@@ -39,24 +39,34 @@ export const useProfile = () => {
 
         setProfile(profileData as Profile);
 
-        // Fetch roles
-        const { data: roleData, error: roleError } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', user.id);
+        try {
+          // Fetch roles in a separate try/catch block
+          const { data: roleData, error: roleError } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', user.id);
 
-        if (roleError) {
-          console.error("Error fetching roles:", roleError);
-          throw roleError;
+          if (roleError) {
+            console.error("Error fetching roles:", roleError);
+            // Don't throw here, just set empty roles
+            setRoles([]);
+          } else {
+            setRoles(roleData.map((r: UserRoleRecord) => r.role));
+          }
+        } catch (roleError) {
+          console.error("Exception fetching roles:", roleError);
+          setRoles([]);
         }
-
-        setRoles(roleData.map((r: UserRoleRecord) => r.role));
       } catch (error: any) {
+        console.error("Profile fetch error:", error);
         toast({
           variant: "destructive",
           title: "Profile Error",
           description: error.message || "Failed to fetch profile data",
         });
+        // Still set empty data to avoid leaving the app in a loading state
+        setProfile(null);
+        setRoles([]);
       } finally {
         setIsLoading(false);
       }
