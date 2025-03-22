@@ -40,17 +40,31 @@ export const useProfile = () => {
         setProfile(profileData as Profile);
 
         try {
-          // Fetch roles in a separate try/catch block
+          // First attempt: Try the standard approach to fetch roles
+          console.log("Fetching user roles for user ID:", user.id);
           const { data: roleData, error: roleError } = await supabase
             .from('user_roles')
             .select('role')
             .eq('user_id', user.id);
 
           if (roleError) {
-            console.error("Error fetching roles:", roleError);
-            // Don't throw here, just set empty roles
-            setRoles([]);
+            console.error("Error fetching roles (standard approach):", roleError);
+            
+            // If there's an error with the standard approach, try using a custom RPC function
+            console.log("Attempting to fetch roles using RPC...");
+            const { data: rpcRoleData, error: rpcError } = await supabase
+              .rpc('get_user_roles', { user_uuid: user.id });
+            
+            if (rpcError) {
+              console.error("Error fetching roles (RPC fallback):", rpcError);
+              // If both approaches fail, just set empty roles
+              setRoles([]);
+            } else {
+              console.log("Successfully fetched roles via RPC:", rpcRoleData);
+              setRoles(rpcRoleData || []);
+            }
           } else {
+            console.log("Successfully fetched roles via standard query:", roleData);
             setRoles(roleData.map((r: UserRoleRecord) => r.role));
           }
         } catch (roleError) {
