@@ -1,0 +1,98 @@
+
+import React from 'react';
+import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardFooter, 
+  CardHeader, 
+  CardTitle 
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Eye, Pencil, Trash2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+
+export interface ProjectData {
+  id: string;
+  name: string;
+  description: string;
+  updatedAt: string;
+  thumbnailUrl?: string;
+}
+
+interface ProjectCardProps {
+  project: ProjectData;
+  onDelete?: (id: string) => void;
+}
+
+const ProjectCard = ({ project, onDelete }: ProjectCardProps) => {
+  const navigate = useNavigate();
+  
+  const handleEdit = () => {
+    navigate(`/circuit-editor?id=${project.id}`);
+  };
+  
+  const handleView = () => {
+    navigate(`/circuit-demo?id=${project.id}`);
+  };
+  
+  const handleDelete = () => {
+    if (onDelete) {
+      onDelete(project.id);
+    }
+  };
+  
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  return (
+    <Card className="h-full flex flex-col shadow-sm hover:shadow-md transition-shadow">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-lg text-primary">{project.name}</CardTitle>
+        <CardDescription className="text-sm text-muted-foreground">
+          Last updated: {formatDate(project.updatedAt)}
+        </CardDescription>
+      </CardHeader>
+      
+      <CardContent className="flex-grow">
+        {project.thumbnailUrl ? (
+          <div className="aspect-video bg-gray-100 rounded-md mb-3 overflow-hidden">
+            <img 
+              src={project.thumbnailUrl} 
+              alt={project.name} 
+              className="h-full w-full object-cover"
+            />
+          </div>
+        ) : (
+          <div className="aspect-video bg-gray-100 rounded-md mb-3 flex items-center justify-center text-gray-400">
+            No preview
+          </div>
+        )}
+        <p className="text-sm line-clamp-2">{project.description}</p>
+      </CardContent>
+      
+      <CardFooter className="border-t pt-3 flex justify-between">
+        <Button variant="outline" size="sm" onClick={handleView}>
+          <Eye className="h-4 w-4 mr-1" />
+          View
+        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={handleEdit}>
+            <Pencil className="h-4 w-4 mr-1" />
+            Edit
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleDelete} className="text-destructive hover:bg-destructive/10">
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      </CardFooter>
+    </Card>
+  );
+};
+
+export default ProjectCard;
