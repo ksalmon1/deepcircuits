@@ -1,3 +1,4 @@
+
 /**
  * This file handles the integration with wokwi-elements 
  * via the global script loaded in index.html
@@ -25,15 +26,6 @@ export const isWokwiLoaded = (): boolean => {
       componentsLoadedSuccessfully = true;
     }
     
-    // Additional logging to help debug the issue
-    if (!isLoaded && typeof window !== 'undefined') {
-      console.log('Script loaded:', scriptLoaded);
-      console.log('customElements available:', !!window.customElements);
-      if (window.customElements) {
-        console.log('wokwi-led defined:', !!window.customElements.get('wokwi-led'));
-      }
-    }
-    
     return isLoaded;
   } catch (error) {
     console.error('Error checking if Wokwi is loaded:', error);
@@ -55,7 +47,7 @@ export const forceLoadWokwiElements = (): Promise<boolean> => {
       const script = document.createElement('script');
       script.id = 'wokwi-elements-script';
       script.type = 'module';
-      script.src = 'https://unpkg.com/wokwi-elements@1.7.0/dist/wokwi-elements.bundle.js';
+      script.src = 'https://unpkg.com/@wokwi/elements@1.7.0/dist/wokwi-elements.bundle.js';
       script.onload = () => {
         window.wokwiElementsLoaded = true;
         // Give a little time for custom elements to register
