@@ -61,7 +61,9 @@ export const useProfile = () => {
               setRoles([]);
             } else {
               console.log("Successfully fetched roles via RPC:", rpcRoleData);
-              setRoles(rpcRoleData || []);
+              // Convert response to array if it's not already
+              const roleArray = Array.isArray(rpcRoleData) ? rpcRoleData : [];
+              setRoles(roleArray as UserRole[]);
             }
           } else {
             console.log("Successfully fetched roles via standard query:", roleData);
