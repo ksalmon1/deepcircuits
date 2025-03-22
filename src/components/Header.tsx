@@ -1,7 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { CircuitIcon, Menu, X } from "lucide-react";
+import { Circuit, Menu, X } from "lucide-react";
 import { useState } from "react";
 
 const Header = () => {
@@ -13,7 +13,7 @@ const Header = () => {
     <header className="border-b border-neutral-100 bg-white py-4">
       <div className="container flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2">
-          <CircuitIcon className="h-6 w-6 text-primary" />
+          <Circuit className="h-6 w-6 text-primary" />
           <span className="text-xl font-bold text-slate-900">CircuitSim</span>
         </Link>
 
