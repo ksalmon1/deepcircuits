@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useProfile } from "@/hooks/use-profile";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -24,7 +23,6 @@ import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
-// Define form schema for profile updates
 const profileFormSchema = z.object({
   display_name: z
     .string()
@@ -43,7 +41,6 @@ const profileFormSchema = z.object({
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
-// Subscription plan types
 type PlanTier = 'free' | 'standard' | 'professional';
 
 interface PlanDetails {
@@ -100,7 +97,6 @@ const ProfileSection = () => {
   const [activeTab, setActiveTab] = useState("profile");
   const { toast } = useToast();
   
-  // Form handling
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
@@ -113,17 +109,14 @@ const ProfileSection = () => {
   
   const isSubmitting = form.formState.isSubmitting;
 
-  // Simulated current plan (in a real app, this would come from your database or subscription service)
   const currentPlanTier: PlanTier = "free";
   
-  // Usage statistics (simulated)
   const usageData = {
     projects: { current: 3, limit: 5 },
     storage: { current: 45, limit: 100 },
     components: { current: 12, limit: 20 }
   };
 
-  // Reset form when profile changes
   React.useEffect(() => {
     if (profile) {
       form.reset({
@@ -134,7 +127,6 @@ const ProfileSection = () => {
     }
   }, [profile, form]);
 
-  // Handle form submission
   const onSubmit = async (values: ProfileFormValues) => {
     try {
       await updateProfile({
@@ -155,7 +147,6 @@ const ProfileSection = () => {
     }
   };
 
-  // Handle subscription change (simulated)
   const handleSubscriptionChange = (plan: PlanTier) => {
     if (plan === currentPlanTier) {
       toast({
@@ -165,7 +156,6 @@ const ProfileSection = () => {
       return;
     }
 
-    // In a real app, this would navigate to a Stripe checkout or similar
     toast({
       title: "Subscription Change",
       description: `Upgrading to ${planDetails[plan].name} plan would go to payment processing in the full app.`,
@@ -212,7 +202,6 @@ const ProfileSection = () => {
             )}
           </TabsList>
           
-          {/* Profile Tab */}
           <TabsContent value="profile">
             <div className="space-y-6">
               <div className="flex flex-col md:flex-row gap-6 items-start">
@@ -315,7 +304,6 @@ const ProfileSection = () => {
             </div>
           </TabsContent>
           
-          {/* Account Tab */}
           <TabsContent value="account">
             <div className="space-y-6">
               <div className="space-y-2">
@@ -357,7 +345,6 @@ const ProfileSection = () => {
             </div>
           </TabsContent>
           
-          {/* Subscription Tab */}
           <TabsContent value="subscription">
             <div className="space-y-6">
               <div className="space-y-2">
@@ -367,7 +354,6 @@ const ProfileSection = () => {
                 </p>
               </div>
               
-              {/* Current Plan */}
               <div className="border rounded-md p-5 bg-muted/10">
                 <div className="flex justify-between items-start">
                   <div>
@@ -391,7 +377,6 @@ const ProfileSection = () => {
                 </div>
               </div>
               
-              {/* Usage Statistics */}
               <div className="space-y-4">
                 <h4 className="font-medium">Usage Statistics</h4>
                 
@@ -437,12 +422,11 @@ const ProfileSection = () => {
                 </div>
               </div>
               
-              {/* Available Plans */}
               <div className="pt-6 border-t">
                 <h4 className="font-medium mb-4">Available Plans</h4>
                 
                 <div className="grid gap-4 md:grid-cols-3">
-                  {Object.entries(planDetails).map(([key, plan]) => {
+                  {(Object.entries(planDetails) as [PlanTier, PlanDetails][]).map(([key, plan]) => {
                     const planKey = key as PlanTier;
                     const isCurrent = planKey === currentPlanTier;
                     
@@ -486,7 +470,6 @@ const ProfileSection = () => {
                 </div>
               </div>
               
-              {/* Payment History - Would be implemented with real data in a full app */}
               <div className="pt-6 border-t">
                 <h4 className="font-medium mb-4">Payment History</h4>
                 {currentPlanTier === 'free' ? (
@@ -495,7 +478,6 @@ const ProfileSection = () => {
                   </div>
                 ) : (
                   <div className="border rounded-md divide-y">
-                    {/* These would be real payment records in a full implementation */}
                     <div className="p-3 flex justify-between items-center">
                       <div>
                         <p className="font-medium">Invoice #2345</p>
@@ -522,7 +504,6 @@ const ProfileSection = () => {
             </div>
           </TabsContent>
           
-          {/* Admin Settings Tab */}
           {roles.includes('admin') && (
             <TabsContent value="admin">
               <div className="space-y-6">
