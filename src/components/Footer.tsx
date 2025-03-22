@@ -1,12 +1,12 @@
 
 import { Link } from "react-router-dom";
-import { CircuitBoard } from "lucide-react";
+import { CircuitBoard, Github, Twitter } from "lucide-react";
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="border-t border-neutral-100 bg-white py-8">
+    <footer className="border-t border-neutral-100 bg-white py-12">
       <div className="container">
         <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
           <div className="flex flex-col gap-4">
@@ -17,10 +17,30 @@ const Footer = () => {
             <p className="text-sm text-slate-600">
               A web-based, interactive 2D electronics and microcontroller circuit simulator for hobbyists and students.
             </p>
+            <div className="flex items-center gap-4 pt-2">
+              <a 
+                href="https://twitter.com" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-slate-500 hover:text-primary"
+                aria-label="Twitter"
+              >
+                <Twitter size={20} />
+              </a>
+              <a 
+                href="https://github.com" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-slate-500 hover:text-primary"
+                aria-label="GitHub"
+              >
+                <Github size={20} />
+              </a>
+            </div>
           </div>
 
           <div>
-            <h3 className="mb-4 text-sm font-semibold text-slate-900">Product</h3>
+            <h3 className="mb-4 text-sm font-semibold uppercase text-slate-900">Product</h3>
             <ul className="flex flex-col gap-2">
               <li>
                 <Link to="/features" className="text-sm text-slate-600 hover:text-primary">
@@ -37,11 +57,16 @@ const Footer = () => {
                   Documentation
                 </Link>
               </li>
+              <li>
+                <Link to="/tutorials" className="text-sm text-slate-600 hover:text-primary">
+                  Tutorials
+                </Link>
+              </li>
             </ul>
           </div>
 
           <div>
-            <h3 className="mb-4 text-sm font-semibold text-slate-900">Company</h3>
+            <h3 className="mb-4 text-sm font-semibold uppercase text-slate-900">Company</h3>
             <ul className="flex flex-col gap-2">
               <li>
                 <Link to="/about" className="text-sm text-slate-600 hover:text-primary">
@@ -58,11 +83,16 @@ const Footer = () => {
                   Blog
                 </Link>
               </li>
+              <li>
+                <Link to="/careers" className="text-sm text-slate-600 hover:text-primary">
+                  Careers
+                </Link>
+              </li>
             </ul>
           </div>
 
           <div>
-            <h3 className="mb-4 text-sm font-semibold text-slate-900">Legal</h3>
+            <h3 className="mb-4 text-sm font-semibold uppercase text-slate-900">Legal</h3>
             <ul className="flex flex-col gap-2">
               <li>
                 <Link to="/terms" className="text-sm text-slate-600 hover:text-primary">
@@ -74,12 +104,20 @@ const Footer = () => {
                   Privacy Policy
                 </Link>
               </li>
+              <li>
+                <Link to="/cookies" className="text-sm text-slate-600 hover:text-primary">
+                  Cookie Policy
+                </Link>
+              </li>
             </ul>
           </div>
         </div>
 
-        <div className="mt-8 border-t border-neutral-100 pt-8 text-center text-sm text-slate-600">
-          &copy; {currentYear} CircuitSim. All rights reserved.
+        <div className="mt-10 border-t border-neutral-100 pt-8 text-center text-sm text-slate-600">
+          <p>&copy; {currentYear} CircuitSim. All rights reserved.</p>
+          <p className="mt-2">
+            Built with passion for electronics and education.
+          </p>
         </div>
       </div>
     </footer>
