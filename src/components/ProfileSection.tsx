@@ -426,7 +426,7 @@ const ProfileSection = () => {
                 <h4 className="font-medium mb-4">Available Plans</h4>
                 
                 <div className="grid gap-4 md:grid-cols-3">
-                  {(Object.entries(planDetails) as [PlanTier, PlanDetails][]).map(([key, plan]) => {
+                  {(Object.entries(planDetails as Record<string, {price: string}>) as [PlanTier, PlanDetails][]).map(([key, plan]) => {
                     const planKey = key as PlanTier;
                     const isCurrent = planKey === currentPlanTier;
                     

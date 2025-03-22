@@ -28,9 +28,9 @@ function App() {
   const queryClient = new QueryClient();
 
   return (
-    <AuthProvider>
-      <QueryClientProvider client={queryClient}>
-        <Router>
+    <QueryClientProvider client={queryClient}>
+      <Router>
+        <AuthProvider>
           <Routes>
             {/* Public Routes */}
             <Route path="/" element={<Index />} />
@@ -111,10 +111,10 @@ function App() {
             {/* 404 Route */}
             <Route path="*" element={<NotFound />} />
           </Routes>
-        </Router>
-        <Toaster />
-      </QueryClientProvider>
-    </AuthProvider>
+          <Toaster />
+        </AuthProvider>
+      </Router>
+    </QueryClientProvider>
   );
 }
 
