@@ -1,4 +1,3 @@
-
 /**
  * This file handles the integration with wokwi-elements 
  * via the global script loaded in index.html
@@ -6,11 +5,28 @@
 
 // Function to check if wokwi-elements are loaded
 export const isWokwiLoaded = (): boolean => {
-  return (
-    typeof window !== 'undefined' && 
-    window.customElements && 
-    !!window.customElements.get('wokwi-led')
-  );
+  try {
+    const isLoaded = (
+      typeof window !== 'undefined' && 
+      window.customElements && 
+      !!window.customElements.get('wokwi-led')
+    );
+    
+    console.log('Wokwi loaded check:', isLoaded);
+    
+    // Additional logging to help debug the issue
+    if (!isLoaded && typeof window !== 'undefined') {
+      console.log('customElements available:', !!window.customElements);
+      if (window.customElements) {
+        console.log('wokwi-led defined:', !!window.customElements.get('wokwi-led'));
+      }
+    }
+    
+    return isLoaded;
+  } catch (error) {
+    console.error('Error checking if Wokwi is loaded:', error);
+    return false;
+  }
 };
 
 // Type definition for wokwi element properties
