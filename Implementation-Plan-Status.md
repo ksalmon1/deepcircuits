@@ -309,3 +309,9 @@
 - Complete Phase 2.5 (Admin Panel)
 - Complete Phase 3.1-3.3 (Canvas Implementation and Component Integration)
 - Begin work on Phase 5.1 (Project Versioning)
+
+## Miscellaneous Tasks
+
+### Technical Debt
+- ❌ Fix TypeScript errors in ProfileSection.tsx (type issues with planDetails object)
+- ❌ Refactor large components into smaller, more manageable pieces
