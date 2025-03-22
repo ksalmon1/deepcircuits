@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
+import { Loader2 } from "lucide-react";
 
 export const ProtectedRoute = ({ 
   children 
@@ -18,7 +19,12 @@ export const ProtectedRoute = ({
   }, [isLoading]);
 
   if (isChecking) {
-    return <div className="flex h-screen items-center justify-center">Loading...</div>;
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-2 text-lg">Loading...</span>
+      </div>
+    );
   }
 
   if (!user) {
@@ -43,7 +49,12 @@ export const PublicOnlyRoute = ({
   }, [isLoading]);
 
   if (isChecking) {
-    return <div className="flex h-screen items-center justify-center">Loading...</div>;
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-2 text-lg">Loading...</span>
+      </div>
+    );
   }
 
   if (user) {
