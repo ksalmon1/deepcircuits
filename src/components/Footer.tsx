@@ -1,6 +1,6 @@
 
 import { Link } from "react-router-dom";
-import { Circuit } from "lucide-react";
+import { CircuitBoard } from "lucide-react";
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
@@ -11,7 +11,7 @@ const Footer = () => {
         <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
           <div className="flex flex-col gap-4">
             <Link to="/" className="flex items-center gap-2">
-              <Circuit className="h-6 w-6 text-primary" />
+              <CircuitBoard className="h-6 w-6 text-primary" />
               <span className="text-xl font-bold text-slate-900">CircuitSim</span>
             </Link>
             <p className="text-sm text-slate-600">
