@@ -17,6 +17,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
 import WokwiDemo from "./components/CircuitComponents/WokwiDemo";
+import CircuitEditorPage from "./components/CircuitEditor/CircuitEditorPage";
 
 const queryClient = new QueryClient();
 
@@ -36,6 +37,7 @@ const AppRoutes = () => (
     {/* Protected routes - only accessible when logged in */}
     <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
     <Route path="/circuit-demo" element={<ProtectedRoute><WokwiDemo /></ProtectedRoute>} />
+    <Route path="/circuit-editor" element={<ProtectedRoute><CircuitEditorPage /></ProtectedRoute>} />
     
     <Route path="*" element={<NotFound />} />
   </Routes>
