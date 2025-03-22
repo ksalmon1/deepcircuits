@@ -3,6 +3,18 @@ import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Activity, CircuitBoard, Code, Clock } from "lucide-react";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+
+// Sample activity data - in a real app, this would come from a database
+const activityData = [
+  { day: 'Mon', compilations: 4, edits: 8 },
+  { day: 'Tue', compilations: 3, edits: 5 },
+  { day: 'Wed', compilations: 5, edits: 10 },
+  { day: 'Thu', compilations: 7, edits: 12 },
+  { day: 'Fri', compilations: 2, edits: 7 },
+  { day: 'Sat', compilations: 6, edits: 9 },
+  { day: 'Sun', compilations: 3, edits: 6 },
+];
 
 interface AnalyticsProps {
   totalProjects: number;
@@ -83,11 +95,54 @@ const DashboardAnalytics = ({
           <Card>
             <CardHeader>
               <CardTitle>Recent Activity</CardTitle>
-              <CardDescription>Your project activity over the last 30 days</CardDescription>
+              <CardDescription>Your project activity over the last 7 days</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="h-[200px] flex items-center justify-center border-2 border-dashed rounded-md border-slate-200 p-4">
-                <p className="text-muted-foreground">Activity chart will appear here</p>
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart
+                    data={activityData}
+                    margin={{ top: 10, right: 30, left: 0, bottom: 10 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="day" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
+                    <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'white',
+                        borderRadius: '8px',
+                        border: '1px solid #e2e8f0',
+                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                      }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="edits"
+                      stroke="#4C72F4"
+                      strokeWidth={2}
+                      dot={{
+                        strokeWidth: 2,
+                        r: 4,
+                        strokeDasharray: '',
+                      }}
+                      activeDot={{ r: 6, stroke: '#4C72F4', strokeWidth: 2 }}
+                      name="Project Edits"
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="compilations"
+                      stroke="#F4C95D"
+                      strokeWidth={2}
+                      dot={{
+                        strokeWidth: 2,
+                        r: 4, 
+                        strokeDasharray: '',
+                      }}
+                      activeDot={{ r: 6, stroke: '#F4C95D', strokeWidth: 2 }}
+                      name="Code Compilations"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
               </div>
             </CardContent>
           </Card>
