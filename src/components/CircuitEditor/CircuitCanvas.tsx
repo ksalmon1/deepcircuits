@@ -44,6 +44,21 @@ const CircuitCanvas = () => {
     return () => clearTimeout(timer);
   }, [isReady, loadingError]);
 
+  // This function safely renders Wokwi elements
+  const renderWokwiElement = () => {
+    if (!isReady) return null;
+    
+    // We need to use dangerouslySetInnerHTML because React doesn't know how to handle custom elements
+    return (
+      <div 
+        className="col-start-5 col-span-4 row-start-5 row-span-4 flex items-center justify-center"
+        dangerouslySetInnerHTML={{
+          __html: '<wokwi-led color="red"></wokwi-led>'
+        }}
+      />
+    );
+  };
+
   return (
     <div className="h-full w-full bg-white relative">
       {!isReady && (
@@ -64,12 +79,8 @@ const CircuitCanvas = () => {
         ref={canvasRef} 
         className="h-full w-full grid grid-cols-[repeat(40,25px)] grid-rows-[repeat(30,25px)] bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjUiIGhlaWdodD0iMjUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSIyNSIgaGVpZ2h0PSIyNSIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAwIDAgTCAyNSAwIE0gMCAwIEwgMCAyNSIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZTJlOGYwIiBzdHJva2Utd2lkdGg9IjEiPjwvcGF0aD48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JpZCkiPjwvcmVjdD48L3N2Zz4=')]"
       >
-        {/* For demonstration purposes, add a placeholder component */}
-        {isReady && (
-          <div className="col-start-5 col-span-4 row-start-5 row-span-4 flex items-center justify-center">
-            <wokwi-led color="red"></wokwi-led>
-          </div>
-        )}
+        {/* Render the Wokwi component using dangerouslySetInnerHTML */}
+        {renderWokwiElement()}
       </div>
     </div>
   );
