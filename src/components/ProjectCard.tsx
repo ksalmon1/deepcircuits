@@ -9,8 +9,9 @@ import {
   CardTitle 
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Eye, Pencil, Trash2 } from "lucide-react";
+import { Eye, Pencil, Trash2, Cpu } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { Badge } from "@/components/ui/badge";
 
 export interface ProjectData {
   id: string;
@@ -18,6 +19,11 @@ export interface ProjectData {
   description: string;
   updatedAt: string;
   thumbnailUrl?: string;
+  microcontroller?: {
+    type: string;
+    codeSize?: number;
+    lastCompiled?: string;
+  };
 }
 
 interface ProjectCardProps {
@@ -53,7 +59,15 @@ const ProjectCard = ({ project, onDelete }: ProjectCardProps) => {
   return (
     <Card className="h-full flex flex-col shadow-sm hover:shadow-md transition-shadow">
       <CardHeader className="pb-2">
-        <CardTitle className="text-lg text-primary">{project.name}</CardTitle>
+        <CardTitle className="text-lg text-primary flex items-center justify-between">
+          {project.name}
+          {project.microcontroller && (
+            <Badge variant="outline" className="flex items-center gap-1">
+              <Cpu className="h-3 w-3" />
+              {project.microcontroller.type}
+            </Badge>
+          )}
+        </CardTitle>
         <CardDescription className="text-sm text-muted-foreground">
           Last updated: {formatDate(project.updatedAt)}
         </CardDescription>
@@ -74,6 +88,17 @@ const ProjectCard = ({ project, onDelete }: ProjectCardProps) => {
           </div>
         )}
         <p className="text-sm line-clamp-2">{project.description}</p>
+        
+        {project.microcontroller?.lastCompiled && (
+          <div className="mt-2 text-xs text-muted-foreground">
+            <span>Code compiled: {formatDate(project.microcontroller.lastCompiled)}</span>
+            {project.microcontroller.codeSize && (
+              <span className="ml-2">
+                Size: {(project.microcontroller.codeSize / 1024).toFixed(1)} KB
+              </span>
+            )}
+          </div>
+        )}
       </CardContent>
       
       <CardFooter className="border-t pt-3 flex justify-between">

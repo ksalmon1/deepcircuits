@@ -2,8 +2,13 @@
 import React, { useState, useEffect } from 'react';
 import CircuitCanvas from './CircuitCanvas';
 import ComponentPanel from './ComponentPanel';
+import CodeEditor from './CodeEditor';
+import SerialMonitor from './SerialMonitor';
 import { Button } from '@/components/ui/button';
-import { Play, Save, Undo, Redo, Trash2, ArrowLeft } from 'lucide-react';
+import { 
+  Play, Save, Undo, Redo, Trash2, ArrowLeft, 
+  Code, MonitorUp, SplitSquareVertical, SplitSquareHorizontal 
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -16,6 +21,9 @@ export const CircuitEditorLayout = () => {
   const [circuitName, setCircuitName] = useState<string>('Untitled Circuit');
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [isModified, setIsModified] = useState<boolean>(false);
+  const [showCodeEditor, setShowCodeEditor] = useState<boolean>(false);
+  const [showSerialMonitor, setShowSerialMonitor] = useState<boolean>(false);
+  const [verticalSplit, setVerticalSplit] = useState<boolean>(true);
 
   // Load project data based on ID (mock implementation)
   useEffect(() => {
@@ -54,8 +62,9 @@ export const CircuitEditorLayout = () => {
   };
 
   const handleSimulate = () => {
+    setShowSerialMonitor(true);
     toast.info('Starting simulation...', {
-      description: 'Simulation feature will be available in the next update',
+      description: 'Simulation started. Check the serial monitor for output.',
     });
   };
 
@@ -96,6 +105,14 @@ export const CircuitEditorLayout = () => {
     }
   };
 
+  const handleCompileCode = async (code: string) => {
+    console.log('Compiling code:', code);
+    // In a real app, this would send the code to a backend API
+    // For now, we'll just show a toast message
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    toast.success('Code compiled and uploaded to simulated microcontroller');
+  };
+
   // Mock function to simulate circuit changes
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -104,6 +121,11 @@ export const CircuitEditorLayout = () => {
     
     return () => clearTimeout(timer);
   }, []);
+
+  // Toggle layout orientation
+  const toggleOrientation = () => {
+    setVerticalSplit(!verticalSplit);
+  };
 
   return (
     <div className="h-full flex flex-col">
@@ -132,6 +154,35 @@ export const CircuitEditorLayout = () => {
           {isModified && <span className="ml-2 text-xs text-amber-600">●</span>}
         </div>
         <div className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => setShowCodeEditor(!showCodeEditor)}
+            className={showCodeEditor ? "bg-secondary" : ""}
+          >
+            <Code className="mr-1 h-4 w-4" />
+            Code
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => setShowSerialMonitor(!showSerialMonitor)}
+            className={showSerialMonitor ? "bg-secondary" : ""}
+          >
+            <MonitorUp className="mr-1 h-4 w-4" />
+            Serial
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={toggleOrientation}
+            title={verticalSplit ? "Switch to horizontal layout" : "Switch to vertical layout"}
+          >
+            {verticalSplit ? 
+              <SplitSquareHorizontal className="h-4 w-4" /> : 
+              <SplitSquareVertical className="h-4 w-4" />
+            }
+          </Button>
           <Button variant="outline" size="sm" onClick={handleClearCircuit}>
             <Trash2 className="mr-1 h-4 w-4" />
             Clear
@@ -170,9 +221,55 @@ export const CircuitEditorLayout = () => {
           <ComponentPanel />
         </div>
 
-        {/* Main canvas area */}
-        <div className="flex-1 overflow-hidden">
-          <CircuitCanvas />
+        {/* Main area with circuit canvas and optional editors */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Main content with dynamic layout based on which editors are open */}
+          {(showCodeEditor || showSerialMonitor) ? (
+            <div className={`flex-1 flex ${verticalSplit ? 'flex-row' : 'flex-col'} overflow-hidden`}>
+              {/* Circuit canvas - always shown but with dynamic size */}
+              <div className={`${verticalSplit ? 
+                (showCodeEditor && showSerialMonitor ? 'w-1/2' : 'w-2/3') : 
+                (showCodeEditor && showSerialMonitor ? 'h-1/2' : 'h-2/3')
+              } overflow-hidden`}>
+                <CircuitCanvas />
+              </div>
+              
+              {/* Right/bottom panel with code editor and/or serial monitor */}
+              <div className={`${verticalSplit ? 
+                (showCodeEditor && showSerialMonitor ? 'w-1/2' : 'w-1/3') : 
+                (showCodeEditor && showSerialMonitor ? 'h-1/2' : 'h-1/3')
+              } border-l overflow-hidden flex ${verticalSplit ? 'flex-col' : 'flex-row'}`}>
+                {showCodeEditor && showSerialMonitor ? (
+                  <>
+                    <div className={`${verticalSplit ? 'h-1/2' : 'w-1/2'} overflow-hidden`}>
+                      <CodeEditor projectId={projectId || undefined} onCompile={handleCompileCode} />
+                    </div>
+                    <div className={`${verticalSplit ? 'h-1/2 border-t' : 'w-1/2 border-l'} overflow-hidden`}>
+                      <SerialMonitor projectId={projectId || undefined} />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {showCodeEditor && (
+                      <div className="flex-1 overflow-hidden">
+                        <CodeEditor projectId={projectId || undefined} onCompile={handleCompileCode} />
+                      </div>
+                    )}
+                    {showSerialMonitor && (
+                      <div className="flex-1 overflow-hidden">
+                        <SerialMonitor projectId={projectId || undefined} />
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          ) : (
+            // If no editors are open, show only the circuit canvas
+            <div className="flex-1 overflow-hidden">
+              <CircuitCanvas />
+            </div>
+          )}
         </div>
       </div>
     </div>
