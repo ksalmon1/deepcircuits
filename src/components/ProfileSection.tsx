@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, User, Mail, Calendar, Shield } from "lucide-react";
+import { Loader2, User, Mail, Calendar, Shield, Image } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -197,20 +197,19 @@ const ProfileSection = () => {
                             Enter a URL to an image to use as your avatar.
                           </FormDescription>
                           <FormMessage />
+                          {field.value && (
+                            <div className="flex justify-center mt-4">
+                              <Avatar className="h-20 w-20">
+                                <AvatarImage src={field.value} alt="Preview" />
+                                <AvatarFallback>
+                                  <User className="h-8 w-8" />
+                                </AvatarFallback>
+                              </Avatar>
+                            </div>
+                          )}
                         </FormItem>
                       )}
                     />
-                    
-                    {field => field.value && (
-                      <div className="flex justify-center mt-4">
-                        <Avatar className="h-20 w-20">
-                          <AvatarImage src={field.value} alt="Preview" />
-                          <AvatarFallback>
-                            <User className="h-8 w-8" />
-                          </AvatarFallback>
-                        </Avatar>
-                      </div>
-                    )}
                     
                     <div className="flex justify-end">
                       <Button type="submit" disabled={isSubmitting}>
