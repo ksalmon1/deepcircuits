@@ -1,0 +1,130 @@
+
+import { useEffect, useState } from "react";
+import { useAuth } from "@/context/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { Profile, UserRole, UserRoleRecord } from "@/types/database";
+import { useToast } from "./use-toast";
+
+export const useProfile = () => {
+  const { user } = useAuth();
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [roles, setRoles] = useState<UserRole[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
+
+  // Fetch profile data
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!user) {
+        setProfile(null);
+        setRoles([]);
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
+
+      try {
+        // Fetch profile
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+
+        if (profileError) {
+          console.error("Error fetching profile:", profileError);
+          throw profileError;
+        }
+
+        setProfile(profileData as Profile);
+
+        // Fetch roles
+        const { data: roleData, error: roleError } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id);
+
+        if (roleError) {
+          console.error("Error fetching roles:", roleError);
+          throw roleError;
+        }
+
+        setRoles(roleData.map((r: UserRoleRecord) => r.role));
+      } catch (error: any) {
+        toast({
+          variant: "destructive",
+          title: "Profile Error",
+          description: error.message || "Failed to fetch profile data",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, [user, toast]);
+
+  // Update profile
+  const updateProfile = async (updates: Partial<Profile>) => {
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "You must be logged in to update your profile",
+      });
+      return { error: new Error("Not authenticated"), data: null };
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', user.id)
+        .select();
+
+      if (error) {
+        throw error;
+      }
+
+      // Update local state
+      setProfile(prev => prev ? { ...prev, ...updates } : null);
+
+      toast({
+        title: "Profile Updated",
+        description: "Your profile has been updated successfully",
+      });
+
+      return { data, error: null };
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Update Failed",
+        description: error.message || "Failed to update profile",
+      });
+      return { error, data: null };
+    }
+  };
+
+  // Check if user has a specific role
+  const hasRole = (role: UserRole) => {
+    return roles.includes(role);
+  };
+
+  // Check if user is admin
+  const isAdmin = () => {
+    return hasRole('admin');
+  };
+
+  return {
+    profile,
+    roles,
+    isLoading,
+    updateProfile,
+    hasRole,
+    isAdmin,
+  };
+};

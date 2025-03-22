@@ -8,6 +8,8 @@ import ProjectCard, { ProjectData } from "@/components/ProjectCard";
 import NewProjectCard from "@/components/NewProjectCard";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import ProfileSection from "@/components/ProfileSection";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // Sample project data - in a real app, this would come from a database
 const sampleProjects: ProjectData[] = [
@@ -29,6 +31,7 @@ const Dashboard = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [projects, setProjects] = useState<ProjectData[]>(sampleProjects);
+  const [activeTab, setActiveTab] = useState("projects");
 
   const handleCreateProject = (name: string, description: string) => {
     const newProject: ProjectData = {
@@ -75,39 +78,52 @@ const Dashboard = () => {
         <div className="mb-8 rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
           <h2 className="mb-4 text-xl font-semibold">Welcome, {user?.email}</h2>
           <p className="text-slate-600">
-            This is your dashboard where you'll manage your circuit projects.
+            This is your dashboard where you'll manage your circuit projects and profile.
           </p>
         </div>
 
-        <div className="mb-6 flex items-center justify-between">
-          <h2 className="text-xl font-semibold">Your Projects</h2>
-          <Button onClick={() => document.getElementById('create-project-button')?.click()}>
-            <Plus className="mr-1 h-4 w-4" />
-            New Project
-          </Button>
-        </div>
-
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {/* New Project Card */}
-          <div id="create-project-button">
-            <NewProjectCard onCreateProject={handleCreateProject} />
-          </div>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-8">
+          <TabsList className="mb-6">
+            <TabsTrigger value="projects">Your Projects</TabsTrigger>
+            <TabsTrigger value="profile">Profile Settings</TabsTrigger>
+          </TabsList>
           
-          {/* Project Cards */}
-          {projects.map((project) => (
-            <ProjectCard
-              key={project.id}
-              project={project}
-              onDelete={handleDeleteProject}
-            />
-          ))}
-          
-          {projects.length === 0 && (
-            <div className="col-span-full py-12 text-center text-slate-500">
-              <p>You don't have any projects yet. Create your first project to get started!</p>
+          <TabsContent value="projects">
+            <div className="mb-6 flex items-center justify-between">
+              <h2 className="text-xl font-semibold">Your Projects</h2>
+              <Button onClick={() => document.getElementById('create-project-button')?.click()}>
+                <Plus className="mr-1 h-4 w-4" />
+                New Project
+              </Button>
             </div>
-          )}
-        </div>
+
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {/* New Project Card */}
+              <div id="create-project-button">
+                <NewProjectCard onCreateProject={handleCreateProject} />
+              </div>
+              
+              {/* Project Cards */}
+              {projects.map((project) => (
+                <ProjectCard
+                  key={project.id}
+                  project={project}
+                  onDelete={handleDeleteProject}
+                />
+              ))}
+              
+              {projects.length === 0 && (
+                <div className="col-span-full py-12 text-center text-slate-500">
+                  <p>You don't have any projects yet. Create your first project to get started!</p>
+                </div>
+              )}
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="profile">
+            <ProfileSection />
+          </TabsContent>
+        </Tabs>
       </div>
     </PageLayout>
   );
