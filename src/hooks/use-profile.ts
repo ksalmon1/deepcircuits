@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Profile, UserRole, UserRoleRecord } from "@/types/database";
+import { Profile, UserRole } from "@/types/database";
 import { useToast } from "./use-toast";
 
 export const useProfile = () => {
@@ -39,38 +39,19 @@ export const useProfile = () => {
 
         setProfile(profileData as Profile);
 
-        try {
-          // Try to fetch roles using the standard approach first
-          console.log("Fetching user roles for user ID:", user.id);
-          const { data: roleData, error: roleError } = await supabase
-            .from('user_roles')
-            .select('role')
-            .eq('user_id', user.id);
-
-          if (roleError) {
-            console.error("Error fetching roles with standard approach:", roleError);
-            
-            // Fall back to using the get_user_roles RPC function
-            console.log("Falling back to RPC function for roles...");
-            const { data: rpcRoleData, error: rpcError } = await supabase
-              .rpc('get_user_roles', { user_uuid: user.id });
-            
-            if (rpcError) {
-              console.error("Error fetching roles with RPC fallback:", rpcError);
-              setRoles([]);
-            } else {
-              console.log("Successfully fetched roles via RPC:", rpcRoleData);
-              // Convert response to array if it's not already
-              const roleArray = Array.isArray(rpcRoleData) ? rpcRoleData : [];
-              setRoles(roleArray as UserRole[]);
-            }
-          } else {
-            console.log("Successfully fetched roles via standard query:", roleData);
-            setRoles(roleData.map((r: UserRoleRecord) => r.role));
-          }
-        } catch (roleError) {
-          console.error("Exception fetching roles:", roleError);
+        // Skip the direct query that causes recursion and only use the RPC approach
+        console.log("Fetching user roles via RPC for user ID:", user.id);
+        const { data: rpcRoleData, error: rpcError } = await supabase
+          .rpc('get_user_roles', { user_uuid: user.id });
+        
+        if (rpcError) {
+          console.error("Error fetching roles with RPC:", rpcError);
           setRoles([]);
+        } else {
+          console.log("Successfully fetched roles via RPC:", rpcRoleData);
+          // Convert response to array if it's not already
+          const roleArray = Array.isArray(rpcRoleData) ? rpcRoleData : [];
+          setRoles(roleArray as UserRole[]);
         }
       } catch (error: any) {
         console.error("Profile fetch error:", error);
