@@ -1,9 +1,10 @@
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>empty-canvas-creation-77</title>
+    <title>CircuitSim - Interactive Circuit Simulator</title>
     <meta name="description" content="Lovable Generated Project" />
     <meta name="author" content="Lovable" />
 
@@ -15,6 +16,21 @@
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@lovable_dev" />
     <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+    
+    <!-- Wokwi Elements - Added with defer attribute and onload handler -->
+    <script 
+      type="module" 
+      src="https://unpkg.com/wokwi-elements@1.7.0/dist/wokwi-elements.bundle.js"
+      id="wokwi-elements-script"
+      onload="window.wokwiElementsLoaded = true;"
+    ></script>
+    <style>
+      /* Base styles for Wokwi elements */
+      wokwi-led, wokwi-resistor, wokwi-arduino-uno, wokwi-pushbutton, 
+      wokwi-slide-switch, wokwi-capacitor, wokwi-battery {
+        display: inline-block;
+      }
+    </style>
   </head>
 
   <body>

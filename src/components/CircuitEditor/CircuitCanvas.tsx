@@ -1,50 +1,91 @@
 
-import React, { useRef, useEffect, useState } from 'react';
-import { isWokwiLoaded } from '@/integrations/wokwi/WokwiIntegration';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
+import { isWokwiLoaded, forceLoadWokwiElements } from '@/integrations/wokwi/WokwiIntegration';
 import { Skeleton } from '@/components/ui/skeleton';
+import { toast } from 'sonner';
 
 const CircuitCanvas = () => {
   const canvasRef = useRef<HTMLDivElement>(null);
   const [isReady, setIsReady] = useState(false);
   const [loadingError, setLoadingError] = useState<string | null>(null);
   const [loadingAttempts, setLoadingAttempts] = useState(0);
+  const [manuallyLoaded, setManuallyLoaded] = useState(false);
 
-  useEffect(() => {
-    // Check if Wokwi components are loaded
-    const checkWokwiLoaded = () => {
-      console.log('Checking if Wokwi is loaded, attempt:', loadingAttempts + 1);
+  // Function to check if Wokwi is loaded
+  const checkWokwiLoaded = useCallback(async () => {
+    console.log('Checking if Wokwi is loaded, attempt:', loadingAttempts + 1);
+    
+    if (isWokwiLoaded()) {
+      console.log('Wokwi components loaded successfully');
+      setIsReady(true);
+      return true;
+    } 
+    
+    // After a few attempts, try to force load
+    if (loadingAttempts >= 3 && !manuallyLoaded) {
+      console.log('Attempting to manually load Wokwi components...');
+      setManuallyLoaded(true);
       
-      if (isWokwiLoaded()) {
-        console.log('Wokwi components loaded successfully');
-        setIsReady(true);
-      } else {
-        if (loadingAttempts > 10) {
-          console.error('Failed to load Wokwi components after multiple attempts');
-          setLoadingError('Failed to load circuit components. Please refresh the page.');
-          return;
+      try {
+        const success = await forceLoadWokwiElements();
+        if (success) {
+          console.log('Manual loading of Wokwi components succeeded');
+          setIsReady(true);
+          return true;
+        } else {
+          console.log('Manual loading of Wokwi components failed');
         }
-        
-        setLoadingAttempts(prev => prev + 1);
-        setTimeout(checkWokwiLoaded, 1000); // Increased timeout for better chances of loading
+      } catch (err) {
+        console.error('Error during manual loading:', err);
+      }
+    }
+    
+    if (loadingAttempts > 10) {
+      console.error('Failed to load Wokwi components after multiple attempts');
+      setLoadingError('Failed to load circuit components. Please refresh the page or check your internet connection.');
+      // Show a toast notification
+      toast.error('Circuit components failed to load', {
+        description: 'Please refresh the page or check your internet connection.',
+        duration: 5000,
+      });
+      return false;
+    }
+    
+    setLoadingAttempts(prev => prev + 1);
+    return false;
+  }, [loadingAttempts, manuallyLoaded]);
+
+  // Initial load checking
+  useEffect(() => {
+    const attemptLoading = async () => {
+      const success = await checkWokwiLoaded();
+      
+      if (!success) {
+        // Schedule the next check
+        const timer = setTimeout(attemptLoading, 1000);
+        return () => clearTimeout(timer);
       }
     };
+    
+    attemptLoading();
+  }, [checkWokwiLoaded]);
 
-    checkWokwiLoaded();
-  }, [loadingAttempts]);
-
-  // For demo purposes, let's make the canvas load after a few seconds even if Wokwi isn't ready
+  // Backup timeout to show the UI even if components aren't fully loaded
   useEffect(() => {
     const timer = setTimeout(() => {
       if (!isReady && !loadingError) {
-        console.log('Forcing canvas to load after timeout');
+        console.log('Fallback: Forcing canvas to load after timeout');
+        toast.warning('Loading components in fallback mode', {
+          description: 'Some features may be limited.',
+        });
         setIsReady(true);
       }
-    }, 5000);
+    }, 8000); // Increased from 5000 to 8000ms
 
     return () => clearTimeout(timer);
   }, [isReady, loadingError]);
 
-  // This function safely renders Wokwi elements
+  // Function to safely render Wokwi elements
   const renderWokwiElement = () => {
     if (!isReady) return null;
     
@@ -59,6 +100,25 @@ const CircuitCanvas = () => {
     );
   };
 
+  const handleRetry = async () => {
+    setLoadingError(null);
+    setLoadingAttempts(0);
+    setManuallyLoaded(false);
+    const success = await checkWokwiLoaded();
+    if (!success) {
+      // Try to force load immediately on retry
+      try {
+        const manualSuccess = await forceLoadWokwiElements();
+        if (manualSuccess) {
+          setIsReady(true);
+          toast.success('Components loaded successfully');
+        }
+      } catch (err) {
+        console.error('Error during retry loading:', err);
+      }
+    }
+  };
+
   return (
     <div className="h-full w-full bg-white relative">
       {!isReady && (
@@ -69,6 +129,12 @@ const CircuitCanvas = () => {
             {loadingError && (
               <div className="mt-4 text-red-500 max-w-md">
                 {loadingError}
+                <button 
+                  onClick={handleRetry}
+                  className="ml-2 text-blue-500 underline"
+                >
+                  Retry
+                </button>
               </div>
             )}
           </div>

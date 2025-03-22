@@ -33,3 +33,8 @@ declare namespace JSX {
     };
   }
 }
+
+// Add the global wokwiElementsLoaded property to the Window interface
+interface Window {
+  wokwiElementsLoaded?: boolean;
+}
