@@ -55,7 +55,9 @@ const AdminSettings = () => {
               <p className="mb-4 text-sm text-slate-600">
                 Add, edit or deactivate user accounts. Manage user roles and permissions.
               </p>
-              <Button as={Link} to="/admin/users">Manage Users</Button>
+              <Button asChild>
+                <Link to="/admin/users">Manage Users</Link>
+              </Button>
             </CardContent>
           </Card>
 
@@ -73,7 +75,9 @@ const AdminSettings = () => {
               <p className="mb-4 text-sm text-slate-600">
                 Configure application-wide settings, logging preferences, and more.
               </p>
-              <Button as={Link} to="/admin/system">System Configuration</Button>
+              <Button asChild>
+                <Link to="/admin/system">System Configuration</Link>
+              </Button>
             </CardContent>
           </Card>
 
@@ -91,7 +95,9 @@ const AdminSettings = () => {
               <p className="mb-4 text-sm text-slate-600">
                 Add, edit or remove components from the library. Configure component properties.
               </p>
-              <Button as={Link} to="/admin/components">Manage Components</Button>
+              <Button asChild>
+                <Link to="/admin/components">Manage Components</Link>
+              </Button>
             </CardContent>
           </Card>
         </div>

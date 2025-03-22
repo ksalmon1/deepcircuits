@@ -19,7 +19,7 @@ import NotFound from "@/pages/NotFound";
 import ForgotPassword from "@/pages/ForgotPassword";
 import ResetPassword from "@/pages/ResetPassword";
 import CircuitEditorPage from "@/components/CircuitEditor/CircuitEditorPage";
-import ProtectedRoute from "@/components/ProtectedRoute";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AuthProvider } from "@/context/AuthContext";
 
 import "./App.css";
