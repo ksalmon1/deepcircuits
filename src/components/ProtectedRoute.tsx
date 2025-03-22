@@ -18,7 +18,6 @@ export const ProtectedRoute = ({
   }, [isLoading]);
 
   if (isChecking) {
-    // You could show a loading spinner here
     return <div className="flex h-screen items-center justify-center">Loading...</div>;
   }
 
@@ -44,7 +43,6 @@ export const PublicOnlyRoute = ({
   }, [isLoading]);
 
   if (isChecking) {
-    // You could show a loading spinner here
     return <div className="flex h-screen items-center justify-center">Loading...</div>;
   }
 

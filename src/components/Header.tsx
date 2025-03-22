@@ -1,13 +1,15 @@
 
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { CircuitBoard, Menu, X } from "lucide-react";
+import { CircuitBoard, Menu, User, X } from "lucide-react";
 import { useState } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useAuth } from "@/context/AuthContext";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const isMobile = useIsMobile();
+  const { user, signOut } = useAuth();
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
   const closeMenu = () => setIsMenuOpen(false);
@@ -32,12 +34,25 @@ const Header = () => {
             About
           </Link>
           <div className="flex items-center gap-2">
-            <Button asChild variant="outline">
-              <Link to="/login">Sign In</Link>
-            </Button>
-            <Button asChild>
-              <Link to="/signup">Sign Up</Link>
-            </Button>
+            {user ? (
+              <>
+                <Button asChild variant="outline">
+                  <Link to="/dashboard">Dashboard</Link>
+                </Button>
+                <Button onClick={signOut} variant="ghost">
+                  Sign Out
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button asChild variant="outline">
+                  <Link to="/login">Sign In</Link>
+                </Button>
+                <Button asChild>
+                  <Link to="/signup">Sign Up</Link>
+                </Button>
+              </>
+            )}
           </div>
         </nav>
 
@@ -76,12 +91,25 @@ const Header = () => {
             >
               About
             </Link>
-            <Button asChild variant="outline" className="w-full" onClick={closeMenu}>
-              <Link to="/login">Sign In</Link>
-            </Button>
-            <Button asChild className="w-full" onClick={closeMenu}>
-              <Link to="/signup">Sign Up</Link>
-            </Button>
+            {user ? (
+              <>
+                <Button asChild variant="outline" className="w-full" onClick={closeMenu}>
+                  <Link to="/dashboard">Dashboard</Link>
+                </Button>
+                <Button className="w-full" onClick={() => { signOut(); closeMenu(); }}>
+                  Sign Out
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button asChild variant="outline" className="w-full" onClick={closeMenu}>
+                  <Link to="/login">Sign In</Link>
+                </Button>
+                <Button asChild className="w-full" onClick={closeMenu}>
+                  <Link to="/signup">Sign Up</Link>
+                </Button>
+              </>
+            )}
           </nav>
         </div>
       )}

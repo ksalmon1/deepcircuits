@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { Session, User } from "@supabase/supabase-js";
+import { Session, User, Provider } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 
@@ -16,6 +16,7 @@ type AuthContextType = {
     error: any | null;
     data: any | null;
   }>;
+  signInWithProvider: (provider: Provider) => Promise<void>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{
     error: any | null;
@@ -75,6 +76,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return response;
   };
 
+  // Sign in with social provider
+  const signInWithProvider = async (provider: Provider) => {
+    setIsLoading(true);
+    try {
+      await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`,
+        },
+      });
+    } catch (error) {
+      console.error("Social login error:", error);
+      setIsLoading(false);
+    }
+  };
+
   // Sign out
   const signOut = async () => {
     setIsLoading(true);
@@ -99,6 +116,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     isLoading,
     signUp,
     signIn,
+    signInWithProvider,
     signOut,
     resetPassword,
   };
