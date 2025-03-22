@@ -357,7 +357,7 @@ const ProfileSection = () => {
             </div>
           </TabsContent>
           
-          {/* Subscription Tab - NEW */}
+          {/* Subscription Tab */}
           <TabsContent value="subscription">
             <div className="space-y-6">
               <div className="space-y-2">
