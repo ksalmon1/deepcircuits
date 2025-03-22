@@ -1,6 +1,11 @@
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { isWokwiLoaded, forceLoadWokwiElements } from '@/integrations/wokwi/WokwiIntegration';
+import { 
+  isWokwiLoaded, 
+  forceLoadWokwiElements, 
+  WokwiComponent, 
+  renderWokwiElement 
+} from '@/integrations/wokwi/WokwiIntegration';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 
@@ -9,7 +14,7 @@ const CircuitCanvas = () => {
   const [isReady, setIsReady] = useState(false);
   const [loadingError, setLoadingError] = useState<string | null>(null);
   const [loadingAttempts, setLoadingAttempts] = useState(0);
-  const [manuallyLoaded, setManuallyLoaded] = useState(false);
+  const [components, setComponents] = useState<WokwiComponent[]>([]);
 
   // Function to check if Wokwi is loaded
   const checkWokwiLoaded = useCallback(async () => {
@@ -19,12 +24,11 @@ const CircuitCanvas = () => {
       console.log('Wokwi components loaded successfully');
       setIsReady(true);
       return true;
-    } 
+    }
     
     // After a few attempts, try to force load
-    if (loadingAttempts >= 3 && !manuallyLoaded) {
+    if (loadingAttempts >= 2) {
       console.log('Attempting to manually load Wokwi components...');
-      setManuallyLoaded(true);
       
       try {
         const success = await forceLoadWokwiElements();
@@ -40,10 +44,9 @@ const CircuitCanvas = () => {
       }
     }
     
-    if (loadingAttempts > 10) {
+    if (loadingAttempts > 5) {
       console.error('Failed to load Wokwi components after multiple attempts');
       setLoadingError('Failed to load circuit components. Please refresh the page or check your internet connection.');
-      // Show a toast notification
       toast.error('Circuit components failed to load', {
         description: 'Please refresh the page or check your internet connection.',
         duration: 5000,
@@ -53,7 +56,7 @@ const CircuitCanvas = () => {
     
     setLoadingAttempts(prev => prev + 1);
     return false;
-  }, [loadingAttempts, manuallyLoaded]);
+  }, [loadingAttempts]);
 
   // Initial load checking
   useEffect(() => {
@@ -70,7 +73,7 @@ const CircuitCanvas = () => {
     attemptLoading();
   }, [checkWokwiLoaded]);
 
-  // Backup timeout to show the UI even if components aren't fully loaded
+  // Fallback timeout to show UI even if components aren't fully loaded
   useEffect(() => {
     const timer = setTimeout(() => {
       if (!isReady && !loadingError) {
@@ -80,49 +83,98 @@ const CircuitCanvas = () => {
         });
         setIsReady(true);
       }
-    }, 8000); // Increased from 5000 to 8000ms
+    }, 6000);
 
     return () => clearTimeout(timer);
   }, [isReady, loadingError]);
 
-  // Function to safely render Wokwi elements
-  const renderWokwiElement = () => {
-    if (!isReady) return null;
+  // Handle drop event for components
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
     
-    // We need to use dangerouslySetInnerHTML because React doesn't know how to handle custom elements
+    try {
+      // Get the component data from the drag event
+      const componentData = e.dataTransfer.getData('component');
+      if (!componentData) return;
+      
+      const componentInfo = JSON.parse(componentData);
+      
+      // Calculate position relative to the grid
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      
+      // Get the drop position
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      
+      // Snap to grid (25px grid size)
+      const gridSize = 25;
+      const left = Math.floor(x / gridSize) * gridSize;
+      const top = Math.floor(y / gridSize) * gridSize;
+      
+      // Create a new component with proper positioning
+      const newComponent: WokwiComponent = {
+        type: componentInfo.type,
+        id: `comp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        top,
+        left,
+        attributes: { color: 'red' }, // Default attributes, can be customized later
+      };
+      
+      // Add the new component to the canvas
+      setComponents(prevComponents => [...prevComponents, newComponent]);
+      
+      toast.success(`Added ${componentInfo.name}`, {
+        description: `Component placed at position (${left}, ${top})`,
+        duration: 2000,
+      });
+    } catch (error) {
+      console.error('Error adding component:', error);
+      toast.error('Failed to add component');
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault(); // Allow drop
+    e.dataTransfer.dropEffect = 'copy';
+  };
+
+  // Render a component on the canvas
+  const renderComponent = useCallback((component: WokwiComponent) => {
+    const { type, id, top, left, attributes } = component;
+    
     return (
       <div 
-        className="col-start-5 col-span-4 row-start-5 row-span-4 flex items-center justify-center"
-        dangerouslySetInnerHTML={{
-          __html: '<wokwi-led color="red"></wokwi-led>'
-        }}
-      />
+        key={id}
+        className="absolute"
+        style={{ top: `${top}px`, left: `${left}px` }}
+      >
+        <div id={`wokwi-element-${id}`}></div>
+      </div>
     );
-  };
+  }, []);
+
+  // Effect to render Wokwi elements after components state changes
+  useEffect(() => {
+    if (!isReady) return;
+    
+    // Render each component
+    components.forEach(component => {
+      const elementId = `wokwi-element-${component.id}`;
+      renderWokwiElement(component.type, elementId, component.attributes);
+    });
+  }, [components, isReady]);
 
   const handleRetry = async () => {
     setLoadingError(null);
     setLoadingAttempts(0);
-    setManuallyLoaded(false);
-    const success = await checkWokwiLoaded();
-    if (!success) {
-      // Try to force load immediately on retry
-      try {
-        const manualSuccess = await forceLoadWokwiElements();
-        if (manualSuccess) {
-          setIsReady(true);
-          toast.success('Components loaded successfully');
-        }
-      } catch (err) {
-        console.error('Error during retry loading:', err);
-      }
-    }
+    await checkWokwiLoaded();
   };
 
   return (
     <div className="h-full w-full bg-white relative">
       {!isReady && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-50 bg-opacity-80">
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-50 bg-opacity-80 z-10">
           <div className="text-center">
             <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary mx-auto mb-2"></div>
             <p className="text-gray-600">Loading circuit components...</p>
@@ -144,9 +196,11 @@ const CircuitCanvas = () => {
       <div 
         ref={canvasRef} 
         className="h-full w-full grid grid-cols-[repeat(40,25px)] grid-rows-[repeat(30,25px)] bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjUiIGhlaWdodD0iMjUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSIyNSIgaGVpZ2h0PSIyNSIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAwIDAgTCAyNSAwIE0gMCAwIEwgMCAyNSIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZTJlOGYwIiBzdHJva2Utd2lkdGg9IjEiPjwvcGF0aD48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JpZCkiPjwvcmVjdD48L3N2Zz4=')]"
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
       >
-        {/* Render the Wokwi component using dangerouslySetInnerHTML */}
-        {renderWokwiElement()}
+        {/* Render all placed components */}
+        {components.map(renderComponent)}
       </div>
     </div>
   );

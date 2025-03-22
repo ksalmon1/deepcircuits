@@ -1,17 +1,63 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import CircuitCanvas from './CircuitCanvas';
 import ComponentPanel from './ComponentPanel';
 import { Button } from '@/components/ui/button';
-import { Play, Save, Undo, Redo } from 'lucide-react';
+import { Play, Save, Undo, Redo, Trash2, Download, Upload } from 'lucide-react';
+import { toast } from 'sonner';
 
 export const CircuitEditorLayout = () => {
+  const [circuitName, setCircuitName] = useState<string>('Untitled Circuit');
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+
+  const handleSaveCircuit = () => {
+    setIsSaving(true);
+    // Simulate a save operation
+    setTimeout(() => {
+      setIsSaving(false);
+      toast.success('Circuit saved successfully', {
+        description: `${circuitName} has been saved`,
+      });
+    }, 800);
+  };
+
+  const handleSimulate = () => {
+    toast.info('Starting simulation...', {
+      description: 'Simulation feature will be available in the next update',
+    });
+  };
+
+  const handleClearCircuit = () => {
+    toast.warning('Clear circuit?', {
+      description: 'This will remove all components from the canvas',
+      action: {
+        label: 'Clear',
+        onClick: () => {
+          // We'll implement this in a future step
+          toast.success('Circuit cleared');
+        },
+      },
+    });
+  };
+
   return (
     <div className="h-full flex flex-col">
       {/* Top toolbar */}
       <div className="bg-white border-b p-2 flex items-center justify-between">
-        <div className="text-lg font-semibold text-primary">Circuit Editor</div>
+        <div className="flex items-center">
+          <div className="text-lg font-semibold text-primary mr-4">Circuit Editor</div>
+          <input
+            type="text"
+            value={circuitName}
+            onChange={(e) => setCircuitName(e.target.value)}
+            className="border rounded px-2 py-1 text-sm w-64"
+          />
+        </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={handleClearCircuit}>
+            <Trash2 className="mr-1 h-4 w-4" />
+            Clear
+          </Button>
           <Button variant="outline" size="sm">
             <Undo className="mr-1 h-4 w-4" />
             Undo
@@ -20,11 +66,19 @@ export const CircuitEditorLayout = () => {
             <Redo className="mr-1 h-4 w-4" />
             Redo
           </Button>
-          <Button variant="outline" size="sm">
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={handleSaveCircuit}
+            disabled={isSaving}
+          >
             <Save className="mr-1 h-4 w-4" />
-            Save
+            {isSaving ? 'Saving...' : 'Save'}
           </Button>
-          <Button size="sm">
+          <Button 
+            size="sm"
+            onClick={handleSimulate}
+          >
             <Play className="mr-1 h-4 w-4" />
             Simulate
           </Button>
