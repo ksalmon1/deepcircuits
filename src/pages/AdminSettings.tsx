@@ -2,7 +2,7 @@
 import React from "react";
 import PageLayout from "@/components/PageLayout";
 import { useAuth } from "@/context/AuthContext";
-import { Navigate } from "react-router-dom";
+import { Navigate, Link } from "react-router-dom";
 import { useProfile } from "@/hooks/use-profile";
 import { 
   Card, 
@@ -55,7 +55,7 @@ const AdminSettings = () => {
               <p className="mb-4 text-sm text-slate-600">
                 Add, edit or deactivate user accounts. Manage user roles and permissions.
               </p>
-              <Button>Manage Users</Button>
+              <Button as={Link} to="/admin/users">Manage Users</Button>
             </CardContent>
           </Card>
 
@@ -73,7 +73,7 @@ const AdminSettings = () => {
               <p className="mb-4 text-sm text-slate-600">
                 Configure application-wide settings, logging preferences, and more.
               </p>
-              <Button>System Configuration</Button>
+              <Button as={Link} to="/admin/system">System Configuration</Button>
             </CardContent>
           </Card>
 
@@ -91,7 +91,7 @@ const AdminSettings = () => {
               <p className="mb-4 text-sm text-slate-600">
                 Add, edit or remove components from the library. Configure component properties.
               </p>
-              <Button>Manage Components</Button>
+              <Button as={Link} to="/admin/components">Manage Components</Button>
             </CardContent>
           </Card>
         </div>

@@ -1,64 +1,121 @@
 
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { Toaster } from "@/components/ui/toaster";
+
+import Index from "@/pages/Index";
+import Login from "@/pages/Login";
+import Signup from "@/pages/Signup";
+import Dashboard from "@/pages/Dashboard";
+import ProfileSettings from "@/pages/ProfileSettings";
+import AdminSettings from "@/pages/AdminSettings";
+import UserManagement from "@/pages/admin/UserManagement";
+import SystemSettings from "@/pages/admin/SystemSettings";
+import ComponentLibrary from "@/pages/admin/ComponentLibrary";
+import About from "@/pages/About";
+import Features from "@/pages/Features";
+import Pricing from "@/pages/Pricing";
+import NotFound from "@/pages/NotFound";
+import ForgotPassword from "@/pages/ForgotPassword";
+import ResetPassword from "@/pages/ResetPassword";
+import CircuitEditorPage from "@/components/CircuitEditor/CircuitEditorPage";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import { AuthProvider } from "@/context/AuthContext";
-import { ProtectedRoute, PublicOnlyRoute } from "@/components/ProtectedRoute";
-import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
-import Features from "./pages/Features";
-import Pricing from "./pages/Pricing";
-import About from "./pages/About";
-import Login from "./pages/Login";
-import Signup from "./pages/Signup";
-import ForgotPassword from "./pages/ForgotPassword";
-import ResetPassword from "./pages/ResetPassword";
-import Dashboard from "./pages/Dashboard";
-import ProfileSettings from "./pages/ProfileSettings";
-import AdminSettings from "./pages/AdminSettings";
-import WokwiDemo from "./components/CircuitComponents/WokwiDemo";
-import CircuitEditorPage from "./components/CircuitEditor/CircuitEditorPage";
 
-const queryClient = new QueryClient();
+import "./App.css";
 
-const AppRoutes = () => (
-  <Routes>
-    <Route path="/" element={<Index />} />
-    <Route path="/features" element={<Features />} />
-    <Route path="/pricing" element={<Pricing />} />
-    <Route path="/about" element={<About />} />
-    
-    {/* Public routes - only accessible when not logged in */}
-    <Route path="/login" element={<PublicOnlyRoute><Login /></PublicOnlyRoute>} />
-    <Route path="/signup" element={<PublicOnlyRoute><Signup /></PublicOnlyRoute>} />
-    <Route path="/forgot-password" element={<PublicOnlyRoute><ForgotPassword /></PublicOnlyRoute>} />
-    <Route path="/reset-password" element={<PublicOnlyRoute><ResetPassword /></PublicOnlyRoute>} />
-    
-    {/* Protected routes - only accessible when logged in */}
-    <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-    <Route path="/profile" element={<ProtectedRoute><ProfileSettings /></ProtectedRoute>} />
-    <Route path="/admin" element={<ProtectedRoute><AdminSettings /></ProtectedRoute>} />
-    <Route path="/circuit-demo" element={<ProtectedRoute><WokwiDemo /></ProtectedRoute>} />
-    <Route path="/circuit-editor" element={<ProtectedRoute><CircuitEditorPage /></ProtectedRoute>} />
-    
-    <Route path="*" element={<NotFound />} />
-  </Routes>
-);
+function App() {
+  const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <AuthProvider>
-          <AppRoutes />
-        </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+  return (
+    <AuthProvider>
+      <QueryClientProvider client={queryClient}>
+        <Router>
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/" element={<Index />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/features" element={<Features />} />
+            <Route path="/pricing" element={<Pricing />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+
+            {/* Protected Routes */}
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <ProfileSettings />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute>
+                  <AdminSettings />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/users"
+              element={
+                <ProtectedRoute>
+                  <UserManagement />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/system"
+              element={
+                <ProtectedRoute>
+                  <SystemSettings />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/components"
+              element={
+                <ProtectedRoute>
+                  <ComponentLibrary />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/circuit-editor/:id"
+              element={
+                <ProtectedRoute>
+                  <CircuitEditorPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/circuit-demo"
+              element={
+                <ProtectedRoute>
+                  <CircuitEditorPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* 404 Route */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Router>
+        <Toaster />
+      </QueryClientProvider>
+    </AuthProvider>
+  );
+}
 
 export default App;
