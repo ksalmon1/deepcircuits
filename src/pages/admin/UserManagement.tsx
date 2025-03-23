@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import PageLayout from "@/components/PageLayout";
 import { useAuth } from "@/context/AuthContext";
 import { Navigate } from "react-router-dom";
@@ -40,10 +40,8 @@ import {
   Users, 
   Search, 
   Filter, 
-  UserPlus, 
   Edit, 
   Trash, 
-  Shield, 
   AlertCircle,
   Loader2
 } from "lucide-react";
@@ -53,7 +51,6 @@ import {
   getAllUsers, 
   updateUserProfile, 
   updateUserRole, 
-  createUser, 
   deleteUser,
   UserWithProfile
 } from "@/services/userService";
@@ -70,15 +67,14 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-const userFormSchema = z.object({
+const userEditFormSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters" }),
   email: z.string().email({ message: "Invalid email address" }),
-  password: z.string().min(6, { message: "Password must be at least 6 characters" }).optional(),
   role: z.enum(["user", "admin"] as const),
   status: z.enum(["active", "inactive"] as const),
 });
 
-type UserFormValues = z.infer<typeof userFormSchema>;
+type UserEditFormValues = z.infer<typeof userEditFormSchema>;
 
 const UserManagement = () => {
   const { user, isAdmin } = useAuth();
@@ -92,26 +88,14 @@ const UserManagement = () => {
   const [selectedUser, setSelectedUser] = useState<UserWithProfile | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   
   const { data: users = [], isLoading, error } = useQuery({
     queryKey: ['users'],
     queryFn: getAllUsers,
   });
 
-  const addUserForm = useForm<UserFormValues>({
-    resolver: zodResolver(userFormSchema),
-    defaultValues: {
-      name: '',
-      email: '',
-      password: '',
-      role: 'user',
-      status: 'active',
-    },
-  });
-
-  const editUserForm = useForm<UserFormValues>({
-    resolver: zodResolver(userFormSchema.omit({ password: true })),
+  const editUserForm = useForm<UserEditFormValues>({
+    resolver: zodResolver(userEditFormSchema),
     defaultValues: {
       name: '',
       email: '',
@@ -120,7 +104,7 @@ const UserManagement = () => {
     },
   });
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (selectedUser && isEditDialogOpen) {
       editUserForm.reset({
         name: selectedUser.name || '',
@@ -131,43 +115,8 @@ const UserManagement = () => {
     }
   }, [selectedUser, isEditDialogOpen, editUserForm]);
 
-  const createUserMutation = useMutation({
-    mutationFn: async (userData: UserFormValues) => {
-      try {
-        return await createUser(
-          userData.email, 
-          userData.password || Math.random().toString(36).slice(-8),
-          { 
-            display_name: userData.name,
-            role: userData.role as UserRole,
-            status: userData.status as UserStatus
-          }
-        );
-      } catch (error) {
-        console.error("Error in createUserMutation:", error);
-        throw error;
-      }
-    },
-    onSuccess: () => {
-      toast({
-        title: "User Created",
-        description: "The user has been created successfully.",
-      });
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-      setIsAddDialogOpen(false);
-      addUserForm.reset();
-    },
-    onError: (error: any) => {
-      toast({
-        variant: "destructive",
-        title: "Failed to Create User",
-        description: error.message || "An error occurred while creating the user.",
-      });
-    }
-  });
-
   const updateUserMutation = useMutation({
-    mutationFn: async (userData: UserFormValues & { id: string }) => {
+    mutationFn: async (userData: UserEditFormValues & { id: string }) => {
       try {
         // Update profile first
         await updateUserProfile(userData.id, { 
@@ -227,10 +176,6 @@ const UserManagement = () => {
   if (!isAdmin()) {
     return <Navigate to="/dashboard" />;
   }
-
-  const handleAddUser = async (data: UserFormValues) => {
-    createUserMutation.mutate(data);
-  };
 
   const handleEditUser = (user: UserWithProfile) => {
     setSelectedUser(user);
@@ -328,14 +273,6 @@ const UserManagement = () => {
                     <SelectItem value="inactive">Inactive</SelectItem>
                   </SelectContent>
                 </Select>
-
-                <Button 
-                  className="gap-2" 
-                  onClick={() => setIsAddDialogOpen(true)}
-                >
-                  <UserPlus className="h-4 w-4" />
-                  <span className="hidden sm:inline">Add User</span>
-                </Button>
               </div>
             </div>
 
@@ -417,119 +354,6 @@ const UserManagement = () => {
             </div>
           </CardContent>
         </Card>
-
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Add New User</DialogTitle>
-              <DialogDescription>
-                Create a new user account with the following details.
-              </DialogDescription>
-            </DialogHeader>
-            <Form {...addUserForm}>
-              <form onSubmit={addUserForm.handleSubmit(handleAddUser)} className="space-y-4">
-                <FormField
-                  control={addUserForm.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="John Doe" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={addUserForm.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <Input placeholder="user@example.com" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={addUserForm.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Password (Optional)</FormLabel>
-                      <FormControl>
-                        <Input type="password" placeholder="Leave blank for random password" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={addUserForm.control}
-                  name="role"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Role</FormLabel>
-                      <Select 
-                        onValueChange={field.onChange} 
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a role" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="admin">Admin</SelectItem>
-                          <SelectItem value="user">User</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={addUserForm.control}
-                  name="status"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Status</FormLabel>
-                      <Select 
-                        onValueChange={field.onChange} 
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a status" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="active">Active</SelectItem>
-                          <SelectItem value="inactive">Inactive</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={createUserMutation.isPending}>
-                    {createUserMutation.isPending && (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    )}
-                    Create User
-                  </Button>
-                </DialogFooter>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
 
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
           <DialogContent className="max-w-md">
