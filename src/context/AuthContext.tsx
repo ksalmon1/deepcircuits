@@ -14,7 +14,10 @@ type AuthContextType = {
   isLoading: boolean;
   isAdmin: () => boolean;
   hasRole: (role: UserRole) => boolean;
-  updateProfile: (updates: Partial<Profile>) => Promise<void>;
+  updateProfile: (updates: Partial<Profile>) => Promise<{
+    success: boolean;
+    error?: any;
+  }>;
   signUp: (email: string, password: string, username?: string) => Promise<{
     error: any | null;
     data: any | null;
@@ -124,7 +127,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const updateProfile = async (updates: Partial<Profile>) => {
     if (!user) {
-      throw new Error("User must be logged in to update profile");
+      return { 
+        success: false, 
+        error: new Error("User must be logged in to update profile") 
+      };
     }
 
     try {
@@ -148,17 +154,27 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return { ...prevProfile, ...updates } as Profile;
       });
 
+      console.log("Profile updated successfully");
+      
       toast({
         title: "Profile updated",
         description: "Your profile has been updated successfully",
       });
+      
+      return { success: true };
     } catch (error: any) {
       console.error("Error updating profile:", error);
+      
       toast({
         variant: "destructive",
         title: "Error",
         description: error.message || "Failed to update profile",
       });
+      
+      return { 
+        success: false, 
+        error 
+      };
     }
   };
 

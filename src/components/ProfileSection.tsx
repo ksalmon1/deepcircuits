@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useProfile } from "@/hooks/use-profile";
@@ -146,35 +145,30 @@ const ProfileSection = () => {
     }
   }, [profile, user, form]);
 
-  function onSubmit(data: ProfileFormValues) {
+  async function onSubmit(data: ProfileFormValues) {
     setIsLoading(true);
     console.log("Form submitted with data:", data);
 
-    updateProfile({
+    const result = await updateProfile({
       display_name: data.display_name,
       avatar_url: data.avatar_url,
-    })
-      .then(() => {
-        setIsLoading(false);
-        console.log("Profile update completed");
-        toast({
-          title: "Profile Updated",
-          description: "Your profile has been updated successfully.",
-        });
-      })
-      .catch((error) => {
-        console.error("Error updating profile:", error);
-        setIsLoading(false);
-        toast({
-          variant: "destructive",
-          title: "Update Failed",
-          description: "There was an error updating your profile.",
-        });
+    });
+
+    setIsLoading(false);
+    
+    if (result.success) {
+      console.log("Profile update completed");
+    } else {
+      console.error("Error updating profile:", result.error);
+      toast({
+        variant: "destructive",
+        title: "Update Failed",
+        description: "There was an error updating your profile.",
       });
+    }
   }
 
   const handleDeleteAccount = () => {
-    // For now, just show a toast. In a real app, this would trigger a confirmation dialog
     toast({
       variant: "destructive",
       title: "Delete account",
