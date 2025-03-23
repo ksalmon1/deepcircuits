@@ -5,7 +5,6 @@ import { User } from "@supabase/supabase-js";
 
 export type UserWithProfile = {
   id: string;
-  email: string;
   name: string | null;
   role: UserRole;
   status: UserStatus;
@@ -43,7 +42,6 @@ export const getAllUsers = async (): Promise<UserWithProfile[]> => {
       
       return {
         id: profile.id,
-        email: profile.display_name?.includes('@') ? profile.display_name : `${profile.display_name || 'user'}@example.com`,
         name: profile.display_name || 'Unknown',
         role: (roleRecord?.role as UserRole) || 'user',
         status: (profile.status as UserStatus) || 'active',
@@ -90,7 +88,6 @@ export const getUserById = async (userId: string): Promise<UserWithProfile | nul
     
     return {
       id: profile.id,
-      email: profile.display_name?.includes('@') ? profile.display_name : `${profile.display_name || 'user'}@example.com`,
       name: profile.display_name || 'Unknown',
       role: (roleData?.role as UserRole) || 'user',
       status: (profile.status as UserStatus) || 'active',
@@ -175,55 +172,5 @@ export const updateUserRole = async (userId: string, role: UserRole): Promise<vo
   } catch (error) {
     console.error("Error in updateUserRole:", error);
     throw error;
-  }
-};
-
-// Delete a user
-export const deleteUser = async (userId: string): Promise<void> => {
-  try {
-    // Try to delete user with admin API
-    const { error: authError } = await supabase.auth.admin.deleteUser(userId);
-    
-    if (authError) {
-      console.error("Error deleting user from Auth:", authError);
-      // Fallback to just removing from profiles table for demo
-      await deleteUserPublic(userId);
-      return;
-    }
-    
-    // RLS will cascade delete related records in profiles and user_roles
-  } catch (error) {
-    console.error("Error in deleteUser:", error);
-    throw error;
-  }
-};
-
-// Fallback method for demo purposes
-const deleteUserPublic = async (userId: string): Promise<void> => {
-  try {
-    // Delete from profiles first
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .delete()
-      .eq('id', userId);
-      
-    if (profileError) {
-      console.error("Error deleting profile:", profileError);
-      throw profileError;
-    }
-    
-    // Delete from user_roles too
-    const { error: roleError } = await supabase
-      .from('user_roles')
-      .delete()
-      .eq('user_id', userId);
-      
-    if (roleError) {
-      console.error("Error deleting user role:", roleError);
-      // Continue anyway
-    }
-  } catch (error) {
-    console.error("Error in deleteUserPublic:", error);
-    throw new Error("Failed to delete user through public API. This is a demo limitation - in production you would need to use the service_role key.");
   }
 };

@@ -41,8 +41,6 @@ import {
   Search, 
   Filter, 
   Edit, 
-  Trash, 
-  AlertCircle,
   Loader2
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -50,8 +48,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
   getAllUsers, 
   updateUserProfile, 
-  updateUserRole, 
-  deleteUser,
+  updateUserRole,
   UserWithProfile
 } from "@/services/userService";
 import { UserRole, UserStatus } from "@/types/database";
@@ -69,7 +66,6 @@ import {
 
 const userEditFormSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters" }),
-  email: z.string().email({ message: "Invalid email address" }),
   role: z.enum(["user", "admin"] as const),
   status: z.enum(["active", "inactive"] as const),
 });
@@ -87,7 +83,6 @@ const UserManagement = () => {
   
   const [selectedUser, setSelectedUser] = useState<UserWithProfile | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   
   const { data: users = [], isLoading, error } = useQuery({
     queryKey: ['users'],
@@ -98,7 +93,6 @@ const UserManagement = () => {
     resolver: zodResolver(userEditFormSchema),
     defaultValues: {
       name: '',
-      email: '',
       role: 'user',
       status: 'active',
     },
@@ -108,7 +102,6 @@ const UserManagement = () => {
     if (selectedUser && isEditDialogOpen) {
       editUserForm.reset({
         name: selectedUser.name || '',
-        email: selectedUser.email,
         role: selectedUser.role,
         status: selectedUser.status,
       });
@@ -150,25 +143,6 @@ const UserManagement = () => {
     }
   });
 
-  const deleteUserMutation = useMutation({
-    mutationFn: (userId: string) => deleteUser(userId),
-    onSuccess: () => {
-      toast({
-        title: "User Deleted",
-        description: "The user has been deleted successfully.",
-      });
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-      setIsDeleteDialogOpen(false);
-    },
-    onError: (error: any) => {
-      toast({
-        variant: "destructive",
-        title: "Failed to Delete User",
-        description: error.message || "An error occurred while deleting the user.",
-      });
-    }
-  });
-
   if (!user) {
     return <Navigate to="/login" />;
   }
@@ -193,20 +167,9 @@ const UserManagement = () => {
     });
   };
 
-  const handleDeleteUser = (user: UserWithProfile) => {
-    setSelectedUser(user);
-    setIsDeleteDialogOpen(true);
-  };
-
-  const handleConfirmDelete = () => {
-    if (!selectedUser) return;
-    deleteUserMutation.mutate(selectedUser.id);
-  };
-
   const filteredUsers = users.filter(user => {
     const matchesSearch = 
-      (user.name?.toLowerCase().includes(searchTerm.toLowerCase()) || false) || 
-      user.email.toLowerCase().includes(searchTerm.toLowerCase());
+      (user.name?.toLowerCase().includes(searchTerm.toLowerCase()) || false);
     const matchesRole = roleFilter === "all" ? true : user.role === roleFilter;
     const matchesStatus = statusFilter === "all" ? true : user.status === statusFilter;
     return matchesSearch && matchesRole && matchesStatus;
@@ -281,7 +244,6 @@ const UserManagement = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Name</TableHead>
-                    <TableHead>Email</TableHead>
                     <TableHead>Role</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Joined</TableHead>
@@ -291,7 +253,7 @@ const UserManagement = () => {
                 <TableBody>
                   {isLoading ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="h-24 text-center">
+                      <TableCell colSpan={5} className="h-24 text-center">
                         <div className="flex justify-center items-center">
                           <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
                           <span>Loading users...</span>
@@ -302,7 +264,6 @@ const UserManagement = () => {
                     filteredUsers.map((user) => (
                       <TableRow key={user.id}>
                         <TableCell className="font-medium">{user.name}</TableCell>
-                        <TableCell>{user.email}</TableCell>
                         <TableCell>
                           <Badge 
                             variant={user.role === "admin" ? "default" : "outline"}
@@ -330,21 +291,13 @@ const UserManagement = () => {
                             >
                               <Edit className="h-4 w-4" />
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDeleteUser(user)}
-                              disabled={deleteUserMutation.isPending}
-                            >
-                              <Trash className="h-4 w-4 text-destructive" />
-                            </Button>
                           </div>
                         </TableCell>
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
+                      <TableCell colSpan={5} className="text-center py-6 text-muted-foreground">
                         No users match your filters.
                       </TableCell>
                     </TableRow>
@@ -374,19 +327,6 @@ const UserManagement = () => {
                         <FormLabel>Name</FormLabel>
                         <FormControl>
                           <Input {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={editUserForm.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                          <Input {...field} disabled />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -454,42 +394,6 @@ const UserManagement = () => {
                 </form>
               </Form>
             )}
-          </DialogContent>
-        </Dialog>
-
-        <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <AlertCircle className="h-5 w-5 text-destructive" />
-                Confirm Deletion
-              </DialogTitle>
-              <DialogDescription>
-                Are you sure you want to delete this user? This action cannot be undone.
-              </DialogDescription>
-            </DialogHeader>
-            {selectedUser && (
-              <div className="border rounded-md p-4 bg-muted/50 my-4">
-                <p><strong>Name:</strong> {selectedUser.name}</p>
-                <p><strong>Email:</strong> {selectedUser.email}</p>
-                <p><strong>Role:</strong> {selectedUser.role}</p>
-              </div>
-            )}
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button 
-                variant="destructive" 
-                onClick={handleConfirmDelete}
-                disabled={deleteUserMutation.isPending}
-              >
-                {deleteUserMutation.isPending && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                Delete User
-              </Button>
-            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
