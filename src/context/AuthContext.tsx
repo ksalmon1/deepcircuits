@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { Session, User, Provider } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,7 +14,7 @@ type AuthContextType = {
   isAdmin: () => boolean;
   hasRole: (role: UserRole) => boolean;
   updateProfile: (updates: Partial<Profile>) => Promise<void>;
-  signUp: (email: string, password: string) => Promise<{
+  signUp: (email: string, password: string, username?: string) => Promise<{
     error: any | null;
     data: any | null;
   }>;
@@ -42,12 +41,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Fetch profile and roles data
   const fetchUserData = async (userId: string) => {
     try {
       console.log("Fetching profile and roles for user:", userId);
       
-      // Fetch profile
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
@@ -62,7 +59,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setProfile(profileData as Profile);
       console.log("Profile loaded successfully");
 
-      // Fetch roles
       const { data: roleData, error: roleError } = await supabase
         .rpc('get_user_roles', { user_uuid: userId });
       
@@ -87,7 +83,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   useEffect(() => {
-    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         console.log("Auth state changed:", event);
@@ -104,7 +99,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     );
 
-    // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -121,14 +115,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
   }, [toast]);
 
-  // Set isLoading to false when profile and roles are loaded
   useEffect(() => {
     if (user && profile) {
       setIsLoading(false);
     }
   }, [user, profile]);
 
-  // Update user profile
   const updateProfile = async (updates: Partial<Profile>) => {
     if (!user) {
       throw new Error("User must be logged in to update profile");
@@ -144,7 +136,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         throw error;
       }
 
-      // Update local profile state with the changes
       setProfile(prev => prev ? { ...prev, ...updates } : null);
 
       toast({
@@ -161,18 +152,40 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  // Sign up with email and password
-  const signUp = async (email: string, password: string) => {
+  const signUp = async (email: string, password: string, username?: string) => {
     setIsLoading(true);
+    
+    const metadata = username ? { display_name: username } : undefined;
+    
     const response = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        data: metadata,
+      }
     });
+    
+    if (response.data.user && !response.error) {
+      try {
+        const { error: roleError } = await supabase
+          .from('user_roles')
+          .insert({ 
+            user_id: response.data.user.id, 
+            role: 'user' as UserRole 
+          });
+          
+        if (roleError) {
+          console.error("Error setting default user role:", roleError);
+        }
+      } catch (error) {
+        console.error("Failed to set default user role:", error);
+      }
+    }
+    
     setIsLoading(false);
     return response;
   };
 
-  // Sign in with email and password
   const signIn = async (email: string, password: string) => {
     setIsLoading(true);
     const response = await supabase.auth.signInWithPassword({
@@ -183,7 +196,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return response;
   };
 
-  // Sign in with social provider
   const signInWithProvider = async (provider: Provider) => {
     setIsLoading(true);
     try {
@@ -199,7 +211,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  // Sign out
   const signOut = async () => {
     setIsLoading(true);
     await supabase.auth.signOut();
@@ -207,7 +218,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setIsLoading(false);
   };
 
-  // Reset password
   const resetPassword = async (email: string) => {
     setIsLoading(true);
     const response = await supabase.auth.resetPasswordForEmail(email, {
@@ -217,10 +227,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return response;
   };
 
-  // Check if user has a specific role
   const hasRole = (role: UserRole) => roles.includes(role);
 
-  // Check if user is admin
   const isAdmin = () => hasRole('admin');
 
   const value = {

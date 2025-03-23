@@ -2,6 +2,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Profile, UserRole, UserStatus } from "@/types/database";
 import { User } from "@supabase/supabase-js";
+import { generateUsername } from "unique-username-generator";
 
 export type UserWithProfile = {
   id: string;
@@ -9,6 +10,11 @@ export type UserWithProfile = {
   role: UserRole;
   status: UserStatus;
   created_at: string;
+};
+
+// Generate a unique username for new users
+export const generateUniqueUsername = (): string => {
+  return generateUsername("-", 2, 20, "unique username");
 };
 
 // Get all users (using public schema instead of admin API)

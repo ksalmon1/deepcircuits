@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Separator } from "@/components/ui/separator";
+import { generateUniqueUsername } from "@/services/userService";
 
 const Signup = () => {
   const [email, setEmail] = useState("");
@@ -49,7 +50,11 @@ const Signup = () => {
 
     setIsLoading(true);
     try {
-      const { error, data } = await signUp(email, password);
+      // Generate a unique username
+      const username = generateUniqueUsername();
+      
+      // Sign up with the generated username as metadata
+      const { error, data } = await signUp(email, password, username);
       
       if (error) {
         toast({
