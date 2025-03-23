@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { Session, User, Provider } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -131,7 +130,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       console.log("Updating profile with data:", updates);
       
-      // First check if the profile exists
       const { data: existingProfile, error: checkError } = await supabase
         .from('profiles')
         .select('*')
@@ -143,70 +141,28 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         throw checkError;
       }
       
-      let result;
+      const { data, error } = await supabase
+        .from('profiles')
+        .upsert({
+          id: user.id,
+          ...updates,
+          updated_at: new Date().toISOString(),
+          ...(existingProfile ? {} : { created_at: new Date().toISOString() })
+        }, { 
+          onConflict: 'id',
+        });
       
-      if (existingProfile) {
-        // Update existing profile - fix: don't use select() directly in the update
-        result = await supabase
-          .from('profiles')
-          .update({
-            ...updates,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', user.id);
-          
-        // Fetch the updated profile separately to avoid the 406 error
-        if (!result.error) {
-          const { data: updatedProfile, error: fetchError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', user.id)
-            .single();
-            
-          if (!fetchError) {
-            console.log("Profile updated successfully:", updatedProfile);
-            setProfile(updatedProfile as Profile);
-          } else if (fetchError.code !== 'PGRST116') {
-            console.error("Error fetching updated profile:", fetchError);
-          }
-        }
-      } else {
-        // Insert new profile if somehow it doesn't exist
-        result = await supabase
-          .from('profiles')
-          .insert({
-            id: user.id,
-            ...updates,
-            updated_at: new Date().toISOString()
-          });
-          
-        // Fetch the inserted profile separately
-        if (!result.error) {
-          const { data: newProfile, error: fetchError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', user.id)
-            .single();
-            
-          if (!fetchError) {
-            console.log("Profile created successfully:", newProfile);
-            setProfile(newProfile as Profile);
-          } else if (fetchError.code !== 'PGRST116') {
-            console.error("Error fetching new profile:", fetchError);
-          }
-        }
+      if (error) {
+        console.error("Error updating profile:", error);
+        throw error;
       }
       
-      if (result.error) {
-        console.error("Error updating profile:", result.error);
-        throw result.error;
-      }
+      setProfile(prev => {
+        if (!prev) return { id: user.id, ...updates } as Profile;
+        return { ...prev, ...updates } as Profile;
+      });
       
-      // If we couldn't get the profile above, fetch it again
-      if (!setProfile) {
-        console.log("No profile data available, fetching profile again");
-        await fetchUserData(user.id);
-      }
+      await fetchUserData(user.id);
 
       toast({
         title: "Profile updated",
