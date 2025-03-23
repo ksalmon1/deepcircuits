@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useProfile } from "@/hooks/use-profile";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -487,7 +486,7 @@ const ProfileSection = () => {
                         <p className="text-sm text-muted-foreground">Oct 15, 2023</p>
                       </div>
                       <div className="text-right">
-                        <p className="font-medium">{planDetails[currentPlanTier].price.replace('$', '')}</p>
+                        <p className="font-medium">{planDetails[currentPlanTier].price?.replace('$', '') || '0'}</p>
                         <Badge variant="outline" className="bg-green-50">Paid</Badge>
                       </div>
                     </div>
@@ -497,7 +496,7 @@ const ProfileSection = () => {
                         <p className="text-sm text-muted-foreground">Sep 15, 2023</p>
                       </div>
                       <div className="text-right">
-                        <p className="font-medium">{planDetails[currentPlanTier].price.replace('$', '')}</p>
+                        <p className="font-medium">{planDetails[currentPlanTier].price?.replace('$', '') || '0'}</p>
                         <Badge variant="outline" className="bg-green-50">Paid</Badge>
                       </div>
                     </div>

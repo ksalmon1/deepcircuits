@@ -38,7 +38,7 @@ export const getAllUsers = async (): Promise<UserWithProfile[]> => {
     }
 
     // Map profiles with their roles
-    const users = profiles.map((profile: Profile) => {
+    const users = profiles.map((profile) => {
       const roleRecord = userRoles?.find((r) => r.user_id === profile.id) || null;
       
       return {
@@ -46,7 +46,7 @@ export const getAllUsers = async (): Promise<UserWithProfile[]> => {
         email: profile.display_name?.includes('@') ? profile.display_name : `${profile.display_name || 'user'}@example.com`,
         name: profile.display_name || 'Unknown',
         role: (roleRecord?.role as UserRole) || 'user',
-        status: profile.status as 'active' | 'inactive' || 'active',
+        status: (profile.status as 'active' | 'inactive') || 'active',
         created_at: profile.created_at,
       };
     });
