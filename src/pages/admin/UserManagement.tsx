@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import PageLayout from "@/components/PageLayout";
 import { useAuth } from "@/context/AuthContext";
@@ -73,7 +72,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-// Schema for add/edit user form
 const userFormSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters" }),
   email: z.string().email({ message: "Invalid email address" }),
@@ -99,13 +97,11 @@ const UserManagement = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   
-  // Fetch users
   const { data: users = [], isLoading, error } = useQuery({
     queryKey: ['users'],
     queryFn: getAllUsers,
   });
 
-  // Create user form
   const addUserForm = useForm<UserFormValues>({
     resolver: zodResolver(userFormSchema),
     defaultValues: {
@@ -117,7 +113,6 @@ const UserManagement = () => {
     },
   });
 
-  // Edit user form
   const editUserForm = useForm<UserFormValues>({
     resolver: zodResolver(userFormSchema.omit({ password: true })),
     defaultValues: {
@@ -128,7 +123,6 @@ const UserManagement = () => {
     },
   });
 
-  // Set edit form values when a user is selected
   useEffect(() => {
     if (selectedUser && isEditDialogOpen) {
       editUserForm.reset({
@@ -140,12 +134,11 @@ const UserManagement = () => {
     }
   }, [selectedUser, isEditDialogOpen, editUserForm]);
 
-  // Create user mutation
   const createUserMutation = useMutation({
     mutationFn: async (userData: UserFormValues) => {
       return await createUser(
         userData.email, 
-        userData.password || Math.random().toString(36).slice(-8), // Generate random password if not provided
+        userData.password || Math.random().toString(36).slice(-8),
         { 
           display_name: userData.name,
           role: userData.role as UserRole 
@@ -170,18 +163,11 @@ const UserManagement = () => {
     }
   });
 
-  // Update user mutation
   const updateUserMutation = useMutation({
     mutationFn: async (userData: UserFormValues & { id: string }) => {
-      // Update profile (name)
       await updateUserProfile(userData.id, { display_name: userData.name });
-      
-      // Update role
       await updateUserRole(userData.id, userData.role as UserRole);
-      
-      // Update status
       await updateUserStatus(userData.id, userData.status);
-      
       return userData.id;
     },
     onSuccess: () => {
@@ -201,7 +187,6 @@ const UserManagement = () => {
     }
   });
 
-  // Delete user mutation
   const deleteUserMutation = useMutation({
     mutationFn: (userId: string) => deleteUser(userId),
     onSuccess: () => {
@@ -369,7 +354,7 @@ const UserManagement = () => {
                         <TableCell>{user.email}</TableCell>
                         <TableCell>
                           <Badge 
-                            variant={user.role === "admin" ? "default" : user.role === "moderator" ? "secondary" : "outline"}
+                            variant={user.role === "admin" ? "default" : (user.role === "moderator" ? "secondary" : "outline")}
                           >
                             {user.role}
                           </Badge>
@@ -418,7 +403,6 @@ const UserManagement = () => {
           </CardContent>
         </Card>
 
-        {/* Add User Dialog */}
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogContent className="max-w-md">
             <DialogHeader>
@@ -533,7 +517,6 @@ const UserManagement = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Edit User Dialog */}
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
           <DialogContent className="max-w-md">
             <DialogHeader>
@@ -637,7 +620,6 @@ const UserManagement = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Delete User Dialog */}
         <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
           <DialogContent>
             <DialogHeader>

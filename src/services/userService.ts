@@ -49,12 +49,16 @@ export const getAllUsers = async (): Promise<UserWithProfile[]> => {
       const profile = profiles?.find((p: Profile) => p.id === user.id) || null;
       const role = userRoles?.find((r) => r.user_id === user.id)?.role || 'user';
       
+      // Check if user is disabled/banned
+      const userMetadata = user.user_metadata || {};
+      const isDisabled = userMetadata.disabled === true || user.email_confirmed_at === null;
+      
       return {
         id: user.id,
         email: user.email || '',
         name: profile?.display_name || user.email?.split('@')[0] || 'Unknown',
         role: role as UserRole,
-        status: user.banned ? 'inactive' : 'active',
+        status: isDisabled ? 'inactive' : 'active',
         created_at: user.created_at || new Date().toISOString(),
       };
     });
@@ -97,12 +101,15 @@ export const getUserById = async (userId: string): Promise<UserWithProfile | nul
     }
 
     const user = authUser.user;
+    const userMetadata = user.user_metadata || {};
+    const isDisabled = userMetadata.disabled === true || user.email_confirmed_at === null;
+    
     return {
       id: user.id,
       email: user.email || '',
       name: profile?.display_name || user.email?.split('@')[0] || 'Unknown',
       role: (roleData?.role as UserRole) || 'user',
-      status: user.banned ? 'inactive' : 'active',
+      status: isDisabled ? 'inactive' : 'active',
       created_at: user.created_at || new Date().toISOString(),
     };
   } catch (error) {
@@ -137,7 +144,7 @@ export const updateUserProfile = async (
 export const updateUserStatus = async (userId: string, status: 'active' | 'inactive'): Promise<void> => {
   const { error } = await supabase.auth.admin.updateUserById(
     userId,
-    { banned: status === 'inactive' }
+    { user_metadata: { disabled: status === 'inactive' } }
   );
 
   if (error) {
