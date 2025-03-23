@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { Session, User, Provider } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -143,13 +144,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.log("Updating profile with data:", updates);
       console.log("Current user ID:", user.id);
       
+      // Using upsert instead of update to handle cases where the profile might not exist
       const { data, error } = await supabase
         .from('profiles')
-        .update({
+        .upsert({
+          id: user.id,  // Include ID to ensure we're updating the right record
           ...updates,
           updated_at: new Date().toISOString()
         })
-        .eq('id', user.id)
         .select();
       
       if (error) {
@@ -169,14 +171,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       console.log("Profile updated successfully. Response data:", data);
       
-      if (data && data.length > 0) {
-        setProfile(prevProfile => {
-          if (!prevProfile) return data[0] as Profile;
-          return { ...prevProfile, ...updates } as Profile;
-        });
-      } else {
-        console.warn("No profile data returned after update");
-      }
+      // Even if data is empty, update the local state with the updates
+      // This ensures the UI reflects the changes even if Supabase didn't return data
+      setProfile(prevProfile => {
+        if (!prevProfile) return { 
+          id: user.id, 
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          status: 'active',
+          ...updates 
+        } as Profile;
+        
+        return { ...prevProfile, ...updates } as Profile;
+      });
 
       toast({
         title: "Profile updated",
