@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import PageLayout from "@/components/PageLayout";
 import { useAuth } from "@/context/AuthContext";
 import { Navigate } from "react-router-dom";
-import { useProfile } from "@/hooks/use-profile";
 import { 
   Card, 
   CardContent, 
@@ -27,7 +26,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -89,8 +87,8 @@ const UserManagement = () => {
   const queryClient = useQueryClient();
   
   const [searchTerm, setSearchTerm] = useState("");
-  const [roleFilter, setRoleFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [roleFilter, setRoleFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   
   const [selectedUser, setSelectedUser] = useState<UserWithProfile | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -248,8 +246,8 @@ const UserManagement = () => {
     const matchesSearch = 
       (user.name?.toLowerCase().includes(searchTerm.toLowerCase()) || false) || 
       user.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRole = roleFilter ? user.role === roleFilter : true;
-    const matchesStatus = statusFilter ? user.status === statusFilter : true;
+    const matchesRole = roleFilter === "all" ? true : user.role === roleFilter;
+    const matchesStatus = statusFilter === "all" ? true : user.status === statusFilter;
     return matchesSearch && matchesRole && matchesStatus;
   });
 
@@ -290,11 +288,11 @@ const UserManagement = () => {
                   <SelectTrigger className="w-[130px]">
                     <div className="flex items-center gap-2">
                       <Filter className="h-4 w-4" />
-                      <span>{roleFilter || "Role"}</span>
+                      <span>{roleFilter === "all" ? "Role" : roleFilter}</span>
                     </div>
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Roles</SelectItem>
+                    <SelectItem value="all">All Roles</SelectItem>
                     <SelectItem value="admin">Admin</SelectItem>
                     <SelectItem value="user">User</SelectItem>
                   </SelectContent>
@@ -304,11 +302,11 @@ const UserManagement = () => {
                   <SelectTrigger className="w-[130px]">
                     <div className="flex items-center gap-2">
                       <Filter className="h-4 w-4" />
-                      <span>{statusFilter || "Status"}</span>
+                      <span>{statusFilter === "all" ? "Status" : statusFilter}</span>
                     </div>
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Status</SelectItem>
+                    <SelectItem value="all">All Status</SelectItem>
                     <SelectItem value="active">Active</SelectItem>
                     <SelectItem value="inactive">Inactive</SelectItem>
                   </SelectContent>
