@@ -58,3 +58,5 @@ export type VersionHistory = {
   created_at: string;
   created_by: string;
 };
+
+export type UserStatus = 'active' | 'inactive';

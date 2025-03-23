@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Profile, UserRole } from "@/types/database";
 import { User } from "@supabase/supabase-js";
@@ -58,7 +57,7 @@ export const getAllUsers = async (): Promise<UserWithProfile[]> => {
         email: user.email || '',
         name: profile?.display_name || user.email?.split('@')[0] || 'Unknown',
         role: role as UserRole,
-        status: isDisabled ? 'inactive' : 'active',
+        status: isDisabled ? 'inactive' as const : 'active' as const,
         created_at: user.created_at || new Date().toISOString(),
       };
     });
