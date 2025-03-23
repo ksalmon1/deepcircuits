@@ -119,7 +119,7 @@ export const useProfile = () => {
     return roles.includes(role);
   };
 
-  // Check if user is admin
+  // Check if user is admin - memoized function to avoid unnecessary rerenders
   const isAdmin = () => {
     return hasRole('admin');
   };
