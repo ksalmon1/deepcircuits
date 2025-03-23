@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import PageLayout from "@/components/PageLayout";
 import { useAuth } from "@/context/AuthContext";
@@ -232,7 +233,7 @@ const ComponentLibrary = () => {
                     </div>
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Categories</SelectItem>
+                    <SelectItem value="all">All Categories</SelectItem>
                     <SelectItem value="input">Input</SelectItem>
                     <SelectItem value="output">Output</SelectItem>
                     <SelectItem value="passive">Passive</SelectItem>
@@ -248,7 +249,7 @@ const ComponentLibrary = () => {
                     </div>
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Types</SelectItem>
+                    <SelectItem value="all">All Types</SelectItem>
                     <SelectItem value="basic">Basic</SelectItem>
                     <SelectItem value="complex">Complex</SelectItem>
                   </SelectContent>
@@ -363,7 +364,7 @@ const ComponentLibrary = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <label htmlFor="category">Category</label>
-                  <Select>
+                  <Select defaultValue="input">
                     <SelectTrigger>
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
@@ -377,7 +378,7 @@ const ComponentLibrary = () => {
                 </div>
                 <div className="grid gap-2">
                   <label htmlFor="type">Type</label>
-                  <Select>
+                  <Select defaultValue="basic">
                     <SelectTrigger>
                       <SelectValue placeholder="Select type" />
                     </SelectTrigger>
