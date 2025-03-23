@@ -19,7 +19,7 @@ import NotFound from "@/pages/NotFound";
 import ForgotPassword from "@/pages/ForgotPassword";
 import ResetPassword from "@/pages/ResetPassword";
 import CircuitEditorPage from "@/components/CircuitEditor/CircuitEditorPage";
-import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { ProtectedRoute, PublicOnlyRoute } from "@/components/ProtectedRoute";
 import { AdminRoute } from "@/components/AdminRoute";
 import { AuthProvider } from "@/context/AuthContext";
 
@@ -35,8 +35,8 @@ function App() {
           <Routes>
             {/* Public Routes */}
             <Route path="/" element={<Index />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
+            <Route path="/login" element={<PublicOnlyRoute><Login /></PublicOnlyRoute>} />
+            <Route path="/signup" element={<PublicOnlyRoute><Signup /></PublicOnlyRoute>} />
             <Route path="/about" element={<About />} />
             <Route path="/features" element={<Features />} />
             <Route path="/pricing" element={<Pricing />} />

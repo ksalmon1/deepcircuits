@@ -39,8 +39,7 @@ export const useProfile = () => {
 
         setProfile(profileData as Profile);
 
-        // Instead of querying the user_roles table directly (which can cause infinite recursion),
-        // we'll use our RPC function that's designed to avoid these issues
+        // Use the RPC function to get user roles
         const { data: roleData, error: roleError } = await supabase
           .rpc('get_user_roles', { user_uuid: user.id });
         

@@ -93,7 +93,7 @@ export const getUserById = async (userId: string): Promise<UserWithProfile | nul
       email: profile.display_name?.includes('@') ? profile.display_name : `${profile.display_name || 'user'}@example.com`,
       name: profile.display_name || 'Unknown',
       role: (roleData?.role as UserRole) || 'user',
-      status: profile.status as 'active' | 'inactive' || 'active',
+      status: (profile.status as 'active' | 'inactive') || 'active',
       created_at: profile.created_at,
     };
   } catch (error) {
