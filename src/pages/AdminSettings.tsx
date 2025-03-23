@@ -13,6 +13,8 @@ import { Shield, Users, Cog, Database } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const AdminSettings = () => {
+  console.log("Rendering AdminSettings page");
+  
   return (
     <PageLayout>
       <div className="container py-12">

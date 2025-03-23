@@ -441,7 +441,11 @@ const ProfileSection = () => {
                           </div>
                           <div className="flex items-end gap-1">
                             <span className="text-2xl font-bold">
-                              {currentPlanTier && planDetails[currentPlanTier] && planDetails[currentPlanTier]?.price?.replace('$', '')}
+                              {currentPlanTier && 
+                               planDetails[currentPlanTier as keyof typeof planDetails] && 
+                               typeof planDetails[currentPlanTier as keyof typeof planDetails]?.price === 'string' ? 
+                               planDetails[currentPlanTier as keyof typeof planDetails]?.price?.replace('$', '') : 
+                               '0'}
                             </span>
                             <span className="text-sm text-muted-foreground mb-1">{plan.interval}</span>
                           </div>
@@ -548,3 +552,4 @@ const ProfileSection = () => {
 };
 
 export default ProfileSection;
+
