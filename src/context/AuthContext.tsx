@@ -145,7 +145,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         .eq('id', user.id);
       
       if (error) {
-        console.error("Error updating profile:", error);
+        console.error("Supabase update error:", error);
         throw error;
       }
 
