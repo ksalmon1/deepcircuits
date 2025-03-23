@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Profile, UserRole, UserStatus } from "@/types/database";
 import { User } from "@supabase/supabase-js";
@@ -180,4 +179,3 @@ export const updateUserRole = async (userId: string, role: UserRole): Promise<vo
     throw error;
   }
 };
-

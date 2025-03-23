@@ -1,10 +1,10 @@
-
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { Session, User, Provider } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { Profile, UserRole } from "@/types/database";
 import { useToast } from "@/hooks/use-toast";
+import { generateUniqueUsername } from "@/services/userService";
 
 type AuthContextType = {
   session: Session | null;
@@ -156,6 +156,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signUp = async (email: string, password: string, username?: string) => {
     setIsLoading(true);
     
+    // If username is provided, add it to the metadata to be used by the trigger
     const metadata = username ? { display_name: username } : undefined;
     
     const response = await supabase.auth.signUp({
@@ -165,23 +166,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         data: metadata,
       }
     });
-    
-    if (response.data.user && !response.error) {
-      try {
-        const { error: roleError } = await supabase
-          .from('user_roles')
-          .insert({ 
-            user_id: response.data.user.id, 
-            role: 'user' as UserRole 
-          });
-          
-        if (roleError) {
-          console.error("Error setting default user role:", roleError);
-        }
-      } catch (error) {
-        console.error("Failed to set default user role:", error);
-      }
-    }
     
     setIsLoading(false);
     return response;
