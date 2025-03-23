@@ -123,7 +123,13 @@ export const updateUserProfile = async (
       throw error;
     }
 
-    return profile;
+    // Ensure the status is correctly typed as UserStatus
+    const typedProfile: Profile = {
+      ...profile,
+      status: profile.status as UserStatus
+    };
+
+    return typedProfile;
   } catch (error) {
     console.error("Error in updateUserProfile:", error);
     throw error;
