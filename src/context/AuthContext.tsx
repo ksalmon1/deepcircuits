@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { Session, User, Provider } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -128,22 +129,56 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
 
     try {
-      const { data, error } = await supabase
+      console.log("Updating profile with data:", updates);
+      
+      // First check if the profile exists
+      const { data: existingProfile, error: checkError } = await supabase
         .from('profiles')
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString()
-        })
+        .select('*')
         .eq('id', user.id)
-        .select();
-
-      if (error) {
-        throw error;
+        .single();
+      
+      if (checkError && checkError.code !== 'PGRST116') { // Not PGRST116 means it's not "No rows returned" error
+        console.error("Error checking profile:", checkError);
+        throw checkError;
       }
-
-      if (data && data.length > 0) {
-        setProfile(data[0] as Profile);
+      
+      let result;
+      
+      if (existingProfile) {
+        // Update existing profile
+        result = await supabase
+          .from('profiles')
+          .update({
+            ...updates,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', user.id)
+          .select('*')
+          .single();
       } else {
+        // Insert new profile if somehow it doesn't exist
+        result = await supabase
+          .from('profiles')
+          .insert({
+            id: user.id,
+            ...updates,
+            updated_at: new Date().toISOString()
+          })
+          .select('*')
+          .single();
+      }
+      
+      if (result.error) {
+        console.error("Error updating profile:", result.error);
+        throw result.error;
+      }
+      
+      if (result.data) {
+        console.log("Profile updated successfully:", result.data);
+        setProfile(result.data as Profile);
+      } else {
+        console.log("No data returned after update, fetching profile again");
         await fetchUserData(user.id);
       }
 

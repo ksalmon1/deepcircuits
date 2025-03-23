@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useProfile } from "@/hooks/use-profile";
@@ -137,6 +138,7 @@ const ProfileSection = () => {
 
   useEffect(() => {
     if (profile) {
+      console.log("Setting form values from profile:", profile);
       form.reset({
         display_name: profile.display_name || "",
         avatar_url: profile.avatar_url || "",
@@ -146,6 +148,7 @@ const ProfileSection = () => {
 
   function onSubmit(data: ProfileFormValues) {
     setIsLoading(true);
+    console.log("Form submitted with data:", data);
 
     updateProfile({
       display_name: data.display_name,
@@ -153,6 +156,7 @@ const ProfileSection = () => {
     })
       .then(() => {
         setIsLoading(false);
+        console.log("Profile update completed");
         toast({
           title: "Profile Updated",
           description: "Your profile has been updated successfully.",
