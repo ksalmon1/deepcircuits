@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useProfile } from "@/hooks/use-profile";
@@ -65,18 +64,13 @@ interface PlanDetails {
 }
 
 const profileFormSchema = z.object({
-  name: z
+  display_name: z
     .string()
     .min(2, {
-      message: "Name must be at least 2 characters.",
+      message: "Display name must be at least 2 characters.",
     })
     .max(30, {
-      message: "Name cannot be longer than 30 characters.",
-    }),
-  email: z
-    .string()
-    .email({
-      message: "Please enter a valid email address.",
+      message: "Display name cannot be longer than 30 characters.",
     }),
   avatar_url: z.string().optional(),
 });
@@ -136,8 +130,7 @@ const ProfileSection = () => {
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
-      name: "",
-      email: "",
+      display_name: "",
       avatar_url: "",
     },
   });
@@ -145,8 +138,7 @@ const ProfileSection = () => {
   useEffect(() => {
     if (profile) {
       form.reset({
-        name: profile.display_name || "",
-        email: user?.email || "",
+        display_name: profile.display_name || "",
         avatar_url: profile.avatar_url || "",
       });
     }
@@ -156,15 +148,24 @@ const ProfileSection = () => {
     setIsLoading(true);
 
     updateProfile({
-      display_name: data.name,
+      display_name: data.display_name,
       avatar_url: data.avatar_url,
     })
       .then(() => {
         setIsLoading(false);
+        toast({
+          title: "Profile Updated",
+          description: "Your profile has been updated successfully.",
+        });
       })
       .catch((error) => {
         console.error("Error updating profile:", error);
         setIsLoading(false);
+        toast({
+          variant: "destructive",
+          title: "Update Failed",
+          description: "There was an error updating your profile.",
+        });
       });
   }
 
@@ -200,43 +201,21 @@ const ProfileSection = () => {
                     </Avatar>
                     <div>
                       <h3 className="text-lg font-medium">{profile?.display_name}</h3>
-                      <p className="text-sm text-slate-500">{user?.email}</p>
+                      <p className="text-sm text-slate-500">Account ID: {user?.id?.substring(0, 8)}...</p>
                     </div>
                   </div>
 
                   <FormField
                     control={form.control}
-                    name="name"
+                    name="display_name"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Display Name</FormLabel>
                         <FormControl>
-                          <Input placeholder="Your name" {...field} />
+                          <Input placeholder="Your display name" {...field} />
                         </FormControl>
                         <FormDescription>
                           This is the name that will be displayed to other users.
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="Your email address"
-                            type="email"
-                            disabled
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          Your email address is used for account-related notifications.
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
