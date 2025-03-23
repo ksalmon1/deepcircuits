@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import PageLayout from "@/components/PageLayout";
 import { useAuth } from "@/context/AuthContext";
@@ -51,13 +52,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
   getAllUsers, 
   updateUserProfile, 
-  updateUserStatus, 
   updateUserRole, 
   createUser, 
   deleteUser,
   UserWithProfile
 } from "@/services/userService";
-import { UserRole } from "@/types/database";
+import { UserRole, UserStatus } from "@/types/database";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -133,14 +133,20 @@ const UserManagement = () => {
 
   const createUserMutation = useMutation({
     mutationFn: async (userData: UserFormValues) => {
-      return await createUser(
-        userData.email, 
-        userData.password || Math.random().toString(36).slice(-8),
-        { 
-          display_name: userData.name,
-          role: userData.role as UserRole 
-        }
-      );
+      try {
+        return await createUser(
+          userData.email, 
+          userData.password || Math.random().toString(36).slice(-8),
+          { 
+            display_name: userData.name,
+            role: userData.role as UserRole,
+            status: userData.status as UserStatus
+          }
+        );
+      } catch (error) {
+        console.error("Error in createUserMutation:", error);
+        throw error;
+      }
     },
     onSuccess: () => {
       toast({
@@ -162,10 +168,21 @@ const UserManagement = () => {
 
   const updateUserMutation = useMutation({
     mutationFn: async (userData: UserFormValues & { id: string }) => {
-      await updateUserProfile(userData.id, { display_name: userData.name });
-      await updateUserRole(userData.id, userData.role as UserRole);
-      await updateUserStatus(userData.id, userData.status);
-      return userData.id;
+      try {
+        // Update profile first
+        await updateUserProfile(userData.id, { 
+          display_name: userData.name,
+          status: userData.status as UserStatus
+        });
+        
+        // Then update role
+        await updateUserRole(userData.id, userData.role as UserRole);
+        
+        return userData.id;
+      } catch (error) {
+        console.error("Error in updateUserMutation:", error);
+        throw error;
+      }
     },
     onSuccess: () => {
       toast({
@@ -251,6 +268,7 @@ const UserManagement = () => {
   });
 
   if (error) {
+    console.error("Error fetching users:", error);
     toast({
       variant: "destructive",
       title: "Error Loading Users",
@@ -351,6 +369,7 @@ const UserManagement = () => {
                         <TableCell>
                           <Badge 
                             variant={user.role === "admin" ? "default" : "outline"}
+                            className={user.role === "admin" ? "bg-primary text-primary-foreground" : ""}
                           >
                             {user.role}
                           </Badge>

@@ -5,6 +5,7 @@ export type Profile = {
   avatar_url: string | null;
   created_at: string;
   updated_at: string;
+  status: UserStatus;
 };
 
 export type UserRole = 'user' | 'admin';
@@ -15,6 +16,8 @@ export type UserRoleRecord = {
   role: UserRole;
   created_at: string;
 };
+
+export type UserStatus = 'active' | 'inactive';
 
 export type Project = {
   id: string;
@@ -58,5 +61,3 @@ export type VersionHistory = {
   created_at: string;
   created_by: string;
 };
-
-export type UserStatus = 'active' | 'inactive';
