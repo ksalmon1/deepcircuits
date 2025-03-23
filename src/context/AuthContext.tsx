@@ -128,16 +128,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
 
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('profiles')
-        .update(updates)
-        .eq('id', user.id);
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id)
+        .select();
 
       if (error) {
         throw error;
       }
 
-      setProfile(prev => prev ? { ...prev, ...updates } : null);
+      if (data && data.length > 0) {
+        setProfile(data[0] as Profile);
+      } else {
+        await fetchUserData(user.id);
+      }
 
       toast({
         title: "Profile updated",
@@ -156,7 +164,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signUp = async (email: string, password: string, username?: string) => {
     setIsLoading(true);
     
-    // If username is provided, add it to the metadata to be used by the trigger
     const metadata = username ? { display_name: username } : undefined;
     
     const response = await supabase.auth.signUp({
