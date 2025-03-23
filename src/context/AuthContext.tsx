@@ -146,16 +146,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       let result;
       
       if (existingProfile) {
-        // Update existing profile
+        // Update existing profile - fix: don't use select() directly in the update
         result = await supabase
           .from('profiles')
           .update({
             ...updates,
             updated_at: new Date().toISOString()
           })
-          .eq('id', user.id)
-          .select('*')
-          .single();
+          .eq('id', user.id);
+          
+        // Fetch the updated profile separately to avoid the 406 error
+        if (!result.error) {
+          const { data: updatedProfile, error: fetchError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+            
+          if (!fetchError) {
+            console.log("Profile updated successfully:", updatedProfile);
+            setProfile(updatedProfile as Profile);
+          } else if (fetchError.code !== 'PGRST116') {
+            console.error("Error fetching updated profile:", fetchError);
+          }
+        }
       } else {
         // Insert new profile if somehow it doesn't exist
         result = await supabase
@@ -164,9 +178,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             id: user.id,
             ...updates,
             updated_at: new Date().toISOString()
-          })
-          .select('*')
-          .single();
+          });
+          
+        // Fetch the inserted profile separately
+        if (!result.error) {
+          const { data: newProfile, error: fetchError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+            
+          if (!fetchError) {
+            console.log("Profile created successfully:", newProfile);
+            setProfile(newProfile as Profile);
+          } else if (fetchError.code !== 'PGRST116') {
+            console.error("Error fetching new profile:", fetchError);
+          }
+        }
       }
       
       if (result.error) {
@@ -174,11 +202,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         throw result.error;
       }
       
-      if (result.data) {
-        console.log("Profile updated successfully:", result.data);
-        setProfile(result.data as Profile);
-      } else {
-        console.log("No data returned after update, fetching profile again");
+      // If we couldn't get the profile above, fetch it again
+      if (!setProfile) {
+        console.log("No profile data available, fetching profile again");
         await fetchUserData(user.id);
       }
 
