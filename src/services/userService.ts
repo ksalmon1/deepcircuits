@@ -1,7 +1,8 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Profile, UserRole, UserStatus } from "@/types/database";
 import { User } from "@supabase/supabase-js";
-import { generateUsername } from "unique-username-generator";
+import { generateUsername, type Config } from "unique-username-generator";
 
 export type UserWithProfile = {
   id: string;
@@ -11,9 +12,33 @@ export type UserWithProfile = {
   created_at: string;
 };
 
+// Custom dictionaries for username generation
+const circuitTerms = [
+  "resistor", "capacitor", "inductor", "diode", "transistor", 
+  "circuit", "logic", "gate", "sensor", "relay", "switch",
+  "board", "chip", "micro", "analog", "digital", "signal",
+  "wire", "current", "voltage", "power", "phase", "led",
+  "motor", "arduino", "pi", "nano", "mega", "uno", "byte"
+];
+
+const descriptors = [
+  "awesome", "brilliant", "clever", "dynamic", "electric",
+  "fast", "genius", "happy", "innovative", "jolly", "keen",
+  "lively", "magical", "nimble", "original", "powerful",
+  "quick", "rapid", "super", "talented", "unique", "vibrant",
+  "wise", "xpert", "youthful", "zippy", "creative", "smart"
+];
+
 // Generate a unique username for new users
 export const generateUniqueUsername = (): string => {
-  return generateUsername("-", 2, 20, "unique username");
+  const config: Config = {
+    dictionaries: [descriptors, circuitTerms],
+    separator: "-",
+    style: "capital",
+    randomDigits: 2
+  };
+  
+  return generateUsername(config);
 };
 
 // Get all users (using public schema instead of admin API)
