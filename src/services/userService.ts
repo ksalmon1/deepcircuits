@@ -2,7 +2,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Profile, UserRole, UserStatus } from "@/types/database";
 import { User } from "@supabase/supabase-js";
-import { generateUsername, type Config } from "unique-username-generator";
+import { generateUsername, Config } from "unique-username-generator";
 
 export type UserWithProfile = {
   id: string;
@@ -38,6 +38,7 @@ export const generateUniqueUsername = (): string => {
     randomDigits: 2
   };
   
+  // Using the correct function signature with the config object
   return generateUsername(config);
 };
 
