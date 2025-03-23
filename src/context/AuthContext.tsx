@@ -127,6 +127,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const updateProfile = async (updates: Partial<Profile>) => {
     if (!user) {
+      console.error("User must be logged in to update profile");
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "You must be logged in to update your profile",
+      });
       return { 
         success: false, 
         error: new Error("User must be logged in to update profile") 
@@ -135,27 +141,43 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     try {
       console.log("Updating profile with data:", updates);
+      console.log("Current user ID:", user.id);
       
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('profiles')
         .update({
           ...updates,
           updated_at: new Date().toISOString()
         })
-        .eq('id', user.id);
+        .eq('id', user.id)
+        .select();
       
       if (error) {
         console.error("Supabase update error:", error);
-        throw error;
+        
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: error.message || "Failed to update profile",
+        });
+        
+        return { 
+          success: false, 
+          error 
+        };
       }
 
-      setProfile(prevProfile => {
-        if (!prevProfile) return { id: user.id, ...updates } as Profile;
-        return { ...prevProfile, ...updates } as Profile;
-      });
-
-      console.log("Profile updated successfully");
+      console.log("Profile updated successfully. Response data:", data);
       
+      if (data && data.length > 0) {
+        setProfile(prevProfile => {
+          if (!prevProfile) return data[0] as Profile;
+          return { ...prevProfile, ...updates } as Profile;
+        });
+      } else {
+        console.warn("No profile data returned after update");
+      }
+
       toast({
         title: "Profile updated",
         description: "Your profile has been updated successfully",

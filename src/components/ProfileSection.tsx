@@ -1,3 +1,7 @@
+
+// Only updating the onSubmit function in ProfileSection.tsx
+// We only need to modify this one function, leaving the rest of the file intact
+
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useProfile } from "@/hooks/use-profile";
@@ -149,6 +153,23 @@ const ProfileSection = () => {
     setIsLoading(true);
     console.log("Form submitted with data:", data);
 
+    // Clear any previous form errors
+    if (form.formState.errors) {
+      form.clearErrors();
+    }
+
+    // Make sure we have a valid user before attempting the update
+    if (!user) {
+      console.error("Cannot update profile: No user logged in");
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "You must be logged in to update your profile.",
+      });
+      setIsLoading(false);
+      return;
+    }
+
     const result = await updateProfile({
       display_name: data.display_name,
       avatar_url: data.avatar_url,
@@ -157,14 +178,11 @@ const ProfileSection = () => {
     setIsLoading(false);
     
     if (result.success) {
-      console.log("Profile update completed");
+      console.log("Profile update completed successfully");
+      // We don't need to show success toast here as it's already shown in updateProfile
     } else {
       console.error("Error updating profile:", result.error);
-      toast({
-        variant: "destructive",
-        title: "Update Failed",
-        description: "There was an error updating your profile.",
-      });
+      // Error toast is already shown in updateProfile
     }
   }
 
