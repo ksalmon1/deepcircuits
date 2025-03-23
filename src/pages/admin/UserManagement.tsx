@@ -81,8 +81,7 @@ const userFormSchema = z.object({
 type UserFormValues = z.infer<typeof userFormSchema>;
 
 const UserManagement = () => {
-  const { user } = useAuth();
-  const { isAdmin } = useProfile();
+  const { user, isAdmin } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   

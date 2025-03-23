@@ -14,6 +14,7 @@ type AuthContextType = {
   isLoading: boolean;
   isAdmin: () => boolean;
   hasRole: (role: UserRole) => boolean;
+  updateProfile: (updates: Partial<Profile>) => Promise<void>;
   signUp: (email: string, password: string) => Promise<{
     error: any | null;
     data: any | null;
@@ -127,6 +128,39 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, [user, profile]);
 
+  // Update user profile
+  const updateProfile = async (updates: Partial<Profile>) => {
+    if (!user) {
+      throw new Error("User must be logged in to update profile");
+    }
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update(updates)
+        .eq('id', user.id);
+
+      if (error) {
+        throw error;
+      }
+
+      // Update local profile state with the changes
+      setProfile(prev => prev ? { ...prev, ...updates } : null);
+
+      toast({
+        title: "Profile updated",
+        description: "Your profile has been updated successfully",
+      });
+    } catch (error: any) {
+      console.error("Error updating profile:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to update profile",
+      });
+    }
+  };
+
   // Sign up with email and password
   const signUp = async (email: string, password: string) => {
     setIsLoading(true);
@@ -197,6 +231,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     isLoading,
     isAdmin,
     hasRole,
+    updateProfile,
     signUp,
     signIn,
     signInWithProvider,
