@@ -76,7 +76,7 @@ const userFormSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters" }),
   email: z.string().email({ message: "Invalid email address" }),
   password: z.string().min(6, { message: "Password must be at least 6 characters" }).optional(),
-  role: z.enum(["user", "admin", "moderator"] as const),
+  role: z.enum(["user", "admin"] as const),
   status: z.enum(["active", "inactive"] as const),
 });
 
@@ -296,7 +296,6 @@ const UserManagement = () => {
                   <SelectContent>
                     <SelectItem value="">All Roles</SelectItem>
                     <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="moderator">Moderator</SelectItem>
                     <SelectItem value="user">User</SelectItem>
                   </SelectContent>
                 </Select>
@@ -354,7 +353,7 @@ const UserManagement = () => {
                         <TableCell>{user.email}</TableCell>
                         <TableCell>
                           <Badge 
-                            variant={user.role === "admin" ? "default" : (user.role === "moderator" ? "secondary" : "outline")}
+                            variant={user.role === "admin" ? "default" : "outline"}
                           >
                             {user.role}
                           </Badge>
@@ -469,7 +468,6 @@ const UserManagement = () => {
                         </FormControl>
                         <SelectContent>
                           <SelectItem value="admin">Admin</SelectItem>
-                          <SelectItem value="moderator">Moderator</SelectItem>
                           <SelectItem value="user">User</SelectItem>
                         </SelectContent>
                       </Select>
@@ -571,7 +569,6 @@ const UserManagement = () => {
                           </FormControl>
                           <SelectContent>
                             <SelectItem value="admin">Admin</SelectItem>
-                            <SelectItem value="moderator">Moderator</SelectItem>
                             <SelectItem value="user">User</SelectItem>
                           </SelectContent>
                         </Select>

@@ -7,7 +7,7 @@ export type Profile = {
   updated_at: string;
 };
 
-export type UserRole = 'user' | 'admin' | 'moderator';
+export type UserRole = 'user' | 'admin';
 
 export type UserRoleRecord = {
   id: string;
@@ -58,4 +58,3 @@ export type VersionHistory = {
   created_at: string;
   created_by: string;
 };
-

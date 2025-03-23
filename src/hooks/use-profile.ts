@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -38,7 +39,8 @@ export const useProfile = () => {
 
         setProfile(profileData as Profile);
 
-        // Only use the RPC function which is working correctly
+        // Instead of querying the user_roles table directly (which can cause infinite recursion),
+        // we'll use our RPC function that's designed to avoid these issues
         const { data: roleData, error: roleError } = await supabase
           .rpc('get_user_roles', { user_uuid: user.id });
         
