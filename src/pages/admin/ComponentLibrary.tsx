@@ -1,9 +1,7 @@
-
 import React, { useState } from "react";
 import PageLayout from "@/components/PageLayout";
 import { useAuth } from "@/context/AuthContext";
 import { Navigate } from "react-router-dom";
-import { useProfile } from "@/hooks/use-profile";
 import { 
   Card, 
   CardContent, 
@@ -55,7 +53,6 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-// Mock data for components
 const mockComponents = [
   { 
     id: "1", 
@@ -123,8 +120,7 @@ const mockComponents = [
 ];
 
 const ComponentLibrary = () => {
-  const { user } = useAuth();
-  const { isAdmin } = useProfile();
+  const { user, isAdmin } = useAuth();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
@@ -351,7 +347,6 @@ const ComponentLibrary = () => {
           </CardContent>
         </Card>
 
-        {/* Add Component Dialog */}
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogContent className="max-w-md">
             <DialogHeader>
@@ -417,7 +412,6 @@ const ComponentLibrary = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Edit Component Dialog */}
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
           <DialogContent className="max-w-md">
             <DialogHeader>
@@ -486,7 +480,6 @@ const ComponentLibrary = () => {
           </DialogContent>
         </Dialog>
 
-        {/* View Component Dialog */}
         <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
           <DialogContent className="max-w-md">
             <DialogHeader>
@@ -551,7 +544,6 @@ const ComponentLibrary = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Delete Component Dialog */}
         <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
           <DialogContent>
             <DialogHeader>
