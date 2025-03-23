@@ -61,7 +61,7 @@ function App() {
               }
             />
             
-            {/* Admin Routes - Using the improved AdminRoute component */}
+            {/* Admin Routes */}
             <Route path="/admin" element={<AdminRoute><AdminSettings /></AdminRoute>} />
             <Route path="/admin/users" element={<AdminRoute><UserManagement /></AdminRoute>} />
             <Route path="/admin/system" element={<AdminRoute><SystemSettings /></AdminRoute>} />

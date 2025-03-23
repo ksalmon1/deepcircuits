@@ -22,14 +22,6 @@ export const AdminRoute = ({
     }
   }, [isLoading, rolesLoaded]);
 
-  // Detailed logging to debug the flow
-  console.log("AdminRoute - user:", user ? "authenticated" : "not authenticated");
-  console.log("AdminRoute - adminStatus:", adminStatus);
-  console.log("AdminRoute - isLoading:", isLoading);
-  console.log("AdminRoute - rolesLoaded:", rolesLoaded);
-  console.log("AdminRoute - hasCheckedPermission:", hasCheckedPermission);
-  console.log("AdminRoute - current path:", location.pathname);
-
   // Show loading state until all permission checks are complete
   if (isLoading || !hasCheckedPermission) {
     return (
@@ -42,7 +34,7 @@ export const AdminRoute = ({
 
   // Redirect to login if not authenticated
   if (!user) {
-    console.log("AdminRoute - redirecting to login");
+    console.log("AdminRoute - redirecting to login (not authenticated)");
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
 

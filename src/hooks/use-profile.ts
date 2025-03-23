@@ -130,7 +130,7 @@ export const useProfile = () => {
   // Cache admin status for efficiency
   const adminStatus = useMemo(() => {
     return isAdmin();
-  }, [isAdmin, roles]);
+  }, [isAdmin]);
 
   return {
     profile,
