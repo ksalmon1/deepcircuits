@@ -20,6 +20,7 @@ import ForgotPassword from "@/pages/ForgotPassword";
 import ResetPassword from "@/pages/ResetPassword";
 import CircuitEditorPage from "@/components/CircuitEditor/CircuitEditorPage";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { AdminRoute } from "@/components/AdminRoute";
 import { AuthProvider } from "@/context/AuthContext";
 
 import "./App.css";
@@ -59,38 +60,41 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            
+            {/* Admin Routes */}
             <Route
               path="/admin"
               element={
-                <ProtectedRoute>
+                <AdminRoute>
                   <AdminSettings />
-                </ProtectedRoute>
+                </AdminRoute>
               }
             />
             <Route
               path="/admin/users"
               element={
-                <ProtectedRoute>
+                <AdminRoute>
                   <UserManagement />
-                </ProtectedRoute>
+                </AdminRoute>
               }
             />
             <Route
               path="/admin/system"
               element={
-                <ProtectedRoute>
+                <AdminRoute>
                   <SystemSettings />
-                </ProtectedRoute>
+                </AdminRoute>
               }
             />
             <Route
               path="/admin/components"
               element={
-                <ProtectedRoute>
+                <AdminRoute>
                   <ComponentLibrary />
-                </ProtectedRoute>
+                </AdminRoute>
               }
             />
+            
             <Route
               path="/circuit-editor/:id"
               element={

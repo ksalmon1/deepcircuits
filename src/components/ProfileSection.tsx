@@ -440,7 +440,9 @@ const ProfileSection = () => {
                             )}
                           </div>
                           <div className="flex items-end gap-1">
-                            <span className="text-2xl font-bold">{plan.price}</span>
+                            <span className="text-2xl font-bold">
+                              {currentPlanTier && planDetails[currentPlanTier] && planDetails[currentPlanTier]?.price?.replace('$', '')}
+                            </span>
                             <span className="text-sm text-muted-foreground mb-1">{plan.interval}</span>
                           </div>
                         </CardHeader>

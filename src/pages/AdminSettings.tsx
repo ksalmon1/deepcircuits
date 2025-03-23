@@ -1,9 +1,6 @@
 
 import React from "react";
 import PageLayout from "@/components/PageLayout";
-import { useAuth } from "@/context/AuthContext";
-import { Navigate, Link } from "react-router-dom";
-import { useProfile } from "@/hooks/use-profile";
 import { 
   Card, 
   CardContent, 
@@ -13,19 +10,9 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Shield, Users, Cog, Database } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const AdminSettings = () => {
-  const { user } = useAuth();
-  const { isAdmin } = useProfile();
-
-  if (!user) {
-    return <Navigate to="/login" />;
-  }
-
-  if (!isAdmin()) {
-    return <Navigate to="/dashboard" />;
-  }
-
   return (
     <PageLayout>
       <div className="container py-12">
