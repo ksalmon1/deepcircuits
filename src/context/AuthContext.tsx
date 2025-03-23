@@ -142,7 +142,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         console.error("Error updating profile:", error);
         throw error;
       }
-      
+
       setProfile(prevProfile => {
         if (!prevProfile) return { id: user.id, ...updates } as Profile;
         return { ...prevProfile, ...updates } as Profile;
