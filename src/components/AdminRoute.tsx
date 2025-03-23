@@ -11,28 +11,31 @@ export const AdminRoute = ({
   children: React.ReactNode 
 }) => {
   const { user } = useAuth();
-  const { isAdmin, isLoading: profileLoading } = useProfile();
-  const [isReady, setIsReady] = useState(false);
+  const { adminStatus, isLoading, rolesLoaded } = useProfile();
+  const [hasCheckedPermission, setHasCheckedPermission] = useState(false);
   const location = useLocation();
 
   useEffect(() => {
-    // Only set ready state when profile loading is complete
-    if (!profileLoading) {
-      setIsReady(true);
+    // Only mark permissions as checked when loading is complete and roles are loaded
+    if (!isLoading && rolesLoaded) {
+      setHasCheckedPermission(true);
     }
-  }, [profileLoading]);
+  }, [isLoading, rolesLoaded]);
 
+  // Detailed logging to debug the flow
   console.log("AdminRoute - user:", user ? "authenticated" : "not authenticated");
-  console.log("AdminRoute - isAdmin:", isAdmin());
-  console.log("AdminRoute - isLoading:", profileLoading);
+  console.log("AdminRoute - adminStatus:", adminStatus);
+  console.log("AdminRoute - isLoading:", isLoading);
+  console.log("AdminRoute - rolesLoaded:", rolesLoaded);
+  console.log("AdminRoute - hasCheckedPermission:", hasCheckedPermission);
   console.log("AdminRoute - current path:", location.pathname);
 
-  // Show loading state while checking permissions
-  if (profileLoading || !isReady) {
+  // Show loading state until all permission checks are complete
+  if (isLoading || !hasCheckedPermission) {
     return (
       <div className="flex h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <span className="ml-2 text-lg">Loading...</span>
+        <span className="ml-2 text-lg">Verifying permissions...</span>
       </div>
     );
   }
@@ -44,7 +47,7 @@ export const AdminRoute = ({
   }
 
   // Redirect to dashboard if authenticated but not admin
-  if (!isAdmin()) {
+  if (!adminStatus) {
     console.log("AdminRoute - redirecting to dashboard (not admin)");
     return <Navigate to="/dashboard" replace />;
   }

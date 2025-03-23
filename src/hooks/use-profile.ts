@@ -1,5 +1,4 @@
-
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Profile, UserRole } from "@/types/database";
@@ -10,6 +9,7 @@ export const useProfile = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [roles, setRoles] = useState<UserRole[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [rolesLoaded, setRolesLoaded] = useState(false);
   const { toast } = useToast();
 
   // Fetch profile data
@@ -19,6 +19,7 @@ export const useProfile = () => {
         setProfile(null);
         setRoles([]);
         setIsLoading(false);
+        setRolesLoaded(false);
         return;
       }
 
@@ -51,6 +52,7 @@ export const useProfile = () => {
           // Convert response to array if it's not already
           const roleArray = Array.isArray(roleData) ? roleData : [];
           setRoles(roleArray as UserRole[]);
+          setRolesLoaded(true);
         }
       } catch (error: any) {
         console.error("Profile fetch error:", error);
@@ -114,22 +116,29 @@ export const useProfile = () => {
     }
   };
 
-  // Check if user has a specific role
-  const hasRole = (role: UserRole) => {
+  // Check if user has a specific role - memoized to prevent unnecessary recalculations
+  const hasRole = useCallback((role: UserRole) => {
     return roles.includes(role);
-  };
+  }, [roles]);
 
-  // Check if user is admin - memoized function to avoid unnecessary rerenders
-  const isAdmin = () => {
+  // Check if user is admin - memoized to prevent unnecessary recalculations
+  const isAdmin = useCallback(() => {
     return hasRole('admin');
-  };
+  }, [hasRole]);
+
+  // Cache admin status for efficiency
+  const adminStatus = useMemo(() => {
+    return isAdmin();
+  }, [isAdmin, roles]);
 
   return {
     profile,
     roles,
     isLoading,
+    rolesLoaded,
     updateProfile,
     hasRole,
-    isAdmin,
+    isAdmin: useCallback(() => adminStatus, [adminStatus]),
+    adminStatus,
   };
 };

@@ -61,39 +61,11 @@ function App() {
               }
             />
             
-            {/* Admin Routes */}
-            <Route
-              path="/admin"
-              element={
-                <AdminRoute>
-                  <AdminSettings />
-                </AdminRoute>
-              }
-            />
-            <Route
-              path="/admin/users"
-              element={
-                <AdminRoute>
-                  <UserManagement />
-                </AdminRoute>
-              }
-            />
-            <Route
-              path="/admin/system"
-              element={
-                <AdminRoute>
-                  <SystemSettings />
-                </AdminRoute>
-              }
-            />
-            <Route
-              path="/admin/components"
-              element={
-                <AdminRoute>
-                  <ComponentLibrary />
-                </AdminRoute>
-              }
-            />
+            {/* Admin Routes - Using the improved AdminRoute component */}
+            <Route path="/admin" element={<AdminRoute><AdminSettings /></AdminRoute>} />
+            <Route path="/admin/users" element={<AdminRoute><UserManagement /></AdminRoute>} />
+            <Route path="/admin/system" element={<AdminRoute><SystemSettings /></AdminRoute>} />
+            <Route path="/admin/components" element={<AdminRoute><ComponentLibrary /></AdminRoute>} />
             
             <Route
               path="/circuit-editor/:id"
