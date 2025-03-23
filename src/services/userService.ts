@@ -1,8 +1,7 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Profile, UserRole, UserStatus } from "@/types/database";
 import { User } from "@supabase/supabase-js";
-import { generateUsername, Config } from "unique-username-generator";
+import { uniqueUsernameGenerator } from "unique-username-generator";
 
 export type UserWithProfile = {
   id: string;
@@ -31,15 +30,14 @@ const descriptors = [
 
 // Generate a unique username for new users
 export const generateUniqueUsername = (): string => {
-  const config: Config = {
+  // According to the documentation, we need to use uniqueUsernameGenerator 
+  // function with dictionaries passed as configuration
+  return uniqueUsernameGenerator({
     dictionaries: [descriptors, circuitTerms],
     separator: "-",
     style: "capital",
     randomDigits: 2
-  };
-  
-  // Using the correct function signature with the config object
-  return generateUsername(config);
+  });
 };
 
 // Get all users (using public schema instead of admin API)
