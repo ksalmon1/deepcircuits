@@ -443,8 +443,8 @@ const ProfileSection = () => {
                             <span className="text-2xl font-bold">
                               {currentPlanTier && 
                                planDetails[currentPlanTier as keyof typeof planDetails] && 
-                               typeof planDetails[currentPlanTier as keyof typeof planDetails]?.price === 'string' ? 
-                               planDetails[currentPlanTier as keyof typeof planDetails]?.price?.replace('$', '') : 
+                               (planDetails[currentPlanTier as keyof typeof planDetails] as any)?.price ? 
+                               (planDetails[currentPlanTier as keyof typeof planDetails] as any)?.price?.replace('$', '') : 
                                '0'}
                             </span>
                             <span className="text-sm text-muted-foreground mb-1">{plan.interval}</span>
@@ -552,4 +552,3 @@ const ProfileSection = () => {
 };
 
 export default ProfileSection;
-
