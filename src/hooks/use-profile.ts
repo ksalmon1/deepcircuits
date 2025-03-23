@@ -1,5 +1,5 @@
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Profile, UserRole } from "@/types/database";
@@ -10,23 +10,22 @@ export const useProfile = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [roles, setRoles] = useState<UserRole[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [rolesLoaded, setRolesLoaded] = useState(false);
   const { toast } = useToast();
 
-  // Fetch profile data
+  // Fetch profile data and roles
   useEffect(() => {
     const fetchProfile = async () => {
       if (!user) {
         setProfile(null);
         setRoles([]);
         setIsLoading(false);
-        setRolesLoaded(false);
         return;
       }
 
-      setIsLoading(true);
-
       try {
+        setIsLoading(true);
+        console.log("Fetching profile data for user:", user.id);
+
         // Fetch profile
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
@@ -40,8 +39,9 @@ export const useProfile = () => {
         }
 
         setProfile(profileData as Profile);
+        console.log("Profile loaded successfully");
 
-        // Use the RPC function to get user roles
+        // Fetch user roles
         const { data: roleData, error: roleError } = await supabase
           .rpc('get_user_roles', { user_uuid: user.id });
         
@@ -49,11 +49,9 @@ export const useProfile = () => {
           console.error("Error fetching roles:", roleError);
           setRoles([]);
         } else {
-          console.log("Successfully fetched roles:", roleData);
-          // Convert response to array if it's not already
           const roleArray = Array.isArray(roleData) ? roleData : [];
+          console.log("Roles loaded successfully:", roleArray);
           setRoles(roleArray as UserRole[]);
-          setRolesLoaded(true);
         }
       } catch (error: any) {
         console.error("Profile fetch error:", error);
@@ -62,7 +60,6 @@ export const useProfile = () => {
           title: "Profile Error",
           description: error.message || "Failed to fetch profile data",
         });
-        // Still set empty data to avoid leaving the app in a loading state
         setProfile(null);
         setRoles([]);
       } finally {
@@ -73,7 +70,7 @@ export const useProfile = () => {
     fetchProfile();
   }, [user, toast]);
 
-  // Update profile
+  // Update profile function
   const updateProfile = async (updates: Partial<Profile>) => {
     if (!user) {
       toast({
@@ -117,29 +114,18 @@ export const useProfile = () => {
     }
   };
 
-  // Check if user has a specific role - memoized to prevent unnecessary recalculations
-  const hasRole = useCallback((role: UserRole) => {
-    return roles.includes(role);
-  }, [roles]);
+  // Simple helper function to check if user has a specific role
+  const hasRole = (role: UserRole) => roles.includes(role);
 
-  // Check if user is admin - memoized to prevent unnecessary recalculations
-  const isAdmin = useCallback(() => {
-    return hasRole('admin');
-  }, [hasRole]);
-
-  // Cache admin status for efficiency
-  const adminStatus = useMemo(() => {
-    return isAdmin();
-  }, [isAdmin]);
+  // Check if user is admin
+  const isAdmin = () => hasRole('admin');
 
   return {
     profile,
     roles,
     isLoading,
-    rolesLoaded,
     updateProfile,
     hasRole,
-    isAdmin: useCallback(() => adminStatus, [adminStatus]),
-    adminStatus,
+    isAdmin,
   };
 };
