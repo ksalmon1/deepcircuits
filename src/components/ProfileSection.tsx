@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useProfile } from "@/hooks/use-profile";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -441,11 +442,7 @@ const ProfileSection = () => {
                           </div>
                           <div className="flex items-end gap-1">
                             <span className="text-2xl font-bold">
-                              {currentPlanTier && 
-                               planDetails[currentPlanTier as keyof typeof planDetails] && 
-                               (planDetails[currentPlanTier as keyof typeof planDetails] as any)?.price ? 
-                               (planDetails[currentPlanTier as keyof typeof planDetails] as any)?.price?.replace('$', '') : 
-                               '0'}
+                              {plan.price ? plan.price.replace('$', '') : '0'}
                             </span>
                             <span className="text-sm text-muted-foreground mb-1">{plan.interval}</span>
                           </div>
@@ -490,7 +487,7 @@ const ProfileSection = () => {
                         <p className="text-sm text-muted-foreground">Oct 15, 2023</p>
                       </div>
                       <div className="text-right">
-                        <p className="font-medium">{currentPlanTier && planDetails[currentPlanTier] && planDetails[currentPlanTier].price.replace('$', '')}</p>
+                        <p className="font-medium">{planDetails[currentPlanTier].price.replace('$', '')}</p>
                         <Badge variant="outline" className="bg-green-50">Paid</Badge>
                       </div>
                     </div>
@@ -500,7 +497,7 @@ const ProfileSection = () => {
                         <p className="text-sm text-muted-foreground">Sep 15, 2023</p>
                       </div>
                       <div className="text-right">
-                        <p className="font-medium">{currentPlanTier && planDetails[currentPlanTier] && planDetails[currentPlanTier].price.replace('$', '')}</p>
+                        <p className="font-medium">{planDetails[currentPlanTier].price.replace('$', '')}</p>
                         <Badge variant="outline" className="bg-green-50">Paid</Badge>
                       </div>
                     </div>
@@ -526,7 +523,9 @@ const ProfileSection = () => {
                     <p className="text-sm text-muted-foreground mt-1">
                       Manage users and their permissions
                     </p>
-                    <Button variant="outline" className="mt-2">Go to User Management</Button>
+                    <Button variant="outline" className="mt-2" asChild>
+                      <a href="/admin/users">Go to User Management</a>
+                    </Button>
                   </div>
                   
                   <div className="border rounded-md p-4">
@@ -534,7 +533,19 @@ const ProfileSection = () => {
                     <p className="text-sm text-muted-foreground mt-1">
                       Configure global application settings
                     </p>
-                    <Button variant="outline" className="mt-2">System Configuration</Button>
+                    <Button variant="outline" className="mt-2" asChild>
+                      <a href="/admin/settings">System Configuration</a>
+                    </Button>
+                  </div>
+                  
+                  <div className="border rounded-md p-4">
+                    <h4 className="font-medium">Component Library</h4>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Manage circuit components available in the editor
+                    </p>
+                    <Button variant="outline" className="mt-2" asChild>
+                      <a href="/admin/components">Manage Components</a>
+                    </Button>
                   </div>
                 </div>
               </div>

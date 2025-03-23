@@ -46,7 +46,7 @@ export const getAllUsers = async (): Promise<UserWithProfile[]> => {
         email: profile.display_name?.includes('@') ? profile.display_name : `${profile.display_name || 'user'}@example.com`,
         name: profile.display_name || 'Unknown',
         role: (roleRecord?.role as UserRole) || 'user',
-        status: 'active' as const, // Assuming all profiles are for active users
+        status: profile.status as 'active' | 'inactive' || 'active',
         created_at: profile.created_at,
       };
     });
@@ -93,7 +93,7 @@ export const getUserById = async (userId: string): Promise<UserWithProfile | nul
       email: profile.display_name?.includes('@') ? profile.display_name : `${profile.display_name || 'user'}@example.com`,
       name: profile.display_name || 'Unknown',
       role: (roleData?.role as UserRole) || 'user',
-      status: 'active' as const,
+      status: profile.status as 'active' | 'inactive' || 'active',
       created_at: profile.created_at,
     };
   } catch (error) {
@@ -125,9 +125,7 @@ export const updateUserProfile = async (
 };
 
 // Update user status (active/inactive)
-// Note: This now just updates a field in the profiles table instead of using auth.admin
 export const updateUserStatus = async (userId: string, status: 'active' | 'inactive'): Promise<void> => {
-  // Create a custom field in profiles to track status since we can't use auth.admin
   const { error } = await supabase
     .from('profiles')
     .update({ 
