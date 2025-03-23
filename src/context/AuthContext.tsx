@@ -4,11 +4,16 @@ import { Session, User, Provider } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { Profile, UserRole } from "@/types/database";
+import { useToast } from "@/hooks/use-toast";
 
 type AuthContextType = {
   session: Session | null;
   user: User | null;
+  profile: Profile | null;
+  roles: UserRole[];
   isLoading: boolean;
+  isAdmin: () => boolean;
+  hasRole: (role: UserRole) => boolean;
   signUp: (email: string, password: string) => Promise<{
     error: any | null;
     data: any | null;
@@ -30,30 +35,97 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [roles, setRoles] = useState<UserRole[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
+  const { toast } = useToast();
+
+  // Fetch profile and roles data
+  const fetchUserData = async (userId: string) => {
+    try {
+      console.log("Fetching profile and roles for user:", userId);
+      
+      // Fetch profile
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (profileError) {
+        console.error("Error fetching profile:", profileError);
+        throw profileError;
+      }
+
+      setProfile(profileData as Profile);
+      console.log("Profile loaded successfully");
+
+      // Fetch roles
+      const { data: roleData, error: roleError } = await supabase
+        .rpc('get_user_roles', { user_uuid: userId });
+      
+      if (roleError) {
+        console.error("Error fetching roles:", roleError);
+        setRoles([]);
+      } else {
+        const roleArray = Array.isArray(roleData) ? roleData : [];
+        console.log("Roles loaded successfully:", roleArray);
+        setRoles(roleArray as UserRole[]);
+      }
+    } catch (error: any) {
+      console.error("User data fetch error:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to fetch user data",
+      });
+      setProfile(null);
+      setRoles([]);
+    }
+  };
 
   useEffect(() => {
-    // Set up auth state listener FIRST
+    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        console.log("Auth state changed:", event);
         setSession(session);
         setUser(session?.user ?? null);
-        setIsLoading(false);
+        
+        if (session?.user) {
+          fetchUserData(session.user.id);
+        } else {
+          setProfile(null);
+          setRoles([]);
+          setIsLoading(false);
+        }
       }
     );
 
-    // THEN check for existing session
+    // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
-      setIsLoading(false);
+      
+      if (session?.user) {
+        fetchUserData(session.user.id);
+      } else {
+        setIsLoading(false);
+      }
     });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [toast]);
+
+  // Set isLoading to false when profile and roles are loaded
+  useEffect(() => {
+    if (user && profile) {
+      setIsLoading(false);
+    }
+  }, [user, profile]);
 
   // Sign up with email and password
   const signUp = async (email: string, password: string) => {
@@ -111,10 +183,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return response;
   };
 
+  // Check if user has a specific role
+  const hasRole = (role: UserRole) => roles.includes(role);
+
+  // Check if user is admin
+  const isAdmin = () => hasRole('admin');
+
   const value = {
     session,
     user,
+    profile,
+    roles,
     isLoading,
+    isAdmin,
+    hasRole,
     signUp,
     signIn,
     signInWithProvider,

@@ -1,131 +1,20 @@
 
-import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
-import { Profile, UserRole } from "@/types/database";
-import { useToast } from "./use-toast";
+import { Profile } from "@/types/database";
 
+/**
+ * This hook provides access to the user profile data from AuthContext
+ * to maintain backward compatibility with existing components
+ */
 export const useProfile = () => {
-  const { user } = useAuth();
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [roles, setRoles] = useState<UserRole[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const { toast } = useToast();
-
-  // Fetch profile data and roles
-  useEffect(() => {
-    const fetchProfile = async () => {
-      if (!user) {
-        setProfile(null);
-        setRoles([]);
-        setIsLoading(false);
-        return;
-      }
-
-      try {
-        setIsLoading(true);
-        console.log("Fetching profile data for user:", user.id);
-
-        // Fetch profile
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-
-        if (profileError) {
-          console.error("Error fetching profile:", profileError);
-          throw profileError;
-        }
-
-        setProfile(profileData as Profile);
-        console.log("Profile loaded successfully");
-
-        // Fetch user roles
-        const { data: roleData, error: roleError } = await supabase
-          .rpc('get_user_roles', { user_uuid: user.id });
-        
-        if (roleError) {
-          console.error("Error fetching roles:", roleError);
-          setRoles([]);
-        } else {
-          const roleArray = Array.isArray(roleData) ? roleData : [];
-          console.log("Roles loaded successfully:", roleArray);
-          setRoles(roleArray as UserRole[]);
-        }
-      } catch (error: any) {
-        console.error("Profile fetch error:", error);
-        toast({
-          variant: "destructive",
-          title: "Profile Error",
-          description: error.message || "Failed to fetch profile data",
-        });
-        setProfile(null);
-        setRoles([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchProfile();
-  }, [user, toast]);
-
-  // Update profile function
-  const updateProfile = async (updates: Partial<Profile>) => {
-    if (!user) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "You must be logged in to update your profile",
-      });
-      return { error: new Error("Not authenticated"), data: null };
-    }
-
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', user.id)
-        .select();
-
-      if (error) {
-        throw error;
-      }
-
-      // Update local state
-      setProfile(prev => prev ? { ...prev, ...updates } : null);
-
-      toast({
-        title: "Profile Updated",
-        description: "Your profile has been updated successfully",
-      });
-
-      return { data, error: null };
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Update Failed",
-        description: error.message || "Failed to update profile",
-      });
-      return { error, data: null };
-    }
-  };
-
-  // Simple helper function to check if user has a specific role
-  const hasRole = (role: UserRole) => roles.includes(role);
-
-  // Check if user is admin
-  const isAdmin = () => hasRole('admin');
+  const { profile, roles, isLoading, hasRole, isAdmin, updateProfile } = useAuth();
 
   return {
     profile,
     roles,
     isLoading,
-    updateProfile,
     hasRole,
     isAdmin,
+    updateProfile,
   };
 };

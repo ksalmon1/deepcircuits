@@ -3,7 +3,6 @@ import { ReactNode, useEffect, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { useProfile } from "@/hooks/use-profile";
 import { UserRole } from "@/types/database";
 
 type AuthGuardProps = {
@@ -27,23 +26,22 @@ export const AuthGuard = ({
   requireAuth = true,
   fallbackPath,
 }: AuthGuardProps) => {
-  const { user } = useAuth();
-  const { roles, isLoading: profileLoading } = useProfile();
-  const [isVerifying, setIsVerifying] = useState(true);
+  const { user, roles, isLoading } = useAuth();
+  const [hasVerifiedPermissions, setHasVerifiedPermissions] = useState(false);
   const location = useLocation();
 
   // Determine the appropriate fallback path
   const redirectPath = fallbackPath || (requireAuth ? "/login" : "/dashboard");
 
   useEffect(() => {
-    // Complete verification when profile data is loaded
-    if (!profileLoading) {
-      setIsVerifying(false);
+    // Set verification complete when auth data is loaded
+    if (!isLoading) {
+      setHasVerifiedPermissions(true);
     }
-  }, [profileLoading]);
+  }, [isLoading]);
 
-  // Show loading state during verification
-  if (isVerifying) {
+  // Show loading state while verifying
+  if (isLoading || !hasVerifiedPermissions) {
     return (
       <div className="flex h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -56,6 +54,12 @@ export const AuthGuard = ({
   if (requireAuth && !user) {
     console.log(`AuthGuard: Redirecting to ${redirectPath} - Not authenticated`);
     return <Navigate to={redirectPath} replace state={{ from: location }} />;
+  }
+
+  // If public route and user is logged in, check if we should redirect
+  if (!requireAuth && user) {
+    console.log(`AuthGuard: Redirecting to ${redirectPath} - Already authenticated`);
+    return <Navigate to={redirectPath} replace />;
   }
 
   // If no role check is needed or no allowed roles specified, render children
