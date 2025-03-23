@@ -45,7 +45,7 @@ type PlanTier = 'free' | 'standard' | 'professional';
 
 interface PlanDetails {
   name: string;
-  price: string;
+  price?: string;
   interval: string;
   features: string[];
   isPopular?: boolean;
@@ -533,7 +533,7 @@ const ProfileSection = () => {
                       Configure global application settings
                     </p>
                     <Button variant="outline" className="mt-2" asChild>
-                      <a href="/admin/settings">System Configuration</a>
+                      <a href="/admin/system">System Configuration</a>
                     </Button>
                   </div>
                   
