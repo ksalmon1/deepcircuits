@@ -130,39 +130,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       console.log("Updating profile with data:", updates);
       
-      const { data: existingProfile, error: checkError } = await supabase
+      const { error } = await supabase
         .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-      
-      if (checkError && checkError.code !== 'PGRST116') { // Not PGRST116 means it's not "No rows returned" error
-        console.error("Error checking profile:", checkError);
-        throw checkError;
-      }
-      
-      const { data, error } = await supabase
-        .from('profiles')
-        .upsert({
-          id: user.id,
+        .update({
           ...updates,
-          updated_at: new Date().toISOString(),
-          ...(existingProfile ? {} : { created_at: new Date().toISOString() })
-        }, { 
-          onConflict: 'id',
-        });
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id);
       
       if (error) {
         console.error("Error updating profile:", error);
         throw error;
       }
       
-      setProfile(prev => {
-        if (!prev) return { id: user.id, ...updates } as Profile;
-        return { ...prev, ...updates } as Profile;
+      setProfile(prevProfile => {
+        if (!prevProfile) return { id: user.id, ...updates } as Profile;
+        return { ...prevProfile, ...updates } as Profile;
       });
-      
-      await fetchUserData(user.id);
 
       toast({
         title: "Profile updated",
