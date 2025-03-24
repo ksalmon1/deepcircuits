@@ -95,6 +95,7 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
     const rect = editorRef.current?.getBoundingClientRect();
     if (!rect) return;
 
+    // Calculate the position within the component
     const x = (e.clientX - rect.left) / zoomLevel;
     const y = (e.clientY - rect.top) / zoomLevel;
 
@@ -119,6 +120,7 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
     const rect = editorRef.current?.getBoundingClientRect();
     if (!rect) return;
 
+    // Calculate position in the viewport
     const x = (e.clientX - rect.left) / zoomLevel;
     const y = (e.clientY - rect.top) / zoomLevel;
     
@@ -126,7 +128,7 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
     const relativeX = x - componentOrigin.left / zoomLevel;
     const relativeY = y - componentOrigin.top / zoomLevel;
     
-    // Update the current drag position for visual feedback
+    // Store cursor position for visual feedback
     setCurrentDragPosition({ x: e.clientX - rect.left, y: e.clientY - rect.top });
     
     // Live update the pin position during drag
@@ -242,7 +244,7 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
           {/* Component visual representation */}
           <div 
             ref={componentContainerRef}
-            className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
+            className="absolute top-1/2 left-1/2"
             style={{ 
               transform: `translate(-50%, -50%) scale(${zoomLevel})`,
               transformOrigin: 'center'
@@ -267,23 +269,22 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
 
           {/* Pin markers */}
           {pins.map((pin, index) => {
-            // Calculate absolute position for the pin display, accounting for zoom
-            const absoluteX = (componentOrigin.left + pin.x * zoomLevel);
-            const absoluteY = (componentOrigin.top + pin.y * zoomLevel);
+            // Calculate position based on component's top-left
+            const pinX = componentOrigin.left + (pin.x * zoomLevel);
+            const pinY = componentOrigin.top + (pin.y * zoomLevel);
             
             return (
               <div
                 key={`pin-${index}`}
                 className={`pin-marker ${draggedPin === index ? 'dragging' : ''}`}
                 style={{ 
-                  left: `${absoluteX}px`, 
-                  top: `${absoluteY}px`,
+                  left: `${pinX}px`, 
+                  top: `${pinY}px`,
                   backgroundColor: getSignalColor(pin.signals && pin.signals.length > 0 ? pin.signals[0] : 'digital'),
                   cursor: readonly ? 'default' : 'move',
-                  transform: `translate(-50%, -50%) scale(${1/zoomLevel})`,
-                  // Adjust scaling to keep pin size consistent across zoom levels
-                  width: `${10 / zoomLevel}px`,
-                  height: `${10 / zoomLevel}px`
+                  // Keep pin size consistent regardless of zoom
+                  width: `${10}px`,
+                  height: `${10}px`
                 }}
                 data-pin-name={pin.name}
                 onMouseEnter={() => setHoveredPin(index)}
@@ -294,16 +295,15 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
                   <button 
                     className="absolute -top-5 -right-5 bg-red-500 text-white rounded-full flex items-center justify-center"
                     style={{
-                      width: `${16 / zoomLevel}px`,
-                      height: `${16 / zoomLevel}px`,
-                      fontSize: `${12 / zoomLevel}px`
+                      width: '16px',
+                      height: '16px'
                     }}
                     onClick={(e) => {
                       e.stopPropagation();
                       removePin(index);
                     }}
                   >
-                    <X className="w-3 h-3" style={{ transform: `scale(${1/zoomLevel})` }} />
+                    <X className="w-3 h-3" />
                   </button>
                 )}
               </div>
@@ -315,10 +315,9 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
             <div 
               className="pin-tooltip"
               style={{ 
-                top: `${componentOrigin.top + pins[hoveredPin].y * zoomLevel}px`, 
+                top: `${componentOrigin.top + pins[hoveredPin].y * zoomLevel - 20}px`, 
                 left: `${componentOrigin.left + pins[hoveredPin].x * zoomLevel}px`,
-                transform: `translate(-50%, -100%) scale(${1/zoomLevel})`,
-                transformOrigin: 'bottom center'
+                transform: 'translate(-50%, 0)',
               }}
             >
               {pins[hoveredPin].name}

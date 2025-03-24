@@ -45,8 +45,6 @@
   border-radius: 4px;
   font-size: 12px;
   white-space: nowrap;
-  transform: translate(-50%, -100%);
-  margin-top: -8px;
   position: absolute;
 }
 
