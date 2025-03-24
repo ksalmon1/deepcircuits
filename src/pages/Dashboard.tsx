@@ -1,11 +1,9 @@
-
 import React, { useState, useMemo } from "react";
 import PageLayout from "@/components/PageLayout";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Plus, Search, ArrowUpDown } from "lucide-react";
 import ProjectCard, { ProjectData } from "@/components/ProjectCard";
-import NewProjectCard from "@/components/NewProjectCard";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import DashboardAnalytics from "@/components/DashboardAnalytics";
@@ -69,17 +67,17 @@ const Dashboard = () => {
     codeCompilations: 12,
   };
 
-  const handleCreateProject = (name: string, description: string) => {
+  const handleCreateProject = () => {
     const newProject: ProjectData = {
       id: `proj-${Date.now()}`,
-      name,
-      description,
+      name: "New Project",
+      description: "",
       updatedAt: new Date().toISOString(),
     };
     
     setProjects([...projects, newProject]);
     toast.success("Project created successfully", {
-      description: `"${name}" has been created.`,
+      description: `"${newProject.name}" has been created.`,
       action: {
         label: "Open Editor",
         onClick: () => navigate(`/circuit-editor/${newProject.id}`),
@@ -153,7 +151,7 @@ const Dashboard = () => {
         <div className="mb-6 flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold">Your Projects</h2>
-            <Button onClick={() => document.getElementById('create-project-button')?.click()}>
+            <Button onClick={handleCreateProject}>
               <Plus className="mr-1 h-4 w-4" />
               New Project
             </Button>
@@ -215,10 +213,6 @@ const Dashboard = () => {
         </div>
 
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          <div id="create-project-button">
-            <NewProjectCard onCreateProject={handleCreateProject} />
-          </div>
-          
           {filteredProjects.map((project) => (
             <ProjectCard
               key={project.id}
@@ -229,7 +223,7 @@ const Dashboard = () => {
           
           {projects.length === 0 && (
             <div className="col-span-full py-12 text-center text-slate-500">
-              <p>You don't have any projects yet. Create your first project to get started!</p>
+              <p>You don't have any projects yet. Create your first project using the "New Project" button.</p>
             </div>
           )}
           
