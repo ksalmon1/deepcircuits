@@ -75,7 +75,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
           console.log(`Found pins for ${component.name} (${component.type}):`, component.pins);
           pinCache[component.type] = component.pins.map(pin => ({
             name: pin.name,
-            x: Number(pin.x),
+            x: Number(pin.x), 
             y: Number(pin.y),
             signals: pin.signals || []
           }));
@@ -477,107 +477,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
         )}
       </div>
     );
-  };
-
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'copy';
-  };
-
-  const togglePinVisibility = useCallback((componentId: string) => {
-    setVisiblePins(prev => ({
-      ...prev,
-      [componentId]: !prev[componentId]
-    }));
-  }, []);
-
-  const handlePinHover = (componentId: string, pinIndex: number) => {
-    setHoveredPin({ componentId, pinIndex });
-  };
-
-  const handlePinHoverExit = () => {
-    setHoveredPin(null);
-  };
-
-  const handleComponentHover = useCallback((id: string, type: string) => {
-    setHoveredComponent(id);
-    
-    const pins = fetchComponentPins(type);
-    setHoveredPins(pins);
-    
-    const element = document.getElementById(`wokwi-element-${id}`);
-    if (element && element.firstChild) {
-      (element.firstChild as HTMLElement).style.outline = '2px solid #4C72F4';
-      (element.firstChild as HTMLElement).style.outlineOffset = '2px';
-    }
-  }, []);
-
-  const handleComponentHoverExit = useCallback(() => {
-    if (hoveredComponent) {
-      const element = document.getElementById(`wokwi-element-${hoveredComponent}`);
-      if (element && element.firstChild) {
-        (element.firstChild as HTMLElement).style.outline = 'none';
-      }
-    }
-    setHoveredComponent(null);
-    setHoveredPins([]);
-  }, [hoveredComponent]);
-
-  const handleRetry = async () => {
-    setLoadingError(null);
-    setLoadingAttempts(0);
-    await checkWokwiLoaded();
-  };
-
-  const handleZoomIn = () => {
-    setZoom(prevZoom => Math.min(prevZoom + 0.1, 3));
-  };
-
-  const handleZoomOut = () => {
-    setZoom(prevZoom => Math.max(prevZoom - 0.1, 0.5));
-  };
-
-  const togglePanMode = () => {
-    setPanMode(!panMode);
-    if (panMode) {
-      document.body.style.cursor = 'default';
-    } else {
-      document.body.style.cursor = 'move';
-    }
-  };
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (panMode || e.button === 1) {
-      setIsPanning(true);
-      setStartPanPoint({ x: e.clientX - position.x, y: e.clientY - position.y });
-      e.preventDefault();
-    }
-  };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (isPanning) {
-      const newX = e.clientX - startPanPoint.x;
-      const newY = e.clientY - startPanPoint.y;
-      setPosition({ x: newX, y: newY });
-      e.preventDefault();
-    }
-  };
-
-  const handleMouseUp = () => {
-    setIsPanning(false);
-  };
-
-  const handleMouseLeave = () => {
-    setIsPanning(false);
-  };
-
-  const handleWheel = (e: React.WheelEvent) => {
-    e.preventDefault();
-    const delta = e.deltaY > 0 ? -0.1 : 0.1;
-    setZoom(prevZoom => {
-      const newZoom = Math.max(0.5, Math.min(3, prevZoom + delta));
-      return newZoom;
-    });
   };
 
   return (

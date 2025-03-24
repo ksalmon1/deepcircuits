@@ -37,12 +37,19 @@ export const useComponentLibrary = () => {
       const detailsMap: Record<string, any> = {};
       
       if (components && components.length > 0) {
+        console.log(`Fetching details for ${components.length} components`);
         for (const component of components) {
           if (component.id) {
             try {
               const details = await getComponentWithDetails(component.id);
               if (details) {
+                console.log(`Got details for ${component.name} (${component.type}):`, details);
                 detailsMap[component.id] = details;
+                
+                // If the details contain pins, log them for debugging
+                if (details.pins && details.pins.length > 0) {
+                  console.log(`${component.name} has ${details.pins.length} pins:`, details.pins);
+                }
               }
             } catch (error) {
               console.error(`Error fetching details for component ${component.id}:`, error);
@@ -51,6 +58,7 @@ export const useComponentLibrary = () => {
         }
       }
       
+      console.log(`Fetched details for ${Object.keys(detailsMap).length} components`);
       return detailsMap;
     },
     enabled: components.length > 0
