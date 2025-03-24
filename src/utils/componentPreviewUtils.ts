@@ -34,11 +34,10 @@ export const renderWokwiComponentPreview = async (
     setTimeout(() => {
       const wokwiElement = document.getElementById(elementId)?.firstElementChild;
       if (wokwiElement instanceof HTMLElement) {
-        // Center the element in the container
+        // Center the element in the container without transform to maintain coordinate system
         wokwiElement.style.position = 'absolute';
-        wokwiElement.style.left = '50%';
-        wokwiElement.style.top = '50%';
-        wokwiElement.style.transform = 'translate(-50%, -50%)';
+        wokwiElement.style.left = '0';
+        wokwiElement.style.top = '0';
         
         // Log element dimensions for debugging
         console.log(`Wokwi element ${componentType} dimensions:`, {

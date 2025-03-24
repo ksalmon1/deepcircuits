@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect, WheelEvent } from 'react';
 import { Move, Plus, X, ZoomIn, ZoomOut } from 'lucide-react';
 import { Button } from "@/components/ui/button";
@@ -49,6 +50,7 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
   const [isDraggingCanvas, setIsDraggingCanvas] = useState(false);
   const [panMode, setPanMode] = useState(false);
   const [componentCenter, setComponentCenter] = useState({ x: 0, y: 0 });
+  const [componentElement, setComponentElement] = useState<HTMLElement | null>(null);
   
   // Ensure pins is an array
   const pinData = Array.isArray(pins) ? pins : [];
@@ -77,9 +79,11 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
           
           // After component is loaded, get its dimensions to help with pin positioning
           setTimeout(() => {
-            const element = previewRef.current?.firstElementChild;
+            const element = previewRef.current?.firstElementChild?.firstElementChild;
             if (element instanceof HTMLElement) {
+              setComponentElement(element);
               const rect = element.getBoundingClientRect();
+              console.log("Component element dimensions:", rect);
               setComponentCenter({
                 x: rect.width / 2,
                 y: rect.height / 2
@@ -107,8 +111,16 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
     const containerRect = containerRef.current?.getBoundingClientRect();
     if (!containerRect) return;
     
-    const canvasX = (e.clientX - containerRect.left - offset.x) / zoom;
-    const canvasY = (e.clientY - containerRect.top - offset.y) / zoom;
+    // Get component element position for relative coordinates
+    const componentRect = componentElement?.getBoundingClientRect();
+    if (!componentRect) {
+      console.error("Component element not found");
+      return;
+    }
+    
+    // Calculate coordinates relative to component's top-left corner
+    const canvasX = (e.clientX - componentRect.left - offset.x) / zoom;
+    const canvasY = (e.clientY - componentRect.top - offset.y) / zoom;
     
     // Check if clicking on an existing pin
     for (let i = 0; i < pinData.length; i++) {
@@ -135,7 +147,7 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
         signals: []
       };
       
-      console.log(`Adding new pin at coordinates (${canvasX}, ${canvasY})`);
+      console.log(`Adding new pin at coordinates (${canvasX}, ${canvasY}) relative to component`);
       handlePinsChange([...pinData, newPin]);
     }
   };
@@ -151,11 +163,12 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
     }
     
     if (draggingPin !== null) {
-      const containerRect = containerRef.current?.getBoundingClientRect();
-      if (!containerRect) return;
+      const componentRect = componentElement?.getBoundingClientRect();
+      if (!componentRect) return;
       
-      const canvasX = (e.clientX - containerRect.left - offset.x) / zoom;
-      const canvasY = (e.clientY - containerRect.top - offset.y) / zoom;
+      // Calculate coordinates relative to component's top-left corner
+      const canvasX = (e.clientX - componentRect.left - offset.x) / zoom;
+      const canvasY = (e.clientY - componentRect.top - offset.y) / zoom;
       
       // Update the pin position
       const updatedPins = [...pinData];
@@ -294,19 +307,38 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
               height: '100%'
             }}
           >
-            <div ref={previewRef} className="absolute" style={{ left: '50%', top: '50%', transform: 'translate(-50%, -50%)', zIndex: 5 }}></div>
+            <div 
+              ref={previewRef} 
+              className="absolute" 
+              style={{ 
+                left: '50%', 
+                top: '50%', 
+                transform: 'translate(-50%, -50%)', 
+                zIndex: 5,
+                border: '1px dashed rgba(0, 0, 0, 0.2)'
+              }}
+            ></div>
             
-            {/* Origin marker (0,0) */}
-            <div className="absolute left-0 top-0 w-3 h-3 border-2 border-red-500 rounded-full" style={{ zIndex: 15 }}></div>
+            {/* Origin marker (0,0) for the component */}
+            {componentElement && (
+              <div 
+                className="absolute w-3 h-3 border-2 border-red-500 rounded-full" 
+                style={{ 
+                  left: `${componentElement.offsetLeft}px`, 
+                  top: `${componentElement.offsetTop}px`, 
+                  zIndex: 15 
+                }}
+              ></div>
+            )}
             
             {/* Render pins */}
-            {pinData.map((pin, i) => (
+            {componentElement && pinData.map((pin, i) => (
               <div 
                 key={i} 
                 className="absolute" 
                 style={{
-                  left: `${pin.x}px`,
-                  top: `${pin.y}px`,
+                  left: `${componentElement.offsetLeft + Number(pin.x)}px`,
+                  top: `${componentElement.offsetTop + Number(pin.y)}px`,
                   transform: 'translate(-50%, -50%)',
                   cursor: readonly ? 'default' : 'move',
                   zIndex: 10
