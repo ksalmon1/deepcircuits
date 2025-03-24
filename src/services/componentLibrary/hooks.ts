@@ -8,6 +8,7 @@ import {
   deleteComponent 
 } from "./api";
 import { ComponentLibraryItem } from "./types";
+import { useEffect, useState } from "react";
 
 /**
  * React hook wrapper for the component library service
@@ -15,11 +16,44 @@ import { ComponentLibraryItem } from "./types";
  */
 export const useComponentLibraryService = () => {
   const { toast } = useToast();
+  
+  const [allComponents, setAllComponents] = useState<ComponentLibraryItem[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  // Load all components on mount
+  useEffect(() => {
+    const loadComponents = async () => {
+      setIsLoading(true);
+      try {
+        const components = await getAllComponents();
+        setAllComponents(components);
+      } catch (error) {
+        console.error("Error loading components:", error);
+        setError(error instanceof Error ? error : new Error("Failed to load components"));
+        toast({
+          title: "Error fetching components",
+          description: error instanceof Error ? error.message : "An unknown error occurred",
+          variant: "destructive"
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadComponents();
+  }, [toast]);
 
   return {
+    components: allComponents,
+    isLoading,
+    error,
+    
     getAllComponents: async () => {
       try {
-        return await getAllComponents();
+        const components = await getAllComponents();
+        setAllComponents(components);
+        return components;
       } catch (error) {
         toast({
           title: "Error fetching components",
@@ -50,6 +84,10 @@ export const useComponentLibraryService = () => {
           title: "Component created",
           description: `${component.name} has been added to the library.`,
         });
+        
+        // Refresh the components list
+        await getAllComponents().then(setAllComponents);
+        
         return id;
       } catch (error) {
         toast({
@@ -68,6 +106,9 @@ export const useComponentLibraryService = () => {
           title: "Component updated",
           description: `${component.name} has been updated successfully.`,
         });
+        
+        // Refresh the components list
+        await getAllComponents().then(setAllComponents);
       } catch (error) {
         toast({
           title: "Error updating component",
@@ -85,6 +126,9 @@ export const useComponentLibraryService = () => {
           title: "Component deleted",
           description: componentName ? `${componentName} has been removed from the library.` : "Component has been removed from the library.",
         });
+        
+        // Refresh the components list
+        await getAllComponents().then(setAllComponents);
       } catch (error) {
         toast({
           title: "Error deleting component",

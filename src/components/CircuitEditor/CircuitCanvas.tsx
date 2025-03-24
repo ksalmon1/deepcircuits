@@ -44,8 +44,10 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
   // Pre-populate the pin cache with library components' pins
   useEffect(() => {
     if (libraryComponents && libraryComponents.length > 0) {
+      console.log('Loading pin data from library components:', libraryComponents.length);
       libraryComponents.forEach(component => {
         if (component.pins && component.pins.length > 0) {
+          console.log(`Found pins for ${component.name} (${component.type}):`, component.pins);
           pinCache[component.type] = component.pins.map(pin => ({
             name: pin.name,
             x: Number(pin.x),
@@ -54,6 +56,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
           }));
         }
       });
+      console.log('Pin cache after loading:', pinCache);
     }
   }, [libraryComponents]);
 
@@ -124,17 +127,19 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     return () => clearTimeout(timer);
   }, [isReady, loadingError]);
 
-  // Get component pin information safely without using hooks directly in callbacks
-  const fetchComponentPins = useCallback((type: string): WokwiPin[] => {
+  // Get component pin information safely without using hooks
+  const fetchComponentPins = (type: string): WokwiPin[] => {
     try {
       // First check our cache
       if (pinCache[type]) {
+        console.log(`Using cached pins for ${type}:`, pinCache[type]);
         return pinCache[type];
       }
       
       // Check if we have this component in our library with pins
       const libraryComponent = libraryComponents?.find(c => c.type === type);
       if (libraryComponent?.pins && libraryComponent.pins.length > 0) {
+        console.log(`Found pins for ${type} in library:`, libraryComponent.pins);
         const pins = libraryComponent.pins.map(pin => ({
           name: pin.name,
           x: Number(pin.x),
@@ -148,6 +153,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
       }
       
       // Fallback to default pin info from WokwiIntegration
+      console.log(`Using default pins for ${type}`);
       const defaultPins = getComponentPinInfo(type);
       pinCache[type] = defaultPins;
       return defaultPins;
@@ -155,7 +161,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
       console.error(`Error in fetchComponentPins for ${type}:`, err);
       return getComponentPinInfo(type);
     }
-  }, [libraryComponents]);
+  };
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -176,12 +182,21 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
       const left = Math.floor(x / gridSize) * gridSize;
       const top = Math.floor(y / gridSize) * gridSize;
       
+      // Find the component in the library to get pins
+      const libraryComponent = libraryComponents?.find(c => c.type === componentInfo.type);
+      
       const newComponent: WokwiComponent = {
         type: componentInfo.type,
         id: `comp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         top,
         left,
         attributes: { color: 'red' },
+        pins: libraryComponent?.pins?.map(pin => ({
+          name: pin.name,
+          x: Number(pin.x),
+          y: Number(pin.y),
+          signals: pin.signals || []
+        }))
       };
       
       const updatedComponents = [...components, newComponent];
@@ -231,7 +246,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
       (element.firstChild as HTMLElement).style.outline = '2px solid #4C72F4';
       (element.firstChild as HTMLElement).style.outlineOffset = '2px';
     }
-  }, [fetchComponentPins]);
+  }, []);
 
   const handleComponentHoverExit = useCallback(() => {
     if (hoveredComponent) {
@@ -254,6 +269,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
       
       // Only render if element exists and we haven't rendered it yet
       if (element && !renderedComponents[component.id]) {
+        console.log(`Rendering component ${component.type} with id ${component.id}`);
         renderWokwiElement(component.type, elementId, component.attributes);
         setRenderedComponents(prev => ({
           ...prev,
@@ -338,7 +354,8 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
   const renderComponent = (component: WokwiComponent) => {
     const { type, id, top, left, attributes } = component;
     
-    const pins = fetchComponentPins(type);
+    // Use component's pins if available, otherwise fetch them
+    const pins = component.pins || fetchComponentPins(type);
     const showPins = visiblePins[id] || hoveredComponent === id;
     
     return (
@@ -352,7 +369,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
       >
         <div id={`wokwi-element-${id}`}></div>
         
-        {showPins && pins.length > 0 && (
+        {showPins && pins && pins.length > 0 && (
           <div className="absolute top-0 left-0 z-10 pointer-events-none">
             {pins.map((pin, index) => (
               <div 
@@ -370,7 +387,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
           </div>
         )}
         
-        {hoveredPin && hoveredPin.componentId === id && pins[hoveredPin.pinIndex] && (
+        {hoveredPin && hoveredPin.componentId === id && pins && pins[hoveredPin.pinIndex] && (
           <div 
             className="absolute z-20 bg-black text-white text-xs px-1 py-0.5 rounded-sm opacity-80"
             style={{ 
