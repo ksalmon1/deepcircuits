@@ -102,6 +102,53 @@ declare namespace JSX {
     };
     'wokwi-microsd-card': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>;
     'wokwi-show-pins': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>;
+    'wokwi-2x16-lcd-pcf8574': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
+      text?: string;
+    };
+    'wokwi-arduino-nano-33-ble-sense': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>;
+    'wokwi-attiny85': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>;
+    'wokwi-bme280': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
+      temperature?: number | string;
+      pressure?: number | string;
+      humidity?: number | string;
+    };
+    'wokwi-led-bar-graph': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
+      color?: string;
+      values?: string;
+    };
+    'wokwi-led-matrix': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>;
+    'wokwi-led-ring': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
+      color?: string;
+      values?: string;
+    };
+    'wokwi-microbit': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>;
+    'wokwi-ht16k33': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>;
+    'wokwi-tca9548a': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>;
+    'wokwi-rtc-ds1307': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>;
+    'wokwi-analog-joystick': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
+      xValue?: number | string;
+      yValue?: number | string;
+      buttonPressed?: boolean | string;
+    };
+    'wokwi-ttp223': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>;
+    'wokwi-ili9341': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>;
+    'wokwi-st7789': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>;
+    'wokwi-ssd1351': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>;
+    'wokwi-level-shifter': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>;
+    'wokwi-display-spi': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>;
+    'wokwi-oled-spi': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>;
+    'wokwi-servo-sg90': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
+      angle?: number | string;
+    };
+    'wokwi-keypad': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>;
+    'wokwi-braille-display': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>;
+    'wokwi-buzzer-passive': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>;
+    'wokwi-fsr': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
+      value?: number | string;
+    };
+    'wokwi-potentiometer-slide': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
+      value?: number | string;
+    };
   }
 }
 
