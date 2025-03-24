@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { 
   isWokwiLoaded, 
@@ -27,7 +26,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
   const [startPanPoint, setStartPanPoint] = useState({ x: 0, y: 0 });
   const [panMode, setPanMode] = useState(false);
 
-  // Function to check if Wokwi is loaded
   const checkWokwiLoaded = useCallback(async () => {
     console.log('Checking if Wokwi is loaded, attempt:', loadingAttempts + 1);
     
@@ -37,7 +35,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
       return true;
     }
     
-    // After a few attempts, try to force load
     if (loadingAttempts >= 2) {
       console.log('Attempting to manually load Wokwi components...');
       
@@ -69,13 +66,11 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     return false;
   }, [loadingAttempts]);
 
-  // Initial load checking
   useEffect(() => {
     const attemptLoading = async () => {
       const success = await checkWokwiLoaded();
       
       if (!success) {
-        // Schedule the next check
         const timer = setTimeout(attemptLoading, 1000);
         return () => clearTimeout(timer);
       }
@@ -84,7 +79,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     attemptLoading();
   }, [checkWokwiLoaded]);
 
-  // Fallback timeout to show UI even if components aren't fully loaded
   useEffect(() => {
     const timer = setTimeout(() => {
       if (!isReady && !loadingError) {
@@ -99,40 +93,33 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     return () => clearTimeout(timer);
   }, [isReady, loadingError]);
 
-  // Handle drop event for components
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     
     try {
-      // Get the component data from the drag event
       const componentData = e.dataTransfer.getData('component');
       if (!componentData) return;
       
       const componentInfo = JSON.parse(componentData);
       
-      // Calculate position relative to the grid, accounting for zoom and pan
       const rect = canvasRef.current?.getBoundingClientRect();
       if (!rect) return;
       
-      // Get the drop position, accounting for zoom and pan
       const x = (e.clientX - rect.left - position.x) / zoom;
       const y = (e.clientY - rect.top - position.y) / zoom;
       
-      // Snap to grid (25px grid size), accounting for zoom
       const gridSize = 25;
       const left = Math.floor(x / gridSize) * gridSize;
       const top = Math.floor(y / gridSize) * gridSize;
       
-      // Create a new component with proper positioning
       const newComponent: WokwiComponent = {
         type: componentInfo.type,
         id: `comp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         top,
         left,
-        attributes: { color: 'red' }, // Default attributes, can be customized later
+        attributes: { color: 'red' },
       };
       
-      // Add the new component to the canvas
       const updatedComponents = [...components, newComponent];
       onComponentsChange(updatedComponents);
       
@@ -150,11 +137,10 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
   };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault(); // Allow drop
+    e.preventDefault();
     e.dataTransfer.dropEffect = 'copy';
   };
 
-  // Render a component on the canvas
   const renderComponent = useCallback((component: WokwiComponent) => {
     const { type, id, top, left, attributes } = component;
     
@@ -169,11 +155,9 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     );
   }, []);
 
-  // Effect to render Wokwi elements after components state changes
   useEffect(() => {
     if (!isReady) return;
     
-    // Render each component
     components.forEach(component => {
       const elementId = `wokwi-element-${component.id}`;
       renderWokwiElement(component.type, elementId, component.attributes);
@@ -186,17 +170,14 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     await checkWokwiLoaded();
   };
 
-  // Handle zoom in
   const handleZoomIn = () => {
     setZoom(prevZoom => Math.min(prevZoom + 0.1, 3));
   };
 
-  // Handle zoom out
   const handleZoomOut = () => {
     setZoom(prevZoom => Math.max(prevZoom - 0.1, 0.5));
   };
 
-  // Toggle pan mode
   const togglePanMode = () => {
     setPanMode(!panMode);
     if (panMode) {
@@ -206,16 +187,14 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     }
   };
 
-  // Handle mouse down for panning
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (panMode || e.button === 1) { // Middle mouse button
+    if (panMode || e.button === 1) {
       setIsPanning(true);
       setStartPanPoint({ x: e.clientX - position.x, y: e.clientY - position.y });
       e.preventDefault();
     }
   };
 
-  // Handle mouse move for panning
   const handleMouseMove = (e: React.MouseEvent) => {
     if (isPanning) {
       const newX = e.clientX - startPanPoint.x;
@@ -225,26 +204,21 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     }
   };
 
-  // Handle mouse up to stop panning
   const handleMouseUp = () => {
     setIsPanning(false);
   };
 
-  // Handle mouse leave to stop panning
   const handleMouseLeave = () => {
     setIsPanning(false);
   };
 
-  // Handle wheel event for zooming
   const handleWheel = (e: React.WheelEvent) => {
-    if (e.ctrlKey) {
-      e.preventDefault();
-      const delta = e.deltaY > 0 ? -0.1 : 0.1;
-      setZoom(prevZoom => {
-        const newZoom = Math.max(0.5, Math.min(3, prevZoom + delta));
-        return newZoom;
-      });
-    }
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -0.1 : 0.1;
+    setZoom(prevZoom => {
+      const newZoom = Math.max(0.5, Math.min(3, prevZoom + delta));
+      return newZoom;
+    });
   };
 
   return (
@@ -269,7 +243,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
         </div>
       )}
 
-      {/* Zoom and pan controls */}
       <div className="absolute top-2 right-2 bg-white rounded-md shadow-md p-1 z-20 flex gap-1">
         <button
           onClick={handleZoomIn}
@@ -317,7 +290,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
             transition: isPanning ? 'none' : 'transform 0.1s ease-out'
           }}
         >
-          {/* Render all placed components */}
           {components.map(renderComponent)}
         </div>
       </div>
