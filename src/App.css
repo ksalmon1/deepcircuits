@@ -41,25 +41,3 @@ wokwi-show-pins {
   display: inline-block;
   position: relative;
 }
-
-/* Custom styling for Wokwi pin display */
-.wokwi-pins-container {
-  position: relative;
-}
-
-/* Ensure pin labels are visible on hover */
-.wokwi-pins-container wokwi-show-pins::part(pin) {
-  cursor: pointer;
-}
-
-.wokwi-pins-container wokwi-show-pins::part(pin):hover::part(pin-label) {
-  visibility: visible !important;
-  opacity: 1 !important;
-}
-
-/* Apply styles to the shadow DOM if possible */
-.wokwi-pins-container wokwi-show-pins {
-  --pin-label-background: rgba(255, 255, 255, 0.9);
-  --pin-label-color: #333;
-  --pin-label-opacity: 1;
-}

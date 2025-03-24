@@ -11,60 +11,6 @@
 }
 
 /* Style for wokwi elements */
-wokwi-led,
-wokwi-resistor,
-wokwi-capacitor,
-wokwi-battery,
-wokwi-arduino-uno,
-wokwi-arduino-nano,
-wokwi-esp32-devkit-v1,
-wokwi-pushbutton,
-wokwi-slide-switch,
-wokwi-7segment,
-wokwi-buzzer,
-wokwi-potentiometer,
-wokwi-servo,
-wokwi-lcd1602,
-wokwi-membrane-keypad,
-wokwi-stepper-motor,
-wokwi-relay,
-wokwi-ir-remote,
-wokwi-ir-receiver,
-wokwi-dht22,
-wokwi-logic-analyzer,
-wokwi-arduino-mega,
-wokwi-arduino-leonardo,
-wokwi-arduino-micro,
-wokwi-breadboard,
-wokwi-analog-joystick,
-wokwi-bicolor-led,
-wokwi-clock-generator,
-wokwi-crystal,
-wokwi-hc-sr04,
-wokwi-ky-040,
-wokwi-lcd2004,
-wokwi-led-bar-graph,
-wokwi-led-matrix,
-wokwi-microphone,
-wokwi-mpu6050,
-wokwi-max7219-matrix,
-wokwi-neopixel,
-wokwi-photoresistor-sensor,
-wokwi-piezo,
-wokwi-pir-motion-sensor,
-wokwi-raspberrypi-pico,
-wokwi-rgb-led,
-wokwi-rotary-dialer,
-wokwi-sd-card,
-wokwi-slide-potentiometer,
-wokwi-ssd1306,
-wokwi-text-lcd1602,
-wokwi-tilt-sensor,
-wokwi-ultrasonic-distance-sensor,
-wokwi-voltage-source {
-  display: inline-block;
-}
-
 wokwi-led {
   display: inline-block;
 }
@@ -78,9 +24,7 @@ wokwi-capacitor {
 }
 
 wokwi-arduino-uno,
-wokwi-arduino-mega,
-wokwi-esp32-devkit-v1,
-wokwi-breadboard {
+wokwi-esp32-devkit-v1 {
   transform: scale(0.8);
   transform-origin: center;
 }
@@ -129,19 +73,6 @@ wokwi-breadboard {
   opacity: 1;
 }
 
-/* Wokwi pin visualization enhancements */
-.wokwi-pins-container {
-  position: relative;
-}
-
-/* Set CSS variables for wokwi-show-pins */
-.wokwi-pins-container wokwi-show-pins {
-  --pin-label-background: rgba(255, 255, 255, 0.9);
-  --pin-label-color: #333;
-  --pin-color: #ff6384;
-  --pin-hover-color: #ff8c9e;
-}
-
 /* Grid for component placement */
 .component-grid {
   background-size: 10px 10px;
@@ -165,52 +96,58 @@ wokwi-breadboard {
 }
 
 .component-grid::before {
-  width: 1px;
-  top: 0;
-  bottom: 0;
   left: 50%;
+  top: 0;
+  width: 1px;
+  height: 100%;
   transform: translateX(-50%);
 }
 
 .component-grid::after {
-  height: 1px;
-  left: 0;
-  right: 0;
   top: 50%;
+  left: 0;
+  height: 1px;
+  width: 100%;
   transform: translateY(-50%);
 }
 
-/* Component highlight */
-.component-highlight {
+/* Component highlight on hover/selection */
+.component-preview-container:hover {
+  outline: 1px dashed rgba(var(--primary), 0.3);
+}
+
+/* Animations for preview */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.component-preview-container > * {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+/* Pin positioning guide */
+.pin-position-guide {
   position: absolute;
-  top: 0;
+  font-size: 10px;
+  color: #666;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.pin-position-guide.x {
+  bottom: 5px;
   left: 0;
   width: 100%;
+  text-align: center;
+}
+
+.pin-position-guide.y {
+  top: 0;
+  left: 5px;
   height: 100%;
-  border: 2px dashed rgba(var(--primary), 0.7);
-  pointer-events: none;
-  z-index: 1;
-  border-radius: 5px;
-}
-
-/* Animations */
-@keyframes pulse {
-  0% {
-    transform: scale(1);
-    opacity: 0.7;
-  }
-  50% {
-    transform: scale(1.1);
-    opacity: 1;
-  }
-  100% {
-    transform: scale(1);
-    opacity: 0.7;
-  }
-}
-
-.pulse {
-  animation: pulse 2s infinite;
+  writing-mode: vertical-lr;
+  transform: rotate(180deg);
 }
 
 /* Mobile responsiveness */
