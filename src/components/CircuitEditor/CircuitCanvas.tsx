@@ -48,6 +48,10 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
   
   // Pre-populate the pin cache with pin data from Supabase
   useEffect(() => {
+    populatePinCache();
+  }, [libraryComponents, componentsDetailsMap]);
+
+  const populatePinCache = useCallback(() => {
     if (libraryComponents && componentsDetailsMap && Object.keys(componentsDetailsMap).length > 0) {
       console.log('Loading pin data from componentsDetailsMap:', Object.keys(componentsDetailsMap).length);
       
@@ -126,6 +130,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     return false;
   }, [loadingAttempts]);
 
+  // Attempt to load Wokwi components when the component mounts
   useEffect(() => {
     const attemptLoading = async () => {
       const success = await checkWokwiLoaded();
@@ -139,6 +144,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     attemptLoading();
   }, [checkWokwiLoaded]);
 
+  // Fallback timer to force loading after a timeout
   useEffect(() => {
     const timer = setTimeout(() => {
       if (!isReady && !loadingError) {
@@ -555,6 +561,11 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
   );
 };
 
+/**
+ * Helper function to get a color based on signal type
+ * @param signal The signal type to get a color for
+ * @returns A hex color code for the signal
+ */
 function getSignalColor(signal: string): string {
   const colors: Record<string, string> = {
     'power': '#FF6384',    // Red
