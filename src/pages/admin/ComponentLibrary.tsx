@@ -69,6 +69,9 @@ import {
   forceLoadWokwiElements, 
   renderWokwiElement 
 } from '@/integrations/wokwi/WokwiIntegration';
+import VisualPinEditor from "@/components/CircuitEditor/VisualPinEditor";
+import DynamicPropertyEditor from "@/components/CircuitEditor/DynamicPropertyEditor";
+import EnhancedComponentPreview from "@/components/CircuitEditor/EnhancedComponentPreview";
 
 interface ComponentType {
   id: string;
@@ -408,167 +411,26 @@ const ComponentLibrary = () => {
     });
   };
   
-  const updatePinConfig = (index: number, field: string, value: any) => {
-    if (!editedComponent || !editedComponent.pinConfig) return;
-    
-    const updatedPins = [...editedComponent.pinConfig];
-    updatedPins[index] = { 
-      ...updatedPins[index], 
-      [field]: field === 'signals' 
-        ? Array.isArray(value) ? value : [value]
-        : value 
-    };
-    
-    setEditedComponent({
-      ...editedComponent,
-      pinConfig: updatedPins
-    });
-  };
-  
-  const addPin = () => {
+  const updateComponentProperties = (properties: Record<string, any>) => {
     if (!editedComponent) return;
     
-    const newPin = {
-      name: `Pin ${(editedComponent.pinConfig?.length || 0) + 1}`,
-      x: 0,
-      y: (editedComponent.pinConfig?.length || 0) * 10,
-      signals: ["digital"]
-    };
-    
-    setEditedComponent({
-      ...editedComponent,
-      pinConfig: [...(editedComponent.pinConfig || []), newPin],
-      pins: (editedComponent.pins || 0) + 1
+    setEditedComponent(prev => {
+      if (!prev) return prev;
+      return { ...prev, properties };
     });
   };
   
-  const removePin = (index: number) => {
-    if (!editedComponent || !editedComponent.pinConfig) return;
+  const updatePinConfiguration = (pinConfig: PinConfig[]) => {
+    if (!editedComponent) return;
     
-    const updatedPins = editedComponent.pinConfig.filter((_, i) => i !== index);
-    
-    setEditedComponent({
-      ...editedComponent,
-      pinConfig: updatedPins,
-      pins: editedComponent.pins - 1
+    setEditedComponent(prev => {
+      if (!prev) return prev;
+      return { 
+        ...prev, 
+        pinConfig, 
+        pins: pinConfig.length 
+      };
     });
-  };
-
-  const PinConfigurationSection = () => {
-    if (!editedComponent || !editedComponent.pinConfig) {
-      return (
-        <div className="text-center py-4">
-          <p>No pin configuration available for this component.</p>
-          <Button onClick={addPin} className="mt-2">Add First Pin</Button>
-        </div>
-      );
-    }
-    
-    return (
-      <div className="space-y-4">
-        <div className="flex justify-between items-center">
-          <h3 className="text-lg font-medium">Pin Configuration</h3>
-          <Button onClick={addPin} size="sm">Add Pin</Button>
-        </div>
-        
-        {editedComponent.pinConfig.map((pin, index) => (
-          <div key={`pin-${index}`} className="border rounded-md p-3 space-y-2">
-            <div className="flex justify-between items-center">
-              <h4 className="font-medium">Pin {index + 1}</h4>
-              <Button 
-                variant="ghost" 
-                size="icon"
-                onClick={() => removePin(index)}
-                className="h-6 w-6 text-destructive"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-sm text-muted-foreground">Name</label>
-                <Input 
-                  value={pin.name} 
-                  onChange={(e) => updatePinConfig(index, 'name', e.target.value)}
-                  className="mt-1"
-                />
-              </div>
-              
-              <div>
-                <label className="text-sm text-muted-foreground">Signal Types</label>
-                <Select
-                  value={pin.signals[0] || "digital"}
-                  onValueChange={(value) => updatePinConfig(index, 'signals', [value])}
-                >
-                  <SelectTrigger className="mt-1">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {signalTypes.map(signal => (
-                      <SelectItem key={signal} value={signal}>
-                        {signal.charAt(0).toUpperCase() + signal.slice(1)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div>
-                <label className="text-sm text-muted-foreground">X Position</label>
-                <Input 
-                  type="number"
-                  value={pin.x} 
-                  onChange={(e) => updatePinConfig(index, 'x', parseInt(e.target.value))}
-                  className="mt-1"
-                />
-              </div>
-              
-              <div>
-                <label className="text-sm text-muted-foreground">Y Position</label>
-                <Input 
-                  type="number"
-                  value={pin.y} 
-                  onChange={(e) => updatePinConfig(index, 'y', parseInt(e.target.value))}
-                  className="mt-1"
-                />
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  };
-
-  const PropertiesSection = () => {
-    if (!editedComponent) return null;
-    
-    const properties = editedComponent.properties || {};
-    const propertyKeys = Object.keys(properties);
-    
-    if (propertyKeys.length === 0) {
-      return (
-        <div className="text-center py-4">
-          <p>No custom properties defined for this component.</p>
-        </div>
-      );
-    }
-    
-    return (
-      <div className="space-y-4">
-        <h3 className="text-lg font-medium">Component Properties</h3>
-        
-        {propertyKeys.map(propKey => (
-          <div key={propKey} className="grid grid-cols-2 gap-2">
-            <div className="font-medium">{propKey}:</div>
-            <Input 
-              value={properties[propKey]} 
-              onChange={(e) => updateComponentProperty(`properties.${propKey}`, e.target.value)}
-            />
-          </div>
-        ))}
-      </div>
-    );
   };
 
   return (
@@ -800,7 +662,7 @@ const ComponentLibrary = () => {
         </Dialog>
 
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
+          <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Edit Component</DialogTitle>
               <DialogDescription>
@@ -815,8 +677,9 @@ const ComponentLibrary = () => {
                 value={activeTab}
                 onValueChange={setActiveTab}
               >
-                <TabsList className="grid grid-cols-3">
+                <TabsList className="grid grid-cols-4">
                   <TabsTrigger value="details">Basic Details</TabsTrigger>
+                  <TabsTrigger value="properties">Properties</TabsTrigger>
                   <TabsTrigger value="pins">Pin Configuration</TabsTrigger>
                   <TabsTrigger value="preview">Preview</TabsTrigger>
                 </TabsList>
@@ -890,33 +753,77 @@ const ComponentLibrary = () => {
                       <label htmlFor="enabled">Enable component for users</label>
                     </div>
                     
-                    <PropertiesSection />
+                    <div className="mt-4">
+                      <EnhancedComponentPreview
+                        componentType={editedComponent.type}
+                        properties={editedComponent.properties || {}}
+                        customSvgPath={editedComponent.svgPath}
+                        previewId="details-preview"
+                      />
+                    </div>
+                  </div>
+                </TabsContent>
+                
+                <TabsContent value="properties" className="py-4">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <DynamicPropertyEditor
+                      properties={editedComponent.properties || {}}
+                      componentType={editedComponent.type}
+                      onChange={updateComponentProperties}
+                    />
+                    
+                    <EnhancedComponentPreview
+                      componentType={editedComponent.type}
+                      properties={editedComponent.properties || {}}
+                      customSvgPath={editedComponent.svgPath}
+                      previewId="property-preview"
+                    />
                   </div>
                 </TabsContent>
                 
                 <TabsContent value="pins" className="py-4">
-                  <PinConfigurationSection />
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="lg:col-span-2">
+                      <VisualPinEditor
+                        pins={editedComponent.pinConfig || []}
+                        componentType={editedComponent.type}
+                        onChange={updatePinConfiguration}
+                      />
+                    </div>
+                    
+                    <div>
+                      <EnhancedComponentPreview
+                        componentType={editedComponent.type}
+                        properties={editedComponent.properties || {}}
+                        customSvgPath={editedComponent.svgPath}
+                        previewId="pinEditor-component-preview"
+                      />
+                      
+                      <div className="mt-4 p-4 border rounded-md bg-gray-50">
+                        <h4 className="font-medium mb-2">Pin Configuration Tips</h4>
+                        <ul className="text-sm space-y-2 text-muted-foreground">
+                          <li>• Click a pin marker and then click on the grid to reposition it</li>
+                          <li>• Pins should be positioned relative to the component's outline</li>
+                          <li>• For accurate simulation, ensure pin positions match actual component pins</li>
+                          <li>• Each pin must have at least one signal type</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
                 </TabsContent>
                 
                 <TabsContent value="preview" className="py-4">
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div className="border rounded-md p-4">
-                      <h3 className="text-lg font-medium mb-3">Component Preview</h3>
-                      <div className="bg-gray-50 p-8 rounded-md flex items-center justify-center min-h-[200px]">
-                        {wokwiReady ? (
-                          <div id="edit-component-preview" ref={previewRef} className="component-preview-container"></div>
-                        ) : (
-                          <div className="text-center text-muted-foreground">
-                            <Cpu className="h-12 w-12 mb-2 mx-auto animate-pulse" />
-                            <p>Loading component preview...</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
+                    <EnhancedComponentPreview
+                      componentType={editedComponent.type}
+                      properties={editedComponent.properties || {}}
+                      customSvgPath={editedComponent.svgPath}
+                      previewId="edit-component-preview"
+                    />
                     
                     <div className="border rounded-md p-4">
                       <h3 className="text-lg font-medium mb-3">Component JSON</h3>
-                      <div className="bg-gray-100 rounded-md p-4 font-mono text-xs overflow-auto max-h-[300px]">
+                      <div className="bg-gray-100 rounded-md p-4 font-mono text-xs overflow-auto max-h-[320px]">
                         <pre>{JSON.stringify(editedComponent, null, 2)}</pre>
                       </div>
                     </div>
@@ -984,17 +891,12 @@ const ComponentLibrary = () => {
                   </div>
                   
                   <div>
-                    <h3 className="text-lg font-medium mb-4">Component Preview</h3>
-                    <div className="bg-gray-50 p-6 rounded-md flex items-center justify-center min-h-[200px] border">
-                      {wokwiReady ? (
-                        <div id="component-preview" className="component-preview-container"></div>
-                      ) : (
-                        <div className="text-center text-muted-foreground">
-                          <Cpu className="h-10 w-10 mb-2 mx-auto animate-pulse" />
-                          <p>Loading component preview...</p>
-                        </div>
-                      )}
-                    </div>
+                    <EnhancedComponentPreview
+                      componentType={selectedComponent.type}
+                      properties={selectedComponent.properties || {}}
+                      customSvgPath={selectedComponent.svgPath}
+                      previewId="component-preview"
+                    />
                   </div>
                 </div>
                 
@@ -1062,10 +964,37 @@ const ComponentLibrary = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle className="text-destructive">Delete Component</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete this component? This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              {selectedComponent && (
+                <div className="flex items-center gap-3 p-3 border rounded-md bg-gray-50">
+                  <div className="w-10 h-10 flex items-center justify-center bg-red-100 rounded-md">
+                    <AlertCircle className="h-6 w-6 text-destructive" />
+                  </div>
+                  <div>
+                    <p className="font-medium">{selectedComponent.name}</p>
+                    <p className="text-sm text-muted-foreground">{selectedComponent.type}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>Cancel</Button>
+              <Button variant="destructive" onClick={handleConfirmDelete}>Delete Component</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </PageLayout>
   );
 };
 
 export default ComponentLibrary;
-

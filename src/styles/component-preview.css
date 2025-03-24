@@ -7,6 +7,7 @@
   min-height: 150px;
   width: 100%;
   position: relative;
+  padding: 20px;
 }
 
 /* Style for wokwi elements */
@@ -31,38 +32,137 @@ wokwi-esp32-devkit-v1 {
 /* Pin markers */
 .pin-marker {
   position: absolute;
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background-color: #ff6384;
   border: 1px solid #ffffff;
   transform: translate(-50%, -50%);
   z-index: 10;
-  pointer-events: none;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+  cursor: move;
+  transition: transform 0.1s ease-in-out, box-shadow 0.1s ease-in-out;
+}
+
+.pin-marker:hover {
+  transform: translate(-50%, -50%) scale(1.5);
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.2);
+  z-index: 20;
 }
 
 .pin-marker::after {
   content: attr(data-pin-name);
   position: absolute;
   font-size: 10px;
-  background-color: rgba(255, 255, 255, 0.8);
+  background-color: rgba(255, 255, 255, 0.9);
+  color: #333;
   padding: 2px 4px;
   border-radius: 2px;
   white-space: nowrap;
-  top: -18px;
+  top: -20px;
   left: 50%;
   transform: translateX(-50%);
   pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+  z-index: 20;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.pin-marker:hover::after {
+  opacity: 1;
 }
 
 /* Grid for component placement */
 .component-grid {
-  background-size: 20px 20px;
-  background-image: linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px),
-                    linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
+  background-size: 10px 10px;
+  background-image: 
+    linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
   width: 100%;
   height: 100%;
   position: absolute;
   pointer-events: none;
   z-index: 0;
+}
+
+/* Center guide lines */
+.component-grid::before,
+.component-grid::after {
+  content: '';
+  position: absolute;
+  background-color: rgba(var(--primary), 0.2);
+  pointer-events: none;
+}
+
+.component-grid::before {
+  left: 50%;
+  top: 0;
+  width: 1px;
+  height: 100%;
+  transform: translateX(-50%);
+}
+
+.component-grid::after {
+  top: 50%;
+  left: 0;
+  height: 1px;
+  width: 100%;
+  transform: translateY(-50%);
+}
+
+/* Component highlight on hover/selection */
+.component-preview-container:hover {
+  outline: 1px dashed rgba(var(--primary), 0.3);
+}
+
+/* Animations for preview */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.component-preview-container > * {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+/* Pin positioning guide */
+.pin-position-guide {
+  position: absolute;
+  font-size: 10px;
+  color: #666;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.pin-position-guide.x {
+  bottom: 5px;
+  left: 0;
+  width: 100%;
+  text-align: center;
+}
+
+.pin-position-guide.y {
+  top: 0;
+  left: 5px;
+  height: 100%;
+  writing-mode: vertical-lr;
+  transform: rotate(180deg);
+}
+
+/* Mobile responsiveness */
+@media (max-width: 640px) {
+  .component-preview-container {
+    min-height: 100px;
+  }
+  
+  .pin-marker {
+    width: 6px;
+    height: 6px;
+  }
+  
+  .pin-marker::after {
+    font-size: 8px;
+    padding: 1px 2px;
+  }
 }
