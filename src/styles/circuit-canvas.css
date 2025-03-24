@@ -12,9 +12,10 @@
   position: absolute;
 }
 
-.pin-marker:hover {
+.pin-marker.dragging {
+  z-index: 30;
   transform: translate(-50%, -50%) scale(1.5);
-  box-shadow: 0 0 0 2px rgba(76, 114, 244, 0.9), 0 0 5px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 0 3px rgba(76, 114, 244, 1), 0 0 8px rgba(0, 0, 0, 0.5);
 }
 
 .component-highlight {
@@ -88,10 +89,41 @@
   justify-content: center;
 }
 
-/* These styles enable drag animation */
-.pin-marker.dragging {
-  z-index: 30;
-  transform: translate(-50%, -50%) scale(1.5);
-  box-shadow: 0 0 0 3px rgba(76, 114, 244, 1), 0 0 8px rgba(0, 0, 0, 0.5);
+/* Zoom control styles */
+.zoom-controls {
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  display: flex;
+  gap: 4px;
+  z-index: 40;
+  background: white;
+  padding: 4px;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
+.zoom-controls button {
+  border: none;
+  background: #f0f0f0;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.zoom-controls button:hover {
+  background: #e0e0e0;
+}
+
+.zoom-level {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  padding: 0 8px;
+}

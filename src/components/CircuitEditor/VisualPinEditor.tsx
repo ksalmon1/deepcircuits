@@ -1,7 +1,7 @@
-
-import React, { useState, useRef, useEffect } from 'react';
-import { Move, Plus, X } from 'lucide-react';
+import React, { useState, useRef, useEffect, WheelEvent } from 'react';
+import { Move, Plus, X, ZoomIn, ZoomOut } from 'lucide-react';
 import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface PinConfig {
   name: string;
@@ -33,6 +33,7 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
   const [componentBounds, setComponentBounds] = useState({ width: 0, height: 0 });
   const [componentOrigin, setComponentOrigin] = useState({ left: 0, top: 0 });
   const [currentDragPosition, setCurrentDragPosition] = useState({ x: 0, y: 0 });
+  const [zoomLevel, setZoomLevel] = useState(1);
 
   useEffect(() => {
     if (editorRef.current) {
@@ -94,12 +95,12 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
     const rect = editorRef.current?.getBoundingClientRect();
     if (!rect) return;
 
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const x = (e.clientX - rect.left) / zoomLevel;
+    const y = (e.clientY - rect.top) / zoomLevel;
 
     // Convert to component-relative coordinates
-    const relativeX = x - componentOrigin.left;
-    const relativeY = y - componentOrigin.top;
+    const relativeX = x - componentOrigin.left / zoomLevel;
+    const relativeY = y - componentOrigin.top / zoomLevel;
 
     const updatedPins = [...pins];
     updatedPins[draggedPin] = {
@@ -118,15 +119,15 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
     const rect = editorRef.current?.getBoundingClientRect();
     if (!rect) return;
 
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const x = (e.clientX - rect.left) / zoomLevel;
+    const y = (e.clientY - rect.top) / zoomLevel;
     
     // Convert to component-relative coordinates
-    const relativeX = x - componentOrigin.left;
-    const relativeY = y - componentOrigin.top;
+    const relativeX = x - componentOrigin.left / zoomLevel;
+    const relativeY = y - componentOrigin.top / zoomLevel;
     
     // Update the current drag position for visual feedback
-    setCurrentDragPosition({ x, y });
+    setCurrentDragPosition({ x: e.clientX - rect.left, y: e.clientY - rect.top });
     
     // Live update the pin position during drag
     const updatedPins = [...pins];
@@ -141,6 +142,21 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
 
   const handlePinDragEnd = () => {
     setDraggedPin(null);
+  };
+
+  const handleZoom = (e: WheelEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -0.1 : 0.1;
+    const newZoom = Math.max(0.5, Math.min(3, zoomLevel + delta));
+    setZoomLevel(newZoom);
+  };
+
+  const zoomIn = () => {
+    setZoomLevel(prev => Math.min(3, prev + 0.2));
+  };
+
+  const zoomOut = () => {
+    setZoomLevel(prev => Math.max(0.5, prev - 0.2));
   };
 
   const addNewPin = () => {
@@ -188,7 +204,14 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-medium">Visual Pin Configuration</h3>
-        <div className="space-x-2">
+        <div className="space-x-2 flex items-center">
+          <Button onClick={zoomOut} size="sm" variant="outline" className="px-2">
+            <ZoomOut className="h-4 w-4" />
+          </Button>
+          <span className="text-sm font-medium">{Math.round(zoomLevel * 100)}%</span>
+          <Button onClick={zoomIn} size="sm" variant="outline" className="px-2">
+            <ZoomIn className="h-4 w-4" />
+          </Button>
           <Button onClick={() => setShowGrid(!showGrid)} size="sm" variant="outline">
             {showGrid ? "Hide Grid" : "Show Grid"}
           </Button>
@@ -198,101 +221,123 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
         </div>
       </div>
 
-      <div 
-        ref={editorRef}
-        className="border rounded-md relative h-[300px] overflow-hidden cursor-crosshair"
-        onClick={handleEditorClick}
-        onMouseMove={handlePinDrag}
-        onMouseUp={handlePinDragEnd}
-        onMouseLeave={handlePinDragEnd}
-      >
-        {showGrid && (
-          <div className="component-grid absolute inset-0"></div>
-        )}
-
-        {/* Component visual representation */}
+      <ScrollArea className="border rounded-md h-[300px] relative" onWheel={handleZoom}>
         <div 
-          ref={componentContainerRef}
-          className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
+          ref={editorRef}
+          className="relative cursor-crosshair"
+          style={{ 
+            height: '300px', 
+            width: '100%',
+            overflow: 'hidden'
+          }}
+          onClick={handleEditorClick}
+          onMouseMove={handlePinDrag}
+          onMouseUp={handlePinDragEnd}
+          onMouseLeave={handlePinDragEnd}
         >
+          {showGrid && (
+            <div className="component-grid absolute inset-0"></div>
+          )}
+
+          {/* Component visual representation */}
           <div 
-            className="component-pin-container"
+            ref={componentContainerRef}
+            className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
             style={{ 
-              width: `${componentBounds.width}px`, 
-              height: `${componentBounds.height}px`,
-              minWidth: '80px',
-              minHeight: '80px',
-              position: 'relative',
-              transformOrigin: 'center',
-              padding: '0',
-              margin: '0'
+              transform: `translate(-50%, -50%) scale(${zoomLevel})`,
+              transformOrigin: 'center'
             }}
           >
-            <div id="pinEditor-component-preview" className="flex items-center justify-center"></div>
-          </div>
-        </div>
-
-        {/* Pin markers */}
-        {pins.map((pin, index) => {
-          // Calculate absolute position for the pin display
-          const absoluteX = componentOrigin.left + pin.x;
-          const absoluteY = componentOrigin.top + pin.y;
-          
-          return (
-            <div
-              key={`pin-${index}`}
-              className={`pin-marker ${draggedPin === index ? 'dragging' : ''}`}
+            <div 
+              className="component-pin-container"
               style={{ 
-                left: `${absoluteX}px`, 
-                top: `${absoluteY}px`,
-                backgroundColor: getSignalColor(pin.signals && pin.signals.length > 0 ? pin.signals[0] : 'digital'),
-                cursor: readonly ? 'default' : 'move'
+                width: `${componentBounds.width}px`, 
+                height: `${componentBounds.height}px`,
+                minWidth: '80px',
+                minHeight: '80px',
+                position: 'relative',
+                transformOrigin: 'center',
+                padding: '0',
+                margin: '0'
               }}
-              data-pin-name={pin.name}
-              onMouseEnter={() => setHoveredPin(index)}
-              onMouseLeave={() => setHoveredPin(null)}
-              onMouseDown={() => handlePinDragStart(index)}
             >
-              {!readonly && (
-                <button 
-                  className="absolute -top-5 -right-5 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    removePin(index);
-                  }}
-                >
-                  <X className="w-3 h-3" />
-                </button>
+              <div id="pinEditor-component-preview" className="flex items-center justify-center"></div>
+            </div>
+          </div>
+
+          {/* Pin markers */}
+          {pins.map((pin, index) => {
+            // Calculate absolute position for the pin display, accounting for zoom
+            const absoluteX = (componentOrigin.left + pin.x * zoomLevel);
+            const absoluteY = (componentOrigin.top + pin.y * zoomLevel);
+            
+            return (
+              <div
+                key={`pin-${index}`}
+                className={`pin-marker ${draggedPin === index ? 'dragging' : ''}`}
+                style={{ 
+                  left: `${absoluteX}px`, 
+                  top: `${absoluteY}px`,
+                  backgroundColor: getSignalColor(pin.signals && pin.signals.length > 0 ? pin.signals[0] : 'digital'),
+                  cursor: readonly ? 'default' : 'move',
+                  transform: `translate(-50%, -50%) scale(${1/zoomLevel})`,
+                  // Adjust scaling to keep pin size consistent across zoom levels
+                  width: `${10 / zoomLevel}px`,
+                  height: `${10 / zoomLevel}px`
+                }}
+                data-pin-name={pin.name}
+                onMouseEnter={() => setHoveredPin(index)}
+                onMouseLeave={() => setHoveredPin(null)}
+                onMouseDown={() => handlePinDragStart(index)}
+              >
+                {!readonly && (
+                  <button 
+                    className="absolute -top-5 -right-5 bg-red-500 text-white rounded-full flex items-center justify-center"
+                    style={{
+                      width: `${16 / zoomLevel}px`,
+                      height: `${16 / zoomLevel}px`,
+                      fontSize: `${12 / zoomLevel}px`
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removePin(index);
+                    }}
+                  >
+                    <X className="w-3 h-3" style={{ transform: `scale(${1/zoomLevel})` }} />
+                  </button>
+                )}
+              </div>
+            );
+          })}
+
+          {/* Pin tooltip */}
+          {hoveredPin !== null && (
+            <div 
+              className="pin-tooltip"
+              style={{ 
+                top: `${componentOrigin.top + pins[hoveredPin].y * zoomLevel}px`, 
+                left: `${componentOrigin.left + pins[hoveredPin].x * zoomLevel}px`,
+                transform: `translate(-50%, -100%) scale(${1/zoomLevel})`,
+                transformOrigin: 'bottom center'
+              }}
+            >
+              {pins[hoveredPin].name}
+              {pins[hoveredPin].signals && (
+                <span className="text-xs opacity-70 ml-1">
+                  ({pins[hoveredPin].signals.join(', ')})
+                </span>
               )}
             </div>
-          );
-        })}
+          )}
 
-        {/* Pin tooltip */}
-        {hoveredPin !== null && (
-          <div 
-            className="pin-tooltip"
-            style={{ 
-              top: `${componentOrigin.top + pins[hoveredPin].y}px`, 
-              left: `${componentOrigin.left + pins[hoveredPin].x}px`
-            }}
-          >
-            {pins[hoveredPin].name}
-            {pins[hoveredPin].signals && (
-              <span className="text-xs opacity-70 ml-1">
-                ({pins[hoveredPin].signals.join(', ')})
-              </span>
-            )}
-          </div>
-        )}
-
-        {/* Drag instruction */}
-        {draggedPin !== null && (
-          <div className="absolute top-4 left-4 bg-black bg-opacity-70 text-white p-2 rounded text-sm">
-            Drag to position pin
-          </div>
-        )}
-      </div>
+          {/* Drag instruction */}
+          {draggedPin !== null && (
+            <div className="absolute top-4 left-4 bg-black bg-opacity-70 text-white p-2 rounded text-sm">
+              Drag to position pin
+            </div>
+          )}
+        </div>
+      </ScrollArea>
 
       <div className="mt-4 grid grid-cols-2 md:grid-cols-3 gap-4">
         {pins.map((pin, index) => (
