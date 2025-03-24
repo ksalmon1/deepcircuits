@@ -9,8 +9,10 @@ import './styles/tailwind.css'
 import { Toaster } from "@/components/ui/toaster"
 import { Toaster as SonnerToaster } from 'sonner'
 
-// Import Wokwi elements
-import '@wokwi/elements';
+// Import Wokwi elements once at the application root
+// This ensures the custom elements are only registered once
+import '@wokwi/elements'
+console.log('Wokwi elements imported in main.tsx')
 
 // Create a client for React Query
 const queryClient = new QueryClient()

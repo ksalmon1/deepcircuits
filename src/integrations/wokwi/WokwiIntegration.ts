@@ -1,5 +1,6 @@
 
-import '@wokwi/elements';
+// Instead of importing the elements directly, we'll check if they're already registered
+// We removed: import '@wokwi/elements';
 
 // Track whether we've seen the components load successfully
 let componentsLoadedSuccessfully = false;
@@ -25,7 +26,7 @@ export const isWokwiLoaded = (): boolean => {
   }
 };
 
-// Load wokwi elements - now simplified since we're importing the package directly
+// Force load Wokwi elements if they haven't been loaded yet
 export const forceLoadWokwiElements = async (): Promise<boolean> => {
   return new Promise((resolve) => {
     if (isWokwiLoaded()) {
@@ -33,14 +34,32 @@ export const forceLoadWokwiElements = async (): Promise<boolean> => {
       return;
     }
 
-    // Give a little time for custom elements to register (if they haven't already)
-    setTimeout(() => {
-      const loaded = isWokwiLoaded();
-      resolve(loaded);
-      if (!loaded) {
-        console.error('Failed to load Wokwi components');
-      }
-    }, 500);
+    // Check if we need to dynamically import the elements
+    if (!window.customElements?.get('wokwi-led')) {
+      console.log('Attempting to dynamically import Wokwi elements...');
+      // Dynamic import to avoid duplicate registration
+      import('@wokwi/elements').then(() => {
+        setTimeout(() => {
+          const loaded = isWokwiLoaded();
+          resolve(loaded);
+          if (!loaded) {
+            console.error('Failed to load Wokwi components dynamically');
+          }
+        }, 500);
+      }).catch(err => {
+        console.error('Error importing Wokwi elements:', err);
+        resolve(false);
+      });
+    } else {
+      // Give a little time for custom elements to register (if they haven't already)
+      setTimeout(() => {
+        const loaded = isWokwiLoaded();
+        resolve(loaded);
+        if (!loaded) {
+          console.error('Failed to load Wokwi components');
+        }
+      }, 500);
+    }
   });
 };
 

@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from 'react';
 import { Cpu, ExternalLink, RefreshCw, EyeIcon, EyeOffIcon } from 'lucide-react';
 import { Button } from "@/components/ui/button";
@@ -50,12 +51,21 @@ const EnhancedComponentPreview: React.FC<EnhancedComponentPreviewProps> = ({
       setError(null);
       
       try {
+        // Just check if Wokwi is loaded, don't try to force load here
         if (isWokwiLoaded()) {
           setIsReady(true);
           setIsLoading(false);
         } else {
-          setError("Wokwi elements failed to load");
-          setIsLoading(false);
+          console.log('Wokwi elements not loaded yet in preview');
+          // Set a timer to check again
+          setTimeout(() => {
+            if (isWokwiLoaded()) {
+              setIsReady(true);
+            } else {
+              setError("Wokwi elements failed to load");
+            }
+            setIsLoading(false);
+          }, 1500);
         }
       } catch (err) {
         setError("Error checking Wokwi status");

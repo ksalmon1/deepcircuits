@@ -28,19 +28,19 @@ const CircuitCanvas = () => {
     
     // After a few attempts, try to force load
     if (loadingAttempts >= 2) {
-      console.log('Attempting to manually load Wokwi components...');
+      console.log('Attempting to check Wokwi components again...');
       
       try {
         const success = await forceLoadWokwiElements();
         if (success) {
-          console.log('Manual loading of Wokwi components succeeded');
+          console.log('Wokwi components are now available');
           setIsReady(true);
           return true;
         } else {
-          console.log('Manual loading of Wokwi components failed');
+          console.log('Wokwi components still not available');
         }
       } catch (err) {
-        console.error('Error during manual loading:', err);
+        console.error('Error during loading check:', err);
       }
     }
     
