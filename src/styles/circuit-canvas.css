@@ -14,7 +14,7 @@
 
 .pin-marker:hover {
   transform: translate(-50%, -50%) scale(1.5);
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.9), 0 0 5px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 0 2px rgba(76, 114, 244, 0.9), 0 0 5px rgba(0, 0, 0, 0.3);
 }
 
 .component-highlight {
@@ -92,5 +92,6 @@
 .pin-marker.dragging {
   z-index: 30;
   transform: translate(-50%, -50%) scale(1.5);
-  box-shadow: 0 0 0 3px rgba(255, 255, 255, 1), 0 0 8px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0 0 3px rgba(76, 114, 244, 1), 0 0 8px rgba(0, 0, 0, 0.5);
 }
+

@@ -25,11 +25,13 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
 }) => {
   const [draggedPin, setDraggedPin] = useState<number | null>(null);
   const editorRef = useRef<HTMLDivElement>(null);
+  const componentContainerRef = useRef<HTMLDivElement>(null);
   const [editorSize, setEditorSize] = useState({ width: 0, height: 0 });
   const [showGrid, setShowGrid] = useState(true);
   const [hoveredPin, setHoveredPin] = useState<number | null>(null);
   const [componentElement, setComponentElement] = useState<HTMLElement | null>(null);
   const [componentBounds, setComponentBounds] = useState({ width: 0, height: 0 });
+  const [componentOrigin, setComponentOrigin] = useState({ left: 0, top: 0 });
   const [currentDragPosition, setCurrentDragPosition] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
@@ -63,6 +65,17 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
             width: Math.ceil(rect.width), 
             height: Math.ceil(rect.height) 
           });
+          
+          // Store the component's position for relative pin positioning
+          if (componentContainerRef.current) {
+            const containerRect = componentContainerRef.current.getBoundingClientRect();
+            const editorRect = editorRef.current?.getBoundingClientRect() || { left: 0, top: 0 };
+            
+            setComponentOrigin({
+              left: containerRect.left - editorRect.left,
+              top: containerRect.top - editorRect.top
+            });
+          }
         }
       }, 100);
     } catch (error) {
@@ -76,19 +89,23 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
   };
 
   const handleEditorClick = (e: React.MouseEvent) => {
-    if (draggedPin === null || readonly) return;
+    if (draggedPin === null) return;
     
     const rect = editorRef.current?.getBoundingClientRect();
     if (!rect) return;
 
-    const x = Math.round(e.clientX - rect.left);
-    const y = Math.round(e.clientY - rect.top);
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    // Convert to component-relative coordinates
+    const relativeX = x - componentOrigin.left;
+    const relativeY = y - componentOrigin.top;
 
     const updatedPins = [...pins];
     updatedPins[draggedPin] = {
       ...updatedPins[draggedPin],
-      x,
-      y
+      x: relativeX,
+      y: relativeY
     };
 
     onChange(updatedPins);
@@ -96,13 +113,17 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
   };
   
   const handlePinDrag = (e: React.MouseEvent) => {
-    if (draggedPin === null || readonly) return;
+    if (draggedPin === null) return;
     
     const rect = editorRef.current?.getBoundingClientRect();
     if (!rect) return;
 
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
+    
+    // Convert to component-relative coordinates
+    const relativeX = x - componentOrigin.left;
+    const relativeY = y - componentOrigin.top;
     
     // Update the current drag position for visual feedback
     setCurrentDragPosition({ x, y });
@@ -111,8 +132,8 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
     const updatedPins = [...pins];
     updatedPins[draggedPin] = {
       ...updatedPins[draggedPin],
-      x,
-      y
+      x: relativeX,
+      y: relativeY
     };
     
     onChange(updatedPins);
@@ -127,8 +148,8 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
     
     const newPin = {
       name: `Pin ${pins.length + 1}`,
-      x: 50,
-      y: 50,
+      x: componentBounds.width / 2,
+      y: componentBounds.height / 2,
       signals: ['digital']
     };
     onChange([...pins, newPin]);
@@ -190,16 +211,21 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
         )}
 
         {/* Component visual representation */}
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+        <div 
+          ref={componentContainerRef}
+          className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
+        >
           <div 
             className="component-pin-container"
             style={{ 
-              width: `${componentBounds.width + 20}px`, 
-              height: `${componentBounds.height + 20}px`,
+              width: `${componentBounds.width}px`, 
+              height: `${componentBounds.height}px`,
               minWidth: '80px',
               minHeight: '80px',
               position: 'relative',
-              transformOrigin: 'center'
+              transformOrigin: 'center',
+              padding: '0',
+              margin: '0'
             }}
           >
             <div id="pinEditor-component-preview" className="flex items-center justify-center"></div>
@@ -207,43 +233,48 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
         </div>
 
         {/* Pin markers */}
-        {pins.map((pin, index) => (
-          <div
-            key={`pin-${index}`}
-            className={`pin-marker ${draggedPin === index ? 'ring-2 ring-primary' : ''} 
-                      ${hoveredPin === index ? 'scale-125' : ''}`}
-            style={{ 
-              left: `${pin.x}px`, 
-              top: `${pin.y}px`,
-              backgroundColor: getSignalColor(pin.signals && pin.signals.length > 0 ? pin.signals[0] : 'digital'),
-              cursor: readonly ? 'default' : 'move'
-            }}
-            data-pin-name={pin.name}
-            onMouseEnter={() => setHoveredPin(index)}
-            onMouseLeave={() => setHoveredPin(null)}
-            onMouseDown={() => handlePinDragStart(index)}
-          >
-            {!readonly && (
-              <button 
-                className="absolute -top-5 -right-5 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  removePin(index);
-                }}
-              >
-                <X className="w-3 h-3" />
-              </button>
-            )}
-          </div>
-        ))}
+        {pins.map((pin, index) => {
+          // Calculate absolute position for the pin display
+          const absoluteX = componentOrigin.left + pin.x;
+          const absoluteY = componentOrigin.top + pin.y;
+          
+          return (
+            <div
+              key={`pin-${index}`}
+              className={`pin-marker ${draggedPin === index ? 'dragging' : ''}`}
+              style={{ 
+                left: `${absoluteX}px`, 
+                top: `${absoluteY}px`,
+                backgroundColor: getSignalColor(pin.signals && pin.signals.length > 0 ? pin.signals[0] : 'digital'),
+                cursor: readonly ? 'default' : 'move'
+              }}
+              data-pin-name={pin.name}
+              onMouseEnter={() => setHoveredPin(index)}
+              onMouseLeave={() => setHoveredPin(null)}
+              onMouseDown={() => handlePinDragStart(index)}
+            >
+              {!readonly && (
+                <button 
+                  className="absolute -top-5 -right-5 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removePin(index);
+                  }}
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+          );
+        })}
 
         {/* Pin tooltip */}
         {hoveredPin !== null && (
           <div 
             className="pin-tooltip"
             style={{ 
-              top: `${pins[hoveredPin].y}px`, 
-              left: `${pins[hoveredPin].x}px`
+              top: `${componentOrigin.top + pins[hoveredPin].y}px`, 
+              left: `${componentOrigin.left + pins[hoveredPin].x}px`
             }}
           >
             {pins[hoveredPin].name}
