@@ -1,11 +1,11 @@
 
 /* Pin styles */
 .pin-marker {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   cursor: pointer;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.7);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.9);
   transform: translate(-50%, -50%);
   transition: all 0.2s ease;
   z-index: 20;
@@ -63,4 +63,19 @@
   justify-content: center;
   align-items: center;
   min-height: 150px;
+  position: relative;
+}
+
+/* Pin editor specific styles */
+#pinEditor-component-preview {
+  position: relative;
+  z-index: 5;
+}
+
+.component-pin-container {
+  position: relative;
+  border: 2px solid #4C72F4;
+  background: rgba(76, 114, 244, 0.05);
+  border-radius: 4px;
+  padding: 8px;
 }

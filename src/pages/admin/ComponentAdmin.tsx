@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import PageLayout from "@/components/PageLayout";
 import { useAuth } from "@/context/AuthContext";
@@ -939,33 +938,16 @@ const ComponentLibrary = () => {
                 
                 <TabsContent value="pins" className="py-4">
                   <div className="flex flex-col">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-medium">Pin Configuration</h3>
-                      <div className="flex items-center space-x-2">
-                        <Switch 
-                          id="showPins" 
-                          checked={showPins} 
-                          onCheckedChange={setShowPins}
-                        />
-                        <label htmlFor="showPins">Show Pins</label>
-                      </div>
-                    </div>
-                    
                     <div className="border rounded-md bg-gray-50 p-4">
-                      <div className="component-preview-container mb-4">
-                        <div className="relative">
-                          <VisualPinEditor
-                            componentType={editedComponent.type}
-                            pins={editedComponent.pinConfig || getComponentPinInfo(editedComponent.type)}
-                            onChange={updatePinConfiguration}
-                            showPins={showPins}
-                            readonly={editedComponent.isOriginal}
-                          />
-                        </div>
-                      </div>
+                      <VisualPinEditor
+                        componentType={editedComponent.type}
+                        pins={editedComponent.pinConfig || getComponentPinInfo(editedComponent.type)}
+                        onChange={updatePinConfiguration}
+                        readonly={editedComponent.isOriginal}
+                      />
                       
                       {editedComponent.isOriginal && (
-                        <div className="bg-blue-50 text-blue-800 p-4 rounded-md mb-4 flex items-start gap-2">
+                        <div className="bg-blue-50 text-blue-800 p-4 rounded-md mb-4 flex items-start gap-2 mt-4">
                           <AlertCircle className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
                           <div>
                             <p className="font-medium">Original Component</p>
@@ -973,40 +955,6 @@ const ComponentLibrary = () => {
                           </div>
                         </div>
                       )}
-                      
-                      <div className="overflow-x-auto">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Pin Name</TableHead>
-                              <TableHead>X Position</TableHead>
-                              <TableHead>Y Position</TableHead>
-                              <TableHead>Signal Types</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {(editedComponent.pinConfig || getComponentPinInfo(editedComponent.type)).map((pin, index) => (
-                              <TableRow key={index}>
-                                <TableCell>{pin.name}</TableCell>
-                                <TableCell>{pin.x}</TableCell>
-                                <TableCell>{pin.y}</TableCell>
-                                <TableCell>
-                                  <div className="flex flex-wrap gap-1">
-                                    {pin.signals && pin.signals.map((signal, sIdx) => (
-                                      <Badge key={sIdx} variant="outline" className="text-xs">
-                                        {signal}
-                                      </Badge>
-                                    ))}
-                                    {(!pin.signals || pin.signals.length === 0) && (
-                                      <span className="text-muted-foreground text-xs">None</span>
-                                    )}
-                                  </div>
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
                     </div>
                   </div>
                 </TabsContent>
@@ -1021,6 +969,7 @@ const ComponentLibrary = () => {
                           <EnhancedComponentPreview
                             componentType={editedComponent.type}
                             properties={editedComponent.properties || {}}
+                            previewId={`preview-${editedComponent.id}`}
                           />
                         ) : (
                           <div className="text-center py-8">

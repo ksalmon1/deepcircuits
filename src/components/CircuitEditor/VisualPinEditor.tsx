@@ -14,14 +14,21 @@ interface VisualPinEditorProps {
   pins: PinConfig[];
   componentType: string;
   onChange: (pins: PinConfig[]) => void;
+  readonly?: boolean;
 }
 
-const VisualPinEditor: React.FC<VisualPinEditorProps> = ({ pins, componentType, onChange }) => {
+const VisualPinEditor: React.FC<VisualPinEditorProps> = ({ 
+  pins, 
+  componentType, 
+  onChange,
+  readonly = false
+}) => {
   const [draggedPin, setDraggedPin] = useState<number | null>(null);
   const editorRef = useRef<HTMLDivElement>(null);
   const [editorSize, setEditorSize] = useState({ width: 0, height: 0 });
   const [showGrid, setShowGrid] = useState(true);
   const [hoveredPin, setHoveredPin] = useState<number | null>(null);
+  const [componentElement, setComponentElement] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
     if (editorRef.current) {
@@ -30,12 +37,33 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({ pins, componentType, 
     }
   }, []);
 
+  // Create and render the component preview
+  useEffect(() => {
+    if (!componentType || !editorRef.current) return;
+
+    try {
+      const previewContainer = document.getElementById('pinEditor-component-preview');
+      if (!previewContainer) return;
+
+      // Clear previous content
+      previewContainer.innerHTML = '';
+
+      // Create the component element
+      const element = document.createElement(componentType);
+      previewContainer.appendChild(element);
+      setComponentElement(element);
+    } catch (error) {
+      console.error('Error rendering component preview:', error);
+    }
+  }, [componentType]);
+
   const handlePinDragStart = (index: number) => {
+    if (readonly) return;
     setDraggedPin(index);
   };
 
   const handleEditorClick = (e: React.MouseEvent) => {
-    if (draggedPin === null) return;
+    if (draggedPin === null || readonly) return;
     
     const rect = editorRef.current?.getBoundingClientRect();
     if (!rect) return;
@@ -55,6 +83,8 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({ pins, componentType, 
   };
 
   const addNewPin = () => {
+    if (readonly) return;
+    
     const newPin = {
       name: `Pin ${pins.length + 1}`,
       x: 50,
@@ -65,11 +95,15 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({ pins, componentType, 
   };
 
   const removePin = (index: number) => {
+    if (readonly) return;
+    
     const updatedPins = pins.filter((_, i) => i !== index);
     onChange(updatedPins);
   };
 
   const updatePinSignal = (index: number, signal: string) => {
+    if (readonly) return;
+    
     const updatedPins = [...pins];
     updatedPins[index] = {
       ...updatedPins[index],
@@ -79,6 +113,8 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({ pins, componentType, 
   };
 
   const updatePinName = (index: number, name: string) => {
+    if (readonly) return;
+    
     const updatedPins = [...pins];
     updatedPins[index] = {
       ...updatedPins[index],
@@ -95,7 +131,9 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({ pins, componentType, 
           <Button onClick={() => setShowGrid(!showGrid)} size="sm" variant="outline">
             {showGrid ? "Hide Grid" : "Show Grid"}
           </Button>
-          <Button onClick={addNewPin} size="sm">Add Pin</Button>
+          {!readonly && (
+            <Button onClick={addNewPin} size="sm">Add Pin</Button>
+          )}
         </div>
       </div>
 
@@ -109,7 +147,7 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({ pins, componentType, 
         )}
 
         {/* Component visual representation */}
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 p-4">
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 border border-blue-500 p-4">
           {componentType && (
             <div className="component-preview-container">
               <div id="pinEditor-component-preview"></div>
@@ -133,27 +171,27 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({ pins, componentType, 
             onMouseLeave={() => setHoveredPin(null)}
             onMouseDown={() => handlePinDragStart(index)}
           >
-            <button 
-              className="absolute -top-5 -right-5 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center"
-              onClick={(e) => {
-                e.stopPropagation();
-                removePin(index);
-              }}
-            >
-              <X className="w-3 h-3" />
-            </button>
+            {!readonly && (
+              <button 
+                className="absolute -top-5 -right-5 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  removePin(index);
+                }}
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
           </div>
         ))}
 
         {/* Pin tooltip */}
         {hoveredPin !== null && (
           <div 
-            className="absolute z-20 bg-black text-white text-xs px-1 py-0.5 rounded-sm opacity-80"
+            className="pin-tooltip"
             style={{ 
               top: `${pins[hoveredPin].y}px`, 
-              left: `${pins[hoveredPin].x}px`, 
-              transform: 'translate(-50%, -100%)',
-              marginTop: '-5px'
+              left: `${pins[hoveredPin].x}px`
             }}
           >
             {pins[hoveredPin].name}
@@ -186,16 +224,19 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({ pins, componentType, 
                   className="font-medium text-sm border-none focus:ring-0 p-0 w-full bg-transparent"
                   value={pin.name}
                   onChange={(e) => updatePinName(index, e.target.value)}
+                  readOnly={readonly}
                 />
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6"
-                onClick={() => handlePinDragStart(index)}
-              >
-                <Move className="h-3 w-3" />
-              </Button>
+              {!readonly && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={() => handlePinDragStart(index)}
+                >
+                  <Move className="h-3 w-3" />
+                </Button>
+              )}
             </div>
             <div className="text-xs space-y-1">
               <div>Position: <span className="font-mono">({pin.x}, {pin.y})</span></div>
@@ -205,6 +246,7 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({ pins, componentType, 
                   className="font-mono ml-2 text-xs p-0 h-6 border rounded"
                   value={pin.signals && pin.signals.length > 0 ? pin.signals[0] : 'digital'}
                   onChange={(e) => updatePinSignal(index, e.target.value)}
+                  disabled={readonly}
                 >
                   <option value="power">Power</option>
                   <option value="ground">Ground</option>
