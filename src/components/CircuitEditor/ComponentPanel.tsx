@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ORIGINAL_WOKWI_COMPONENTS } from '@/integrations/wokwi/WokwiIntegration';
@@ -15,136 +15,29 @@ import {
   Gauge, 
   AppWindow,
   History,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Loader2
 } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useComponentLibrary } from '@/hooks/useComponentLibrary';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
-// Define component categories and items with icon mapping
-const componentCategories = [
-  {
-    id: 'basic',
-    label: 'Basic Components',
-    icon: <Workflow className="h-4 w-4 mr-2" />,
-    components: [
-      { id: 'led', name: 'LED', type: 'wokwi-led', description: 'Light Emitting Diode' },
-      { id: 'resistor', name: 'Resistor', type: 'wokwi-resistor', description: 'Limits current flow' },
-      { id: 'capacitor', name: 'Capacitor', type: 'wokwi-capacitor', description: 'Stores electrical charge' },
-      { id: 'battery', name: 'Battery', type: 'wokwi-battery', description: 'Power source' },
-      { id: 'rgb-led', name: 'RGB LED', type: 'wokwi-rgb-led', description: 'Multicolor LED' },
-      { id: 'breadboard', name: 'Breadboard', type: 'wokwi-breadboard', description: 'Connects components without soldering' }
-    ]
-  },
-  {
-    id: 'controllers',
-    label: 'Microcontrollers',
-    icon: <Cpu className="h-4 w-4 mr-2" />,
-    components: [
-      { id: 'arduino-uno', name: 'Arduino Uno', type: 'wokwi-arduino-uno', description: 'Arduino Uno microcontroller' },
-      { id: 'arduino-nano', name: 'Arduino Nano', type: 'wokwi-arduino-nano', description: 'Arduino Nano microcontroller' },
-      { id: 'arduino-mega', name: 'Arduino Mega', type: 'wokwi-arduino-mega', description: 'Arduino Mega microcontroller' },
-      { id: 'esp32', name: 'ESP32', type: 'wokwi-esp32-devkit-v1', description: 'ESP32 development board' },
-      { id: 'raspberry-pi-pico', name: 'Raspberry Pi Pico', type: 'wokwi-raspberry-pi-pico', description: 'Raspberry Pi Pico microcontroller' },
-      { id: 'microbit', name: 'Micro:bit', type: 'wokwi-microbit', description: 'BBC Micro:bit board' },
-      { id: 'arduino-nano-33', name: 'Arduino Nano 33 BLE', type: 'wokwi-arduino-nano-33-ble-sense', description: 'Arduino Nano 33 BLE Sense' },
-      { id: 'attiny85', name: 'ATtiny85', type: 'wokwi-attiny85', description: 'ATtiny85 microcontroller' }
-    ]
-  },
-  {
-    id: 'input',
-    label: 'Input Devices',
-    icon: <SlidersHorizontal className="h-4 w-4 mr-2" />,
-    components: [
-      { id: 'pushbutton', name: 'Push Button', type: 'wokwi-pushbutton', description: 'Momentary button input' },
-      { id: 'slide-switch', name: 'Slide Switch', type: 'wokwi-slide-switch', description: 'On/off toggle switch' },
-      { id: 'potentiometer', name: 'Potentiometer', type: 'wokwi-potentiometer', description: 'Variable resistor' },
-      { id: 'potentiometer-slide', name: 'Slide Potentiometer', type: 'wokwi-potentiometer-slide', description: 'Slide variable resistor' },
-      { id: 'keypad', name: 'Keypad', type: 'wokwi-keypad', description: 'Numeric keypad input' },
-      { id: 'membrane-keypad', name: 'Membrane Keypad', type: 'wokwi-membrane-keypad', description: 'Membrane keypad matrix' },
-      { id: 'photoresistor', name: 'Photoresistor', type: 'wokwi-photoresistor-sensor', description: 'Light-sensitive resistor' },
-      { id: 'joystick', name: 'Analog Joystick', type: 'wokwi-analog-joystick', description: 'Dual-axis control stick' },
-      { id: 'pir-sensor', name: 'PIR Motion Sensor', type: 'wokwi-pir-motion-sensor', description: 'Passive infrared motion detector' },
-      { id: 'touch-button', name: 'Touch Button', type: 'wokwi-ttp223', description: 'Capacitive touch sensor' },
-      { id: 'fsr', name: 'Force Sensor', type: 'wokwi-fsr', description: 'Force Sensitive Resistor' }
-    ]
-  },
-  {
-    id: 'output',
-    label: 'Output Devices',
-    icon: <Lightbulb className="h-4 w-4 mr-2" />,
-    components: [
-      { id: 'buzzer', name: 'Buzzer', type: 'wokwi-buzzer', description: 'Active piezo buzzer' },
-      { id: 'buzzer-passive', name: 'Passive Buzzer', type: 'wokwi-buzzer-passive', description: 'Passive piezo buzzer' },
-      { id: 'servo', name: 'Servo', type: 'wokwi-servo', description: 'Standard servo motor' },
-      { id: 'servo-sg90', name: 'Servo SG90', type: 'wokwi-servo-sg90', description: 'SG90 micro servo motor' },
-      { id: 'stepper-motor', name: 'Stepper Motor', type: 'wokwi-stepper-motor', description: 'Stepper motor' },
-      { id: 'relay', name: 'Relay', type: 'wokwi-relay', description: 'Electromagnetic switch' },
-      { id: 'neopixel', name: 'NeoPixel', type: 'wokwi-neopixel', description: 'Addressable RGB LED' },
-      { id: 'led-bar', name: 'LED Bar Graph', type: 'wokwi-led-bar-graph', description: 'Linear LED array' },
-      { id: 'led-matrix', name: 'LED Matrix', type: 'wokwi-led-matrix', description: 'LED dot matrix display' },
-      { id: 'led-ring', name: 'LED Ring', type: 'wokwi-led-ring', description: 'Circular LED array' },
-      { id: '7segment', name: '7-Segment Display', type: 'wokwi-7segment', description: 'Seven-segment display' },
-      { id: 'piezo', name: 'Piezo Element', type: 'wokwi-piezo', description: 'Piezoelectric element' }
-    ]
-  },
-  {
-    id: 'displays',
-    label: 'Display Modules',
-    icon: <Monitor className="h-4 w-4 mr-2" />,
-    components: [
-      { id: 'lcd1602', name: 'LCD 16x2', type: 'wokwi-lcd1602', description: '16x2 character LCD display' },
-      { id: 'lcd-pcf8574', name: 'LCD 16x2 I2C', type: 'wokwi-2x16-lcd-pcf8574', description: '16x2 LCD with I2C adapter' },
-      { id: 'ssd1306', name: 'OLED Display', type: 'wokwi-ssd1306', description: 'SSD1306 OLED display' },
-      { id: 'max7219', name: 'MAX7219 Matrix', type: 'wokwi-max7219-matrix', description: 'MAX7219 LED matrix display' },
-      { id: 'ili9341', name: 'ILI9341 LCD', type: 'wokwi-ili9341', description: 'ILI9341 color LCD display' },
-      { id: 'st7789', name: 'ST7789 LCD', type: 'wokwi-st7789', description: 'ST7789 color LCD display' },
-      { id: 'ssd1351', name: 'SSD1351 OLED', type: 'wokwi-ssd1351', description: 'SSD1351 color OLED display' },
-      { id: 'display-spi', name: 'SPI Display', type: 'wokwi-display-spi', description: 'Generic SPI display' },
-      { id: 'oled-spi', name: 'SPI OLED', type: 'wokwi-oled-spi', description: 'Generic SPI OLED display' },
-      { id: 'braille-display', name: 'Braille Display', type: 'wokwi-braille-display', description: 'Refreshable Braille display' }
-    ]
-  },
-  {
-    id: 'sensors',
-    label: 'Sensors',
-    icon: <Gauge className="h-4 w-4 mr-2" />,
-    components: [
-      { id: 'temperature', name: 'Temperature Sensor', type: 'wokwi-temperature-sensor', description: 'Analog temperature sensor' },
-      { id: 'dht22', name: 'DHT22', type: 'wokwi-dht22', description: 'Temperature and humidity sensor' },
-      { id: 'bme280', name: 'BME280', type: 'wokwi-bme280', description: 'Environmental sensor (temp, pressure, humidity)' },
-      { id: 'ds18b20', name: 'DS18B20', type: 'wokwi-ds18b20', description: 'Digital temperature sensor' },
-      { id: 'ultrasonic', name: 'Ultrasonic Sensor', type: 'wokwi-ultrasonic-distance-sensor', description: 'Distance measurement sensor' },
-      { id: 'hc-sr04', name: 'HC-SR04', type: 'wokwi-hc-sr04', description: 'Ultrasonic distance sensor' },
-      { id: 'hall-effect', name: 'Hall Effect Sensor', type: 'wokwi-hall-effect-sensor', description: 'Magnetic field sensor' },
-      { id: 'gas-sensor', name: 'Gas Sensor', type: 'wokwi-gas-sensor', description: 'Analog gas sensor' },
-      { id: 'mpu6050', name: 'MPU6050', type: 'wokwi-mpu6050', description: 'Accelerometer and gyroscope sensor' }
-    ]
-  },
-  {
-    id: 'ics',
-    label: 'ICs & Chips',
-    icon: <AppWindow className="h-4 w-4 mr-2" />,
-    components: [
-      { id: 'timer-ic', name: '555 Timer', type: 'wokwi-timer-ic', description: '555 timer integrated circuit' },
-      { id: 'rtc-ds1307', name: 'RTC DS1307', type: 'wokwi-rtc-ds1307', description: 'Real-time clock module' },
-      { id: 'ds1307', name: 'DS1307', type: 'wokwi-ds1307', description: 'Real-time clock IC' },
-      { id: 'ht16k33', name: 'HT16K33', type: 'wokwi-ht16k33', description: 'LED matrix driver' },
-      { id: 'tca9548a', name: 'TCA9548A', type: 'wokwi-tca9548a', description: 'I2C multiplexer' },
-      { id: 'level-shifter', name: 'Level Shifter', type: 'wokwi-level-shifter', description: 'Bidirectional logic level converter' }
-    ]
-  },
-  {
-    id: 'tools',
-    label: 'Tools & Debug',
-    icon: <History className="h-4 w-4 mr-2" />,
-    components: [
-      { id: 'logic-analyzer', name: 'Logic Analyzer', type: 'wokwi-logic-analyzer', description: 'Digital signal analyzer' },
-      { id: 'ir-remote', name: 'IR Remote', type: 'wokwi-ir-remote', description: 'Infrared remote control' },
-      { id: 'ir-receiver', name: 'IR Receiver', type: 'wokwi-ir-receiver', description: 'Infrared receiver module' },
-      { id: 'microsd-card', name: 'microSD Card', type: 'wokwi-microsd-card', description: 'microSD card module' }
-    ]
-  }
-];
+// Interface for component categories
+interface ComponentCategory {
+  id: string;
+  label: string;
+  icon: React.ReactNode;
+  components: ComponentItem[];
+}
+
+// Interface for component items
+interface ComponentItem {
+  id: string;
+  name: string;
+  type: string;
+  description: string;
+}
 
 const ComponentPanel = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -152,10 +45,75 @@ const ComponentPanel = () => {
     'controllers': true, // Open by default
     'basic': true       // Open by default
   });
+  
+  const [categories, setCategories] = useState<ComponentCategory[]>([]);
+  const { components, isLoadingComponents, componentsError } = useComponentLibrary();
 
-  const handleDragStart = (e: React.DragEvent, component: any) => {
+  // Process components into categories when loaded
+  useEffect(() => {
+    if (!components || components.length === 0) return;
+
+    // Create a map to organize components by category
+    const categoryMap: Record<string, ComponentItem[]> = {};
+    
+    // Process each component
+    components.forEach(component => {
+      // Skip disabled components
+      if (!component.enabled) return;
+      
+      const category = component.category || 'other';
+      
+      if (!categoryMap[category]) {
+        categoryMap[category] = [];
+      }
+      
+      categoryMap[category].push({
+        id: component.id || `${component.type}-${Date.now()}`,
+        name: component.name,
+        type: component.type,
+        description: component.description || component.name
+      });
+    });
+    
+    // Map to get appropriate icon for each category
+    const getCategoryIcon = (categoryId: string) => {
+      switch(categoryId) {
+        case 'microcontroller':
+          return <Cpu className="h-4 w-4 mr-2" />;
+        case 'input':
+          return <SlidersHorizontal className="h-4 w-4 mr-2" />;
+        case 'output':
+          return <Lightbulb className="h-4 w-4 mr-2" />;
+        case 'display':
+          return <Monitor className="h-4 w-4 mr-2" />;
+        case 'sensor':
+          return <Gauge className="h-4 w-4 mr-2" />;
+        case 'passive':
+          return <Workflow className="h-4 w-4 mr-2" />;
+        case 'basic':
+          return <Workflow className="h-4 w-4 mr-2" />;
+        case 'other':
+        default:
+          return <AppWindow className="h-4 w-4 mr-2" />;
+      }
+    };
+    
+    // Convert the map to array of categories
+    const categoriesArray: ComponentCategory[] = Object.keys(categoryMap).map(categoryId => ({
+      id: categoryId,
+      label: categoryId.charAt(0).toUpperCase() + categoryId.slice(1),
+      icon: getCategoryIcon(categoryId),
+      components: categoryMap[categoryId].sort((a, b) => a.name.localeCompare(b.name))
+    }));
+    
+    // Sort categories alphabetically
+    categoriesArray.sort((a, b) => a.label.localeCompare(b.label));
+    
+    setCategories(categoriesArray);
+  }, [components]);
+
+  const handleDragStart = (e: React.DragEvent, component: ComponentItem) => {
     e.dataTransfer.setData('component', JSON.stringify(component));
-    // We could also set a custom drag image here
   };
 
   const toggleCategory = (categoryId: string) => {
@@ -167,14 +125,14 @@ const ComponentPanel = () => {
 
   // Filter components based on search term
   const filteredCategories = searchTerm 
-    ? componentCategories.map(category => ({
+    ? categories.map(category => ({
         ...category,
         components: category.components.filter(comp => 
           comp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
           comp.description.toLowerCase().includes(searchTerm.toLowerCase())
         )
       })).filter(category => category.components.length > 0)
-    : componentCategories;
+    : categories;
 
   return (
     <div className="h-full flex flex-col">
@@ -200,9 +158,20 @@ const ComponentPanel = () => {
       </div>
       
       <ScrollArea className="flex-1 pr-3">
-        {filteredCategories.length === 0 ? (
+        {isLoadingComponents ? (
+          <div className="flex flex-col items-center justify-center p-4 text-center text-muted-foreground">
+            <Loader2 className="h-6 w-6 animate-spin mb-2 text-primary" />
+            <p>Loading components...</p>
+          </div>
+        ) : componentsError ? (
+          <Alert variant="destructive" className="mb-2">
+            <AlertDescription>
+              Error loading components. Please try refreshing the page.
+            </AlertDescription>
+          </Alert>
+        ) : filteredCategories.length === 0 ? (
           <div className="p-4 text-center text-muted-foreground">
-            No components found
+            {searchTerm ? "No components found matching your search" : "No components available"}
           </div>
         ) : (
           <div className="space-y-1">
