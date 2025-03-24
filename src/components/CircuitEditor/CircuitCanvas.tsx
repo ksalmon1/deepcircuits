@@ -8,6 +8,7 @@ import {
 } from '@/integrations/wokwi/WokwiIntegration';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
+import { ZoomIn, ZoomOut, Move } from 'lucide-react';
 
 interface CircuitCanvasProps {
   components: WokwiComponent[];
@@ -16,9 +17,15 @@ interface CircuitCanvasProps {
 
 const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) => {
   const canvasRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [isReady, setIsReady] = useState(false);
   const [loadingError, setLoadingError] = useState<string | null>(null);
   const [loadingAttempts, setLoadingAttempts] = useState(0);
+  const [zoom, setZoom] = useState(1);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isPanning, setIsPanning] = useState(false);
+  const [startPanPoint, setStartPanPoint] = useState({ x: 0, y: 0 });
+  const [panMode, setPanMode] = useState(false);
 
   // Function to check if Wokwi is loaded
   const checkWokwiLoaded = useCallback(async () => {
@@ -103,15 +110,15 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
       
       const componentInfo = JSON.parse(componentData);
       
-      // Calculate position relative to the grid
+      // Calculate position relative to the grid, accounting for zoom and pan
       const rect = canvasRef.current?.getBoundingClientRect();
       if (!rect) return;
       
-      // Get the drop position
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
+      // Get the drop position, accounting for zoom and pan
+      const x = (e.clientX - rect.left - position.x) / zoom;
+      const y = (e.clientY - rect.top - position.y) / zoom;
       
-      // Snap to grid (25px grid size)
+      // Snap to grid (25px grid size), accounting for zoom
       const gridSize = 25;
       const left = Math.floor(x / gridSize) * gridSize;
       const top = Math.floor(y / gridSize) * gridSize;
@@ -179,8 +186,69 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     await checkWokwiLoaded();
   };
 
+  // Handle zoom in
+  const handleZoomIn = () => {
+    setZoom(prevZoom => Math.min(prevZoom + 0.1, 3));
+  };
+
+  // Handle zoom out
+  const handleZoomOut = () => {
+    setZoom(prevZoom => Math.max(prevZoom - 0.1, 0.5));
+  };
+
+  // Toggle pan mode
+  const togglePanMode = () => {
+    setPanMode(!panMode);
+    if (panMode) {
+      document.body.style.cursor = 'default';
+    } else {
+      document.body.style.cursor = 'move';
+    }
+  };
+
+  // Handle mouse down for panning
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (panMode || e.button === 1) { // Middle mouse button
+      setIsPanning(true);
+      setStartPanPoint({ x: e.clientX - position.x, y: e.clientY - position.y });
+      e.preventDefault();
+    }
+  };
+
+  // Handle mouse move for panning
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (isPanning) {
+      const newX = e.clientX - startPanPoint.x;
+      const newY = e.clientY - startPanPoint.y;
+      setPosition({ x: newX, y: newY });
+      e.preventDefault();
+    }
+  };
+
+  // Handle mouse up to stop panning
+  const handleMouseUp = () => {
+    setIsPanning(false);
+  };
+
+  // Handle mouse leave to stop panning
+  const handleMouseLeave = () => {
+    setIsPanning(false);
+  };
+
+  // Handle wheel event for zooming
+  const handleWheel = (e: React.WheelEvent) => {
+    if (e.ctrlKey) {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -0.1 : 0.1;
+      setZoom(prevZoom => {
+        const newZoom = Math.max(0.5, Math.min(3, prevZoom + delta));
+        return newZoom;
+      });
+    }
+  };
+
   return (
-    <div className="h-full w-full bg-white relative">
+    <div className="h-full w-full bg-white relative flex flex-col">
       {!isReady && (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-50 bg-opacity-80 z-10">
           <div className="text-center">
@@ -200,15 +268,58 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
           </div>
         </div>
       )}
+
+      {/* Zoom and pan controls */}
+      <div className="absolute top-2 right-2 bg-white rounded-md shadow-md p-1 z-20 flex gap-1">
+        <button
+          onClick={handleZoomIn}
+          className="p-1 hover:bg-gray-100 rounded"
+          title="Zoom In (or use Ctrl+Scroll)"
+        >
+          <ZoomIn size={18} />
+        </button>
+        <button
+          onClick={handleZoomOut}
+          className="p-1 hover:bg-gray-100 rounded"
+          title="Zoom Out (or use Ctrl+Scroll)"
+        >
+          <ZoomOut size={18} />
+        </button>
+        <button
+          onClick={togglePanMode}
+          className={`p-1 hover:bg-gray-100 rounded ${panMode ? 'bg-gray-200' : ''}`}
+          title="Pan Mode (or use middle mouse button)"
+        >
+          <Move size={18} />
+        </button>
+        <div className="px-2 flex items-center text-xs text-gray-600">
+          {Math.round(zoom * 100)}%
+        </div>
+      </div>
       
       <div 
-        ref={canvasRef} 
-        className="h-full w-full grid grid-cols-[repeat(40,25px)] grid-rows-[repeat(30,25px)] bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjUiIGhlaWdodD0iMjUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSIyNSIgaGVpZ2h0PSIyNSIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAwIDAgTCAyNSAwIE0gMCAwIEwgMCAyNSIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZTJlOGYwIiBzdHJva2Utd2lkdGg9IjEiPjwvcGF0aD48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JpZCkiPjwvcmVjdD48L3N2Zz4=')]"
-        onDrop={handleDrop}
-        onDragOver={handleDragOver}
+        ref={containerRef}
+        className="h-full w-full overflow-hidden"
+        onWheel={handleWheel}
       >
-        {/* Render all placed components */}
-        {components.map(renderComponent)}
+        <div 
+          ref={canvasRef} 
+          className="h-full w-full grid grid-cols-[repeat(40,25px)] grid-rows-[repeat(30,25px)] bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjUiIGhlaWdodD0iMjUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSIyNSIgaGVpZ2h0PSIyNSIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAwIDAgTCAyNSAwIE0gMCAwIEwgMCAyNSIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZTJlOGYwIiBzdHJva2Utd2lkdGg9IjEiPjwvcGF0aD48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JpZCkiPjwvcmVjdD48L3N2Zz4=')]"
+          onDrop={handleDrop}
+          onDragOver={handleDragOver}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseLeave}
+          style={{
+            transform: `scale(${zoom}) translate(${position.x / zoom}px, ${position.y / zoom}px)`,
+            transformOrigin: '0 0',
+            transition: isPanning ? 'none' : 'transform 0.1s ease-out'
+          }}
+        >
+          {/* Render all placed components */}
+          {components.map(renderComponent)}
+        </div>
       </div>
     </div>
   );
