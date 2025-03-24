@@ -930,6 +930,7 @@ const ComponentLibrary = () => {
                     <DynamicPropertyEditor 
                       properties={editedComponent.properties || {}}
                       onChange={updateComponentProperties}
+                      componentType={editedComponent.type} // Add this missing required prop
                     />
                   )}
                 </TabsContent>
@@ -937,9 +938,9 @@ const ComponentLibrary = () => {
                 <TabsContent value="pins" className="py-4">
                   {editedComponent && !editedComponent.isOriginal && (
                     <VisualPinEditor 
-                      pinConfig={editedComponent.pinConfig || []}
+                      pins={editedComponent.pinConfig || []} // Changed pinConfig to pins
+                      componentType={editedComponent.type} // Add this missing required prop
                       onChange={updatePinConfiguration}
-                      signalTypes={signalTypes}
                     />
                   )}
                   {editedComponent && editedComponent.isOriginal && (
