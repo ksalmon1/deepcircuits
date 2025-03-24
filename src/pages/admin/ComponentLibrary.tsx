@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import PageLayout from "@/components/PageLayout";
 import { useAuth } from "@/context/AuthContext";
@@ -255,7 +254,6 @@ const ComponentLibrary = () => {
   const [showPins, setShowPins] = useState(true);
   const previewRef = useRef<HTMLDivElement>(null);
   const [allComponents, setAllComponents] = useState<ComponentType[]>(() => {
-    // Initialize components and mark original Wokwi components
     return mockComponents.map(comp => ({
       ...comp,
       isOriginal: isOriginalWokwiComponent(comp.type)
@@ -348,7 +346,6 @@ const ComponentLibrary = () => {
   const handleSaveComponent = () => {
     if (!editedComponent) return;
     
-    // Check if the component type has changed, and if so, update isOriginal flag
     if (editedComponent.type !== selectedComponent?.type) {
       editedComponent.isOriginal = isOriginalWokwiComponent(editedComponent.type);
     }
@@ -398,7 +395,7 @@ const ComponentLibrary = () => {
       }
       
       if (property === 'type') {
-        // When changing the type, update the isOriginal flag
+        editedComponent.isOriginal = isOriginalWokwiComponent(value);
         return { 
           ...prev, 
           type: value,
@@ -448,7 +445,7 @@ const ComponentLibrary = () => {
       <div className="container py-6">
         <div className="mb-6 flex items-center gap-3">
           <Cpu className="h-8 w-8 text-primary" />
-          <h1 className="text-3xl font-bold">Component Library</h1>
+          <h1 className="text-3xl font-bold">Component Admin</h1>
         </div>
 
         <div className="flex justify-end mb-4 gap-2">

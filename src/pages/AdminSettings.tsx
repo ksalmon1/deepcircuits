@@ -1,94 +1,87 @@
 
 import React from "react";
+import { Link } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
+import { Navigate } from "react-router-dom";
 import PageLayout from "@/components/PageLayout";
 import { 
   Card, 
   CardContent, 
   CardDescription, 
+  CardFooter, 
   CardHeader, 
   CardTitle 
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Shield, Users, Cog, Database } from "lucide-react";
-import { Link } from "react-router-dom";
+import { 
+  Users, 
+  Settings, 
+  Database,
+  Cpu
+} from "lucide-react";
 
 const AdminSettings = () => {
-  console.log("Rendering AdminSettings page");
-  
+  const { user, isAdmin } = useAuth();
+
+  if (!user) {
+    return <Navigate to="/login" />;
+  }
+
+  if (!isAdmin()) {
+    return <Navigate to="/dashboard" />;
+  }
+
+  const adminModules = [
+    {
+      title: "User Management",
+      description: "Manage users, roles, and permissions",
+      icon: <Users className="h-8 w-8" />,
+      link: "/admin/users",
+      color: "bg-blue-500"
+    },
+    {
+      title: "System Settings",
+      description: "Configure application-wide settings",
+      icon: <Settings className="h-8 w-8" />,
+      link: "/admin/system",
+      color: "bg-purple-500"
+    },
+    {
+      title: "Component Admin",
+      description: "Manage circuit components available to users",
+      icon: <Cpu className="h-8 w-8" />,
+      link: "/admin/components",
+      color: "bg-green-500"
+    },
+    {
+      title: "Database Backups",
+      description: "Manage database backups and restoration",
+      icon: <Database className="h-8 w-8" />,
+      link: "/admin/database",
+      color: "bg-amber-500"
+    }
+  ];
+
   return (
     <PageLayout>
-      <div className="container py-12">
-        <div className="mb-8 flex items-center gap-3">
-          <Shield className="h-8 w-8 text-primary" />
-          <h1 className="text-3xl font-bold">Admin Settings</h1>
-        </div>
-
-        <div className="mb-8 rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-          <p className="text-slate-600">
-            Welcome to the admin panel. Here you can manage users, system settings, and more.
-          </p>
-        </div>
-
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5 text-primary" />
-                User Management
-              </CardTitle>
-              <CardDescription>
-                Manage users, permissions and roles
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="mb-4 text-sm text-slate-600">
-                Add, edit or deactivate user accounts. Manage user roles and permissions.
-              </p>
-              <Button asChild>
-                <Link to="/admin/users">Manage Users</Link>
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Cog className="h-5 w-5 text-primary" />
-                System Settings
-              </CardTitle>
-              <CardDescription>
-                Configure global application settings
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="mb-4 text-sm text-slate-600">
-                Configure application-wide settings, logging preferences, and more.
-              </p>
-              <Button asChild>
-                <Link to="/admin/system">System Configuration</Link>
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Database className="h-5 w-5 text-primary" />
-                Component Library
-              </CardTitle>
-              <CardDescription>
-                Manage the circuit component library
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="mb-4 text-sm text-slate-600">
-                Add, edit or remove components from the library. Configure component properties.
-              </p>
-              <Button asChild>
-                <Link to="/admin/components">Manage Components</Link>
-              </Button>
-            </CardContent>
-          </Card>
+      <div className="container py-8">
+        <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {adminModules.map((module, index) => (
+            <Link key={index} to={module.link} className="no-underline">
+              <Card className="h-full hover:shadow-md transition-shadow cursor-pointer">
+                <CardHeader className={`${module.color} text-white rounded-t-lg`}>
+                  <div className="flex justify-between items-center">
+                    {module.icon}
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <CardTitle className="mb-2">{module.title}</CardTitle>
+                  <CardDescription>{module.description}</CardDescription>
+                </CardContent>
+              </Card>
+            </Link>
+          ))}
         </div>
       </div>
     </PageLayout>
