@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { WokwiComponent } from '@/integrations/wokwi/WokwiIntegration';
 
 export const CircuitEditorLayout = () => {
   const navigate = useNavigate();
@@ -24,6 +25,8 @@ export const CircuitEditorLayout = () => {
   const [showCodeEditor, setShowCodeEditor] = useState<boolean>(false);
   const [showSerialMonitor, setShowSerialMonitor] = useState<boolean>(false);
   const [verticalSplit, setVerticalSplit] = useState<boolean>(true);
+  // Circuit components state - lifted up from CircuitCanvas
+  const [circuitComponents, setCircuitComponents] = useState<WokwiComponent[]>([]);
 
   // Load project data based on ID (mock implementation)
   useEffect(() => {
@@ -74,7 +77,8 @@ export const CircuitEditorLayout = () => {
       action: {
         label: 'Clear',
         onClick: () => {
-          // We'll implement this in a future step
+          // Implement the clear functionality
+          setCircuitComponents([]);
           toast.success('Circuit cleared');
         },
       },
@@ -112,6 +116,13 @@ export const CircuitEditorLayout = () => {
     await new Promise(resolve => setTimeout(resolve, 1000));
     toast.success('Code compiled and uploaded to simulated microcontroller');
   };
+
+  // Update isModified when circuit components change
+  useEffect(() => {
+    if (circuitComponents.length > 0) {
+      setIsModified(true);
+    }
+  }, [circuitComponents]);
 
   // Mock function to simulate circuit changes
   useEffect(() => {
@@ -231,7 +242,10 @@ export const CircuitEditorLayout = () => {
                 (showCodeEditor && showSerialMonitor ? 'w-1/2' : 'w-2/3') : 
                 (showCodeEditor && showSerialMonitor ? 'h-1/2' : 'h-2/3')
               } overflow-hidden`}>
-                <CircuitCanvas />
+                <CircuitCanvas 
+                  components={circuitComponents} 
+                  onComponentsChange={setCircuitComponents}
+                />
               </div>
               
               {/* Right/bottom panel with code editor and/or serial monitor */}
@@ -267,7 +281,10 @@ export const CircuitEditorLayout = () => {
           ) : (
             // If no editors are open, show only the circuit canvas
             <div className="flex-1 overflow-hidden">
-              <CircuitCanvas />
+              <CircuitCanvas 
+                components={circuitComponents} 
+                onComponentsChange={setCircuitComponents} 
+              />
             </div>
           )}
         </div>
