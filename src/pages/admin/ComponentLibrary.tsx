@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from "react";
 import PageLayout from "@/components/PageLayout";
 import { useAuth } from "@/context/AuthContext";
@@ -944,3 +945,138 @@ const ComponentLibrary = () => {
         </Dialog>
 
         <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+          <DialogContent className="sm:max-w-[800px]">
+            <DialogHeader>
+              <DialogTitle>Component Details</DialogTitle>
+              <DialogDescription>
+                View component specifications and configuration.
+              </DialogDescription>
+            </DialogHeader>
+            
+            {selectedComponent && (
+              <div className="py-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <h3 className="text-lg font-medium mb-4">Component Information</h3>
+                    <div className="space-y-3">
+                      <div>
+                        <span className="text-sm text-muted-foreground">Name:</span>
+                        <p className="font-medium">{selectedComponent.name}</p>
+                      </div>
+                      <div>
+                        <span className="text-sm text-muted-foreground">Type:</span>
+                        <p className="font-mono text-sm">{selectedComponent.type}</p>
+                      </div>
+                      <div>
+                        <span className="text-sm text-muted-foreground">Category:</span>
+                        <p>
+                          <Badge className="mt-1">{selectedComponent.category}</Badge>
+                        </p>
+                      </div>
+                      <div>
+                        <span className="text-sm text-muted-foreground">Status:</span>
+                        <p>
+                          <Badge 
+                            variant={selectedComponent.enabled ? "default" : "outline"}
+                            className={`mt-1 ${selectedComponent.enabled ? "bg-green-500" : "text-red-500"}`}
+                          >
+                            {selectedComponent.enabled ? "Enabled" : "Disabled"}
+                          </Badge>
+                        </p>
+                      </div>
+                      <div>
+                        <span className="text-sm text-muted-foreground">Description:</span>
+                        <p className="text-sm mt-1">{selectedComponent.description}</p>
+                      </div>
+                      <div>
+                        <span className="text-sm text-muted-foreground">Last Updated:</span>
+                        <p className="text-sm">{selectedComponent.last_updated}</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h3 className="text-lg font-medium mb-4">Component Preview</h3>
+                    <div className="bg-gray-50 p-6 rounded-md flex items-center justify-center min-h-[200px] border">
+                      {wokwiReady ? (
+                        <div id="component-preview" className="component-preview-container"></div>
+                      ) : (
+                        <div className="text-center text-muted-foreground">
+                          <Cpu className="h-10 w-10 mb-2 mx-auto animate-pulse" />
+                          <p>Loading component preview...</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                
+                {selectedComponent.pinConfig && selectedComponent.pinConfig.length > 0 && (
+                  <div className="mt-6">
+                    <h3 className="text-lg font-medium mb-3">Pin Configuration</h3>
+                    <div className="rounded-md border overflow-hidden">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Pin Name</TableHead>
+                            <TableHead>X Position</TableHead>
+                            <TableHead>Y Position</TableHead>
+                            <TableHead>Signal Types</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {selectedComponent.pinConfig.map((pin, index) => (
+                            <TableRow key={`view-pin-${index}`}>
+                              <TableCell className="font-medium">{pin.name}</TableCell>
+                              <TableCell>{pin.x}</TableCell>
+                              <TableCell>{pin.y}</TableCell>
+                              <TableCell>
+                                {pin.signals.map(signal => (
+                                  <Badge key={signal} variant="outline" className="mr-1">
+                                    {signal}
+                                  </Badge>
+                                ))}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                )}
+                
+                {selectedComponent.properties && Object.keys(selectedComponent.properties).length > 0 && (
+                  <div className="mt-6">
+                    <h3 className="text-lg font-medium mb-3">Component Properties</h3>
+                    <div className="grid grid-cols-2 gap-2 border rounded-md p-4">
+                      {Object.entries(selectedComponent.properties).map(([key, value]) => (
+                        <div key={`prop-${key}`} className="flex justify-between">
+                          <span className="font-medium">{key}:</span>
+                          <span className="text-right">{String(value)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+            
+            <DialogFooter>
+              <Button onClick={() => setIsViewDialogOpen(false)}>Close</Button>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setIsViewDialogOpen(false);
+                  handleEditComponent(selectedComponent!);
+                }}
+              >
+                Edit Component
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </PageLayout>
+  );
+};
+
+export default ComponentLibrary;
