@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import PageLayout from "@/components/PageLayout";
 import { useAuth } from "@/context/AuthContext";
@@ -79,6 +78,7 @@ import DynamicPropertyEditor from "@/components/CircuitEditor/DynamicPropertyEdi
 import EnhancedComponentPreview from "@/components/CircuitEditor/EnhancedComponentPreview";
 import { useComponentLibrary } from "@/hooks/useComponentLibrary";
 import { ComponentLibraryItem } from "@/services/componentLibraryService";
+import { ComponentPin } from "@/types/database";
 
 interface PinConfig {
   name: string;
@@ -347,8 +347,8 @@ const ComponentLibrary = () => {
   const handleConfirmDelete = () => {
     if (!selectedComponent || !selectedComponent.id) return;
     
-    // Call the mutation from our hook
-    deleteComponent(selectedComponent.id, selectedComponent.name);
+    // Fix: Pass only the id as the first parameter and name as the second parameter
+    deleteComponent(selectedComponent.id);
     
     setIsDeleteDialogOpen(false);
   };
@@ -400,9 +400,17 @@ const ComponentLibrary = () => {
     
     setEditedComponent(prev => {
       if (!prev) return prev;
+      // Ensure all PinConfig objects have the required signals property
+      const typedPinConfig: ComponentPin[] = pinConfig.map(pin => ({
+        name: pin.name,
+        x: pin.x,
+        y: pin.y,
+        signals: pin.signals || []
+      }));
+      
       return { 
         ...prev, 
-        pins: pinConfig as ComponentPin[], 
+        pins: typedPinConfig, 
       };
     });
   };
@@ -947,28 +955,4 @@ const ComponentLibrary = () => {
                   <span className="font-medium">Name:</span>
                   <span>{selectedComponent.name}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">Type:</span>
-                  <span>{selectedComponent.type}</span>
-                </div>
-              </div>
-            )}
-            
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>Cancel</Button>
-              <Button 
-                variant="destructive" 
-                onClick={handleConfirmDelete}
-                disabled={isDeletingComponent}
-              >
-                {isDeletingComponent ? 'Deleting...' : 'Delete'}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
-    </PageLayout>
-  );
-};
-
-export default ComponentLibrary;
+                <div className="flex items-center gap-

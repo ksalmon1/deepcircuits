@@ -61,3 +61,11 @@ export type VersionHistory = {
   created_at: string;
   created_by: string;
 };
+
+export type ComponentPin = {
+  id?: string;
+  name: string;
+  x: number;
+  y: number;
+  signals: string[];
+};

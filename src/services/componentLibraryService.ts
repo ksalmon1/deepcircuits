@@ -1,6 +1,6 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { ComponentPin } from "@/types/database";
 
 export interface ComponentPin {
   id?: string;
@@ -30,7 +30,6 @@ export interface ComponentLibraryItem {
   updatedAt?: string;
 }
 
-// Convert database response to our frontend model
 const mapComponentFromDb = (dbComponent: any): ComponentLibraryItem => {
   return {
     id: dbComponent.id,
@@ -93,8 +92,6 @@ export const getComponentWithDetails = async (componentId: string): Promise<any>
  */
 export const createComponent = async (component: ComponentLibraryItem): Promise<string> => {
   try {
-    // Start a transaction to ensure all operations succeed or fail together
-    // 1. Insert the component
     const { data: componentData, error: componentError } = await supabase
       .from('component_library')
       .insert({
@@ -116,7 +113,6 @@ export const createComponent = async (component: ComponentLibraryItem): Promise<
 
     const componentId = componentData.id;
 
-    // 2. Insert pins if they exist
     if (component.pins && component.pins.length > 0) {
       const pinsToInsert = component.pins.map(pin => ({
         component_id: componentId,
@@ -136,7 +132,6 @@ export const createComponent = async (component: ComponentLibraryItem): Promise<
       }
     }
 
-    // 3. Insert properties if they exist
     if (component.properties && Object.keys(component.properties).length > 0) {
       const propertiesToInsert = Object.entries(component.properties).map(([key, value]) => ({
         component_id: componentId,
@@ -170,7 +165,6 @@ export const updateComponent = async (component: ComponentLibraryItem): Promise<
   }
 
   try {
-    // 1. Update the component
     const { error: componentError } = await supabase
       .from('component_library')
       .update({
@@ -189,9 +183,7 @@ export const updateComponent = async (component: ComponentLibraryItem): Promise<
       throw componentError;
     }
 
-    // 2. Handle pins: Remove existing ones and add new ones
     if (component.pins) {
-      // Delete all existing pins
       const { error: deletePinsError } = await supabase
         .from('component_pins')
         .delete()
@@ -202,7 +194,6 @@ export const updateComponent = async (component: ComponentLibraryItem): Promise<
         throw deletePinsError;
       }
 
-      // Add new pins
       if (component.pins.length > 0) {
         const pinsToInsert = component.pins.map(pin => ({
           component_id: component.id,
@@ -223,9 +214,7 @@ export const updateComponent = async (component: ComponentLibraryItem): Promise<
       }
     }
 
-    // 3. Handle properties: Remove existing ones and add new ones
     if (component.properties) {
-      // Delete all existing properties
       const { error: deletePropertiesError } = await supabase
         .from('component_properties')
         .delete()
@@ -236,7 +225,6 @@ export const updateComponent = async (component: ComponentLibraryItem): Promise<
         throw deletePropertiesError;
       }
 
-      // Add new properties
       if (Object.keys(component.properties).length > 0) {
         const propertiesToInsert = Object.entries(component.properties).map(([key, value]) => ({
           component_id: component.id,
@@ -274,7 +262,6 @@ export const deleteComponent = async (componentId: string): Promise<void> => {
       console.error('Error deleting component:', error);
       throw error;
     }
-    // No need to delete pins and properties separately as they have ON DELETE CASCADE
   } catch (error) {
     console.error('Error in deleteComponent:', error);
     throw error;
@@ -349,12 +336,12 @@ export const useComponentLibraryService = () => {
       }
     },
     
-    deleteComponent: async (componentId: string, componentName: string) => {
+    deleteComponent: async (componentId: string, componentName?: string) => {
       try {
         await deleteComponent(componentId);
         toast({
           title: "Component deleted",
-          description: `${componentName} has been removed from the library.`,
+          description: componentName ? `${componentName} has been removed from the library.` : "Component has been removed from the library.",
         });
       } catch (error) {
         toast({
