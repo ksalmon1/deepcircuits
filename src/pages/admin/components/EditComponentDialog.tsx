@@ -1,6 +1,7 @@
 
 import React from "react";
-import { ComponentLibraryItem, ComponentPin } from "@/services/componentLibraryService";
+import { ComponentLibraryItem } from "@/services/componentLibraryService";
+import { ComponentPin } from "@/types/database";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
