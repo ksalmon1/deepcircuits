@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import PageLayout from "@/components/PageLayout";
 import { useAuth } from "@/context/AuthContext";
@@ -71,7 +70,6 @@ import {
   renderWokwiElement 
 } from '@/integrations/wokwi/WokwiIntegration';
 
-// Extended component type with additional admin properties
 interface ComponentType {
   id: string;
   name: string;
@@ -166,7 +164,6 @@ const mockComponents = [
     pinConfig: [
       { name: "D0", x: 0, y: 0, signals: ["digital", "rx"] },
       { name: "D1", x: 0, y: 10, signals: ["digital", "tx"] },
-      // Additional pins would be defined here
     ]
   },
   { 
@@ -243,7 +240,6 @@ const ComponentLibrary = () => {
   const previewRef = useRef<HTMLDivElement>(null);
   const [allComponents, setAllComponents] = useState<ComponentType[]>(mockComponents);
   
-  // Ensure Wokwi elements are loaded
   useEffect(() => {
     const loadWokwi = async () => {
       try {
@@ -271,7 +267,6 @@ const ComponentLibrary = () => {
     loadWokwi();
   }, [toast]);
 
-  // Render component preview when selected component changes
   useEffect(() => {
     if (wokwiReady && selectedComponent && previewRef.current) {
       try {
@@ -284,7 +279,6 @@ const ComponentLibrary = () => {
     }
   }, [wokwiReady, selectedComponent, activeTab]);
   
-  // Similarly render for edited component
   useEffect(() => {
     if (wokwiReady && editedComponent && previewRef.current && activeTab === "preview") {
       try {
@@ -307,17 +301,16 @@ const ComponentLibrary = () => {
 
   const filteredComponents = allComponents.filter(component => {
     const matchesSearch = component.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = categoryFilter ? component.category === categoryFilter : true;
-    const matchesType = typeFilter ? component.type === typeFilter : true;
+    const matchesCategory = categoryFilter === "all" || !categoryFilter ? true : component.category === categoryFilter;
+    const matchesType = typeFilter === "all" || !typeFilter ? true : component.type === typeFilter;
     return matchesSearch && matchesCategory && matchesType;
   });
 
   const handleAddComponent = () => {
-    // Add the component to the list
     const newComponent = {
       id: `comp-${Date.now()}`,
       name: "New Component",
-      type: "wokwi-led", // Default component type
+      type: "wokwi-led",
       category: "output",
       created_at: new Date().toISOString().split('T')[0],
       last_updated: new Date().toISOString().split('T')[0],
@@ -338,7 +331,7 @@ const ComponentLibrary = () => {
 
   const handleEditComponent = (component: ComponentType) => {
     setSelectedComponent(component);
-    setEditedComponent({...component}); // Create a copy for editing
+    setEditedComponent({...component});
     setIsEditDialogOpen(true);
     setActiveTab("details");
   };
@@ -356,7 +349,6 @@ const ComponentLibrary = () => {
   const handleSaveComponent = () => {
     if (!editedComponent) return;
     
-    // Update the component in the list
     setAllComponents(prevComponents => 
       prevComponents.map(comp => 
         comp.id === editedComponent.id ? editedComponent : comp
@@ -373,7 +365,6 @@ const ComponentLibrary = () => {
   const handleConfirmDelete = () => {
     if (!selectedComponent) return;
     
-    // Remove the component from the list
     setAllComponents(prevComponents => 
       prevComponents.filter(comp => comp.id !== selectedComponent.id)
     );
@@ -386,7 +377,6 @@ const ComponentLibrary = () => {
   };
 
   const handleSaveLibrary = () => {
-    // In a real app, this would save to Supabase
     toast({
       title: "Library Saved",
       description: "Component library has been saved to database successfully.",
@@ -464,7 +454,6 @@ const ComponentLibrary = () => {
     });
   };
 
-  // Component to render pin configuration UI
   const PinConfigurationSection = () => {
     if (!editedComponent || !editedComponent.pinConfig) {
       return (
@@ -551,7 +540,6 @@ const ComponentLibrary = () => {
     );
   };
 
-  // Component to render properties UI
   const PropertiesSection = () => {
     if (!editedComponent) return null;
     
@@ -638,7 +626,7 @@ const ComponentLibrary = () => {
                     </div>
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Categories</SelectItem>
+                    <SelectItem value="all">All Categories</SelectItem>
                     <SelectItem value="input">Input</SelectItem>
                     <SelectItem value="output">Output</SelectItem>
                     <SelectItem value="passive">Passive</SelectItem>
@@ -654,7 +642,7 @@ const ComponentLibrary = () => {
                     </div>
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Types</SelectItem>
+                    <SelectItem value="all">All Types</SelectItem>
                     <SelectItem value="basic">Basic</SelectItem>
                     <SelectItem value="complex">Complex</SelectItem>
                   </SelectContent>
@@ -1080,3 +1068,4 @@ const ComponentLibrary = () => {
 };
 
 export default ComponentLibrary;
+
