@@ -41,6 +41,13 @@ function App() {
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          
+          {/* These routes will show 404 until implemented */}
+          <Route path="/documentation" element={<NotFound />} />
+          <Route path="/tutorials" element={<NotFound />} />
+          <Route path="/blog" element={<NotFound />} />
+          <Route path="/team" element={<NotFound />} />
+          <Route path="/contact" element={<NotFound />} />
 
           {/* Protected Routes */}
           <Route
