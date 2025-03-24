@@ -100,8 +100,7 @@
 - ⏳ Integrate wokwi-elements library
   - ⏳ Load wokwi components dynamically
   - ⏳ Render components on canvas
-  - ❌ Implement component property editors
-  - ❌ Create custom component extensions
+  - ❌ Display pins on mouse hover
 
 ### 3.3 Interactive Placement
 - ⏳ Implement drag and drop functionality
