@@ -7,10 +7,19 @@ import CodeEditor from './CodeEditor';
 import SerialMonitor from './SerialMonitor';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { WokwiComponent } from '@/integrations/wokwi/WokwiIntegration';
+import { useComponentLibrary } from '@/hooks/useComponentLibrary';
 
 const CircuitEditorPage = () => {
   // State for circuit components
   const [components, setComponents] = useState<WokwiComponent[]>([]);
+  
+  // Pre-fetch all component details to have them ready for the circuit canvas
+  const { refetchComponents } = useComponentLibrary();
+  
+  // Ensure we have the latest component library data
+  React.useEffect(() => {
+    refetchComponents();
+  }, [refetchComponents]);
 
   const handleComponentsChange = (newComponents: WokwiComponent[]) => {
     setComponents(newComponents);

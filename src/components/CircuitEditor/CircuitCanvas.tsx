@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { 
   isWokwiLoaded, 
@@ -11,6 +10,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { ZoomIn, ZoomOut, Move } from 'lucide-react';
+import { useComponentLibrary } from '@/hooks/useComponentLibrary';
 
 interface CircuitCanvasProps {
   components: WokwiComponent[];
@@ -32,6 +32,9 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
   const [hoveredPins, setHoveredPins] = useState<WokwiPin[]>([]);
   const [visiblePins, setVisiblePins] = useState<{[componentId: string]: boolean}>({});
   const [hoveredPin, setHoveredPin] = useState<{componentId: string, pinIndex: number} | null>(null);
+  
+  const { useComponentDetails } = useComponentLibrary();
+  const [componentPinsCache, setComponentPinsCache] = useState<Record<string, WokwiPin[]>>({});
 
   const checkWokwiLoaded = useCallback(async () => {
     console.log('Checking if Wokwi is loaded, attempt:', loadingAttempts + 1);
@@ -100,6 +103,44 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     return () => clearTimeout(timer);
   }, [isReady, loadingError]);
 
+  const fetchComponentPins = useCallback(async (type: string) => {
+    try {
+      if (componentPinsCache[type]) {
+        return componentPinsCache[type];
+      }
+
+      const { data: componentDetails, isLoading, error } = useComponentDetails(type);
+      
+      if (error) {
+        console.error(`Error fetching pins for component type ${type}:`, error);
+        return getComponentPinInfo(type);
+      }
+      
+      if (isLoading || !componentDetails) {
+        return getComponentPinInfo(type);
+      }
+
+      const pins = componentDetails.pins || [];
+      
+      const mappedPins: WokwiPin[] = pins.map(pin => ({
+        name: pin.name,
+        x: Number(pin.x),
+        y: Number(pin.y),
+        signals: pin.signals || []
+      }));
+
+      setComponentPinsCache(prev => ({
+        ...prev,
+        [type]: mappedPins
+      }));
+
+      return mappedPins;
+    } catch (err) {
+      console.error(`Error in fetchComponentPins for ${type}:`, err);
+      return getComponentPinInfo(type);
+    }
+  }, [componentPinsCache, useComponentDetails]);
+
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     
@@ -163,9 +204,10 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     setHoveredPin(null);
   };
 
-  const renderComponent = useCallback((component: WokwiComponent) => {
+  const renderComponent = useCallback(async (component: WokwiComponent) => {
     const { type, id, top, left, attributes } = component;
-    const pins = getComponentPinInfo(type);
+    
+    const pins = await fetchComponentPins(type);
     const showPins = visiblePins[id] || hoveredComponent === id;
     
     return (
@@ -217,13 +259,14 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
         )}
       </div>
     );
-  }, [hoveredComponent, hoveredPin, visiblePins, togglePinVisibility]);
+  }, [fetchComponentPins, hoveredComponent, hoveredPin, visiblePins, togglePinVisibility]);
 
-  const handleComponentHover = (id: string, type: string) => {
+  const handleComponentHover = async (id: string, type: string) => {
     setHoveredComponent(id);
-    const pins = getComponentPinInfo(type);
+    
+    const pins = await fetchComponentPins(type);
     setHoveredPins(pins);
-    // Add a subtle highlight or outline to the component
+    
     const element = document.getElementById(`wokwi-element-${id}`);
     if (element && element.firstChild) {
       (element.firstChild as HTMLElement).style.outline = '2px solid #4C72F4';
@@ -232,7 +275,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
   };
 
   const handleComponentHoverExit = () => {
-    // Remove highlight from previous component
     if (hoveredComponent) {
       const element = document.getElementById(`wokwi-element-${hoveredComponent}`);
       if (element && element.firstChild) {
@@ -246,10 +288,14 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
   useEffect(() => {
     if (!isReady) return;
     
-    components.forEach(component => {
-      const elementId = `wokwi-element-${component.id}`;
-      renderWokwiElement(component.type, elementId, component.attributes);
-    });
+    const renderAllComponents = async () => {
+      for (const component of components) {
+        const elementId = `wokwi-element-${component.id}`;
+        renderWokwiElement(component.type, elementId, component.attributes);
+      }
+    };
+    
+    renderAllComponents();
   }, [components, isReady]);
 
   const handleRetry = async () => {
@@ -378,12 +424,50 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
             transition: isPanning ? 'none' : 'transform 0.1s ease-out'
           }}
         >
-          {components.map(renderComponent)}
+          {components.map(component => {
+            return (
+              <AsyncComponent 
+                key={component.id} 
+                renderFn={() => renderComponent(component)} 
+              />
+            );
+          })}
         </div>
       </div>
     </div>
   );
 };
+
+interface AsyncComponentProps {
+  renderFn: () => Promise<JSX.Element>;
+}
+
+function AsyncComponent({ renderFn }: AsyncComponentProps) {
+  const [component, setComponent] = useState<JSX.Element | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    
+    const renderAsync = async () => {
+      try {
+        const renderedComponent = await renderFn();
+        if (isMounted) {
+          setComponent(renderedComponent);
+        }
+      } catch (error) {
+        console.error('Error rendering component:', error);
+      }
+    };
+    
+    renderAsync();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [renderFn]);
+
+  return component || null;
+}
 
 function getSignalColor(signal: string): string {
   const colors: Record<string, string> = {
