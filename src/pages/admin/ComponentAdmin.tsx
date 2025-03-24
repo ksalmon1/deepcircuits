@@ -195,7 +195,8 @@ const ComponentLibrary = () => {
     deleteComponent,
     isCreatingComponent,
     isUpdatingComponent,
-    isDeletingComponent
+    isDeletingComponent,
+    useComponentDetails
   } = useComponentLibrary();
   
   const uniqueCategories = Array.from(new Set((components || []).map(comp => comp.category)));
@@ -294,11 +295,49 @@ const ComponentLibrary = () => {
     setEditedComponent({...component});
     setIsEditDialogOpen(true);
     setActiveTab("details");
+
+    const { data: componentDetails, isLoading, error } = useComponentDetails(component.id);
+    
+    if (componentDetails) {
+      console.log("Component details loaded:", componentDetails);
+      const fullComponent = {
+        ...component,
+        pins: componentDetails.pins || [],
+        properties: componentDetails.properties || {}
+      };
+      setEditedComponent(fullComponent);
+    } else if (error) {
+      console.error("Error loading component details:", error);
+      toast({
+        title: "Error loading component details",
+        description: "Could not load pins and properties for this component.",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleViewComponent = (component: ComponentLibraryItem) => {
     setSelectedComponent(component);
     setIsViewDialogOpen(true);
+    
+    const { data: componentDetails, isLoading, error } = useComponentDetails(component.id);
+    
+    if (componentDetails) {
+      console.log("Component details loaded for view:", componentDetails);
+      const fullComponent = {
+        ...component,
+        pins: componentDetails.pins || [],
+        properties: componentDetails.properties || {}
+      };
+      setSelectedComponent(fullComponent);
+    } else if (error) {
+      console.error("Error loading component details for view:", error);
+      toast({
+        title: "Error loading component details",
+        description: "Could not load pins and properties for this component.",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleDeleteComponent = (component: ComponentLibraryItem) => {
@@ -386,7 +425,7 @@ const ComponentLibrary = () => {
         name: pin.name,
         x: pin.x,
         y: pin.y,
-        signals: pin.signals
+        signals: pin.signals || []
       }));
       
       return { 

@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ComponentPin } from "@/types/database";
@@ -65,6 +64,7 @@ export const getAllComponents = async (): Promise<ComponentLibraryItem[]> => {
  */
 export const getComponentWithDetails = async (componentId: string): Promise<any> => {
   try {
+    // Use the RPC function to get the component with all its details
     const { data, error } = await supabase
       .rpc('get_component_with_details', { component_id: componentId });
 
@@ -73,9 +73,83 @@ export const getComponentWithDetails = async (componentId: string): Promise<any>
       throw error;
     }
 
+    if (!data) {
+      // If no data returned, attempt to fetch component data directly
+      console.log('No data returned from RPC, falling back to direct queries');
+      return await getComponentDetailsDirectly(componentId);
+    }
+
     return data;
   } catch (error) {
     console.error('Error in getComponentWithDetails:', error);
+    console.log('Falling back to direct queries due to error');
+    return await getComponentDetailsDirectly(componentId);
+  }
+};
+
+/**
+ * Fallback function to get component details directly from the tables
+ */
+const getComponentDetailsDirectly = async (componentId: string): Promise<any> => {
+  try {
+    // Get component basic info
+    const { data: componentData, error: componentError } = await supabase
+      .from('component_library')
+      .select('*')
+      .eq('id', componentId)
+      .single();
+
+    if (componentError) {
+      console.error('Error fetching component:', componentError);
+      throw componentError;
+    }
+
+    // Get component pins
+    const { data: pinsData, error: pinsError } = await supabase
+      .from('component_pins')
+      .select('*')
+      .eq('component_id', componentId);
+
+    if (pinsError) {
+      console.error('Error fetching pins:', pinsError);
+      throw pinsError;
+    }
+
+    // Get component properties
+    const { data: propertiesData, error: propertiesError } = await supabase
+      .from('component_properties')
+      .select('*')
+      .eq('component_id', componentId);
+
+    if (propertiesError) {
+      console.error('Error fetching properties:', propertiesError);
+      throw propertiesError;
+    }
+
+    // Convert properties to key-value pairs
+    const properties: Record<string, any> = {};
+    propertiesData.forEach(prop => {
+      properties[prop.property_key] = prop.property_value;
+    });
+
+    // Map pins to the expected format
+    const pins = pinsData.map(pin => ({
+      name: pin.name,
+      x: pin.x,
+      y: pin.y,
+      signals: pin.signals || []
+    }));
+
+    // Construct the result object
+    const component = mapComponentFromDb(componentData);
+    
+    return {
+      component: component,
+      pins: pins,
+      properties: properties
+    };
+  } catch (error) {
+    console.error('Error in getComponentDetailsDirectly:', error);
     throw error;
   }
 };

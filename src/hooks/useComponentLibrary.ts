@@ -31,7 +31,10 @@ export const useComponentLibrary = () => {
     return useQuery({
       queryKey: ['component', componentId],
       queryFn: () => componentId ? getComponentWithDetails(componentId) : null,
-      enabled: !!componentId
+      enabled: !!componentId,
+      onError: (error) => {
+        console.error('Error fetching component details:', error);
+      }
     });
   };
   
