@@ -12,7 +12,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { ZoomIn, ZoomOut, Move } from 'lucide-react';
 import { useComponentLibrary } from '@/hooks/useComponentLibrary';
-import { useQuery } from '@tanstack/react-query';
 
 interface CircuitCanvasProps {
   components: WokwiComponent[];
@@ -37,6 +36,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
   const [hoveredPins, setHoveredPins] = useState<WokwiPin[]>([]);
   const [visiblePins, setVisiblePins] = useState<{[componentId: string]: boolean}>({});
   const [hoveredPin, setHoveredPin] = useState<{componentId: string, pinIndex: number} | null>(null);
+  const [renderedComponents, setRenderedComponents] = useState<Record<string, boolean>>({});
   
   // Fetch all component details once to have them available for the circuit canvas
   const { components: libraryComponents } = useComponentLibrary();
@@ -125,7 +125,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
   }, [isReady, loadingError]);
 
   // Get component pin information safely without using hooks directly in callbacks
-  const fetchComponentPins = useCallback(async (type: string): Promise<WokwiPin[]> => {
+  const fetchComponentPins = useCallback((type: string): WokwiPin[] => {
     try {
       // First check our cache
       if (pinCache[type]) {
@@ -220,67 +220,10 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     setHoveredPin(null);
   };
 
-  const renderComponent = useCallback(async (component: WokwiComponent) => {
-    const { type, id, top, left, attributes } = component;
-    
-    const pins = await fetchComponentPins(type);
-    const showPins = visiblePins[id] || hoveredComponent === id;
-    
-    return (
-      <div 
-        key={id}
-        className="absolute"
-        style={{ top: `${top}px`, left: `${left}px` }}
-        onMouseEnter={() => handleComponentHover(id, type)}
-        onMouseLeave={() => handleComponentHoverExit()}
-        onDoubleClick={() => togglePinVisibility(id)}
-      >
-        <div id={`wokwi-element-${id}`}></div>
-        
-        {showPins && pins.length > 0 && (
-          <div className="absolute top-0 left-0 z-10 pointer-events-none">
-            {pins.map((pin, index) => (
-              <div 
-                key={`pin-${id}-${index}`}
-                className="absolute pin-marker pointer-events-auto"
-                style={{ 
-                  left: `${pin.x}px`, 
-                  top: `${pin.y}px`,
-                  backgroundColor: getSignalColor(pin.signals && pin.signals.length > 0 ? pin.signals[0] : 'digital')
-                }}
-                onMouseEnter={() => handlePinHover(id, index)}
-                onMouseLeave={handlePinHoverExit}
-              ></div>
-            ))}
-          </div>
-        )}
-        
-        {hoveredPin && hoveredPin.componentId === id && pins[hoveredPin.pinIndex] && (
-          <div 
-            className="absolute z-20 bg-black text-white text-xs px-1 py-0.5 rounded-sm opacity-80"
-            style={{ 
-              top: `${pins[hoveredPin.pinIndex].y}px`, 
-              left: `${pins[hoveredPin.pinIndex].x}px`, 
-              transform: 'translate(-50%, -100%)',
-              marginTop: '-5px'
-            }}
-          >
-            {pins[hoveredPin.pinIndex].name}
-            {pins[hoveredPin.pinIndex].signals && pins[hoveredPin.pinIndex].signals.length > 0 && (
-              <span className="text-xs opacity-70 ml-1">
-                ({pins[hoveredPin.pinIndex].signals.join(', ')})
-              </span>
-            )}
-          </div>
-        )}
-      </div>
-    );
-  }, [fetchComponentPins, hoveredComponent, hoveredPin, visiblePins, togglePinVisibility]);
-
-  const handleComponentHover = async (id: string, type: string) => {
+  const handleComponentHover = useCallback((id: string, type: string) => {
     setHoveredComponent(id);
     
-    const pins = await fetchComponentPins(type);
+    const pins = fetchComponentPins(type);
     setHoveredPins(pins);
     
     const element = document.getElementById(`wokwi-element-${id}`);
@@ -288,9 +231,9 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
       (element.firstChild as HTMLElement).style.outline = '2px solid #4C72F4';
       (element.firstChild as HTMLElement).style.outlineOffset = '2px';
     }
-  };
+  }, [fetchComponentPins]);
 
-  const handleComponentHoverExit = () => {
+  const handleComponentHoverExit = useCallback(() => {
     if (hoveredComponent) {
       const element = document.getElementById(`wokwi-element-${hoveredComponent}`);
       if (element && element.firstChild) {
@@ -299,20 +242,40 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     }
     setHoveredComponent(null);
     setHoveredPins([]);
-  };
+  }, [hoveredComponent]);
 
+  // Effect to render wokwi elements when they're loaded and available
   useEffect(() => {
     if (!isReady) return;
     
-    const renderAllComponents = async () => {
-      for (const component of components) {
-        const elementId = `wokwi-element-${component.id}`;
+    components.forEach(component => {
+      const elementId = `wokwi-element-${component.id}`;
+      const element = document.getElementById(elementId);
+      
+      // Only render if element exists and we haven't rendered it yet
+      if (element && !renderedComponents[component.id]) {
         renderWokwiElement(component.type, elementId, component.attributes);
+        setRenderedComponents(prev => ({
+          ...prev,
+          [component.id]: true
+        }));
       }
-    };
-    
-    renderAllComponents();
-  }, [components, isReady]);
+    });
+  }, [components, isReady, renderedComponents]);
+
+  // Clear rendered component tracking when component is removed
+  useEffect(() => {
+    const componentIds = components.map(c => c.id);
+    setRenderedComponents(prev => {
+      const newState = { ...prev };
+      Object.keys(newState).forEach(id => {
+        if (!componentIds.includes(id)) {
+          delete newState[id];
+        }
+      });
+      return newState;
+    });
+  }, [components]);
 
   const handleRetry = async () => {
     setLoadingError(null);
@@ -369,6 +332,64 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
       const newZoom = Math.max(0.5, Math.min(3, prevZoom + delta));
       return newZoom;
     });
+  };
+
+  // Render a single component with its pin information
+  const renderComponent = (component: WokwiComponent) => {
+    const { type, id, top, left, attributes } = component;
+    
+    const pins = fetchComponentPins(type);
+    const showPins = visiblePins[id] || hoveredComponent === id;
+    
+    return (
+      <div 
+        key={id}
+        className="absolute"
+        style={{ top: `${top}px`, left: `${left}px` }}
+        onMouseEnter={() => handleComponentHover(id, type)}
+        onMouseLeave={handleComponentHoverExit}
+        onDoubleClick={() => togglePinVisibility(id)}
+      >
+        <div id={`wokwi-element-${id}`}></div>
+        
+        {showPins && pins.length > 0 && (
+          <div className="absolute top-0 left-0 z-10 pointer-events-none">
+            {pins.map((pin, index) => (
+              <div 
+                key={`pin-${id}-${index}`}
+                className="absolute pin-marker pointer-events-auto"
+                style={{ 
+                  left: `${pin.x}px`, 
+                  top: `${pin.y}px`,
+                  backgroundColor: getSignalColor(pin.signals && pin.signals.length > 0 ? pin.signals[0] : 'digital')
+                }}
+                onMouseEnter={() => handlePinHover(id, index)}
+                onMouseLeave={handlePinHoverExit}
+              ></div>
+            ))}
+          </div>
+        )}
+        
+        {hoveredPin && hoveredPin.componentId === id && pins[hoveredPin.pinIndex] && (
+          <div 
+            className="absolute z-20 bg-black text-white text-xs px-1 py-0.5 rounded-sm opacity-80"
+            style={{ 
+              top: `${pins[hoveredPin.pinIndex].y}px`, 
+              left: `${pins[hoveredPin.pinIndex].x}px`, 
+              transform: 'translate(-50%, -100%)',
+              marginTop: '-5px'
+            }}
+          >
+            {pins[hoveredPin.pinIndex].name}
+            {pins[hoveredPin.pinIndex].signals && pins[hoveredPin.pinIndex].signals.length > 0 && (
+              <span className="text-xs opacity-70 ml-1">
+                ({pins[hoveredPin.pinIndex].signals.join(', ')})
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -440,50 +461,12 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
             transition: isPanning ? 'none' : 'transform 0.1s ease-out'
           }}
         >
-          {components.map(component => {
-            return (
-              <AsyncComponent 
-                key={component.id} 
-                renderFn={() => renderComponent(component)} 
-              />
-            );
-          })}
+          {components.map(component => renderComponent(component))}
         </div>
       </div>
     </div>
   );
 };
-
-interface AsyncComponentProps {
-  renderFn: () => Promise<JSX.Element>;
-}
-
-function AsyncComponent({ renderFn }: AsyncComponentProps) {
-  const [component, setComponent] = useState<JSX.Element | null>(null);
-
-  useEffect(() => {
-    let isMounted = true;
-    
-    const renderAsync = async () => {
-      try {
-        const renderedComponent = await renderFn();
-        if (isMounted) {
-          setComponent(renderedComponent);
-        }
-      } catch (error) {
-        console.error('Error rendering component:', error);
-      }
-    };
-    
-    renderAsync();
-    
-    return () => {
-      isMounted = false;
-    };
-  }, [renderFn]);
-
-  return component || null;
-}
 
 function getSignalColor(signal: string): string {
   const colors: Record<string, string> = {
