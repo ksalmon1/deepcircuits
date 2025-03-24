@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import PageLayout from "@/components/PageLayout";
 import { useAuth } from "@/context/AuthContext";
@@ -196,7 +195,7 @@ const mockComponents = [
   },
   { 
     id: "6", 
-    name: "Button", 
+    name: "Push Button", 
     type: "wokwi-pushbutton", 
     category: "input", 
     created_at: "2023-01-20", 
@@ -215,7 +214,7 @@ const mockComponents = [
   },
   { 
     id: "7", 
-    name: "Motor", 
+    name: "Servo Motor", 
     type: "wokwi-servo", 
     category: "output", 
     created_at: "2023-02-05", 
@@ -232,6 +231,50 @@ const mockComponents = [
     },
     isOriginal: true
   },
+  { 
+    id: "8", 
+    name: "7-Segment Display", 
+    type: "wokwi-7segment", 
+    category: "output", 
+    created_at: "2023-02-10", 
+    last_updated: "2023-04-05", 
+    pins: 10,
+    enabled: true,
+    description: "Seven-segment LED display for showing digits and basic characters",
+    properties: {
+      color: "red",
+      value: "0"
+    },
+    isOriginal: true
+  },
+  { 
+    id: "9", 
+    name: "LCD 16x2", 
+    type: "wokwi-lcd1602", 
+    category: "output", 
+    created_at: "2023-02-15", 
+    last_updated: "2023-04-08", 
+    pins: 16,
+    enabled: true,
+    description: "16x2 character LCD display",
+    properties: {
+      background: "rgb(74, 222, 128)",
+      text: "Hello World!"
+    },
+    isOriginal: true
+  },
+  { 
+    id: "10", 
+    name: "DHT22 Sensor", 
+    type: "wokwi-dht22", 
+    category: "input", 
+    created_at: "2023-03-01", 
+    last_updated: "2023-04-20", 
+    pins: 3,
+    enabled: true,
+    description: "Digital temperature and humidity sensor",
+    isOriginal: true
+  }
 ];
 
 const signalTypes = [
@@ -255,7 +298,6 @@ const ComponentLibrary = () => {
   const [showPins, setShowPins] = useState(true);
   const previewRef = useRef<HTMLDivElement>(null);
   const [allComponents, setAllComponents] = useState<ComponentType[]>(() => {
-    // Initialize components and mark original Wokwi components
     return mockComponents.map(comp => ({
       ...comp,
       isOriginal: isOriginalWokwiComponent(comp.type)
@@ -348,7 +390,6 @@ const ComponentLibrary = () => {
   const handleSaveComponent = () => {
     if (!editedComponent) return;
     
-    // Check if the component type has changed, and if so, update isOriginal flag
     if (editedComponent.type !== selectedComponent?.type) {
       editedComponent.isOriginal = isOriginalWokwiComponent(editedComponent.type);
     }
@@ -398,7 +439,7 @@ const ComponentLibrary = () => {
       }
       
       if (property === 'type') {
-        // When changing the type, update the isOriginal flag
+        editedComponent.isOriginal = isOriginalWokwiComponent(value);
         return { 
           ...prev, 
           type: value,
@@ -1066,3 +1107,4 @@ const ComponentLibrary = () => {
 };
 
 export default ComponentLibrary;
+

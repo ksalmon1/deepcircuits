@@ -145,6 +145,7 @@ export const ORIGINAL_WOKWI_COMPONENTS = [
   'wokwi-led',
   'wokwi-resistor',
   'wokwi-capacitor',
+  'wokwi-battery',
   'wokwi-arduino-uno',
   'wokwi-arduino-nano',
   'wokwi-esp32-devkit-v1',
