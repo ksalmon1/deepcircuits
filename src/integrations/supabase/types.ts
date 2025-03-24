@@ -9,6 +9,124 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      component_library: {
+        Row: {
+          category: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          enabled: boolean
+          id: string
+          is_original: boolean
+          name: string
+          svg_path: string | null
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          enabled?: boolean
+          id?: string
+          is_original?: boolean
+          name: string
+          svg_path?: string | null
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          enabled?: boolean
+          id?: string
+          is_original?: boolean
+          name?: string
+          svg_path?: string | null
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      component_pins: {
+        Row: {
+          component_id: string
+          created_at: string
+          id: string
+          name: string
+          signals: string[] | null
+          updated_at: string
+          x: number
+          y: number
+        }
+        Insert: {
+          component_id: string
+          created_at?: string
+          id?: string
+          name: string
+          signals?: string[] | null
+          updated_at?: string
+          x: number
+          y: number
+        }
+        Update: {
+          component_id?: string
+          created_at?: string
+          id?: string
+          name?: string
+          signals?: string[] | null
+          updated_at?: string
+          x?: number
+          y?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "component_pins_component_id_fkey"
+            columns: ["component_id"]
+            isOneToOne: false
+            referencedRelation: "component_library"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      component_properties: {
+        Row: {
+          component_id: string
+          created_at: string
+          id: string
+          property_key: string
+          property_value: Json
+          updated_at: string
+        }
+        Insert: {
+          component_id: string
+          created_at?: string
+          id?: string
+          property_key: string
+          property_value: Json
+          updated_at?: string
+        }
+        Update: {
+          component_id?: string
+          created_at?: string
+          id?: string
+          property_key?: string
+          property_value?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "component_properties_component_id_fkey"
+            columns: ["component_id"]
+            isOneToOne: false
+            referencedRelation: "component_library"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       components: {
         Row: {
           created_at: string
@@ -198,6 +316,12 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_component_with_details: {
+        Args: {
+          component_id: string
+        }
+        Returns: Json
+      }
       get_user_roles: {
         Args: {
           user_uuid: string
