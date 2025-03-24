@@ -24,6 +24,8 @@ export const CircuitEditorLayout = () => {
   const [showCodeEditor, setShowCodeEditor] = useState<boolean>(false);
   const [showSerialMonitor, setShowSerialMonitor] = useState<boolean>(false);
   const [verticalSplit, setVerticalSplit] = useState<boolean>(true);
+  // Add a key for CircuitCanvas to prevent re-mounting
+  const [canvasKey] = useState<string>(`canvas-${Date.now()}`);
 
   // Load project data based on ID (mock implementation)
   useEffect(() => {
@@ -231,7 +233,7 @@ export const CircuitEditorLayout = () => {
                 (showCodeEditor && showSerialMonitor ? 'w-1/2' : 'w-2/3') : 
                 (showCodeEditor && showSerialMonitor ? 'h-1/2' : 'h-2/3')
               } overflow-hidden`}>
-                <CircuitCanvas />
+                <CircuitCanvas key={canvasKey} />
               </div>
               
               {/* Right/bottom panel with code editor and/or serial monitor */}
@@ -267,7 +269,7 @@ export const CircuitEditorLayout = () => {
           ) : (
             // If no editors are open, show only the circuit canvas
             <div className="flex-1 overflow-hidden">
-              <CircuitCanvas />
+              <CircuitCanvas key={canvasKey} />
             </div>
           )}
         </div>
