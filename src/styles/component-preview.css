@@ -1,3 +1,4 @@
+
 /* Component preview styles */
 .component-preview-container {
   display: flex;
@@ -30,7 +31,37 @@ wokwi-relay,
 wokwi-ir-remote,
 wokwi-ir-receiver,
 wokwi-dht22,
-wokwi-logic-analyzer {
+wokwi-logic-analyzer,
+wokwi-arduino-mega,
+wokwi-arduino-leonardo,
+wokwi-arduino-micro,
+wokwi-breadboard,
+wokwi-analog-joystick,
+wokwi-bicolor-led,
+wokwi-clock-generator,
+wokwi-crystal,
+wokwi-hc-sr04,
+wokwi-ky-040,
+wokwi-lcd2004,
+wokwi-led-bar-graph,
+wokwi-led-matrix,
+wokwi-microphone,
+wokwi-mpu6050,
+wokwi-max7219-matrix,
+wokwi-neopixel,
+wokwi-photoresistor-sensor,
+wokwi-piezo,
+wokwi-pir-motion-sensor,
+wokwi-raspberrypi-pico,
+wokwi-rgb-led,
+wokwi-rotary-dialer,
+wokwi-sd-card,
+wokwi-slide-potentiometer,
+wokwi-ssd1306,
+wokwi-text-lcd1602,
+wokwi-tilt-sensor,
+wokwi-ultrasonic-distance-sensor,
+wokwi-voltage-source {
   display: inline-block;
 }
 
@@ -47,7 +78,9 @@ wokwi-capacitor {
 }
 
 wokwi-arduino-uno,
-wokwi-esp32-devkit-v1 {
+wokwi-arduino-mega,
+wokwi-esp32-devkit-v1,
+wokwi-breadboard {
   transform: scale(0.8);
   transform-origin: center;
 }
