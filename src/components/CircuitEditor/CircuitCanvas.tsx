@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { 
   isWokwiLoaded, 
@@ -378,6 +379,27 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
           }}
         >
           {components.map(renderComponent)}
+        </div>
+      </div>
+    </div>
+  );
+};
 
-          {
+function getSignalColor(signal: string): string {
+  const colors: Record<string, string> = {
+    'power': '#FF6384',    // Red
+    'ground': '#36A2EB',   // Blue
+    'digital': '#4BC0C0',  // Teal
+    'analog': '#FFCE56',   // Yellow
+    'passive': '#9966FF',  // Purple
+    'i2c': '#FF9F40',      // Orange
+    'spi': '#C9CBCF',      // Gray
+    'uart': '#7CFC00',     // Lime
+    'rx': '#FF00FF',       // Magenta
+    'tx': '#00FFFF',       // Cyan
+  };
+  
+  return colors[signal] || '#4BC0C0';
+}
 
+export default CircuitCanvas;
