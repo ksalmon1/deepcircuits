@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { 
   isWokwiLoaded, 
@@ -11,11 +12,15 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { ZoomIn, ZoomOut, Move } from 'lucide-react';
 import { useComponentLibrary } from '@/hooks/useComponentLibrary';
+import { useQuery } from '@tanstack/react-query';
 
 interface CircuitCanvasProps {
   components: WokwiComponent[];
   onComponentsChange: (components: WokwiComponent[]) => void;
 }
+
+// Helper for caching pin data outside of component rendering
+const pinCache: Record<string, WokwiPin[]> = {};
 
 const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) => {
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -33,8 +38,24 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
   const [visiblePins, setVisiblePins] = useState<{[componentId: string]: boolean}>({});
   const [hoveredPin, setHoveredPin] = useState<{componentId: string, pinIndex: number} | null>(null);
   
-  const { useComponentDetails } = useComponentLibrary();
-  const [componentPinsCache, setComponentPinsCache] = useState<Record<string, WokwiPin[]>>({});
+  // Fetch all component details once to have them available for the circuit canvas
+  const { components: libraryComponents } = useComponentLibrary();
+  
+  // Pre-populate the pin cache with library components' pins
+  useEffect(() => {
+    if (libraryComponents && libraryComponents.length > 0) {
+      libraryComponents.forEach(component => {
+        if (component.pins && component.pins.length > 0) {
+          pinCache[component.type] = component.pins.map(pin => ({
+            name: pin.name,
+            x: Number(pin.x),
+            y: Number(pin.y),
+            signals: pin.signals || []
+          }));
+        }
+      });
+    }
+  }, [libraryComponents]);
 
   const checkWokwiLoaded = useCallback(async () => {
     console.log('Checking if Wokwi is loaded, attempt:', loadingAttempts + 1);
@@ -103,43 +124,38 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     return () => clearTimeout(timer);
   }, [isReady, loadingError]);
 
-  const fetchComponentPins = useCallback(async (type: string) => {
+  // Get component pin information safely without using hooks directly in callbacks
+  const fetchComponentPins = useCallback(async (type: string): Promise<WokwiPin[]> => {
     try {
-      if (componentPinsCache[type]) {
-        return componentPinsCache[type];
-      }
-
-      const { data: componentDetails, isLoading, error } = useComponentDetails(type);
-      
-      if (error) {
-        console.error(`Error fetching pins for component type ${type}:`, error);
-        return getComponentPinInfo(type);
+      // First check our cache
+      if (pinCache[type]) {
+        return pinCache[type];
       }
       
-      if (isLoading || !componentDetails) {
-        return getComponentPinInfo(type);
+      // Check if we have this component in our library with pins
+      const libraryComponent = libraryComponents?.find(c => c.type === type);
+      if (libraryComponent?.pins && libraryComponent.pins.length > 0) {
+        const pins = libraryComponent.pins.map(pin => ({
+          name: pin.name,
+          x: Number(pin.x),
+          y: Number(pin.y),
+          signals: pin.signals || []
+        }));
+        
+        // Cache the result
+        pinCache[type] = pins;
+        return pins;
       }
-
-      const pins = componentDetails.pins || [];
       
-      const mappedPins: WokwiPin[] = pins.map(pin => ({
-        name: pin.name,
-        x: Number(pin.x),
-        y: Number(pin.y),
-        signals: pin.signals || []
-      }));
-
-      setComponentPinsCache(prev => ({
-        ...prev,
-        [type]: mappedPins
-      }));
-
-      return mappedPins;
+      // Fallback to default pin info from WokwiIntegration
+      const defaultPins = getComponentPinInfo(type);
+      pinCache[type] = defaultPins;
+      return defaultPins;
     } catch (err) {
       console.error(`Error in fetchComponentPins for ${type}:`, err);
       return getComponentPinInfo(type);
     }
-  }, [componentPinsCache, useComponentDetails]);
+  }, [libraryComponents]);
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
