@@ -1,15 +1,31 @@
 
-import React from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ORIGINAL_WOKWI_COMPONENTS } from '@/integrations/wokwi/WokwiIntegration';
+import { Input } from '@/components/ui/input';
+import { 
+  Search, 
+  ChevronDown, 
+  ChevronRight, 
+  Cpu, 
+  Lightbulb, 
+  Workflow, 
+  Monitor, 
+  Gauge, 
+  AppWindow,
+  History,
+  SlidersHorizontal
+} from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
-// Define component categories and items
+// Define component categories and items with icon mapping
 const componentCategories = [
   {
     id: 'basic',
-    label: 'Basic',
+    label: 'Basic Components',
+    icon: <Workflow className="h-4 w-4 mr-2" />,
     components: [
       { id: 'led', name: 'LED', type: 'wokwi-led', description: 'Light Emitting Diode' },
       { id: 'resistor', name: 'Resistor', type: 'wokwi-resistor', description: 'Limits current flow' },
@@ -21,7 +37,8 @@ const componentCategories = [
   },
   {
     id: 'controllers',
-    label: 'Controllers',
+    label: 'Microcontrollers',
+    icon: <Cpu className="h-4 w-4 mr-2" />,
     components: [
       { id: 'arduino-uno', name: 'Arduino Uno', type: 'wokwi-arduino-uno', description: 'Arduino Uno microcontroller' },
       { id: 'arduino-nano', name: 'Arduino Nano', type: 'wokwi-arduino-nano', description: 'Arduino Nano microcontroller' },
@@ -35,7 +52,8 @@ const componentCategories = [
   },
   {
     id: 'input',
-    label: 'Input',
+    label: 'Input Devices',
+    icon: <SlidersHorizontal className="h-4 w-4 mr-2" />,
     components: [
       { id: 'pushbutton', name: 'Push Button', type: 'wokwi-pushbutton', description: 'Momentary button input' },
       { id: 'slide-switch', name: 'Slide Switch', type: 'wokwi-slide-switch', description: 'On/off toggle switch' },
@@ -52,7 +70,8 @@ const componentCategories = [
   },
   {
     id: 'output',
-    label: 'Output',
+    label: 'Output Devices',
+    icon: <Lightbulb className="h-4 w-4 mr-2" />,
     components: [
       { id: 'buzzer', name: 'Buzzer', type: 'wokwi-buzzer', description: 'Active piezo buzzer' },
       { id: 'buzzer-passive', name: 'Passive Buzzer', type: 'wokwi-buzzer-passive', description: 'Passive piezo buzzer' },
@@ -70,7 +89,8 @@ const componentCategories = [
   },
   {
     id: 'displays',
-    label: 'Displays',
+    label: 'Display Modules',
+    icon: <Monitor className="h-4 w-4 mr-2" />,
     components: [
       { id: 'lcd1602', name: 'LCD 16x2', type: 'wokwi-lcd1602', description: '16x2 character LCD display' },
       { id: 'lcd-pcf8574', name: 'LCD 16x2 I2C', type: 'wokwi-2x16-lcd-pcf8574', description: '16x2 LCD with I2C adapter' },
@@ -87,6 +107,7 @@ const componentCategories = [
   {
     id: 'sensors',
     label: 'Sensors',
+    icon: <Gauge className="h-4 w-4 mr-2" />,
     components: [
       { id: 'temperature', name: 'Temperature Sensor', type: 'wokwi-temperature-sensor', description: 'Analog temperature sensor' },
       { id: 'dht22', name: 'DHT22', type: 'wokwi-dht22', description: 'Temperature and humidity sensor' },
@@ -101,7 +122,8 @@ const componentCategories = [
   },
   {
     id: 'ics',
-    label: 'ICs',
+    label: 'ICs & Chips',
+    icon: <AppWindow className="h-4 w-4 mr-2" />,
     components: [
       { id: 'timer-ic', name: '555 Timer', type: 'wokwi-timer-ic', description: '555 timer integrated circuit' },
       { id: 'rtc-ds1307', name: 'RTC DS1307', type: 'wokwi-rtc-ds1307', description: 'Real-time clock module' },
@@ -113,7 +135,8 @@ const componentCategories = [
   },
   {
     id: 'tools',
-    label: 'Tools',
+    label: 'Tools & Debug',
+    icon: <History className="h-4 w-4 mr-2" />,
     components: [
       { id: 'logic-analyzer', name: 'Logic Analyzer', type: 'wokwi-logic-analyzer', description: 'Digital signal analyzer' },
       { id: 'ir-remote', name: 'IR Remote', type: 'wokwi-ir-remote', description: 'Infrared remote control' },
@@ -124,63 +147,116 @@ const componentCategories = [
 ];
 
 const ComponentPanel = () => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({
+    'controllers': true, // Open by default
+    'basic': true       // Open by default
+  });
+
   const handleDragStart = (e: React.DragEvent, component: any) => {
     e.dataTransfer.setData('component', JSON.stringify(component));
-    // Set a drag image (optional enhancement for later)
-    // const img = new Image();
-    // img.src = `path-to-component-icons/${component.id}.svg`;
-    // e.dataTransfer.setDragImage(img, 0, 0);
+    // We could also set a custom drag image here
   };
+
+  const toggleCategory = (categoryId: string) => {
+    setOpenCategories(prev => ({
+      ...prev,
+      [categoryId]: !prev[categoryId]
+    }));
+  };
+
+  // Filter components based on search term
+  const filteredCategories = searchTerm 
+    ? componentCategories.map(category => ({
+        ...category,
+        components: category.components.filter(comp => 
+          comp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          comp.description.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+      })).filter(category => category.components.length > 0)
+    : componentCategories;
 
   return (
     <div className="h-full flex flex-col">
-      <h3 className="font-medium mb-3">Components</h3>
+      <div className="relative mb-3">
+        <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Search components..."
+          className="pl-8 text-sm"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+        {searchTerm && (
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="absolute right-1 top-1 h-6 w-6 p-0" 
+            onClick={() => setSearchTerm('')}
+          >
+            <span className="sr-only">Clear search</span>
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
       
-      <Tabs defaultValue="basic" className="w-full">
-        <TabsList className="grid grid-cols-4 mb-4">
-          {componentCategories.slice(0, 4).map(category => (
-            <TabsTrigger key={category.id} value={category.id}>
-              {category.label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-        <TabsList className="grid grid-cols-4 mb-4">
-          {componentCategories.slice(4).map(category => (
-            <TabsTrigger key={category.id} value={category.id}>
-              {category.label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-        
-        {componentCategories.map(category => (
-          <TabsContent key={category.id} value={category.id} className="mt-0 max-h-[calc(100vh-280px)] overflow-y-auto">
-            <div className="grid grid-cols-1 gap-2">
-              {category.components.map(component => (
-                <TooltipProvider key={component.id}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="justify-start h-auto py-2 px-3 cursor-grab"
-                        draggable
-                        onDragStart={(e) => handleDragStart(e, component)}
-                      >
-                        <span className="truncate">{component.name}</span>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{component.description}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              ))}
-            </div>
-          </TabsContent>
-        ))}
-      </Tabs>
+      <ScrollArea className="flex-1 pr-3">
+        {filteredCategories.length === 0 ? (
+          <div className="p-4 text-center text-muted-foreground">
+            No components found
+          </div>
+        ) : (
+          <div className="space-y-1">
+            {filteredCategories.map(category => (
+              <Collapsible 
+                key={category.id} 
+                open={searchTerm ? true : openCategories[category.id]} 
+                className="mb-1"
+              >
+                <CollapsibleTrigger asChild onClick={() => toggleCategory(category.id)}>
+                  <div className="flex items-center justify-between py-2 px-1 hover:bg-accent rounded-md cursor-pointer">
+                    <div className="flex items-center text-sm font-medium">
+                      {category.icon}
+                      {category.label}
+                    </div>
+                    {searchTerm ? null : (
+                      openCategories[category.id] ? 
+                        <ChevronDown className="h-4 w-4" /> : 
+                        <ChevronRight className="h-4 w-4" />
+                    )}
+                  </div>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="pl-4 pr-1">
+                  <div className="grid grid-cols-1 gap-1 py-1">
+                    {category.components.map(component => (
+                      <TooltipProvider key={component.id}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="justify-start h-auto py-1.5 text-sm w-full cursor-grab"
+                              draggable
+                              onDragStart={(e) => handleDragStart(e, component)}
+                            >
+                              <span className="truncate">{component.name}</span>
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="right">
+                            <p>{component.description}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    ))}
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            ))}
+          </div>
+        )}
+      </ScrollArea>
       
-      <div className="mt-auto p-2 text-xs text-gray-500 border-t">
-        Drag components to the canvas to build your circuit
+      <div className="mt-auto pt-2 text-xs text-muted-foreground border-t">
+        Drag components to the canvas
       </div>
     </div>
   );
