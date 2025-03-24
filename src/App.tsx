@@ -74,14 +74,6 @@ function App() {
               </ProtectedRoute>
             }
           />
-          <Route
-            path="/circuit-demo"
-            element={
-              <ProtectedRoute>
-                <CircuitEditorPage />
-              </ProtectedRoute>
-            }
-          />
 
           {/* 404 Route */}
           <Route path="*" element={<NotFound />} />
