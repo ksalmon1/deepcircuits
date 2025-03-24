@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from "react";
 import PageLayout from "@/components/PageLayout";
 import { useAuth } from "@/context/AuthContext";
@@ -921,12 +922,179 @@ const ComponentLibrary = () => {
                       />
                       <label htmlFor="enabled">Enable component for users</label>
                     </div>
+                  </div>
+                </TabsContent>
+                
+                <TabsContent value="properties" className="py-4">
+                  {editedComponent && (
+                    <DynamicPropertyEditor 
+                      properties={editedComponent.properties || {}}
+                      onChange={updateComponentProperties}
+                    />
+                  )}
+                </TabsContent>
+                
+                <TabsContent value="pins" className="py-4">
+                  {editedComponent && !editedComponent.isOriginal && (
+                    <VisualPinEditor 
+                      pinConfig={editedComponent.pinConfig || []}
+                      onChange={updatePinConfiguration}
+                      signalTypes={signalTypes}
+                    />
+                  )}
+                  {editedComponent && editedComponent.isOriginal && (
+                    <div className="p-4 border rounded-md bg-amber-50">
+                      <div className="flex gap-2 items-center">
+                        <AlertCircle className="h-5 w-5 text-amber-500" />
+                        <h3 className="font-medium">Read-Only Configuration</h3>
+                      </div>
+                      <p className="mt-2 text-amber-800">
+                        Pin configuration for original Wokwi components is predefined and cannot be modified.
+                      </p>
+                    </div>
+                  )}
+                </TabsContent>
+                
+                <TabsContent value="preview" className="py-4">
+                  <div className="flex flex-col items-center gap-6">
+                    <div className="flex gap-4 items-center">
+                      <div className="flex items-center space-x-2">
+                        <Switch 
+                          id="show-pins" 
+                          checked={showPins} 
+                          onCheckedChange={setShowPins}
+                        />
+                        <label htmlFor="show-pins">Show Pin Labels</label>
+                      </div>
+                    </div>
                     
-                    <div className="mt-4">
-                      <EnhancedComponentPreview
-                        componentType={editedComponent.type}
-                        properties={editedComponent.properties || {}}
-                        customSvgPath={editedComponent.svgPath}
-                        previewId="details-preview"
-                        showPins={showPins}
-                        onShowPinsChange={
+                    {!wokwiReady ? (
+                      <div className="flex flex-col items-center justify-center h-60 w-full border rounded-md bg-slate-50">
+                        <div className="animate-spin mb-3">
+                          <svg className="h-6 w-6 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                        </div>
+                        <p className="text-gray-500">Loading Wokwi components...</p>
+                      </div>
+                    ) : (
+                      <div className="border rounded-md p-6 w-full flex justify-center bg-slate-50" ref={previewRef}>
+                        <EnhancedComponentPreview
+                          componentType={editedComponent.type}
+                          properties={editedComponent.properties || {}}
+                          customSvgPath={editedComponent.svgPath}
+                          previewId="edit-preview"
+                          showPins={showPins}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </TabsContent>
+              </Tabs>
+            )}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
+              <Button onClick={handleSaveComponent}>Save Changes</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+          <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                {selectedComponent?.name}
+                {selectedComponent?.isOriginal && (
+                  <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200">
+                    Original
+                  </Badge>
+                )}
+              </DialogTitle>
+              <DialogDescription>
+                {selectedComponent?.description || "Component details"}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                  <h3 className="text-sm font-medium mb-1">Type</h3>
+                  <p className="text-sm">{selectedComponent?.type}</p>
+                </div>
+                <div>
+                  <h3 className="text-sm font-medium mb-1">Category</h3>
+                  <p className="text-sm">
+                    <Badge variant="outline">
+                      {selectedComponent?.category}
+                    </Badge>
+                  </p>
+                </div>
+                <div>
+                  <h3 className="text-sm font-medium mb-1">Pins</h3>
+                  <p className="text-sm">{selectedComponent?.pins}</p>
+                </div>
+                <div>
+                  <h3 className="text-sm font-medium mb-1">Status</h3>
+                  <p className="text-sm">
+                    <Badge 
+                      variant={selectedComponent?.enabled ? "default" : "outline"}
+                      className={selectedComponent?.enabled ? "bg-green-500" : "text-red-500"}
+                    >
+                      {selectedComponent?.enabled ? "Enabled" : "Disabled"}
+                    </Badge>
+                  </p>
+                </div>
+                <div>
+                  <h3 className="text-sm font-medium mb-1">Created</h3>
+                  <p className="text-sm">{selectedComponent?.created_at}</p>
+                </div>
+                <div>
+                  <h3 className="text-sm font-medium mb-1">Last Updated</h3>
+                  <p className="text-sm">{selectedComponent?.last_updated}</p>
+                </div>
+              </div>
+              
+              {selectedComponent && wokwiReady && (
+                <div className="border rounded-md p-4 flex justify-center bg-slate-50">
+                  <EnhancedComponentPreview
+                    componentType={selectedComponent.type}
+                    properties={selectedComponent.properties || {}}
+                    customSvgPath={selectedComponent.svgPath}
+                    previewId="view-preview"
+                    showPins={true}
+                  />
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>Close</Button>
+              <Button onClick={() => {
+                if (selectedComponent) {
+                  handleEditComponent(selectedComponent);
+                  setIsViewDialogOpen(false);
+                }
+              }}>Edit Component</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Confirm Deletion</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete "{selectedComponent?.name}"? This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>Cancel</Button>
+              <Button variant="destructive" onClick={handleConfirmDelete}>Delete Component</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </PageLayout>
+  );
+};
+
+export default ComponentLibrary;
