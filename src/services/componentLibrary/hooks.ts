@@ -20,6 +20,7 @@ export const useComponentLibraryService = () => {
   const [allComponents, setAllComponents] = useState<ComponentLibraryItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+  const [componentsWithDetails, setComponentsWithDetails] = useState<Record<string, any>>({});
 
   // Load all components on mount
   useEffect(() => {
@@ -28,6 +29,34 @@ export const useComponentLibraryService = () => {
       try {
         const components = await getAllComponents();
         setAllComponents(components);
+        
+        // Load details for each component
+        const details: Record<string, any> = {};
+        for (const component of components) {
+          if (component.id) {
+            try {
+              const componentDetails = await getComponentWithDetails(component.id);
+              if (componentDetails) {
+                details[component.id] = componentDetails;
+                
+                // Update component with pins and properties from details
+                const updatedComponent = {
+                  ...component,
+                  pins: componentDetails.pins || [],
+                  properties: componentDetails.properties || {}
+                };
+                
+                // Update the component in the local state
+                setAllComponents(prev => 
+                  prev.map(c => c.id === component.id ? updatedComponent : c)
+                );
+              }
+            } catch (detailError) {
+              console.error(`Error loading details for component ${component.id}:`, detailError);
+            }
+          }
+        }
+        setComponentsWithDetails(details);
       } catch (error) {
         console.error("Error loading components:", error);
         setError(error instanceof Error ? error : new Error("Failed to load components"));
@@ -46,6 +75,7 @@ export const useComponentLibraryService = () => {
 
   return {
     components: allComponents,
+    componentsWithDetails,
     isLoading,
     error,
     
@@ -66,7 +96,17 @@ export const useComponentLibraryService = () => {
     
     getComponentWithDetails: async (componentId: string) => {
       try {
-        return await getComponentWithDetails(componentId);
+        const details = await getComponentWithDetails(componentId);
+        
+        // Update the cache
+        if (details) {
+          setComponentsWithDetails(prev => ({
+            ...prev,
+            [componentId]: details
+          }));
+        }
+        
+        return details;
       } catch (error) {
         toast({
           title: "Error fetching component details",

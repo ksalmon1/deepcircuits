@@ -27,6 +27,35 @@ export const useComponentLibrary = () => {
     queryFn: getAllComponents
   });
   
+  // Fetch all component details on load
+  const { 
+    data: componentsDetailsMap = {},
+    isLoading: isLoadingDetails 
+  } = useQuery({
+    queryKey: ['componentsDetails'],
+    queryFn: async () => {
+      const detailsMap: Record<string, any> = {};
+      
+      if (components && components.length > 0) {
+        for (const component of components) {
+          if (component.id) {
+            try {
+              const details = await getComponentWithDetails(component.id);
+              if (details) {
+                detailsMap[component.id] = details;
+              }
+            } catch (error) {
+              console.error(`Error fetching details for component ${component.id}:`, error);
+            }
+          }
+        }
+      }
+      
+      return detailsMap;
+    },
+    enabled: components.length > 0
+  });
+  
   // Query factory for fetching a single component with details
   const useComponentDetails = (componentId?: string) => {
     return useQuery({
@@ -49,6 +78,7 @@ export const useComponentLibrary = () => {
     onSuccess: () => {
       // Invalidate the components list query to trigger a refetch
       queryClient.invalidateQueries({ queryKey: ['components'] });
+      queryClient.invalidateQueries({ queryKey: ['componentsDetails'] });
     }
   });
   
@@ -60,6 +90,7 @@ export const useComponentLibrary = () => {
     onSuccess: (_, variables) => {
       // Invalidate both the components list and the specific component query
       queryClient.invalidateQueries({ queryKey: ['components'] });
+      queryClient.invalidateQueries({ queryKey: ['componentsDetails'] });
       if (variables.id) {
         queryClient.invalidateQueries({ queryKey: ['component', variables.id] });
       }
@@ -74,10 +105,17 @@ export const useComponentLibrary = () => {
     onSuccess: (_, componentId) => {
       // Invalidate the components list query to trigger a refetch
       queryClient.invalidateQueries({ queryKey: ['components'] });
+      queryClient.invalidateQueries({ queryKey: ['componentsDetails'] });
       // Remove the specific component from the cache
       queryClient.removeQueries({ queryKey: ['component', componentId] });
     }
   });
+  
+  // Helper to get component details including pins from the cache
+  const getComponentDetailsWithPins = (componentId?: string) => {
+    if (!componentId || !componentsDetailsMap) return null;
+    return componentsDetailsMap[componentId];
+  };
   
   return {
     // Queries
@@ -86,6 +124,11 @@ export const useComponentLibrary = () => {
     componentsError,
     refetchComponents,
     useComponentDetails,
+    
+    // Component details
+    componentsDetailsMap,
+    isLoadingDetails,
+    getComponentDetailsWithPins,
     
     // Mutations
     createComponent: createComponentMutation.mutate,

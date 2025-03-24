@@ -38,13 +38,38 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
   const [hoveredPin, setHoveredPin] = useState<{componentId: string, pinIndex: number} | null>(null);
   const [renderedComponents, setRenderedComponents] = useState<Record<string, boolean>>({});
   
-  // Fetch all component details once to have them available for the circuit canvas
-  const { components: libraryComponents } = useComponentLibrary();
+  // Fetch all component details from the library
+  const { 
+    components: libraryComponents, 
+    componentsDetailsMap, 
+    isLoadingComponents, 
+    isLoadingDetails 
+  } = useComponentLibrary();
   
-  // Pre-populate the pin cache with library components' pins
+  // Pre-populate the pin cache with pin data from Supabase
   useEffect(() => {
-    if (libraryComponents && libraryComponents.length > 0) {
+    if (libraryComponents && componentsDetailsMap && Object.keys(componentsDetailsMap).length > 0) {
+      console.log('Loading pin data from componentsDetailsMap:', Object.keys(componentsDetailsMap).length);
+      
+      libraryComponents.forEach(component => {
+        if (component.id && componentsDetailsMap[component.id]) {
+          const details = componentsDetailsMap[component.id];
+          if (details && details.pins && details.pins.length > 0) {
+            console.log(`Found pins for ${component.name} (${component.type}) from details:`, details.pins);
+            pinCache[component.type] = details.pins.map((pin: any) => ({
+              name: pin.name,
+              x: Number(pin.x),
+              y: Number(pin.y),
+              signals: pin.signals || []
+            }));
+          }
+        }
+      });
+      
+      console.log('Pin cache after loading from details:', pinCache);
+    } else if (libraryComponents && libraryComponents.length > 0) {
       console.log('Loading pin data from library components:', libraryComponents.length);
+      
       libraryComponents.forEach(component => {
         if (component.pins && component.pins.length > 0) {
           console.log(`Found pins for ${component.name} (${component.type}):`, component.pins);
@@ -56,9 +81,10 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
           }));
         }
       });
+      
       console.log('Pin cache after loading:', pinCache);
     }
-  }, [libraryComponents]);
+  }, [libraryComponents, componentsDetailsMap]);
 
   const checkWokwiLoaded = useCallback(async () => {
     console.log('Checking if Wokwi is loaded, attempt:', loadingAttempts + 1);
@@ -130,7 +156,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
   // Get component pin information safely without using hooks
   const fetchComponentPins = (type: string): WokwiPin[] => {
     try {
-      // First check our cache
+      // First check our cache from Supabase data
       if (pinCache[type]) {
         console.log(`Using cached pins for ${type}:`, pinCache[type]);
         return pinCache[type];
@@ -138,6 +164,23 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
       
       // Check if we have this component in our library with pins
       const libraryComponent = libraryComponents?.find(c => c.type === type);
+      if (libraryComponent?.id && componentsDetailsMap && componentsDetailsMap[libraryComponent.id]) {
+        const details = componentsDetailsMap[libraryComponent.id];
+        if (details && details.pins && details.pins.length > 0) {
+          console.log(`Found pins for ${type} in component details:`, details.pins);
+          const pins = details.pins.map((pin: any) => ({
+            name: pin.name,
+            x: Number(pin.x),
+            y: Number(pin.y),
+            signals: pin.signals || []
+          }));
+          
+          // Cache the result
+          pinCache[type] = pins;
+          return pins;
+        }
+      }
+      
       if (libraryComponent?.pins && libraryComponent.pins.length > 0) {
         console.log(`Found pins for ${type} in library:`, libraryComponent.pins);
         const pins = libraryComponent.pins.map(pin => ({
@@ -182,8 +225,40 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
       const left = Math.floor(x / gridSize) * gridSize;
       const top = Math.floor(y / gridSize) * gridSize;
       
-      // Find the component in the library to get pins
+      // Find the component in the library to get pins and details
       const libraryComponent = libraryComponents?.find(c => c.type === componentInfo.type);
+      
+      // Check if we have detailed pin information from Supabase
+      let pins;
+      if (libraryComponent?.id && componentsDetailsMap && componentsDetailsMap[libraryComponent.id]) {
+        const details = componentsDetailsMap[libraryComponent.id];
+        if (details && details.pins && details.pins.length > 0) {
+          console.log(`Using pins from details for ${componentInfo.type}:`, details.pins);
+          pins = details.pins.map((pin: any) => ({
+            name: pin.name,
+            x: Number(pin.x), 
+            y: Number(pin.y),
+            signals: pin.signals || []
+          }));
+        }
+      }
+      
+      // Fallback to component.pins if details are not available
+      if (!pins && libraryComponent?.pins) {
+        console.log(`Using pins from component for ${componentInfo.type}:`, libraryComponent.pins);
+        pins = libraryComponent.pins.map(pin => ({
+          name: pin.name,
+          x: Number(pin.x),
+          y: Number(pin.y),
+          signals: pin.signals || []
+        }));
+      }
+      
+      // Last fallback to default pins
+      if (!pins) {
+        console.log(`Falling back to default pins for ${componentInfo.type}`);
+        pins = fetchComponentPins(componentInfo.type);
+      }
       
       const newComponent: WokwiComponent = {
         type: componentInfo.type,
@@ -191,12 +266,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
         top,
         left,
         attributes: { color: 'red' },
-        pins: libraryComponent?.pins?.map(pin => ({
-          name: pin.name,
-          x: Number(pin.x),
-          y: Number(pin.y),
-          signals: pin.signals || []
-        }))
+        pins
       };
       
       const updatedComponents = [...components, newComponent];
@@ -407,6 +477,107 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
         )}
       </div>
     );
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+  };
+
+  const togglePinVisibility = useCallback((componentId: string) => {
+    setVisiblePins(prev => ({
+      ...prev,
+      [componentId]: !prev[componentId]
+    }));
+  }, []);
+
+  const handlePinHover = (componentId: string, pinIndex: number) => {
+    setHoveredPin({ componentId, pinIndex });
+  };
+
+  const handlePinHoverExit = () => {
+    setHoveredPin(null);
+  };
+
+  const handleComponentHover = useCallback((id: string, type: string) => {
+    setHoveredComponent(id);
+    
+    const pins = fetchComponentPins(type);
+    setHoveredPins(pins);
+    
+    const element = document.getElementById(`wokwi-element-${id}`);
+    if (element && element.firstChild) {
+      (element.firstChild as HTMLElement).style.outline = '2px solid #4C72F4';
+      (element.firstChild as HTMLElement).style.outlineOffset = '2px';
+    }
+  }, []);
+
+  const handleComponentHoverExit = useCallback(() => {
+    if (hoveredComponent) {
+      const element = document.getElementById(`wokwi-element-${hoveredComponent}`);
+      if (element && element.firstChild) {
+        (element.firstChild as HTMLElement).style.outline = 'none';
+      }
+    }
+    setHoveredComponent(null);
+    setHoveredPins([]);
+  }, [hoveredComponent]);
+
+  const handleRetry = async () => {
+    setLoadingError(null);
+    setLoadingAttempts(0);
+    await checkWokwiLoaded();
+  };
+
+  const handleZoomIn = () => {
+    setZoom(prevZoom => Math.min(prevZoom + 0.1, 3));
+  };
+
+  const handleZoomOut = () => {
+    setZoom(prevZoom => Math.max(prevZoom - 0.1, 0.5));
+  };
+
+  const togglePanMode = () => {
+    setPanMode(!panMode);
+    if (panMode) {
+      document.body.style.cursor = 'default';
+    } else {
+      document.body.style.cursor = 'move';
+    }
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (panMode || e.button === 1) {
+      setIsPanning(true);
+      setStartPanPoint({ x: e.clientX - position.x, y: e.clientY - position.y });
+      e.preventDefault();
+    }
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (isPanning) {
+      const newX = e.clientX - startPanPoint.x;
+      const newY = e.clientY - startPanPoint.y;
+      setPosition({ x: newX, y: newY });
+      e.preventDefault();
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsPanning(false);
+  };
+
+  const handleMouseLeave = () => {
+    setIsPanning(false);
+  };
+
+  const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -0.1 : 0.1;
+    setZoom(prevZoom => {
+      const newZoom = Math.max(0.5, Math.min(3, prevZoom + delta));
+      return newZoom;
+    });
   };
 
   return (
