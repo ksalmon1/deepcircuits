@@ -68,8 +68,9 @@ const Dashboard = () => {
   };
 
   const handleCreateProject = () => {
+    const newProjectId = `proj-${Date.now()}`;
     const newProject: ProjectData = {
-      id: `proj-${Date.now()}`,
+      id: newProjectId,
       name: "New Project",
       description: "",
       updatedAt: new Date().toISOString(),
@@ -78,11 +79,8 @@ const Dashboard = () => {
     setProjects([...projects, newProject]);
     toast.success("Project created successfully", {
       description: `"${newProject.name}" has been created.`,
-      action: {
-        label: "Open Editor",
-        onClick: () => navigate(`/circuit-editor/${newProject.id}`),
-      },
     });
+    navigate(`/circuit-editor/${newProjectId}`);
   };
 
   const handleDeleteProject = (id: string) => {
