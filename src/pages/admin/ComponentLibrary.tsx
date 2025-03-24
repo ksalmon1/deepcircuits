@@ -48,7 +48,7 @@ import {
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ORIGINAL_WOKWI_COMPONENTS, isWokwiLoaded, forceLoadWokwiElements } from "@/integrations/wokwi/WokwiIntegration";
+import { isWokwiLoaded, forceLoadWokwiElements } from "@/integrations/wokwi/WokwiIntegration";
 import '@/styles/component-preview.css';
 
 // Import example for component preview
@@ -149,6 +149,7 @@ const ComponentLibrary = () => {
   const handleLoadWokwi = async () => {
     setLoadingWokwi(true);
     try {
+      // Check if already loaded to avoid re-registration
       const loaded = await forceLoadWokwiElements();
       setWokwiLoaded(loaded);
     } catch (error) {
@@ -160,10 +161,14 @@ const ComponentLibrary = () => {
   
   // Check if Wokwi is loaded on component mount
   React.useEffect(() => {
+    // First check if Wokwi elements are already loaded without forcing a reload
     const loaded = isWokwiLoaded();
+    console.log("Admin ComponentLibrary: Wokwi elements loaded check:", loaded);
     setWokwiLoaded(loaded);
     
+    // Only try to load if not already loaded
     if (!loaded) {
+      console.log("Admin ComponentLibrary: Attempting to load Wokwi elements");
       handleLoadWokwi();
     }
   }, []);
