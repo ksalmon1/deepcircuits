@@ -1,8 +1,5 @@
 
-/**
- * This file handles the integration with wokwi-elements 
- * via the global script loaded in index.html
- */
+import '@wokwi/elements';
 
 // Track whether we've seen the components load successfully
 let componentsLoadedSuccessfully = false;
@@ -10,55 +7,40 @@ let componentsLoadedSuccessfully = false;
 // Function to check if wokwi-elements are loaded
 export const isWokwiLoaded = (): boolean => {
   try {
-    // First check if our script onload handler has fired
-    const scriptLoaded = typeof window !== 'undefined' && window.wokwiElementsLoaded === true;
-    
-    // Then check if the components are actually available in the registry
+    // Check if the components are actually available in the registry
     const componentsRegistered = 
       typeof window !== 'undefined' && 
       window.customElements && 
       !!window.customElements.get('wokwi-led');
     
-    const isLoaded = scriptLoaded && componentsRegistered;
-    
-    if (isLoaded && !componentsLoadedSuccessfully) {
+    if (componentsRegistered && !componentsLoadedSuccessfully) {
       console.log('✅ Wokwi components loaded successfully');
       componentsLoadedSuccessfully = true;
     }
     
-    return isLoaded;
+    return componentsRegistered;
   } catch (error) {
     console.error('Error checking if Wokwi is loaded:', error);
     return false;
   }
 };
 
-// Manually force loading of Wokwi elements if needed
-export const forceLoadWokwiElements = (): Promise<boolean> => {
+// Load wokwi elements - now simplified since we're importing the package directly
+export const forceLoadWokwiElements = async (): Promise<boolean> => {
   return new Promise((resolve) => {
     if (isWokwiLoaded()) {
       resolve(true);
       return;
     }
 
-    // Try to load the script manually if not already done
-    const existingScript = document.getElementById('wokwi-elements-script');
-    if (!existingScript) {
-      const script = document.createElement('script');
-      script.id = 'wokwi-elements-script';
-      script.type = 'module';
-      script.src = 'https://unpkg.com/@wokwi/elements@1.7.0/dist/wokwi-elements.bundle.js';
-      script.onload = () => {
-        window.wokwiElementsLoaded = true;
-        // Give a little time for custom elements to register
-        setTimeout(() => resolve(true), 500);
-      };
-      script.onerror = () => resolve(false);
-      document.head.appendChild(script);
-    } else {
-      // If script exists but components aren't registered yet, wait a bit
-      setTimeout(() => resolve(isWokwiLoaded()), 1000);
-    }
+    // Give a little time for custom elements to register (if they haven't already)
+    setTimeout(() => {
+      const loaded = isWokwiLoaded();
+      resolve(loaded);
+      if (!loaded) {
+        console.error('Failed to load Wokwi components');
+      }
+    }, 500);
   });
 };
 
