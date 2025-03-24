@@ -17,7 +17,8 @@ interface PropertyEditorProps {
   onChange: (properties: Record<string, any>) => void;
 }
 
-const COMMON_PROPERTIES: Record<string, { type: string, options?: string[] }> = {
+// Fixed structure - each component type has properties, each property has type and options
+const COMMON_PROPERTIES: Record<string, Record<string, { type: string, options?: string[] }>> = {
   'wokwi-led': {
     color: { type: 'select', options: ['red', 'green', 'blue', 'yellow', 'orange', 'white'] },
     brightness: { type: 'number' },
