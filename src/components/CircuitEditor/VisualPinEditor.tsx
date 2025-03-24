@@ -106,7 +106,7 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({ pins, componentType, 
             style={{ 
               left: `${pin.x}px`, 
               top: `${pin.y}px`,
-              backgroundColor: getSignalColor(pin.signals[0]) 
+              backgroundColor: getSignalColor(pin.signals && pin.signals.length > 0 ? pin.signals[0] : 'digital') 
             }}
             data-pin-name={pin.name}
             onMouseDown={() => handlePinDragStart(index)}
@@ -148,7 +148,7 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({ pins, componentType, 
             <div className="text-xs space-y-1">
               <div>Name: <span className="font-mono">{pin.name}</span></div>
               <div>Position: <span className="font-mono">({pin.x}, {pin.y})</span></div>
-              <div>Signal: <span className="font-mono">{pin.signals.join(', ')}</span></div>
+              <div>Signal: <span className="font-mono">{pin.signals ? pin.signals.join(', ') : 'none'}</span></div>
             </div>
           </div>
         ))}
