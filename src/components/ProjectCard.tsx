@@ -9,7 +9,7 @@ import {
   CardTitle 
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Eye, Pencil, Trash2, Cpu } from "lucide-react";
+import { Pencil, Trash2, Cpu } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 
@@ -36,11 +36,6 @@ const ProjectCard = ({ project, onDelete }: ProjectCardProps) => {
   
   const handleEdit = () => {
     navigate(`/circuit-editor/${project.id}`);
-  };
-  
-  const handleView = () => {
-    // Since we removed the circuit-demo route, we'll point to the editor in view mode
-    navigate(`/circuit-editor/${project.id}?mode=view`);
   };
   
   const handleDelete = () => {
@@ -103,19 +98,13 @@ const ProjectCard = ({ project, onDelete }: ProjectCardProps) => {
       </CardContent>
       
       <CardFooter className="border-t pt-3 flex justify-between">
-        <Button variant="outline" size="sm" onClick={handleView}>
-          <Eye className="h-4 w-4 mr-1" />
-          View
+        <Button variant="outline" size="sm" onClick={handleEdit}>
+          <Pencil className="h-4 w-4 mr-1" />
+          Edit
         </Button>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={handleEdit}>
-            <Pencil className="h-4 w-4 mr-1" />
-            Edit
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleDelete} className="text-destructive hover:bg-destructive/10">
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
+        <Button variant="outline" size="sm" onClick={handleDelete} className="text-destructive hover:bg-destructive/10">
+          <Trash2 className="h-4 w-4" />
+        </Button>
       </CardFooter>
     </Card>
   );
