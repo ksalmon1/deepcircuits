@@ -29,6 +29,7 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
   const [showGrid, setShowGrid] = useState(true);
   const [hoveredPin, setHoveredPin] = useState<number | null>(null);
   const [componentElement, setComponentElement] = useState<HTMLElement | null>(null);
+  const [componentBounds, setComponentBounds] = useState({ width: 0, height: 0 });
 
   useEffect(() => {
     if (editorRef.current) {
@@ -52,6 +53,17 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
       const element = document.createElement(componentType);
       previewContainer.appendChild(element);
       setComponentElement(element);
+      
+      // Get the component's dimensions for accurate border
+      setTimeout(() => {
+        if (element) {
+          const rect = element.getBoundingClientRect();
+          setComponentBounds({ 
+            width: Math.ceil(rect.width), 
+            height: Math.ceil(rect.height) 
+          });
+        }
+      }, 100);
     } catch (error) {
       console.error('Error rendering component preview:', error);
     }
@@ -68,8 +80,8 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
     const rect = editorRef.current?.getBoundingClientRect();
     if (!rect) return;
 
-    const x = Math.round((e.clientX - rect.left) / 10) * 10;
-    const y = Math.round((e.clientY - rect.top) / 10) * 10;
+    const x = Math.round(e.clientX - rect.left);
+    const y = Math.round(e.clientY - rect.top);
 
     const updatedPins = [...pins];
     updatedPins[draggedPin] = {
@@ -80,6 +92,26 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
 
     onChange(updatedPins);
     setDraggedPin(null);
+  };
+  
+  const handlePinDrag = (e: React.MouseEvent) => {
+    if (draggedPin === null || readonly) return;
+    
+    const rect = editorRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    const x = Math.round(e.clientX - rect.left);
+    const y = Math.round(e.clientY - rect.top);
+    
+    // Live update the pin position during drag
+    const updatedPins = [...pins];
+    updatedPins[draggedPin] = {
+      ...updatedPins[draggedPin],
+      x,
+      y
+    };
+    
+    onChange(updatedPins);
   };
 
   const addNewPin = () => {
@@ -141,18 +173,26 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
         ref={editorRef}
         className="border rounded-md relative h-[300px] overflow-hidden cursor-crosshair"
         onClick={handleEditorClick}
+        onMouseMove={handlePinDrag}
+        onMouseUp={() => setDraggedPin(null)}
       >
         {showGrid && (
           <div className="component-grid absolute inset-0"></div>
         )}
 
         {/* Component visual representation */}
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 border border-blue-500 p-4">
-          {componentType && (
-            <div className="component-preview-container">
-              <div id="pinEditor-component-preview"></div>
-            </div>
-          )}
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+          <div 
+            className="component-pin-container"
+            style={{ 
+              width: `${componentBounds.width + 20}px`, 
+              height: `${componentBounds.height + 20}px`,
+              minWidth: '80px',
+              minHeight: '80px'
+            }}
+          >
+            <div id="pinEditor-component-preview" className="flex items-center justify-center"></div>
+          </div>
         </div>
 
         {/* Pin markers */}
@@ -164,7 +204,8 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
             style={{ 
               left: `${pin.x}px`, 
               top: `${pin.y}px`,
-              backgroundColor: getSignalColor(pin.signals && pin.signals.length > 0 ? pin.signals[0] : 'digital') 
+              backgroundColor: getSignalColor(pin.signals && pin.signals.length > 0 ? pin.signals[0] : 'digital'),
+              cursor: readonly ? 'default' : 'move'
             }}
             data-pin-name={pin.name}
             onMouseEnter={() => setHoveredPin(index)}
@@ -206,7 +247,7 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
         {/* Drag instruction */}
         {draggedPin !== null && (
           <div className="absolute top-4 left-4 bg-black bg-opacity-70 text-white p-2 rounded text-sm">
-            Click to place pin
+            Drag to position pin
           </div>
         )}
       </div>

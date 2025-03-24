@@ -70,6 +70,11 @@
 #pinEditor-component-preview {
   position: relative;
   z-index: 5;
+  height: 100%;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .component-pin-container {
@@ -78,4 +83,7 @@
   background: rgba(76, 114, 244, 0.05);
   border-radius: 4px;
   padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
