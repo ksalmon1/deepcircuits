@@ -30,6 +30,7 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
   const [hoveredPin, setHoveredPin] = useState<number | null>(null);
   const [componentElement, setComponentElement] = useState<HTMLElement | null>(null);
   const [componentBounds, setComponentBounds] = useState({ width: 0, height: 0 });
+  const [currentDragPosition, setCurrentDragPosition] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
     if (editorRef.current) {
@@ -100,8 +101,11 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
     const rect = editorRef.current?.getBoundingClientRect();
     if (!rect) return;
 
-    const x = Math.round(e.clientX - rect.left);
-    const y = Math.round(e.clientY - rect.top);
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    // Update the current drag position for visual feedback
+    setCurrentDragPosition({ x, y });
     
     // Live update the pin position during drag
     const updatedPins = [...pins];
@@ -112,6 +116,10 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
     };
     
     onChange(updatedPins);
+  };
+
+  const handlePinDragEnd = () => {
+    setDraggedPin(null);
   };
 
   const addNewPin = () => {
@@ -174,7 +182,8 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
         className="border rounded-md relative h-[300px] overflow-hidden cursor-crosshair"
         onClick={handleEditorClick}
         onMouseMove={handlePinDrag}
-        onMouseUp={() => setDraggedPin(null)}
+        onMouseUp={handlePinDragEnd}
+        onMouseLeave={handlePinDragEnd}
       >
         {showGrid && (
           <div className="component-grid absolute inset-0"></div>
@@ -188,7 +197,9 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
               width: `${componentBounds.width + 20}px`, 
               height: `${componentBounds.height + 20}px`,
               minWidth: '80px',
-              minHeight: '80px'
+              minHeight: '80px',
+              position: 'relative',
+              transformOrigin: 'center'
             }}
           >
             <div id="pinEditor-component-preview" className="flex items-center justify-center"></div>
@@ -280,7 +291,7 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
               )}
             </div>
             <div className="text-xs space-y-1">
-              <div>Position: <span className="font-mono">({pin.x}, {pin.y})</span></div>
+              <div>Position: <span className="font-mono">({Math.round(pin.x)}, {Math.round(pin.y)})</span></div>
               <div>
                 Signal: 
                 <select 

@@ -129,6 +129,28 @@ const EnhancedComponentPreview: React.FC<EnhancedComponentPreviewProps> = ({
     
     try {
       renderWokwiElement(componentType, previewId, properties, showPinsState);
+      
+      // Get size after rendering
+      setTimeout(() => {
+        const container = document.getElementById(previewId);
+        if (!container) return;
+        
+        const elementToMeasure = showPinsState 
+          ? container?.querySelector('wokwi-show-pins') 
+          : container?.firstElementChild;
+        
+        if (elementToMeasure) {
+          const rect = elementToMeasure.getBoundingClientRect();
+          setElementSize({ 
+            width: Math.round(rect.width), 
+            height: Math.round(rect.height) 
+          });
+          
+          if (onSizeChange) {
+            onSizeChange(rect.width, rect.height);
+          }
+        }
+      }, 100);
     } catch (err) {
       console.error("Error refreshing component:", err);
       setError(`Failed to refresh ${componentType}`);

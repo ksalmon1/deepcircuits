@@ -823,9 +823,7 @@ const ComponentLibrary = () => {
                 )}
               </DialogTitle>
               <DialogDescription>
-                {editedComponent?.isOriginal 
-                  ? "Original Wokwi components have predefined pin configurations. You can view and modify basic details and properties."
-                  : "Modify component properties and configuration."}
+                Modify component properties and configuration.
               </DialogDescription>
             </DialogHeader>
 
@@ -943,18 +941,8 @@ const ComponentLibrary = () => {
                         componentType={editedComponent.type}
                         pins={editedComponent.pinConfig || getComponentPinInfo(editedComponent.type)}
                         onChange={updatePinConfiguration}
-                        readonly={editedComponent.isOriginal}
+                        readonly={false}
                       />
-                      
-                      {editedComponent.isOriginal && (
-                        <div className="bg-blue-50 text-blue-800 p-4 rounded-md mb-4 flex items-start gap-2 mt-4">
-                          <AlertCircle className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
-                          <div>
-                            <p className="font-medium">Original Component</p>
-                            <p className="text-sm">This is an original Wokwi component with predefined pin configurations. The pin positions are shown for reference but cannot be modified.</p>
-                          </div>
-                        </div>
-                      )}
                     </div>
                   </div>
                 </TabsContent>

@@ -87,3 +87,10 @@
   align-items: center;
   justify-content: center;
 }
+
+/* These styles enable drag animation */
+.pin-marker.dragging {
+  z-index: 30;
+  transform: translate(-50%, -50%) scale(1.5);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 1), 0 0 8px rgba(0, 0, 0, 0.5);
+}
