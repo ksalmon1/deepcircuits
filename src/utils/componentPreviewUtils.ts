@@ -18,20 +18,26 @@ export const renderWokwiComponentPreview = async (
     // Clear existing content
     container.innerHTML = '';
     
-    // Create the element with the given properties
-    const element = await renderWokwiElement(componentType, properties);
+    // Create a unique element ID for this preview
+    const elementId = `wokwi-preview-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
     
-    if (element) {
+    // Create a placeholder element
+    const placeholderElement = document.createElement('div');
+    placeholderElement.id = elementId;
+    container.appendChild(placeholderElement);
+    
+    // Call renderWokwiElement with the correct arguments
+    // The WokwiIntegration.renderWokwiElement requires type, elementId, and props
+    renderWokwiElement(componentType, elementId, properties);
+    
+    // Style the container for proper display
+    const wokwiElement = document.getElementById(elementId)?.firstElementChild;
+    if (wokwiElement instanceof HTMLElement) {
       // Center the element in the container
-      element.style.position = 'absolute';
-      element.style.left = '50%';
-      element.style.top = '50%';
-      element.style.transform = 'translate(-50%, -50%)';
-      
-      container.appendChild(element);
-    } else {
-      console.error(`Failed to render ${componentType} preview`);
-      container.innerHTML = `<div class="text-destructive text-center p-4">Failed to render component</div>`;
+      wokwiElement.style.position = 'absolute';
+      wokwiElement.style.left = '50%';
+      wokwiElement.style.top = '50%';
+      wokwiElement.style.transform = 'translate(-50%, -50%)';
     }
   } catch (error) {
     console.error('Error rendering component preview:', error);
