@@ -1,5 +1,5 @@
 
-import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
+import { Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 
@@ -30,66 +30,64 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <Router>
-        <AuthProvider>
-          <Routes>
-            {/* Public Routes */}
-            <Route path="/" element={<Index />} />
-            <Route path="/login" element={<PublicOnlyRoute><Login /></PublicOnlyRoute>} />
-            <Route path="/signup" element={<PublicOnlyRoute><Signup /></PublicOnlyRoute>} />
-            <Route path="/about" element={<About />} />
-            <Route path="/features" element={<Features />} />
-            <Route path="/pricing" element={<Pricing />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
+      <AuthProvider>
+        <Routes>
+          {/* Public Routes */}
+          <Route path="/" element={<Index />} />
+          <Route path="/login" element={<PublicOnlyRoute><Login /></PublicOnlyRoute>} />
+          <Route path="/signup" element={<PublicOnlyRoute><Signup /></PublicOnlyRoute>} />
+          <Route path="/about" element={<About />} />
+          <Route path="/features" element={<Features />} />
+          <Route path="/pricing" element={<Pricing />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
 
-            {/* Protected Routes */}
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/profile"
-              element={
-                <ProtectedRoute>
-                  <ProfileSettings />
-                </ProtectedRoute>
-              }
-            />
-            
-            {/* Admin Routes */}
-            <Route path="/admin" element={<AdminRoute><AdminSettings /></AdminRoute>} />
-            <Route path="/admin/users" element={<AdminRoute><UserManagement /></AdminRoute>} />
-            <Route path="/admin/system" element={<AdminRoute><SystemSettings /></AdminRoute>} />
-            <Route path="/admin/components" element={<AdminRoute><ComponentLibrary /></AdminRoute>} />
-            
-            <Route
-              path="/circuit-editor/:id"
-              element={
-                <ProtectedRoute>
-                  <CircuitEditorPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/circuit-demo"
-              element={
-                <ProtectedRoute>
-                  <CircuitEditorPage />
-                </ProtectedRoute>
-              }
-            />
+          {/* Protected Routes */}
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <ProfileSettings />
+              </ProtectedRoute>
+            }
+          />
+          
+          {/* Admin Routes */}
+          <Route path="/admin" element={<AdminRoute><AdminSettings /></AdminRoute>} />
+          <Route path="/admin/users" element={<AdminRoute><UserManagement /></AdminRoute>} />
+          <Route path="/admin/system" element={<AdminRoute><SystemSettings /></AdminRoute>} />
+          <Route path="/admin/components" element={<AdminRoute><ComponentLibrary /></AdminRoute>} />
+          
+          <Route
+            path="/circuit-editor/:id"
+            element={
+              <ProtectedRoute>
+                <CircuitEditorPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/circuit-demo"
+            element={
+              <ProtectedRoute>
+                <CircuitEditorPage />
+              </ProtectedRoute>
+            }
+          />
 
-            {/* 404 Route */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-          <Toaster />
-        </AuthProvider>
-      </Router>
+          {/* 404 Route */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+        <Toaster />
+      </AuthProvider>
     </QueryClientProvider>
   );
 }
