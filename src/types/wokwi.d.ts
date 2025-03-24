@@ -31,10 +31,30 @@ declare namespace JSX {
     'wokwi-potentiometer': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
       value?: number | string;
     };
+    'wokwi-buzzer': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
+      frequency?: number | string;
+    };
+    'wokwi-servo': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
+      horn?: string;
+      angle?: number | string;
+    };
+    'wokwi-lcd1602': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
+      text?: string;
+      background?: string;
+    };
+    'wokwi-7segment': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
+      value?: number | string;
+      color?: string;
+    };
   }
 }
 
 // Add the global wokwiElementsLoaded property to the Window interface
 interface Window {
   wokwiElementsLoaded?: boolean;
+  customElements?: {
+    get: (name: string) => any;
+    define: (name: string, constructor: CustomElementConstructor, options?: ElementDefinitionOptions) => void;
+  };
 }
+

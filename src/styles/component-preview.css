@@ -1,0 +1,68 @@
+
+/* Component preview styles */
+.component-preview-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 150px;
+  width: 100%;
+  position: relative;
+}
+
+/* Style for wokwi elements */
+wokwi-led {
+  display: inline-block;
+}
+
+wokwi-resistor {
+  display: inline-block;
+}
+
+wokwi-capacitor {
+  display: inline-block;
+}
+
+wokwi-arduino-uno,
+wokwi-esp32-devkit-v1 {
+  transform: scale(0.8);
+  transform-origin: center;
+}
+
+/* Pin markers */
+.pin-marker {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #ff6384;
+  border: 1px solid #ffffff;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+  pointer-events: none;
+}
+
+.pin-marker::after {
+  content: attr(data-pin-name);
+  position: absolute;
+  font-size: 10px;
+  background-color: rgba(255, 255, 255, 0.8);
+  padding: 2px 4px;
+  border-radius: 2px;
+  white-space: nowrap;
+  top: -18px;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+/* Grid for component placement */
+.component-grid {
+  background-size: 20px 20px;
+  background-image: linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px),
+                    linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  pointer-events: none;
+  z-index: 0;
+}
