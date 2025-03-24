@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from "react";
 import PageLayout from "@/components/PageLayout";
 import { useAuth } from "@/context/AuthContext";
@@ -76,22 +77,8 @@ import {
 import VisualPinEditor from "@/components/CircuitEditor/VisualPinEditor";
 import DynamicPropertyEditor from "@/components/CircuitEditor/DynamicPropertyEditor";
 import EnhancedComponentPreview from "@/components/CircuitEditor/EnhancedComponentPreview";
-
-interface ComponentType {
-  id: string;
-  name: string;
-  type: string;
-  category: string;
-  created_at: string;
-  last_updated: string;
-  pins: number;
-  enabled?: boolean;
-  description?: string;
-  svgPath?: string;
-  pinConfig?: PinConfig[];
-  properties?: Record<string, any>;
-  isOriginal?: boolean;
-}
+import { useComponentLibrary } from "@/hooks/useComponentLibrary";
+import { ComponentLibraryItem } from "@/services/componentLibraryService";
 
 interface PinConfig {
   name: string;
@@ -178,181 +165,6 @@ const getDefaultPropertiesForType = (type: string): Record<string, any> => {
   return defaults[type] || {};
 };
 
-// Generate components for all wokwi elements
-const generateWokwiComponents = (): ComponentType[] => {
-  const today = new Date().toISOString().split('T')[0];
-  
-  return ORIGINAL_WOKWI_COMPONENTS.map((type, index) => {
-    const name = getDisplayNameFromType(type);
-    const category = getCategoryFromType(type);
-    const pins = getComponentPinInfo(type).length || 2;
-    const properties = getDefaultPropertiesForType(type);
-    
-    return {
-      id: `auto-${index + 1}`,
-      name,
-      type,
-      category,
-      created_at: today,
-      last_updated: today,
-      pins,
-      enabled: true,
-      description: `${name} component for circuit simulations`,
-      pinConfig: getComponentPinInfo(type),
-      properties,
-      isOriginal: true
-    };
-  });
-};
-
-// Original mock components - will be supplemented by generated ones
-const baseMockComponents = [
-  { 
-    id: "1", 
-    name: "LED", 
-    type: "wokwi-led", 
-    category: "output", 
-    created_at: "2023-01-15", 
-    last_updated: "2023-03-22", 
-    pins: 2,
-    enabled: true,
-    description: "Light Emitting Diode that can be turned on or off",
-    svgPath: "/components/led.svg",
-    pinConfig: [
-      { name: "A", x: 0, y: 0, signals: ["power"] },
-      { name: "C", x: 0, y: 20, signals: ["ground"] }
-    ],
-    properties: { 
-      color: "red", 
-      brightness: 1.0
-    },
-    isOriginal: true
-  },
-  { 
-    id: "2", 
-    name: "Resistor", 
-    type: "wokwi-resistor", 
-    category: "passive", 
-    created_at: "2023-01-15", 
-    last_updated: "2023-04-10", 
-    pins: 2,
-    enabled: true,
-    description: "Passive component that implements electrical resistance",
-    svgPath: "/components/resistor.svg",
-    pinConfig: [
-      { name: "1", x: 0, y: 0, signals: ["passive"] },
-      { name: "2", x: 0, y: 20, signals: ["passive"] }
-    ],
-    properties: { 
-      resistance: "220",
-      tolerance: "5%"
-    },
-    isOriginal: true
-  },
-  { 
-    id: "3", 
-    name: "Capacitor", 
-    type: "wokwi-capacitor", 
-    category: "passive", 
-    created_at: "2023-01-16", 
-    last_updated: "2023-02-28", 
-    pins: 2,
-    enabled: true,
-    description: "Stores electrical energy in an electric field",
-    pinConfig: [
-      { name: "1", x: 0, y: 0, signals: ["passive"] },
-      { name: "2", x: 0, y: 20, signals: ["passive"] }
-    ],
-    properties: { 
-      capacitance: "10uF"
-    },
-    isOriginal: true
-  },
-  { 
-    id: "4", 
-    name: "Arduino Uno", 
-    type: "wokwi-arduino-uno", 
-    category: "microcontroller", 
-    created_at: "2023-01-18", 
-    last_updated: "2023-05-05", 
-    pins: 28,
-    enabled: true,
-    description: "Popular microcontroller board based on the ATmega328P",
-    pinConfig: [
-      { name: "D0", x: 0, y: 0, signals: ["digital", "rx"] },
-      { name: "D1", x: 0, y: 10, signals: ["digital", "tx"] },
-    ],
-    properties: {
-    },
-    isOriginal: true
-  },
-  { 
-    id: "5", 
-    name: "ESP32", 
-    type: "wokwi-esp32-devkit-v1", 
-    category: "microcontroller", 
-    created_at: "2023-02-10", 
-    last_updated: "2023-04-15", 
-    pins: 36,
-    enabled: true,
-    description: "ESP32 is a series of low-cost, low-power system on a chip microcontrollers with integrated Wi-Fi and dual-mode Bluetooth",
-    pinConfig: [
-      { name: "D0", x: 0, y: 0, signals: ["digital"] },
-      { name: "D1", x: 0, y: 10, signals: ["digital"] },
-    ],
-    properties: {
-    },
-    isOriginal: true
-  },
-  { 
-    id: "6", 
-    name: "Button", 
-    type: "wokwi-pushbutton", 
-    category: "input", 
-    created_at: "2023-01-20", 
-    last_updated: "2023-03-30", 
-    pins: 2,
-    enabled: true,
-    description: "A push button is a switch that closes a circuit when pressed",
-    pinConfig: [
-      { name: "1", x: 0, y: 0, signals: ["passive"] },
-      { name: "2", x: 0, y: 20, signals: ["passive"] }
-    ],
-    properties: { 
-      color: "red",
-    },
-    isOriginal: true
-  },
-  { 
-    id: "7", 
-    name: "Motor", 
-    type: "wokwi-servo", 
-    category: "output", 
-    created_at: "2023-02-05", 
-    last_updated: "2023-03-15", 
-    pins: 2,
-    enabled: true,
-    description: "A servo motor is a rotary actuator or linear actuator that allows for precise control of angular or linear position, velocity, and acceleration",
-    pinConfig: [
-      { name: "1", x: 0, y: 0, signals: ["power"] },
-      { name: "2", x: 0, y: 20, signals: ["ground"] }
-    ],
-    properties: {
-      angle: 90
-    },
-    isOriginal: true
-  },
-];
-
-// Generate the complete list of components by merging existing detailed ones 
-// with auto-generated ones, avoiding duplicates
-const generateFullComponentList = (): ComponentType[] => {
-  const existingTypes = new Set(baseMockComponents.map(comp => comp.type));
-  const autoGenerated = generateWokwiComponents().filter(comp => !existingTypes.has(comp.type));
-  
-  return [...baseMockComponents, ...autoGenerated];
-};
-
 const signalTypes = [
   "power", "ground", "digital", "analog", "passive", "i2c", "spi", "uart", "rx", "tx"
 ];
@@ -363,8 +175,8 @@ const ComponentLibrary = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
-  const [selectedComponent, setSelectedComponent] = useState<ComponentType | null>(null);
-  const [editedComponent, setEditedComponent] = useState<ComponentType | null>(null);
+  const [selectedComponent, setSelectedComponent] = useState<ComponentLibraryItem | null>(null);
+  const [editedComponent, setEditedComponent] = useState<ComponentLibraryItem | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -373,15 +185,29 @@ const ComponentLibrary = () => {
   const [activeTab, setActiveTab] = useState("details");
   const [showPins, setShowPins] = useState(true);
   const previewRef = useRef<HTMLDivElement>(null);
-  const [allComponents, setAllComponents] = useState<ComponentType[]>(() => {
-    return generateFullComponentList().map(comp => ({
-      ...comp,
-      isOriginal: isOriginalWokwiComponent(comp.type)
-    }));
+  const [newComponent, setNewComponent] = useState<Partial<ComponentLibraryItem>>({
+    name: '',
+    type: 'wokwi-led',
+    category: 'output',
+    description: '',
+    enabled: true,
+    isOriginal: true
   });
   
+  // Get our React Query hook for component library
+  const { 
+    components, 
+    isLoadingComponents, 
+    createComponent, 
+    updateComponent, 
+    deleteComponent,
+    isCreatingComponent,
+    isUpdatingComponent,
+    isDeletingComponent
+  } = useComponentLibrary();
+  
   // Get unique categories for filter dropdown
-  const uniqueCategories = Array.from(new Set(allComponents.map(comp => comp.category)));
+  const uniqueCategories = Array.from(new Set((components || []).map(comp => comp.category)));
   
   useEffect(() => {
     const loadWokwi = async () => {
@@ -418,7 +244,7 @@ const ComponentLibrary = () => {
     return <Navigate to="/dashboard" />;
   }
 
-  const filteredComponents = allComponents.filter(component => {
+  const filteredComponents = (components || []).filter(component => {
     const matchesSearch = component.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = categoryFilter === "all" || !categoryFilter ? true : component.category === categoryFilter;
     let matchesType = typeFilter === "all" || !typeFilter ? true : false;
@@ -436,42 +262,60 @@ const ComponentLibrary = () => {
   });
 
   const handleAddComponent = () => {
-    const newComponent = {
-      id: `comp-${Date.now()}`,
-      name: "New Component",
-      type: "wokwi-led",
-      category: "output",
-      created_at: new Date().toISOString().split('T')[0],
-      last_updated: new Date().toISOString().split('T')[0],
-      pins: 2,
-      enabled: true,
-      description: "New component description",
-      properties: { color: "red" },
-      isOriginal: true
+    if (!newComponent.name || !newComponent.type || !newComponent.category) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Get default pins and properties for this component type
+    const pins = getComponentPinInfo(newComponent.type as string);
+    const properties = getDefaultPropertiesForType(newComponent.type as string);
+    
+    // Create the complete component object
+    const componentToAdd: ComponentLibraryItem = {
+      name: newComponent.name,
+      type: newComponent.type as string,
+      category: newComponent.category as string,
+      description: newComponent.description,
+      enabled: newComponent.enabled === undefined ? true : newComponent.enabled,
+      isOriginal: isOriginalWokwiComponent(newComponent.type as string),
+      pins,
+      properties
     };
     
-    setAllComponents([...allComponents, newComponent]);
+    // Call the mutation from our hook
+    createComponent(componentToAdd);
     
-    toast({
-      title: "Component Added",
-      description: "New component has been added to the library.",
+    // Reset the form
+    setNewComponent({
+      name: '',
+      type: 'wokwi-led',
+      category: 'output',
+      description: '',
+      enabled: true,
+      isOriginal: true
     });
+    
     setIsAddDialogOpen(false);
   };
 
-  const handleEditComponent = (component: ComponentType) => {
+  const handleEditComponent = (component: ComponentLibraryItem) => {
     setSelectedComponent(component);
     setEditedComponent({...component});
     setIsEditDialogOpen(true);
     setActiveTab("details");
   };
 
-  const handleViewComponent = (component: ComponentType) => {
+  const handleViewComponent = (component: ComponentLibraryItem) => {
     setSelectedComponent(component);
     setIsViewDialogOpen(true);
   };
 
-  const handleDeleteComponent = (component: ComponentType) => {
+  const handleDeleteComponent = (component: ComponentLibraryItem) => {
     setSelectedComponent(component);
     setIsDeleteDialogOpen(true);
   };
@@ -479,42 +323,34 @@ const ComponentLibrary = () => {
   const handleSaveComponent = () => {
     if (!editedComponent) return;
     
+    // Check if key fields are filled
+    if (!editedComponent.name || !editedComponent.type || !editedComponent.category) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Update isOriginal status based on the component type
     if (editedComponent.type !== selectedComponent?.type) {
       editedComponent.isOriginal = isOriginalWokwiComponent(editedComponent.type);
     }
     
-    setAllComponents(prevComponents => 
-      prevComponents.map(comp => 
-        comp.id === editedComponent.id ? editedComponent : comp
-      )
-    );
+    // Call the mutation from our hook
+    updateComponent(editedComponent);
     
-    toast({
-      title: "Component Updated",
-      description: `Component "${editedComponent.name}" has been updated successfully.`,
-    });
     setIsEditDialogOpen(false);
   };
 
   const handleConfirmDelete = () => {
-    if (!selectedComponent) return;
+    if (!selectedComponent || !selectedComponent.id) return;
     
-    setAllComponents(prevComponents => 
-      prevComponents.filter(comp => comp.id !== selectedComponent.id)
-    );
+    // Call the mutation from our hook
+    deleteComponent(selectedComponent.id, selectedComponent.name);
     
-    toast({
-      title: "Component Deleted",
-      description: `Component "${selectedComponent.name}" has been removed from the library.`,
-    });
     setIsDeleteDialogOpen(false);
-  };
-
-  const handleSaveLibrary = () => {
-    toast({
-      title: "Library Saved",
-      description: "Component library has been saved to database successfully.",
-    });
   };
 
   const updateComponentProperty = (property: string, value: any) => {
@@ -528,7 +364,6 @@ const ComponentLibrary = () => {
       }
       
       if (property === 'type') {
-        editedComponent.isOriginal = isOriginalWokwiComponent(value);
         return { 
           ...prev, 
           type: value,
@@ -567,10 +402,16 @@ const ComponentLibrary = () => {
       if (!prev) return prev;
       return { 
         ...prev, 
-        pinConfig, 
-        pins: pinConfig.length 
+        pins: pinConfig as ComponentPin[], 
       };
     });
+  };
+
+  const handleNewComponentChange = (field: string, value: any) => {
+    setNewComponent(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
   return (
@@ -582,14 +423,6 @@ const ComponentLibrary = () => {
         </div>
 
         <div className="flex justify-end mb-4 gap-2">
-          <Button 
-            variant="default" 
-            onClick={handleSaveLibrary}
-            className="gap-1"
-          >
-            <Save className="h-4 w-4" />
-            <span>Save Library</span>
-          </Button>
           <Button 
             onClick={() => setIsAddDialogOpen(true)}
             className="gap-1"
@@ -660,14 +493,18 @@ const ComponentLibrary = () => {
                     <TableHead>Name</TableHead>
                     <TableHead>Category</TableHead>
                     <TableHead>Type</TableHead>
-                    <TableHead>Pins</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Last Updated</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredComponents.length > 0 ? (
+                  {isLoadingComponents ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-6 text-muted-foreground">
+                        Loading components...
+                      </TableCell>
+                    </TableRow>
+                  ) : filteredComponents.length > 0 ? (
                     filteredComponents.map((component) => (
                       <TableRow key={component.id}>
                         <TableCell className="font-medium flex items-center gap-2">
@@ -691,7 +528,6 @@ const ComponentLibrary = () => {
                           </Badge>
                         </TableCell>
                         <TableCell>{component.type}</TableCell>
-                        <TableCell>{component.pins}</TableCell>
                         <TableCell>
                           <Badge 
                             variant={component.enabled ? "default" : "outline"}
@@ -700,7 +536,6 @@ const ComponentLibrary = () => {
                             {component.enabled ? "Enabled" : "Disabled"}
                           </Badge>
                         </TableCell>
-                        <TableCell>{component.last_updated}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
                             <Button
@@ -733,7 +568,7 @@ const ComponentLibrary = () => {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-6 text-muted-foreground">
+                      <TableCell colSpan={5} className="text-center py-6 text-muted-foreground">
                         No components match your filters.
                       </TableCell>
                     </TableRow>
@@ -755,12 +590,20 @@ const ComponentLibrary = () => {
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
                 <label htmlFor="name">Component Name</label>
-                <Input id="name" placeholder="e.g. LED, Resistor, etc." />
+                <Input 
+                  id="name" 
+                  placeholder="e.g. LED, Resistor, etc." 
+                  value={newComponent.name}
+                  onChange={(e) => handleNewComponentChange('name', e.target.value)}
+                />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <label htmlFor="category">Category</label>
-                  <Select defaultValue="input">
+                  <Select 
+                    value={newComponent.category} 
+                    onValueChange={(value) => handleNewComponentChange('category', value)}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
@@ -777,7 +620,10 @@ const ComponentLibrary = () => {
                 </div>
                 <div className="grid gap-2">
                   <label htmlFor="type">Type</label>
-                  <Select defaultValue="wokwi-led">
+                  <Select 
+                    value={newComponent.type} 
+                    onValueChange={(value) => handleNewComponentChange('type', value)}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select type" />
                     </SelectTrigger>
@@ -795,18 +641,29 @@ const ComponentLibrary = () => {
                   id="description" 
                   placeholder="Describe this component and its functionality"
                   rows={3}
+                  value={newComponent.description}
+                  onChange={(e) => handleNewComponentChange('description', e.target.value)}
                 />
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
-                  <Switch id="enabled" defaultChecked={true} />
+                  <Switch 
+                    id="enabled" 
+                    checked={newComponent.enabled} 
+                    onCheckedChange={(checked) => handleNewComponentChange('enabled', checked)}
+                  />
                   <label htmlFor="enabled">Enable component for users</label>
                 </div>
               </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>Cancel</Button>
-              <Button onClick={handleAddComponent}>Add Component</Button>
+              <Button 
+                onClick={handleAddComponent}
+                disabled={isCreatingComponent}
+              >
+                {isCreatingComponent ? 'Adding...' : 'Add Component'}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -939,7 +796,7 @@ const ComponentLibrary = () => {
                     <div className="border rounded-md bg-gray-50 p-4">
                       <VisualPinEditor
                         componentType={editedComponent.type}
-                        pins={editedComponent.pinConfig || getComponentPinInfo(editedComponent.type)}
+                        pins={editedComponent.pins || getComponentPinInfo(editedComponent.type)}
                         onChange={updatePinConfiguration}
                         readonly={false}
                       />
@@ -988,7 +845,12 @@ const ComponentLibrary = () => {
             
             <DialogFooter className="mt-6">
               <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
-              <Button onClick={handleSaveComponent}>Save Changes</Button>
+              <Button 
+                onClick={handleSaveComponent}
+                disabled={isUpdatingComponent}
+              >
+                {isUpdatingComponent ? 'Saving...' : 'Save Changes'}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -1056,7 +918,7 @@ const ComponentLibrary = () => {
                     <h4 className="text-sm font-medium mb-2">Pin Configuration</h4>
                     <div className="bg-gray-100 p-3 rounded-md">
                       <pre className="text-xs overflow-auto max-h-40">
-                        {JSON.stringify(selectedComponent.pinConfig || getComponentPinInfo(selectedComponent.type), null, 2)}
+                        {JSON.stringify(selectedComponent.pins || [], null, 2)}
                       </pre>
                     </div>
                   </div>
@@ -1094,7 +956,13 @@ const ComponentLibrary = () => {
             
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>Cancel</Button>
-              <Button variant="destructive" onClick={handleConfirmDelete}>Delete</Button>
+              <Button 
+                variant="destructive" 
+                onClick={handleConfirmDelete}
+                disabled={isDeletingComponent}
+              >
+                {isDeletingComponent ? 'Deleting...' : 'Delete'}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
