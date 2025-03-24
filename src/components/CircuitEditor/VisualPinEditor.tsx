@@ -12,6 +12,7 @@ interface VisualPinEditorProps {
   pins: ComponentPin[];
   componentType: string;
   onPinsChange?: (pins: ComponentPin[]) => void;
+  onChange?: (pins: ComponentPin[]) => void; // Add alias for backwards compatibility
   width?: number;
   height?: number;
   className?: string;
@@ -28,7 +29,8 @@ interface VisualPinEditorProps {
 const VisualPinEditor: React.FC<VisualPinEditorProps> = ({ 
   pins, 
   componentType, 
-  onPinsChange, 
+  onPinsChange,
+  onChange, // Alias for backwards compatibility
   width = 300, 
   height = 300,
   className = '',
@@ -50,6 +52,15 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
   
   // Ensure pins is an array
   const pinData = Array.isArray(pins) ? pins : [];
+  
+  // Handle backward compatibility for onChange vs onPinsChange
+  const handlePinsChange = (updatedPins: ComponentPin[]) => {
+    if (onPinsChange) {
+      onPinsChange(updatedPins);
+    } else if (onChange) {
+      onChange(updatedPins);
+    }
+  };
   
   // Try to load Wokwi elements
   useEffect(() => {
@@ -111,9 +122,7 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
         signals: []
       };
       
-      if (onPinsChange) {
-        onPinsChange([...pinData, newPin]);
-      }
+      handlePinsChange([...pinData, newPin]);
     }
   };
   
@@ -142,9 +151,7 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
         y: canvasY
       };
       
-      if (onPinsChange) {
-        onPinsChange(updatedPins);
-      }
+      handlePinsChange(updatedPins);
     }
   };
   
@@ -181,9 +188,7 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
       signals: newPinSignals.split(',').map(s => s.trim()).filter(s => s)
     };
     
-    if (onPinsChange) {
-      onPinsChange(updatedPins);
-    }
+    handlePinsChange(updatedPins);
     
     setEditingPin(null);
     setNewPinName('');
@@ -196,9 +201,7 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
     const updatedPins = [...pinData];
     updatedPins.splice(index, 1);
     
-    if (onPinsChange) {
-      onPinsChange(updatedPins);
-    }
+    handlePinsChange(updatedPins);
   };
   
   const togglePanMode = () => {
