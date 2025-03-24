@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 import { Cpu, ExternalLink, RefreshCw, EyeIcon, EyeOffIcon } from 'lucide-react';
 import { Button } from "@/components/ui/button";
@@ -37,7 +36,6 @@ const EnhancedComponentPreview: React.FC<EnhancedComponentPreviewProps> = ({
   const [showPinsState, setShowPinsState] = useState(showPins);
   const previewContainerRef = useRef<HTMLDivElement>(null);
   
-  // Handler for toggling pin visibility
   const handleTogglePins = () => {
     const newState = !showPinsState;
     setShowPinsState(newState);
@@ -52,7 +50,6 @@ const EnhancedComponentPreview: React.FC<EnhancedComponentPreviewProps> = ({
       setError(null);
       
       try {
-        // Check if wokwi is loaded
         if (isWokwiLoaded()) {
           setIsReady(true);
           setIsLoading(false);
@@ -69,7 +66,6 @@ const EnhancedComponentPreview: React.FC<EnhancedComponentPreviewProps> = ({
     checkWokwiReady();
   }, []);
   
-  // Render the component whenever props change or wokwi becomes ready
   useEffect(() => {
     if (!isReady || !componentType) return;
     
@@ -77,33 +73,75 @@ const EnhancedComponentPreview: React.FC<EnhancedComponentPreviewProps> = ({
       setIsLoading(true);
       
       try {
-        // Create a container for the component
         const container = document.getElementById(previewId);
         if (!container) {
           throw new Error(`Container with ID ${previewId} not found`);
         }
         
-        // Clear the container
         container.innerHTML = '';
         
-        // Create the wokwi element
         const element = document.createElement(componentType);
         
-        // Set the properties
         Object.entries(properties).forEach(([key, value]) => {
           element.setAttribute(key, String(value));
         });
         
-        // If showPins is enabled, create a wokwi-pins element wrapper
         if (showPinsState) {
           const pinsElement = document.createElement('wokwi-show-pins');
+          
+          const style = document.createElement('style');
+          style.textContent = `
+            wokwi-show-pins::part(pin-label) {
+              visibility: hidden;
+              opacity: 0;
+              transition: opacity 0.2s;
+            }
+            wokwi-show-pins:hover::part(pin-label) {
+              visibility: visible;
+              opacity: 1;
+            }
+          `;
+          
+          container.appendChild(style);
           pinsElement.appendChild(element);
           container.appendChild(pinsElement);
+          
+          setTimeout(() => {
+            try {
+              container.classList.add('wokwi-pins-container');
+              
+              if (pinsElement.shadowRoot) {
+                const styleElement = document.createElement('style');
+                styleElement.textContent = `
+                  :host {
+                    --pin-label-background: rgba(255, 255, 255, 0.9);
+                    --pin-label-color: #333;
+                    --pin-label-opacity: 1;
+                  }
+                  .pin circle {
+                    transition: r 0.2s;
+                  }
+                  .pin:hover circle {
+                    r: 4px;
+                  }
+                  .pin text {
+                    opacity: 0;
+                    transition: opacity 0.2s;
+                  }
+                  .pin:hover text {
+                    opacity: 1;
+                  }
+                `;
+                pinsElement.shadowRoot.appendChild(styleElement);
+              }
+            } catch (err) {
+              console.error("Error enhancing pin display:", err);
+            }
+          }, 100);
         } else {
           container.appendChild(element);
         }
         
-        // Add a slight delay to allow the element to render
         setTimeout(() => {
           const elementToMeasure = showPinsState 
             ? container?.querySelector('wokwi-show-pins') 
@@ -204,7 +242,6 @@ const EnhancedComponentPreview: React.FC<EnhancedComponentPreviewProps> = ({
           <>
             <div id={previewId} className="component-preview-container relative z-10"></div>
             
-            {/* Show custom SVG if provided */}
             {customSvgPath && (
               <div className="absolute inset-0 flex items-center justify-center z-0 opacity-10">
                 <img 

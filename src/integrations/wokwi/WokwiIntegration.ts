@@ -100,6 +100,41 @@ export const renderWokwiElement = (
     const pinsElement = document.createElement('wokwi-show-pins');
     pinsElement.appendChild(wokwiElement);
     element.appendChild(pinsElement);
+    
+    // Add a class to help with styling
+    element.classList.add('wokwi-pins-container');
+    
+    // Add a short delay to allow the shadow DOM to initialize
+    setTimeout(() => {
+      try {
+        // Try to enhance the pin display with custom styles
+        if (pinsElement.shadowRoot) {
+          const style = document.createElement('style');
+          style.textContent = `
+            :host {
+              --pin-label-background: rgba(255, 255, 255, 0.9);
+              --pin-label-color: #333;
+            }
+            .pin circle {
+              transition: r 0.2s ease;
+            }
+            .pin:hover circle {
+              r: 4px;
+            }
+            .pin text {
+              opacity: 0;
+              transition: opacity 0.2s ease;
+            }
+            .pin:hover text {
+              opacity: 1;
+            }
+          `;
+          pinsElement.shadowRoot.appendChild(style);
+        }
+      } catch (err) {
+        console.warn('Could not inject styles into shadow DOM:', err);
+      }
+    }, 50);
   } else {
     element.appendChild(wokwiElement);
   }
