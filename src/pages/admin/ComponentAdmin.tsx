@@ -931,9 +931,9 @@ const ComponentLibrary = () => {
                     <DynamicPropertyEditor 
                       properties={editedComponent.properties || {}}
                       onChange={updateComponentProperties}
-                      componentType={editedComponent.type} // Add this missing required prop
+                      componentType={editedComponent.type}
                     />
                   )}
                 </TabsContent>
                 
-                <
+                <TabsContent value="pins"

@@ -9,6 +9,7 @@
   transform: translate(-50%, -50%);
   transition: all 0.2s ease;
   z-index: 20;
+  position: absolute;
 }
 
 .pin-marker:hover {
@@ -45,4 +46,21 @@
   white-space: nowrap;
   transform: translate(-50%, -100%);
   margin-top: -8px;
+  position: absolute;
+}
+
+/* Component grid for pin editor */
+.component-grid {
+  background-size: 10px 10px;
+  background-image:
+    linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
+}
+
+/* Component preview styles */
+.component-preview-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 150px;
 }
