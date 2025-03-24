@@ -24,10 +24,10 @@ export const renderWokwiComponentPreview = async (
     // Create a placeholder element
     const placeholderElement = document.createElement('div');
     placeholderElement.id = elementId;
+    placeholderElement.style.position = 'relative';
     container.appendChild(placeholderElement);
     
     // Call renderWokwiElement with the correct arguments
-    // The WokwiIntegration.renderWokwiElement requires type, elementId, and props
     renderWokwiElement(componentType, elementId, properties);
     
     // Style the container for proper display
@@ -39,6 +39,12 @@ export const renderWokwiComponentPreview = async (
         wokwiElement.style.left = '50%';
         wokwiElement.style.top = '50%';
         wokwiElement.style.transform = 'translate(-50%, -50%)';
+        
+        // Log element dimensions for debugging
+        console.log(`Wokwi element ${componentType} dimensions:`, {
+          width: wokwiElement.offsetWidth,
+          height: wokwiElement.offsetHeight
+        });
       }
     }, 100); // Small delay to ensure the element has rendered
   } catch (error) {

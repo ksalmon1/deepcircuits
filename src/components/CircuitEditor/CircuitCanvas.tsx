@@ -486,7 +486,8 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
                     borderRadius: '50%',
                     transform: 'translate(-50%, -50%)',
                     border: '1px solid rgba(0,0,0,0.3)',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    zIndex: 20
                   }}
                   onMouseEnter={() => handlePinHover(id, index)}
                   onMouseLeave={handlePinHoverExit}

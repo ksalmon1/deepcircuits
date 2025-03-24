@@ -209,15 +209,15 @@ const EditComponentDialog = ({
               )}
             </TabsContent>
             
-            <TabsContent value="pins" className="py-4 min-h-[400px]">
+            <TabsContent value="pins" className="py-4 min-h-[450px]">
               <div className="flex flex-col h-full">
-                <div className="border rounded-md bg-gray-50 p-4 h-full" style={{ minHeight: '400px' }}>
+                <div className="border rounded-md bg-gray-50 p-4 h-full" style={{ minHeight: '500px' }}>
                   <VisualPinEditor
                     componentType={editedComponent.type}
                     pins={editedComponent.pins || []}
                     onPinsChange={updatePinConfiguration}
                     readonly={false}
-                    height={400}
+                    height={500}
                   />
                 </div>
               </div>

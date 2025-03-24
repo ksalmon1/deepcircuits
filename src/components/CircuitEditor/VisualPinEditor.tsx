@@ -11,7 +11,7 @@ interface VisualPinEditorProps {
   pins: ComponentPin[];
   componentType: string;
   onPinsChange?: (pins: ComponentPin[]) => void;
-  onChange?: (pins: ComponentPin[]) => void; // Add alias for backwards compatibility
+  onChange?: (pins: ComponentPin[]) => void; // Alias for backwards compatibility
   width?: number;
   height?: number;
   className?: string;
@@ -48,6 +48,7 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [isDraggingCanvas, setIsDraggingCanvas] = useState(false);
   const [panMode, setPanMode] = useState(false);
+  const [componentCenter, setComponentCenter] = useState({ x: 0, y: 0 });
   
   // Ensure pins is an array
   const pinData = Array.isArray(pins) ? pins : [];
@@ -73,6 +74,18 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
           console.log("Rendering component preview for:", componentType);
           await renderWokwiComponentPreview(componentType, previewRef.current);
           setComponentLoaded(true);
+          
+          // After component is loaded, get its dimensions to help with pin positioning
+          setTimeout(() => {
+            const element = previewRef.current?.firstElementChild;
+            if (element instanceof HTMLElement) {
+              const rect = element.getBoundingClientRect();
+              setComponentCenter({
+                x: rect.width / 2,
+                y: rect.height / 2
+              });
+            }
+          }, 200);
         }
       } catch (error) {
         console.error('Error loading component preview:', error);
@@ -122,6 +135,7 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
         signals: []
       };
       
+      console.log(`Adding new pin at coordinates (${canvasX}, ${canvasY})`);
       handlePinsChange([...pinData, newPin]);
     }
   };
@@ -282,6 +296,9 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
           >
             <div ref={previewRef} className="absolute" style={{ left: '50%', top: '50%', transform: 'translate(-50%, -50%)', zIndex: 5 }}></div>
             
+            {/* Origin marker (0,0) */}
+            <div className="absolute left-0 top-0 w-3 h-3 border-2 border-red-500 rounded-full" style={{ zIndex: 15 }}></div>
+            
             {/* Render pins */}
             {pinData.map((pin, i) => (
               <div 
@@ -296,16 +313,18 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
                 }}
               >
                 <div 
-                  className={`rounded-full w-4 h-4 border ${readonly ? 'bg-blue-200' : 'bg-blue-500 hover:bg-blue-600'} transition-colors`}
+                  className={`rounded-full w-5 h-5 flex items-center justify-center ${readonly ? 'bg-blue-200' : 'bg-blue-500 hover:bg-blue-600'} transition-colors`}
                   onClick={() => handleEditPin(i)}
-                ></div>
-                <div className="absolute whitespace-nowrap text-xs -mt-5 left-1/2 transform -translate-x-1/2 bg-white/80 px-1 rounded">
+                >
+                  <span className="text-white text-xs font-bold">{i+1}</span>
+                </div>
+                <div className="absolute whitespace-nowrap text-xs -mt-5 left-1/2 transform -translate-x-1/2 bg-white/90 px-1 py-0.5 rounded shadow-sm">
                   {pin.name}
                 </div>
               </div>
             ))}
             
-            {/* Grid lines for reference - helps align pins */}
+            {/* Reference grid */}
             <div className="absolute left-0 top-0 w-full h-full grid grid-cols-12 grid-rows-12 pointer-events-none">
               {Array.from({ length: 13 }).map((_, i) => (
                 <div key={`h-${i}`} className="absolute left-0 right-0 border-t border-gray-200" style={{ top: `${(i / 12) * 100}%` }}></div>
@@ -318,7 +337,7 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
         </div>
         
         {!readonly && (
-          <div className="w-64 border rounded p-2 overflow-y-auto text-sm">
+          <div className="w-72 border rounded p-3 overflow-y-auto text-sm">
             <h3 className="font-medium mb-2">Pin Details</h3>
             
             {editingPin !== null ? (
@@ -345,13 +364,16 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
                 </div>
               </div>
             ) : (
-              <div className="space-y-1 max-h-[300px] overflow-y-auto pr-1">
+              <div className="space-y-1 max-h-[250px] overflow-y-auto pr-1">
                 {pinData.length > 0 ? (
                   pinData.map((pin, i) => (
-                    <div key={i} className="flex items-center justify-between p-1 border rounded">
+                    <div key={i} className="flex items-center justify-between p-2 border rounded hover:bg-gray-50">
                       <div className="overflow-hidden">
-                        <div className="font-medium truncate">{pin.name}</div>
-                        <div className="text-xs text-muted-foreground">
+                        <div className="font-medium truncate flex items-center gap-1">
+                          <span className="bg-blue-500 text-white w-4 h-4 rounded-full flex items-center justify-center text-xs">{i+1}</span>
+                          {pin.name}
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-1">
                           x: {Math.round(Number(pin.x))}, y: {Math.round(Number(pin.y))}
                         </div>
                         <div className="flex flex-wrap gap-1 mt-1">
@@ -383,13 +405,24 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
             )}
             
             {/* Pin position legend */}
-            <div className="mt-4 p-2 bg-muted/40 rounded text-xs">
-              <p className="font-medium mb-1">Tips:</p>
-              <ul className="list-disc pl-4 space-y-1">
-                <li>Coordinates are relative to component's top-left (0,0)</li>
-                <li>Click to add pins or drag existing pins</li>
+            <div className="mt-4 p-3 bg-blue-50 rounded text-xs space-y-2">
+              <p className="font-medium">Coordinate System:</p>
+              <ul className="list-disc pl-4 space-y-1 text-gray-700">
+                <li>The <span className="font-semibold">red dot</span> marks the origin (0,0) at the top-left of the component</li>
+                <li>All coordinates are <span className="font-semibold">relative to this origin point</span></li>
+                <li>These exact coordinates will be used in the circuit editor</li>
+                <li>Pin positions should align with the visible component terminals</li>
+              </ul>
+            </div>
+
+            <div className="mt-3 p-3 bg-gray-50 rounded text-xs space-y-2">
+              <p className="font-medium">Controls:</p>
+              <ul className="list-disc pl-4 space-y-1 text-gray-700">
+                <li>Click to add new pins</li>
+                <li>Drag existing pins to reposition</li>
                 <li>Click a pin to edit its properties</li>
                 <li>Use mouse wheel or buttons to zoom</li>
+                <li>Hold middle mouse button or use Pan Mode to move the view</li>
               </ul>
             </div>
           </div>
