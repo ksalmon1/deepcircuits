@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from "react";
 import PageLayout from "@/components/PageLayout";
 import { useAuth } from "@/context/AuthContext";
@@ -61,13 +62,16 @@ import {
   LucideProps,
   X,
   Settings,
-  Move
+  Move,
+  CheckCircle
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { 
   isWokwiLoaded, 
-  forceLoadWokwiElements, 
-  renderWokwiElement 
+  forceLoadWokwiElements,
+  renderWokwiElement,
+  isOriginalWokwiComponent,
+  ORIGINAL_WOKWI_COMPONENTS
 } from '@/integrations/wokwi/WokwiIntegration';
 import VisualPinEditor from "@/components/CircuitEditor/VisualPinEditor";
 import DynamicPropertyEditor from "@/components/CircuitEditor/DynamicPropertyEditor";
@@ -86,6 +90,7 @@ interface ComponentType {
   svgPath?: string;
   pinConfig?: PinConfig[];
   properties?: Record<string, any>;
+  isOriginal?: boolean;
 }
 
 interface PinConfig {
@@ -114,7 +119,8 @@ const mockComponents = [
     properties: { 
       color: "red", 
       brightness: 1.0
-    }
+    },
+    isOriginal: true
   },
   { 
     id: "2", 
@@ -134,7 +140,8 @@ const mockComponents = [
     properties: { 
       resistance: "220",
       tolerance: "5%"
-    }
+    },
+    isOriginal: true
   },
   { 
     id: "3", 
@@ -152,7 +159,8 @@ const mockComponents = [
     ],
     properties: { 
       capacitance: "10uF"
-    }
+    },
+    isOriginal: true
   },
   { 
     id: "4", 
@@ -167,7 +175,8 @@ const mockComponents = [
     pinConfig: [
       { name: "D0", x: 0, y: 0, signals: ["digital", "rx"] },
       { name: "D1", x: 0, y: 10, signals: ["digital", "tx"] },
-    ]
+    ],
+    isOriginal: true
   },
   { 
     id: "5", 
@@ -182,7 +191,8 @@ const mockComponents = [
     pinConfig: [
       { name: "D0", x: 0, y: 0, signals: ["digital"] },
       { name: "D1", x: 0, y: 10, signals: ["digital"] },
-    ]
+    ],
+    isOriginal: true
   },
   { 
     id: "6", 
@@ -200,7 +210,8 @@ const mockComponents = [
     ],
     properties: { 
       color: "red",
-    }
+    },
+    isOriginal: true
   },
   { 
     id: "7", 
@@ -218,7 +229,8 @@ const mockComponents = [
     ],
     properties: {
       angle: 90
-    }
+    },
+    isOriginal: true
   },
 ];
 
@@ -240,8 +252,15 @@ const ComponentLibrary = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [wokwiReady, setWokwiReady] = useState(false);
   const [activeTab, setActiveTab] = useState("details");
+  const [showPins, setShowPins] = useState(true);
   const previewRef = useRef<HTMLDivElement>(null);
-  const [allComponents, setAllComponents] = useState<ComponentType[]>(mockComponents);
+  const [allComponents, setAllComponents] = useState<ComponentType[]>(() => {
+    // Initialize components and mark original Wokwi components
+    return mockComponents.map(comp => ({
+      ...comp,
+      isOriginal: isOriginalWokwiComponent(comp.type)
+    }));
+  });
   
   useEffect(() => {
     const loadWokwi = async () => {
@@ -270,30 +289,6 @@ const ComponentLibrary = () => {
     loadWokwi();
   }, [toast]);
 
-  useEffect(() => {
-    if (wokwiReady && selectedComponent && previewRef.current) {
-      try {
-        const componentType = selectedComponent.type;
-        const properties = selectedComponent.properties || {};
-        renderWokwiElement(componentType, "component-preview", properties);
-      } catch (error) {
-        console.error("Error rendering component preview:", error);
-      }
-    }
-  }, [wokwiReady, selectedComponent, activeTab]);
-  
-  useEffect(() => {
-    if (wokwiReady && editedComponent && previewRef.current && activeTab === "preview") {
-      try {
-        const componentType = editedComponent.type;
-        const properties = editedComponent.properties || {};
-        renderWokwiElement(componentType, "edit-component-preview", properties);
-      } catch (error) {
-        console.error("Error rendering edit component preview:", error);
-      }
-    }
-  }, [wokwiReady, editedComponent, activeTab]);
-
   if (!user) {
     return <Navigate to="/login" />;
   }
@@ -320,7 +315,8 @@ const ComponentLibrary = () => {
       pins: 2,
       enabled: true,
       description: "New component description",
-      properties: { color: "red" }
+      properties: { color: "red" },
+      isOriginal: true
     };
     
     setAllComponents([...allComponents, newComponent]);
@@ -351,6 +347,11 @@ const ComponentLibrary = () => {
 
   const handleSaveComponent = () => {
     if (!editedComponent) return;
+    
+    // Check if the component type has changed, and if so, update isOriginal flag
+    if (editedComponent.type !== selectedComponent?.type) {
+      editedComponent.isOriginal = isOriginalWokwiComponent(editedComponent.type);
+    }
     
     setAllComponents(prevComponents => 
       prevComponents.map(comp => 
@@ -394,6 +395,15 @@ const ComponentLibrary = () => {
       
       if (property === 'enabled') {
         return { ...prev, enabled: value };
+      }
+      
+      if (property === 'type') {
+        // When changing the type, update the isOriginal flag
+        return { 
+          ...prev, 
+          type: value,
+          isOriginal: isOriginalWokwiComponent(value)
+        };
       }
       
       if (property.startsWith('properties.')) {
@@ -505,8 +515,8 @@ const ComponentLibrary = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Types</SelectItem>
-                    <SelectItem value="basic">Basic</SelectItem>
-                    <SelectItem value="complex">Complex</SelectItem>
+                    <SelectItem value="original">Original Wokwi</SelectItem>
+                    <SelectItem value="custom">Custom</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -529,7 +539,14 @@ const ComponentLibrary = () => {
                   {filteredComponents.length > 0 ? (
                     filteredComponents.map((component) => (
                       <TableRow key={component.id}>
-                        <TableCell className="font-medium">{component.name}</TableCell>
+                        <TableCell className="font-medium flex items-center gap-2">
+                          {component.name}
+                          {component.isOriginal && (
+                            <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200">
+                              Original
+                            </Badge>
+                          )}
+                        </TableCell>
                         <TableCell>
                           <Badge 
                             variant={
@@ -631,10 +648,9 @@ const ComponentLibrary = () => {
                       <SelectValue placeholder="Select type" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="wokwi-led">LED</SelectItem>
-                      <SelectItem value="wokwi-resistor">Resistor</SelectItem>
-                      <SelectItem value="wokwi-capacitor">Capacitor</SelectItem>
-                      <SelectItem value="wokwi-arduino-uno">Arduino Uno</SelectItem>
+                      {ORIGINAL_WOKWI_COMPONENTS.map(type => (
+                        <SelectItem key={type} value={type}>{type}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -664,9 +680,18 @@ const ComponentLibrary = () => {
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
           <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Edit Component</DialogTitle>
+              <DialogTitle className="flex items-center gap-2">
+                Edit Component
+                {editedComponent?.isOriginal && (
+                  <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200">
+                    Original Wokwi Component
+                  </Badge>
+                )}
+              </DialogTitle>
               <DialogDescription>
-                Modify component properties and configuration.
+                {editedComponent?.isOriginal 
+                  ? "Original Wokwi components have predefined pin configurations. You can modify basic details and properties."
+                  : "Modify component properties and configuration."}
               </DialogDescription>
             </DialogHeader>
 
@@ -680,7 +705,9 @@ const ComponentLibrary = () => {
                 <TabsList className="grid grid-cols-4">
                   <TabsTrigger value="details">Basic Details</TabsTrigger>
                   <TabsTrigger value="properties">Properties</TabsTrigger>
-                  <TabsTrigger value="pins">Pin Configuration</TabsTrigger>
+                  <TabsTrigger value="pins" disabled={editedComponent.isOriginal} title={editedComponent.isOriginal ? "Pin configuration is predefined for original Wokwi components" : ""}>
+                    Pin Configuration
+                  </TabsTrigger>
                   <TabsTrigger value="preview">Preview</TabsTrigger>
                 </TabsList>
                 
@@ -697,11 +724,19 @@ const ComponentLibrary = () => {
                       </div>
                       <div className="grid gap-2">
                         <label htmlFor="type">Wokwi Element Type</label>
-                        <Input 
-                          id="type" 
-                          value={editedComponent.type} 
-                          onChange={(e) => updateComponentProperty('type', e.target.value)}
-                        />
+                        <Select 
+                          value={editedComponent.type}
+                          onValueChange={(value) => updateComponentProperty('type', value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {ORIGINAL_WOKWI_COMPONENTS.map(type => (
+                              <SelectItem key={type} value={type}>{type}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
                     
@@ -759,6 +794,9 @@ const ComponentLibrary = () => {
                         properties={editedComponent.properties || {}}
                         customSvgPath={editedComponent.svgPath}
                         previewId="details-preview"
+                        showPins={showPins}
+                        onShowPinsChange={setShowPins}
+                        isOriginalComponent={editedComponent.isOriginal}
                       />
                     </div>
                   </div>
@@ -777,39 +815,56 @@ const ComponentLibrary = () => {
                       properties={editedComponent.properties || {}}
                       customSvgPath={editedComponent.svgPath}
                       previewId="property-preview"
+                      showPins={showPins}
+                      onShowPinsChange={setShowPins}
+                      isOriginalComponent={editedComponent.isOriginal}
                     />
                   </div>
                 </TabsContent>
                 
                 <TabsContent value="pins" className="py-4">
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div className="lg:col-span-2">
-                      <VisualPinEditor
-                        pins={editedComponent.pinConfig || []}
-                        componentType={editedComponent.type}
-                        onChange={updatePinConfiguration}
-                      />
+                  {editedComponent.isOriginal ? (
+                    <div className="p-6 text-center border rounded-md bg-muted">
+                      <AlertCircle className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                      <h3 className="text-lg font-medium mb-2">Pin Configuration Not Editable</h3>
+                      <p className="text-muted-foreground max-w-md mx-auto">
+                        Pin configuration for original Wokwi components is predefined 
+                        and cannot be modified. You can view the pins in the preview tab.
+                      </p>
                     </div>
-                    
-                    <div>
-                      <EnhancedComponentPreview
-                        componentType={editedComponent.type}
-                        properties={editedComponent.properties || {}}
-                        customSvgPath={editedComponent.svgPath}
-                        previewId="pinEditor-component-preview"
-                      />
+                  ) : (
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                      <div className="lg:col-span-2">
+                        <VisualPinEditor
+                          pins={editedComponent.pinConfig || []}
+                          componentType={editedComponent.type}
+                          onChange={updatePinConfiguration}
+                        />
+                      </div>
                       
-                      <div className="mt-4 p-4 border rounded-md bg-gray-50">
-                        <h4 className="font-medium mb-2">Pin Configuration Tips</h4>
-                        <ul className="text-sm space-y-2 text-muted-foreground">
-                          <li>• Click a pin marker and then click on the grid to reposition it</li>
-                          <li>• Pins should be positioned relative to the component's outline</li>
-                          <li>• For accurate simulation, ensure pin positions match actual component pins</li>
-                          <li>• Each pin must have at least one signal type</li>
-                        </ul>
+                      <div>
+                        <EnhancedComponentPreview
+                          componentType={editedComponent.type}
+                          properties={editedComponent.properties || {}}
+                          customSvgPath={editedComponent.svgPath}
+                          previewId="pinEditor-component-preview"
+                          showPins={showPins}
+                          onShowPinsChange={setShowPins}
+                          isOriginalComponent={editedComponent.isOriginal}
+                        />
+                        
+                        <div className="mt-4 p-4 border rounded-md bg-gray-50">
+                          <h4 className="font-medium mb-2">Pin Configuration Tips</h4>
+                          <ul className="text-sm space-y-2 text-muted-foreground">
+                            <li>• Click a pin marker and then click on the grid to reposition it</li>
+                            <li>• Pins should be positioned relative to the component's outline</li>
+                            <li>• For accurate simulation, ensure pin positions match actual component pins</li>
+                            <li>• Each pin must have at least one signal type</li>
+                          </ul>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
                 </TabsContent>
                 
                 <TabsContent value="preview" className="py-4">
@@ -819,6 +874,9 @@ const ComponentLibrary = () => {
                       properties={editedComponent.properties || {}}
                       customSvgPath={editedComponent.svgPath}
                       previewId="edit-component-preview"
+                      showPins={showPins}
+                      onShowPinsChange={setShowPins}
+                      isOriginalComponent={editedComponent.isOriginal}
                     />
                     
                     <div className="border rounded-md p-4">
@@ -842,7 +900,14 @@ const ComponentLibrary = () => {
         <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
           <DialogContent className="sm:max-w-[800px]">
             <DialogHeader>
-              <DialogTitle>Component Details</DialogTitle>
+              <DialogTitle className="flex items-center gap-2">
+                Component Details
+                {selectedComponent?.isOriginal && (
+                  <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200">
+                    Original Wokwi Component
+                  </Badge>
+                )}
+              </DialogTitle>
               <DialogDescription>
                 View component specifications and configuration.
               </DialogDescription>
@@ -896,6 +961,9 @@ const ComponentLibrary = () => {
                       properties={selectedComponent.properties || {}}
                       customSvgPath={selectedComponent.svgPath}
                       previewId="component-preview"
+                      showPins={showPins}
+                      onShowPinsChange={setShowPins}
+                      isOriginalComponent={selectedComponent.isOriginal}
                     />
                   </div>
                 </div>

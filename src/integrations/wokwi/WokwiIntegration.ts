@@ -63,13 +63,15 @@ export interface WokwiComponent {
   left: number;
   attributes: WokwiElementProps;
   pins?: WokwiPin[];
+  isOriginal?: boolean; // Flag to indicate if this is an original Wokwi component
 }
 
 // Function to render a wokwi element with given properties
 export const renderWokwiElement = (
   type: string, 
   elementId: string, 
-  props: WokwiElementProps
+  props: WokwiElementProps,
+  showPins: boolean = false
 ): void => {
   if (!isWokwiLoaded()) {
     console.error('Wokwi elements are not loaded yet');
@@ -82,6 +84,9 @@ export const renderWokwiElement = (
     return;
   }
 
+  // Clear existing content
+  element.innerHTML = '';
+  
   // Create the wokwi element
   const wokwiElement = document.createElement(type);
   
@@ -90,9 +95,43 @@ export const renderWokwiElement = (
     wokwiElement.setAttribute(key, String(value));
   });
   
-  // Clear existing content and append the new element
-  element.innerHTML = '';
-  element.appendChild(wokwiElement);
+  // If showPins is enabled, wrap in wokwi-show-pins element
+  if (showPins) {
+    const pinsElement = document.createElement('wokwi-show-pins');
+    pinsElement.appendChild(wokwiElement);
+    element.appendChild(pinsElement);
+  } else {
+    element.appendChild(wokwiElement);
+  }
+};
+
+// List of official Wokwi component types
+export const ORIGINAL_WOKWI_COMPONENTS = [
+  'wokwi-led',
+  'wokwi-resistor',
+  'wokwi-capacitor',
+  'wokwi-arduino-uno',
+  'wokwi-arduino-nano',
+  'wokwi-esp32-devkit-v1',
+  'wokwi-pushbutton',
+  'wokwi-slide-switch',
+  'wokwi-7segment',
+  'wokwi-buzzer',
+  'wokwi-potentiometer',
+  'wokwi-servo',
+  'wokwi-lcd1602',
+  'wokwi-membrane-keypad',
+  'wokwi-stepper-motor',
+  'wokwi-relay',
+  'wokwi-ir-remote',
+  'wokwi-ir-receiver',
+  'wokwi-dht22',
+  'wokwi-logic-analyzer'
+];
+
+// Check if a component type is an original Wokwi component
+export const isOriginalWokwiComponent = (type: string): boolean => {
+  return ORIGINAL_WOKWI_COMPONENTS.includes(type);
 };
 
 // Get information about pins for a specific component type
@@ -127,7 +166,8 @@ export const createComponent = (type: string, props: WokwiElementProps = {}): Wo
     top: 0,
     left: 0,
     attributes: props,
-    pins: getComponentPinInfo(type)
+    pins: getComponentPinInfo(type),
+    isOriginal: isOriginalWokwiComponent(type)
   };
 };
 

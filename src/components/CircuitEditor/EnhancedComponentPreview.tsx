@@ -1,7 +1,9 @@
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Cpu, ExternalLink, RefreshCw } from 'lucide-react';
+import { Cpu, ExternalLink, RefreshCw, EyeIcon, EyeOffIcon } from 'lucide-react';
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { 
   isWokwiLoaded, 
   renderWokwiElement 
@@ -12,7 +14,10 @@ interface EnhancedComponentPreviewProps {
   properties: Record<string, any>;
   customSvgPath?: string;
   previewId: string;
+  showPins?: boolean;
+  onShowPinsChange?: (showPins: boolean) => void;
   onSizeChange?: (width: number, height: number) => void;
+  isOriginalComponent?: boolean;
 }
 
 const EnhancedComponentPreview: React.FC<EnhancedComponentPreviewProps> = ({
@@ -20,13 +25,26 @@ const EnhancedComponentPreview: React.FC<EnhancedComponentPreviewProps> = ({
   properties,
   customSvgPath,
   previewId,
-  onSizeChange
+  showPins = true,
+  onShowPinsChange,
+  onSizeChange,
+  isOriginalComponent = true
 }) => {
   const [isReady, setIsReady] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [elementSize, setElementSize] = useState({ width: 0, height: 0 });
+  const [showPinsState, setShowPinsState] = useState(showPins);
   const previewContainerRef = useRef<HTMLDivElement>(null);
+  
+  // Handler for toggling pin visibility
+  const handleTogglePins = () => {
+    const newState = !showPinsState;
+    setShowPinsState(newState);
+    if (onShowPinsChange) {
+      onShowPinsChange(newState);
+    }
+  };
   
   useEffect(() => {
     const checkWokwiReady = async () => {
@@ -59,16 +77,40 @@ const EnhancedComponentPreview: React.FC<EnhancedComponentPreviewProps> = ({
       setIsLoading(true);
       
       try {
-        // If using custom SVG, we would need to handle it differently
-        // For this implementation, we're focusing on wokwi built-in elements
-        renderWokwiElement(componentType, previewId, properties);
+        // Create a container for the component
+        const container = document.getElementById(previewId);
+        if (!container) {
+          throw new Error(`Container with ID ${previewId} not found`);
+        }
+        
+        // Clear the container
+        container.innerHTML = '';
+        
+        // Create the wokwi element
+        const element = document.createElement(componentType);
+        
+        // Set the properties
+        Object.entries(properties).forEach(([key, value]) => {
+          element.setAttribute(key, String(value));
+        });
+        
+        // If showPins is enabled, create a wokwi-pins element wrapper
+        if (showPinsState) {
+          const pinsElement = document.createElement('wokwi-show-pins');
+          pinsElement.appendChild(element);
+          container.appendChild(pinsElement);
+        } else {
+          container.appendChild(element);
+        }
         
         // Add a slight delay to allow the element to render
         setTimeout(() => {
-          const element = document.getElementById(previewId)?.firstElementChild;
+          const elementToMeasure = showPinsState 
+            ? container?.querySelector('wokwi-show-pins') 
+            : container?.firstElementChild;
           
-          if (element) {
-            const rect = element.getBoundingClientRect();
+          if (elementToMeasure) {
+            const rect = elementToMeasure.getBoundingClientRect();
             setElementSize({ 
               width: Math.round(rect.width), 
               height: Math.round(rect.height) 
@@ -89,13 +131,13 @@ const EnhancedComponentPreview: React.FC<EnhancedComponentPreviewProps> = ({
     };
     
     renderComponent();
-  }, [isReady, componentType, properties, previewId, onSizeChange]);
+  }, [isReady, componentType, properties, previewId, showPinsState, onSizeChange]);
   
   const handleRefresh = () => {
     if (!isReady || !componentType) return;
     
     try {
-      renderWokwiElement(componentType, previewId, properties);
+      renderWokwiElement(componentType, previewId, properties, showPinsState);
     } catch (err) {
       console.error("Error refreshing component:", err);
       setError(`Failed to refresh ${componentType}`);
@@ -112,6 +154,20 @@ const EnhancedComponentPreview: React.FC<EnhancedComponentPreviewProps> = ({
               {elementSize.width}×{elementSize.height}px
             </span>
           )}
+          <div className="flex items-center space-x-2 mr-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleTogglePins}
+              title={showPinsState ? "Hide pins" : "Show pins"}
+            >
+              {showPinsState ? (
+                <EyeOffIcon className="h-4 w-4" />
+              ) : (
+                <EyeIcon className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
           <Button 
             variant="outline" 
             size="sm"
@@ -164,7 +220,14 @@ const EnhancedComponentPreview: React.FC<EnhancedComponentPreviewProps> = ({
       
       {componentType && (
         <div className="mt-3 text-sm flex items-center justify-between">
-          <span className="font-mono text-muted-foreground">{componentType}</span>
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-muted-foreground">{componentType}</span>
+            {isOriginalComponent && (
+              <span className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded">
+                Original
+              </span>
+            )}
+          </div>
           <a 
             href={`https://docs.wokwi.com/parts/${componentType}`} 
             target="_blank" 
