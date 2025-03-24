@@ -644,7 +644,7 @@ const ComponentLibrary = () => {
                     <SelectTrigger>
                       <SelectValue placeholder="Select type" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="max-h-[300px] overflow-y-auto">
                       {ORIGINAL_WOKWI_COMPONENTS.map(type => (
                         <SelectItem key={type} value={type}>{type}</SelectItem>
                       ))}
@@ -728,7 +728,7 @@ const ComponentLibrary = () => {
                           <SelectTrigger>
                             <SelectValue placeholder="Select type" />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className="max-h-[300px] overflow-y-auto">
                             {ORIGINAL_WOKWI_COMPONENTS.map(type => (
                               <SelectItem key={type} value={type}>{type}</SelectItem>
                             ))}

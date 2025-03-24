@@ -110,6 +110,7 @@ export const ORIGINAL_WOKWI_COMPONENTS = [
   'wokwi-led',
   'wokwi-resistor',
   'wokwi-capacitor',
+  'wokwi-battery',
   'wokwi-arduino-uno',
   'wokwi-arduino-nano',
   'wokwi-esp32-devkit-v1',
@@ -126,7 +127,10 @@ export const ORIGINAL_WOKWI_COMPONENTS = [
   'wokwi-ir-remote',
   'wokwi-ir-receiver',
   'wokwi-dht22',
-  'wokwi-logic-analyzer'
+  'wokwi-logic-analyzer',
+  'wokwi-neopixel',
+  'wokwi-piezo',
+  'wokwi-ultrasonic-distance-sensor'
 ];
 
 // Check if a component type is an original Wokwi component
@@ -148,10 +152,29 @@ export const getComponentPinInfo = (componentType: string): WokwiPin[] => {
       { name: '1', x: 0, y: 0, signals: ['passive'] },
       { name: '2', x: 0, y: 20, signals: ['passive'] }
     ],
+    'wokwi-capacitor': [
+      { name: '1', x: 0, y: 0, signals: ['passive'] },
+      { name: '2', x: 0, y: 20, signals: ['passive'] }
+    ],
     'wokwi-arduino-uno': [
       { name: 'D0', x: 0, y: 0, signals: ['digital'] },
       { name: 'D1', x: 0, y: 10, signals: ['digital'] },
       // Additional pins would be defined here
+    ],
+    'wokwi-pushbutton': [
+      { name: '1', x: -10, y: 0, signals: ['passive'] },
+      { name: '2', x: 10, y: 0, signals: ['passive'] },
+      { name: '3', x: -10, y: 20, signals: ['passive'] },
+      { name: '4', x: 10, y: 20, signals: ['passive'] }
+    ],
+    'wokwi-buzzer': [
+      { name: '+', x: -10, y: 0, signals: ['power'] },
+      { name: '-', x: 10, y: 0, signals: ['ground'] }
+    ],
+    'wokwi-dht22': [
+      { name: 'VCC', x: -10, y: 0, signals: ['power'] },
+      { name: 'DATA', x: 0, y: 0, signals: ['digital'] },
+      { name: 'GND', x: 10, y: 0, signals: ['ground'] }
     ]
   };
   
