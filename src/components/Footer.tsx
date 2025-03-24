@@ -12,7 +12,7 @@ const Footer = () => {
           <div className="flex flex-col gap-4">
             <Link to="/" className="flex items-center gap-2">
               <CircuitBoard className="h-6 w-6 text-primary" />
-              <span className="text-xl font-bold text-slate-900">CircuitSim</span>
+              <span className="text-xl font-bold text-slate-900">DeepCircuits</span>
             </Link>
             <p className="text-sm text-slate-600">
               A web-based, interactive 2D electronics and microcontroller circuit simulator for hobbyists and students.
@@ -114,7 +114,7 @@ const Footer = () => {
         </div>
 
         <div className="mt-10 border-t border-neutral-100 pt-8 text-center text-sm text-slate-600">
-          <p>&copy; {currentYear} CircuitSim. All rights reserved.</p>
+          <p>&copy; {currentYear} DeepCircuits. All rights reserved.</p>
           <p className="mt-2">
             Built with passion for electronics and education.
           </p>

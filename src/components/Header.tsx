@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { CircuitBoard, Menu, User, X, Settings, Shield, LogOut } from "lucide-react";
@@ -27,7 +28,7 @@ const Header = () => {
       <div className="container flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2" onClick={closeMenu}>
           <CircuitBoard className="h-6 w-6 text-primary" />
-          <span className="text-xl font-bold text-slate-900">CircuitSim</span>
+          <span className="text-xl font-bold text-slate-900">DeepCircuits</span>
         </Link>
 
         {/* Desktop Navigation */}

@@ -1,3 +1,4 @@
+
 import * as React from "react";
 import { Link } from "react-router-dom";
 import { CircuitBoard, BookOpen, Info, Users } from "lucide-react";
@@ -28,7 +29,7 @@ export function MainNavigation() {
                   >
                     <CircuitBoard className="h-6 w-6" />
                     <div className="mb-2 mt-4 text-lg font-medium">
-                      CircuitSim
+                      DeepCircuits
                     </div>
                     <p className="text-sm leading-tight text-muted-foreground">
                       A web-based, interactive 2D electronics and microcontroller circuit simulator.
@@ -37,10 +38,10 @@ export function MainNavigation() {
                 </NavigationMenuLink>
               </li>
               <ListItem to="/features" title="Features Overview" icon={BookOpen}>
-                Explore all the features CircuitSim has to offer
+                Explore all the features DeepCircuits has to offer
               </ListItem>
               <ListItem to="/tutorials" title="Tutorials" icon={BookOpen}>
-                Learn how to use CircuitSim with our step-by-step tutorials
+                Learn how to use DeepCircuits with our step-by-step tutorials
               </ListItem>
               <ListItem to="/documentation" title="Documentation" icon={BookOpen}>
                 Detailed documentation for all components and functions
@@ -53,10 +54,10 @@ export function MainNavigation() {
           <NavigationMenuContent>
             <ul className="grid w-[400px] gap-3 p-4 md:grid-cols-2">
               <ListItem to="/about" title="About Us" icon={Info}>
-                Our mission and vision for CircuitSim
+                Our mission and vision for DeepCircuits
               </ListItem>
               <ListItem to="/team" title="Our Team" icon={Users}>
-                Meet the team behind CircuitSim
+                Meet the team behind DeepCircuits
               </ListItem>
               <ListItem to="/contact" title="Contact" icon={Info}>
                 Get in touch with our support team

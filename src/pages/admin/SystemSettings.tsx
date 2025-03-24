@@ -103,7 +103,7 @@ const SystemSettings = () => {
   const generalForm = useForm({
     resolver: zodResolver(generalSettingsSchema),
     defaultValues: {
-      siteName: "CircuitSim",
+      siteName: "DeepCircuits",
       logoUrl: "",
       maintenanceMode: false,
       debugMode: true,
@@ -196,7 +196,7 @@ const SystemSettings = () => {
           <CardHeader>
             <CardTitle>Global Configuration</CardTitle>
             <CardDescription>
-              Configure system-wide settings for the CircuitSim application
+              Configure system-wide settings for the DeepCircuits application
             </CardDescription>
           </CardHeader>
           <CardContent>
