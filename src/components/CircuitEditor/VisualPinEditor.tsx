@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect, WheelEvent } from 'react';
 import { Move, Plus, X, ZoomIn, ZoomOut } from 'lucide-react';
 import { Button } from "@/components/ui/button";
@@ -95,20 +94,6 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
             if (element instanceof HTMLElement) {
               setComponentElement(element);
               console.log("Component element found and positioned at top-left (0,0)");
-              
-              // Add a visual marker at the component's origin (0,0)
-              const originMarker = document.createElement('div');
-              originMarker.style.position = 'absolute';
-              originMarker.style.width = '6px';
-              originMarker.style.height = '6px';
-              originMarker.style.backgroundColor = 'red';
-              originMarker.style.borderRadius = '50%';
-              originMarker.style.top = '0px';
-              originMarker.style.left = '0px';
-              originMarker.style.transform = 'translate(-50%, -50%)';
-              originMarker.style.zIndex = '100';
-              originMarker.title = 'Component origin (0,0)';
-              wrapper.appendChild(originMarker);
             }
           }, 200);
         }
@@ -131,13 +116,14 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
     
     // Get preview wrapper element position
     const previewWrapper = previewRef.current?.firstElementChild;
-    if (!previewWrapper) return;
+    if (!previewWrapper || !componentElement) return;
     
     const previewRect = previewWrapper.getBoundingClientRect();
+    const componentRect = componentElement.getBoundingClientRect();
     
     // Calculate coordinates relative to component's top-left (0,0)
-    const canvasX = (e.clientX - previewRect.left - offset.x) / zoom;
-    const canvasY = (e.clientY - previewRect.top - offset.y) / zoom;
+    const canvasX = (e.clientX - componentRect.left) / zoom;
+    const canvasY = (e.clientY - componentRect.top) / zoom;
     
     // Check if clicking on an existing pin
     for (let i = 0; i < pinData.length; i++) {
@@ -179,16 +165,12 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
       return;
     }
     
-    if (draggingPin !== null) {
-      // Get preview wrapper element position
-      const previewWrapper = previewRef.current?.firstElementChild;
-      if (!previewWrapper) return;
-      
-      const previewRect = previewWrapper.getBoundingClientRect();
+    if (draggingPin !== null && componentElement) {
+      const componentRect = componentElement.getBoundingClientRect();
       
       // Calculate coordinates relative to component's top-left (0,0)
-      const canvasX = (e.clientX - previewRect.left - offset.x) / zoom;
-      const canvasY = (e.clientY - previewRect.top - offset.y) / zoom;
+      const canvasX = (e.clientX - componentRect.left) / zoom;
+      const canvasY = (e.clientY - componentRect.top) / zoom;
       
       // Update the pin position
       const updatedPins = [...pinData];
@@ -339,19 +321,18 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
               }}
             ></div>
             
-            {/* Render pins - positions are now relative to component's top-left (0,0) */}
-            {pinData.map((pin, i) => {
-              const previewWrapper = previewRef.current?.firstElementChild;
-              if (!previewWrapper) return null;
-              
-              // Pin coordinates are relative to component's top-left (0,0)
+            {/* Render pins - positions are relative to component's top-left (0,0) */}
+            {componentElement && pinData.map((pin, i) => {
+              // Calculate absolute position based on the component's position
+              // We cast to HTMLElement to access offsetLeft and offsetTop properties
+              const compEl = componentElement as HTMLElement;
               return (
                 <div 
                   key={i} 
                   className="absolute" 
                   style={{
-                    left: `${previewWrapper.offsetLeft + Number(pin.x)}px`,
-                    top: `${previewWrapper.offsetTop + Number(pin.y)}px`,
+                    left: `${compEl.offsetLeft + Number(pin.x)}px`,
+                    top: `${compEl.offsetTop + Number(pin.y)}px`,
                     transform: 'translate(-50%, -50%)',
                     cursor: readonly ? 'default' : 'move',
                     zIndex: 10

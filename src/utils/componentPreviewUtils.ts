@@ -40,6 +40,20 @@ export const renderWokwiComponentPreview = async (
         wokwiElement.style.left = '0';
         wokwiElement.style.top = '0';
         
+        // Add a visible origin marker to help users see the (0,0) point
+        const originMarker = document.createElement('div');
+        originMarker.style.position = 'absolute';
+        originMarker.style.width = '6px';
+        originMarker.style.height = '6px';
+        originMarker.style.backgroundColor = 'red';
+        originMarker.style.borderRadius = '50%';
+        originMarker.style.top = '0px';
+        originMarker.style.left = '0px';
+        originMarker.style.transform = 'translate(-50%, -50%)';
+        originMarker.style.zIndex = '100';
+        originMarker.title = 'Component origin (0,0)';
+        placeholderElement.appendChild(originMarker);
+        
         // Log element dimensions for debugging
         console.log(`Wokwi element ${componentType} dimensions:`, {
           width: wokwiElement.offsetWidth,
