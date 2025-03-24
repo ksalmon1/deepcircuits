@@ -297,23 +297,25 @@ const ComponentLibrary = () => {
     setActiveTab("details");
 
     const { data: componentDetails, isLoading, error } = useComponentDetails(component.id);
-    
-    if (componentDetails) {
-      console.log("Component details loaded:", componentDetails);
-      const fullComponent = {
-        ...component,
-        pins: componentDetails.pins || [],
-        properties: componentDetails.properties || {}
-      };
-      setEditedComponent(fullComponent);
-    } else if (error) {
-      console.error("Error loading component details:", error);
-      toast({
-        title: "Error loading component details",
-        description: "Could not load pins and properties for this component.",
-        variant: "destructive"
-      });
-    }
+
+    useEffect(() => {
+      if (componentDetails) {
+        console.log("Component details loaded:", componentDetails);
+        const fullComponent = {
+          ...component,
+          pins: componentDetails.pins || [],
+          properties: componentDetails.properties || {}
+        };
+        setEditedComponent(fullComponent);
+      } else if (error) {
+        console.error("Error loading component details:", error);
+        toast({
+          title: "Error loading component details",
+          description: "Could not load pins and properties for this component.",
+          variant: "destructive"
+        });
+      }
+    }, [componentDetails, error, component]);
   };
 
   const handleViewComponent = (component: ComponentLibraryItem) => {
@@ -322,22 +324,24 @@ const ComponentLibrary = () => {
     
     const { data: componentDetails, isLoading, error } = useComponentDetails(component.id);
     
-    if (componentDetails) {
-      console.log("Component details loaded for view:", componentDetails);
-      const fullComponent = {
-        ...component,
-        pins: componentDetails.pins || [],
-        properties: componentDetails.properties || {}
-      };
-      setSelectedComponent(fullComponent);
-    } else if (error) {
-      console.error("Error loading component details for view:", error);
-      toast({
-        title: "Error loading component details",
-        description: "Could not load pins and properties for this component.",
-        variant: "destructive"
-      });
-    }
+    useEffect(() => {
+      if (componentDetails) {
+        console.log("Component details loaded for view:", componentDetails);
+        const fullComponent = {
+          ...component,
+          pins: componentDetails.pins || [],
+          properties: componentDetails.properties || {}
+        };
+        setSelectedComponent(fullComponent);
+      } else if (error) {
+        console.error("Error loading component details for view:", error);
+        toast({
+          title: "Error loading component details",
+          description: "Could not load pins and properties for this component.",
+          variant: "destructive"
+        });
+      }
+    }, [componentDetails, error, component]);
   };
 
   const handleDeleteComponent = (component: ComponentLibraryItem) => {

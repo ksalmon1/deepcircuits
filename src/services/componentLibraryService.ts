@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ComponentPin } from "@/types/database";
@@ -64,22 +65,26 @@ export const getAllComponents = async (): Promise<ComponentLibraryItem[]> => {
  */
 export const getComponentWithDetails = async (componentId: string): Promise<any> => {
   try {
-    // Use the RPC function to get the component with all its details
-    const { data, error } = await supabase
+    console.log('Fetching component details for ID:', componentId);
+    
+    // First try to use the RPC function
+    const { data: rpcData, error: rpcError } = await supabase
       .rpc('get_component_with_details', { component_id: componentId });
 
-    if (error) {
-      console.error('Error fetching component details:', error);
-      throw error;
-    }
-
-    if (!data) {
-      // If no data returned, attempt to fetch component data directly
-      console.log('No data returned from RPC, falling back to direct queries');
+    if (rpcError) {
+      console.error('Error fetching component details via RPC:', rpcError);
+      console.log('Falling back to direct queries');
       return await getComponentDetailsDirectly(componentId);
     }
 
-    return data;
+    if (!rpcData) {
+      // If no data returned from RPC, fall back to direct queries
+      console.log('No data returned from RPC, falling back to direct queries');
+      return await getComponentDetailsDirectly(componentId);
+    }
+    
+    console.log('Component details fetched via RPC:', rpcData);
+    return rpcData;
   } catch (error) {
     console.error('Error in getComponentWithDetails:', error);
     console.log('Falling back to direct queries due to error');
@@ -92,6 +97,8 @@ export const getComponentWithDetails = async (componentId: string): Promise<any>
  */
 const getComponentDetailsDirectly = async (componentId: string): Promise<any> => {
   try {
+    console.log('Getting component details directly for ID:', componentId);
+    
     // Get component basic info
     const { data: componentData, error: componentError } = await supabase
       .from('component_library')
@@ -125,6 +132,10 @@ const getComponentDetailsDirectly = async (componentId: string): Promise<any> =>
       console.error('Error fetching properties:', propertiesError);
       throw propertiesError;
     }
+
+    console.log('Component data:', componentData);
+    console.log('Pins data:', pinsData);
+    console.log('Properties data:', propertiesData);
 
     // Convert properties to key-value pairs
     const properties: Record<string, any> = {};
