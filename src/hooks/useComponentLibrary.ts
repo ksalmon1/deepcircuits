@@ -11,6 +11,7 @@ import {
 
 /**
  * Hook for interacting with the component library
+ * Provides data fetching, caching, and CRUD operations
  */
 export const useComponentLibrary = () => {
   const queryClient = useQueryClient();
