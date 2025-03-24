@@ -1,9 +1,12 @@
+
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { 
   isWokwiLoaded, 
   forceLoadWokwiElements, 
   WokwiComponent, 
-  renderWokwiElement 
+  renderWokwiElement,
+  getComponentPinInfo,
+  WokwiPin
 } from '@/integrations/wokwi/WokwiIntegration';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
@@ -25,6 +28,8 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
   const [isPanning, setIsPanning] = useState(false);
   const [startPanPoint, setStartPanPoint] = useState({ x: 0, y: 0 });
   const [panMode, setPanMode] = useState(false);
+  const [hoveredComponent, setHoveredComponent] = useState<string | null>(null);
+  const [hoveredPins, setHoveredPins] = useState<WokwiPin[]>([]);
 
   const checkWokwiLoaded = useCallback(async () => {
     console.log('Checking if Wokwi is loaded, attempt:', loadingAttempts + 1);
@@ -149,11 +154,55 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
         key={id}
         className="absolute"
         style={{ top: `${top}px`, left: `${left}px` }}
+        onMouseEnter={() => handleComponentHover(id, type)}
+        onMouseLeave={() => handleComponentHoverExit()}
       >
         <div id={`wokwi-element-${id}`}></div>
+        {hoveredComponent === id && hoveredPins.length > 0 && (
+          <div className="pin-tooltip absolute z-20">
+            {hoveredPins.map((pin, index) => (
+              <div 
+                key={index}
+                className="absolute bg-black text-white text-xs px-1 py-0.5 rounded-sm opacity-80"
+                style={{ 
+                  top: `${pin.y}px`, 
+                  left: `${pin.x}px`, 
+                  transform: 'translate(-50%, -100%)',
+                  marginTop: '-5px'
+                }}
+              >
+                {pin.name}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     );
-  }, []);
+  }, [hoveredComponent, hoveredPins]);
+
+  const handleComponentHover = (id: string, type: string) => {
+    setHoveredComponent(id);
+    const pins = getComponentPinInfo(type);
+    setHoveredPins(pins);
+    // Add a subtle highlight or outline to the component
+    const element = document.getElementById(`wokwi-element-${id}`);
+    if (element && element.firstChild) {
+      (element.firstChild as HTMLElement).style.outline = '2px solid #4C72F4';
+      (element.firstChild as HTMLElement).style.outlineOffset = '2px';
+    }
+  };
+
+  const handleComponentHoverExit = () => {
+    // Remove highlight from previous component
+    if (hoveredComponent) {
+      const element = document.getElementById(`wokwi-element-${hoveredComponent}`);
+      if (element && element.firstChild) {
+        (element.firstChild as HTMLElement).style.outline = 'none';
+      }
+    }
+    setHoveredComponent(null);
+    setHoveredPins([]);
+  };
 
   useEffect(() => {
     if (!isReady) return;

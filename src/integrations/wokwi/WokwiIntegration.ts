@@ -1,4 +1,3 @@
-
 import '@wokwi/elements';
 
 // Track whether we've seen the components load successfully
@@ -105,7 +104,7 @@ export const renderWokwiElement = (
   }
 };
 
-// List of official Wokwi component types - Updated to include all available components based on https://elements.wokwi.com/
+// List of official Wokwi component types
 export const ORIGINAL_WOKWI_COMPONENTS = [
   'wokwi-led',
   'wokwi-resistor',
@@ -183,9 +182,6 @@ export const isOriginalWokwiComponent = (type: string): boolean => {
 
 // Get information about pins for a specific component type
 export const getComponentPinInfo = (componentType: string): WokwiPin[] => {
-  // This is a simplified version - in a real implementation, you might fetch this from a database
-  // or have a more comprehensive mapping
-  
   const pinMappings: Record<string, WokwiPin[]> = {
     'wokwi-led': [
       { name: 'A', x: 0, y: 0, signals: ['power'] },
@@ -204,9 +200,60 @@ export const getComponentPinInfo = (componentType: string): WokwiPin[] => {
       { name: '-', x: 0, y: 20, signals: ['ground'] }
     ],
     'wokwi-arduino-uno': [
-      { name: 'D0', x: 0, y: 0, signals: ['digital'] },
-      { name: 'D1', x: 0, y: 10, signals: ['digital'] },
-      // Additional pins would be defined here
+      { name: 'D0/RX', x: -75, y: -5, signals: ['digital', 'rx'] },
+      { name: 'D1/TX', x: -75, y: 5, signals: ['digital', 'tx'] },
+      { name: 'D2', x: -75, y: 15, signals: ['digital'] },
+      { name: 'D3', x: -75, y: 25, signals: ['digital', 'pwm'] },
+      { name: 'D4', x: -75, y: 35, signals: ['digital'] },
+      { name: 'D5', x: -75, y: 45, signals: ['digital', 'pwm'] },
+      { name: 'D6', x: -75, y: 55, signals: ['digital', 'pwm'] },
+      { name: 'D7', x: -75, y: 65, signals: ['digital'] },
+      { name: 'D8', x: -75, y: 75, signals: ['digital'] },
+      { name: 'D9', x: -75, y: 85, signals: ['digital', 'pwm'] },
+      { name: 'D10', x: -75, y: 95, signals: ['digital', 'pwm', 'spi'] },
+      { name: 'D11', x: -75, y: 105, signals: ['digital', 'pwm', 'spi'] },
+      { name: 'D12', x: -75, y: 115, signals: ['digital', 'spi'] },
+      { name: 'D13', x: -75, y: 125, signals: ['digital', 'spi'] },
+      { name: 'A0', x: 75, y: -5, signals: ['analog'] },
+      { name: 'A1', x: 75, y: 5, signals: ['analog'] },
+      { name: 'A2', x: 75, y: 15, signals: ['analog'] },
+      { name: 'A3', x: 75, y: 25, signals: ['analog'] },
+      { name: 'A4', x: 75, y: 35, signals: ['analog', 'i2c'] },
+      { name: 'A5', x: 75, y: 45, signals: ['analog', 'i2c'] },
+      { name: '5V', x: 75, y: 65, signals: ['power'] },
+      { name: 'GND', x: 75, y: 75, signals: ['ground'] },
+      { name: 'GND', x: 75, y: 85, signals: ['ground'] },
+      { name: 'VIN', x: 75, y: 95, signals: ['power'] },
+    ],
+    'wokwi-esp32-devkit-v1': [
+      { name: '3V3', x: -60, y: -5, signals: ['power'] },
+      { name: 'GND', x: -60, y: 5, signals: ['ground'] },
+      { name: 'D15', x: -60, y: 15, signals: ['digital'] },
+      { name: 'D2', x: -60, y: 25, signals: ['digital'] },
+      { name: 'D4', x: -60, y: 35, signals: ['digital'] },
+      { name: 'D16', x: -60, y: 45, signals: ['digital', 'rx'] },
+      { name: 'D17', x: -60, y: 55, signals: ['digital', 'tx'] },
+      { name: 'D5', x: -60, y: 65, signals: ['digital'] },
+      { name: 'D18', x: -60, y: 75, signals: ['digital'] },
+      { name: 'D19', x: -60, y: 85, signals: ['digital'] },
+      { name: 'D21', x: -60, y: 95, signals: ['digital', 'i2c'] },
+      { name: 'D22', x: -60, y: 105, signals: ['digital'] },
+      { name: 'D23', x: -60, y: 115, signals: ['digital'] },
+      { name: 'VIN', x: -60, y: 125, signals: ['power'] },
+      { name: 'D13', x: 60, y: -5, signals: ['digital'] },
+      { name: 'D12', x: 60, y: 5, signals: ['digital'] },
+      { name: 'D14', x: 60, y: 15, signals: ['digital'] },
+      { name: 'D27', x: 60, y: 25, signals: ['digital'] },
+      { name: 'D26', x: 60, y: 35, signals: ['digital'] },
+      { name: 'D25', x: 60, y: 45, signals: ['digital'] },
+      { name: 'D33', x: 60, y: 55, signals: ['digital'] },
+      { name: 'D32', x: 60, y: 65, signals: ['digital'] },
+      { name: 'D35', x: 60, y: 75, signals: ['digital'] },
+      { name: 'D34', x: 60, y: 85, signals: ['digital'] },
+      { name: 'VN', x: 60, y: 95, signals: ['analog'] },
+      { name: 'VP', x: 60, y: 105, signals: ['analog'] },
+      { name: 'EN', x: 60, y: 115, signals: ['digital'] },
+      { name: 'GND', x: 60, y: 125, signals: ['ground'] },
     ],
     'wokwi-pushbutton': [
       { name: '1', x: -10, y: 0, signals: ['passive'] },
@@ -237,6 +284,53 @@ export const getComponentPinInfo = (componentType: string): WokwiPin[] => {
       { name: '1', x: -10, y: 0, signals: ['passive'] },
       { name: '2', x: 0, y: 0, signals: ['passive'] },
       { name: '3', x: 10, y: 0, signals: ['passive'] }
+    ],
+    'wokwi-lcd1602': [
+      { name: 'VSS', x: -70, y: 0, signals: ['ground'] },
+      { name: 'VDD', x: -60, y: 0, signals: ['power'] },
+      { name: 'V0', x: -50, y: 0, signals: ['analog'] },
+      { name: 'RS', x: -40, y: 0, signals: ['digital'] },
+      { name: 'RW', x: -30, y: 0, signals: ['digital'] },
+      { name: 'E', x: -20, y: 0, signals: ['digital'] },
+      { name: 'D0', x: -10, y: 0, signals: ['digital'] },
+      { name: 'D1', x: 0, y: 0, signals: ['digital'] },
+      { name: 'D2', x: 10, y: 0, signals: ['digital'] },
+      { name: 'D3', x: 20, y: 0, signals: ['digital'] },
+      { name: 'D4', x: 30, y: 0, signals: ['digital'] },
+      { name: 'D5', x: 40, y: 0, signals: ['digital'] },
+      { name: 'D6', x: 50, y: 0, signals: ['digital'] },
+      { name: 'D7', x: 60, y: 0, signals: ['digital'] },
+      { name: 'A', x: 70, y: 0, signals: ['power'] },
+      { name: 'K', x: 80, y: 0, signals: ['ground'] },
+    ],
+    'wokwi-rgb-led': [
+      { name: 'R', x: -10, y: 0, signals: ['digital'] },
+      { name: 'COM', x: 0, y: 0, signals: ['ground'] },
+      { name: 'G', x: 5, y: 0, signals: ['digital'] },
+      { name: 'B', x: 10, y: 0, signals: ['digital'] }
+    ],
+    'wokwi-ultrasonic-distance-sensor': [
+      { name: 'VCC', x: -15, y: 0, signals: ['power'] },
+      { name: 'TRIG', x: -5, y: 0, signals: ['digital'] },
+      { name: 'ECHO', x: 5, y: 0, signals: ['digital'] },
+      { name: 'GND', x: 15, y: 0, signals: ['ground'] }
+    ],
+    'wokwi-stepper-motor': [
+      { name: 'A+', x: -15, y: 0, signals: ['digital'] },
+      { name: 'A-', x: -5, y: 0, signals: ['digital'] },
+      { name: 'B+', x: 5, y: 0, signals: ['digital'] },
+      { name: 'B-', x: 15, y: 0, signals: ['digital'] }
+    ],
+    'wokwi-7segment': [
+      { name: 'A', x: -20, y: 0, signals: ['digital'] },
+      { name: 'B', x: -15, y: 0, signals: ['digital'] },
+      { name: 'C', x: -10, y: 0, signals: ['digital'] },
+      { name: 'D', x: -5, y: 0, signals: ['digital'] },
+      { name: 'E', x: 0, y: 0, signals: ['digital'] },
+      { name: 'F', x: 5, y: 0, signals: ['digital'] },
+      { name: 'G', x: 10, y: 0, signals: ['digital'] },
+      { name: 'DP', x: 15, y: 0, signals: ['digital'] },
+      { name: 'COM', x: 20, y: 0, signals: ['ground'] }
     ]
   };
   
