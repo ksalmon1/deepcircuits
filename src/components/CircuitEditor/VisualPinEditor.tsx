@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect, WheelEvent } from 'react';
 import { Move, Plus, X, ZoomIn, ZoomOut } from 'lucide-react';
 import { Button } from "@/components/ui/button";
@@ -18,6 +17,10 @@ interface VisualPinEditorProps {
   readonly?: boolean;
 }
 
+/**
+ * Component for visually editing pin positions on circuit components
+ * Provides a visual interface for positioning and configuring pins
+ */
 const VisualPinEditor: React.FC<VisualPinEditorProps> = ({ 
   pins, 
   componentType, 

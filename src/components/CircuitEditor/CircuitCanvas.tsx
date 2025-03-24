@@ -21,6 +21,10 @@ interface CircuitCanvasProps {
 // Helper for caching pin data outside of component rendering
 const pinCache: Record<string, WokwiPin[]> = {};
 
+/**
+ * CircuitCanvas component for rendering and interacting with circuit components
+ * Provides a canvas for placing, connecting, and manipulating components
+ */
 const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) => {
   const canvasRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -90,6 +94,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     }
   }, [libraryComponents, componentsDetailsMap]);
 
+  // Check if Wokwi is loaded and handle loading attempts
   const checkWokwiLoaded = useCallback(async () => {
     console.log('Checking if Wokwi is loaded, attempt:', loadingAttempts + 1);
     
@@ -159,7 +164,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     return () => clearTimeout(timer);
   }, [isReady, loadingError]);
 
-  // Get component pin information safely without using hooks
+  // Get component pin information from cache or fallbacks
   const fetchComponentPins = (type: string): WokwiPin[] => {
     try {
       // First check our cache from Supabase data
@@ -212,6 +217,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     }
   };
 
+  // Handle dropping components onto the canvas
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     
@@ -291,11 +297,13 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     }
   };
 
+  // Event handler for component drag over
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'copy';
   };
 
+  // Toggle pin visibility for a component
   const togglePinVisibility = useCallback((componentId: string) => {
     setVisiblePins(prev => ({
       ...prev,
@@ -303,14 +311,17 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     }));
   }, []);
 
+  // Handle pin hover events
   const handlePinHover = (componentId: string, pinIndex: number) => {
     setHoveredPin({ componentId, pinIndex });
   };
 
+  // Handle pin hover exit events
   const handlePinHoverExit = () => {
     setHoveredPin(null);
   };
 
+  // Handle component hover events
   const handleComponentHover = useCallback((id: string, type: string) => {
     setHoveredComponent(id);
     
@@ -324,6 +335,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     }
   }, []);
 
+  // Handle component hover exit events
   const handleComponentHoverExit = useCallback(() => {
     if (hoveredComponent) {
       const element = document.getElementById(`wokwi-element-${hoveredComponent}`);
@@ -369,20 +381,24 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     });
   }, [components]);
 
+  // Handle retry after loading error
   const handleRetry = async () => {
     setLoadingError(null);
     setLoadingAttempts(0);
     await checkWokwiLoaded();
   };
 
+  // Zoom in handler
   const handleZoomIn = () => {
     setZoom(prevZoom => Math.min(prevZoom + 0.1, 3));
   };
 
+  // Zoom out handler
   const handleZoomOut = () => {
     setZoom(prevZoom => Math.max(prevZoom - 0.1, 0.5));
   };
 
+  // Toggle pan mode handler
   const togglePanMode = () => {
     setPanMode(!panMode);
     if (panMode) {
@@ -392,6 +408,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     }
   };
 
+  // Mouse down handler for panning
   const handleMouseDown = (e: React.MouseEvent) => {
     if (panMode || e.button === 1) {
       setIsPanning(true);
@@ -400,6 +417,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     }
   };
 
+  // Mouse move handler for panning
   const handleMouseMove = (e: React.MouseEvent) => {
     if (isPanning) {
       const newX = e.clientX - startPanPoint.x;
@@ -409,14 +427,17 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     }
   };
 
+  // Mouse up handler for panning
   const handleMouseUp = () => {
     setIsPanning(false);
   };
 
+  // Mouse leave handler for panning
   const handleMouseLeave = () => {
     setIsPanning(false);
   };
 
+  // Wheel handler for zooming
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
     const delta = e.deltaY > 0 ? -0.1 : 0.1;
