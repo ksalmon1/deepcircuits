@@ -105,7 +105,7 @@ export const renderWokwiElement = (
   }
 };
 
-// List of official Wokwi component types
+// List of official Wokwi component types - Updated to include all available components
 export const ORIGINAL_WOKWI_COMPONENTS = [
   'wokwi-led',
   'wokwi-resistor',
@@ -116,11 +116,11 @@ export const ORIGINAL_WOKWI_COMPONENTS = [
   'wokwi-esp32-devkit-v1',
   'wokwi-pushbutton',
   'wokwi-slide-switch',
-  'wokwi-7segment',
-  'wokwi-buzzer',
   'wokwi-potentiometer',
+  'wokwi-buzzer',
   'wokwi-servo',
   'wokwi-lcd1602',
+  'wokwi-7segment',
   'wokwi-membrane-keypad',
   'wokwi-stepper-motor',
   'wokwi-relay',
@@ -130,7 +130,25 @@ export const ORIGINAL_WOKWI_COMPONENTS = [
   'wokwi-logic-analyzer',
   'wokwi-neopixel',
   'wokwi-piezo',
-  'wokwi-ultrasonic-distance-sensor'
+  'wokwi-ultrasonic-distance-sensor',
+  'wokwi-rgb-led',
+  'wokwi-timer-ic',
+  'wokwi-photoresistor-sensor',
+  'wokwi-temperature-sensor',
+  'wokwi-hall-effect-sensor',
+  'wokwi-ds1307',
+  'wokwi-ds18b20',
+  'wokwi-breadboard',
+  'wokwi-mpu6050',
+  'wokwi-ssd1306',
+  'wokwi-hc-sr04',
+  'wokwi-max7219-matrix',
+  'wokwi-arduino-mega',
+  'wokwi-arduino-mkr1000',
+  'wokwi-pir-motion-sensor',
+  'wokwi-gas-sensor',
+  'wokwi-microsd-card',
+  'wokwi-raspberry-pi-pico'
 ];
 
 // Check if a component type is an original Wokwi component
@@ -156,6 +174,10 @@ export const getComponentPinInfo = (componentType: string): WokwiPin[] => {
       { name: '1', x: 0, y: 0, signals: ['passive'] },
       { name: '2', x: 0, y: 20, signals: ['passive'] }
     ],
+    'wokwi-battery': [
+      { name: '+', x: 0, y: 0, signals: ['power'] },
+      { name: '-', x: 0, y: 20, signals: ['ground'] }
+    ],
     'wokwi-arduino-uno': [
       { name: 'D0', x: 0, y: 0, signals: ['digital'] },
       { name: 'D1', x: 0, y: 10, signals: ['digital'] },
@@ -175,6 +197,21 @@ export const getComponentPinInfo = (componentType: string): WokwiPin[] => {
       { name: 'VCC', x: -10, y: 0, signals: ['power'] },
       { name: 'DATA', x: 0, y: 0, signals: ['digital'] },
       { name: 'GND', x: 10, y: 0, signals: ['ground'] }
+    ],
+    'wokwi-servo': [
+      { name: 'GND', x: -10, y: 0, signals: ['ground'] },
+      { name: 'VCC', x: 0, y: 0, signals: ['power'] },
+      { name: 'PWM', x: 10, y: 0, signals: ['digital'] }
+    ],
+    'wokwi-potentiometer': [
+      { name: '1', x: -10, y: 0, signals: ['passive'] },
+      { name: '2', x: 0, y: 0, signals: ['analog'] },
+      { name: '3', x: 10, y: 0, signals: ['passive'] }
+    ],
+    'wokwi-slide-switch': [
+      { name: '1', x: -10, y: 0, signals: ['passive'] },
+      { name: '2', x: 0, y: 0, signals: ['passive'] },
+      { name: '3', x: 10, y: 0, signals: ['passive'] }
     ]
   };
   

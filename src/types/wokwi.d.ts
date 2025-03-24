@@ -21,7 +21,10 @@ declare namespace JSX {
     };
     'wokwi-arduino-uno': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>;
     'wokwi-arduino-nano': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>;
+    'wokwi-arduino-mega': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>;
+    'wokwi-arduino-mkr1000': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>;
     'wokwi-esp32-devkit-v1': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>;
+    'wokwi-raspberry-pi-pico': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>;
     'wokwi-pushbutton': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
       color?: string;
       label?: string;
@@ -68,6 +71,36 @@ declare namespace JSX {
     'wokwi-ultrasonic-distance-sensor': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
       distance?: number | string;
     };
+    'wokwi-rgb-led': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
+      color?: string;
+      cathode?: boolean | string;
+    };
+    'wokwi-timer-ic': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>;
+    'wokwi-photoresistor-sensor': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
+      value?: number | string;
+    };
+    'wokwi-temperature-sensor': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
+      value?: number | string;
+    };
+    'wokwi-hall-effect-sensor': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>;
+    'wokwi-ds1307': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>;
+    'wokwi-ds18b20': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
+      temperature?: number | string;
+    };
+    'wokwi-breadboard': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>;
+    'wokwi-mpu6050': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>;
+    'wokwi-ssd1306': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>;
+    'wokwi-hc-sr04': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
+      distance?: number | string;
+    };
+    'wokwi-max7219-matrix': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>;
+    'wokwi-pir-motion-sensor': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
+      activated?: boolean | string;
+    };
+    'wokwi-gas-sensor': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
+      value?: number | string;
+    };
+    'wokwi-microsd-card': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>;
     'wokwi-show-pins': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>;
   }
 }
