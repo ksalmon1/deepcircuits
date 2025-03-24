@@ -21,6 +21,7 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({ pins, componentType, 
   const editorRef = useRef<HTMLDivElement>(null);
   const [editorSize, setEditorSize] = useState({ width: 0, height: 0 });
   const [showGrid, setShowGrid] = useState(true);
+  const [hoveredPin, setHoveredPin] = useState<number | null>(null);
 
   useEffect(() => {
     if (editorRef.current) {
@@ -68,6 +69,24 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({ pins, componentType, 
     onChange(updatedPins);
   };
 
+  const updatePinSignal = (index: number, signal: string) => {
+    const updatedPins = [...pins];
+    updatedPins[index] = {
+      ...updatedPins[index],
+      signals: [signal]
+    };
+    onChange(updatedPins);
+  };
+
+  const updatePinName = (index: number, name: string) => {
+    const updatedPins = [...pins];
+    updatedPins[index] = {
+      ...updatedPins[index],
+      name
+    };
+    onChange(updatedPins);
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -102,13 +121,16 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({ pins, componentType, 
         {pins.map((pin, index) => (
           <div
             key={`pin-${index}`}
-            className={`pin-marker ${draggedPin === index ? 'ring-2 ring-primary' : ''}`}
+            className={`pin-marker ${draggedPin === index ? 'ring-2 ring-primary' : ''} 
+                      ${hoveredPin === index ? 'scale-125' : ''}`}
             style={{ 
               left: `${pin.x}px`, 
               top: `${pin.y}px`,
               backgroundColor: getSignalColor(pin.signals && pin.signals.length > 0 ? pin.signals[0] : 'digital') 
             }}
             data-pin-name={pin.name}
+            onMouseEnter={() => setHoveredPin(index)}
+            onMouseLeave={() => setHoveredPin(null)}
             onMouseDown={() => handlePinDragStart(index)}
           >
             <button 
@@ -123,6 +145,26 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({ pins, componentType, 
           </div>
         ))}
 
+        {/* Pin tooltip */}
+        {hoveredPin !== null && (
+          <div 
+            className="absolute z-20 bg-black text-white text-xs px-1 py-0.5 rounded-sm opacity-80"
+            style={{ 
+              top: `${pins[hoveredPin].y}px`, 
+              left: `${pins[hoveredPin].x}px`, 
+              transform: 'translate(-50%, -100%)',
+              marginTop: '-5px'
+            }}
+          >
+            {pins[hoveredPin].name}
+            {pins[hoveredPin].signals && (
+              <span className="text-xs opacity-70 ml-1">
+                ({pins[hoveredPin].signals.join(', ')})
+              </span>
+            )}
+          </div>
+        )}
+
         {/* Drag instruction */}
         {draggedPin !== null && (
           <div className="absolute top-4 left-4 bg-black bg-opacity-70 text-white p-2 rounded text-sm">
@@ -135,7 +177,17 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({ pins, componentType, 
         {pins.map((pin, index) => (
           <div key={`pin-details-${index}`} className="border p-3 rounded-md">
             <div className="flex justify-between items-center mb-2">
-              <span className="font-medium text-sm">Pin {index + 1}</span>
+              <div className="flex items-center gap-2">
+                <div 
+                  className="w-3 h-3 rounded-full" 
+                  style={{ backgroundColor: getSignalColor(pin.signals && pin.signals.length > 0 ? pin.signals[0] : 'digital') }}
+                ></div>
+                <input
+                  className="font-medium text-sm border-none focus:ring-0 p-0 w-full bg-transparent"
+                  value={pin.name}
+                  onChange={(e) => updatePinName(index, e.target.value)}
+                />
+              </div>
               <Button
                 variant="ghost"
                 size="icon"
@@ -146,9 +198,26 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({ pins, componentType, 
               </Button>
             </div>
             <div className="text-xs space-y-1">
-              <div>Name: <span className="font-mono">{pin.name}</span></div>
               <div>Position: <span className="font-mono">({pin.x}, {pin.y})</span></div>
-              <div>Signal: <span className="font-mono">{pin.signals ? pin.signals.join(', ') : 'none'}</span></div>
+              <div>
+                Signal: 
+                <select 
+                  className="font-mono ml-2 text-xs p-0 h-6 border rounded"
+                  value={pin.signals && pin.signals.length > 0 ? pin.signals[0] : 'digital'}
+                  onChange={(e) => updatePinSignal(index, e.target.value)}
+                >
+                  <option value="power">Power</option>
+                  <option value="ground">Ground</option>
+                  <option value="digital">Digital</option>
+                  <option value="analog">Analog</option>
+                  <option value="passive">Passive</option>
+                  <option value="i2c">I2C</option>
+                  <option value="spi">SPI</option>
+                  <option value="uart">UART</option>
+                  <option value="rx">RX</option>
+                  <option value="tx">TX</option>
+                </select>
+              </div>
             </div>
           </div>
         ))}

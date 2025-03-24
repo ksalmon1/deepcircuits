@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { 
   isWokwiLoaded, 
@@ -30,6 +29,8 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
   const [panMode, setPanMode] = useState(false);
   const [hoveredComponent, setHoveredComponent] = useState<string | null>(null);
   const [hoveredPins, setHoveredPins] = useState<WokwiPin[]>([]);
+  const [visiblePins, setVisiblePins] = useState<{[componentId: string]: boolean}>({});
+  const [hoveredPin, setHoveredPin] = useState<{componentId: string, pinIndex: number} | null>(null);
 
   const checkWokwiLoaded = useCallback(async () => {
     console.log('Checking if Wokwi is loaded, attempt:', loadingAttempts + 1);
@@ -146,8 +147,25 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     e.dataTransfer.dropEffect = 'copy';
   };
 
+  const togglePinVisibility = useCallback((componentId: string) => {
+    setVisiblePins(prev => ({
+      ...prev,
+      [componentId]: !prev[componentId]
+    }));
+  }, []);
+
+  const handlePinHover = (componentId: string, pinIndex: number) => {
+    setHoveredPin({ componentId, pinIndex });
+  };
+
+  const handlePinHoverExit = () => {
+    setHoveredPin(null);
+  };
+
   const renderComponent = useCallback((component: WokwiComponent) => {
     const { type, id, top, left, attributes } = component;
+    const pins = getComponentPinInfo(type);
+    const showPins = visiblePins[id] || hoveredComponent === id;
     
     return (
       <div 
@@ -156,29 +174,49 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
         style={{ top: `${top}px`, left: `${left}px` }}
         onMouseEnter={() => handleComponentHover(id, type)}
         onMouseLeave={() => handleComponentHoverExit()}
+        onDoubleClick={() => togglePinVisibility(id)}
       >
         <div id={`wokwi-element-${id}`}></div>
-        {hoveredComponent === id && hoveredPins.length > 0 && (
-          <div className="pin-tooltip absolute z-20">
-            {hoveredPins.map((pin, index) => (
+        
+        {showPins && pins.length > 0 && (
+          <div className="absolute top-0 left-0 z-10 pointer-events-none">
+            {pins.map((pin, index) => (
               <div 
-                key={index}
-                className="absolute bg-black text-white text-xs px-1 py-0.5 rounded-sm opacity-80"
+                key={`pin-${id}-${index}`}
+                className="absolute pin-marker pointer-events-auto"
                 style={{ 
-                  top: `${pin.y}px`, 
                   left: `${pin.x}px`, 
-                  transform: 'translate(-50%, -100%)',
-                  marginTop: '-5px'
+                  top: `${pin.y}px`,
+                  backgroundColor: getSignalColor(pin.signals && pin.signals.length > 0 ? pin.signals[0] : 'digital')
                 }}
-              >
-                {pin.name}
-              </div>
+                onMouseEnter={() => handlePinHover(id, index)}
+                onMouseLeave={handlePinHoverExit}
+              ></div>
             ))}
+          </div>
+        )}
+        
+        {hoveredPin && hoveredPin.componentId === id && pins[hoveredPin.pinIndex] && (
+          <div 
+            className="absolute z-20 bg-black text-white text-xs px-1 py-0.5 rounded-sm opacity-80"
+            style={{ 
+              top: `${pins[hoveredPin.pinIndex].y}px`, 
+              left: `${pins[hoveredPin.pinIndex].x}px`, 
+              transform: 'translate(-50%, -100%)',
+              marginTop: '-5px'
+            }}
+          >
+            {pins[hoveredPin.pinIndex].name}
+            {pins[hoveredPin.pinIndex].signals && pins[hoveredPin.pinIndex].signals.length > 0 && (
+              <span className="text-xs opacity-70 ml-1">
+                ({pins[hoveredPin.pinIndex].signals.join(', ')})
+              </span>
+            )}
           </div>
         )}
       </div>
     );
-  }, [hoveredComponent, hoveredPins]);
+  }, [hoveredComponent, hoveredPin, visiblePins, togglePinVisibility]);
 
   const handleComponentHover = (id: string, type: string) => {
     setHoveredComponent(id);
@@ -340,10 +378,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
           }}
         >
           {components.map(renderComponent)}
-        </div>
-      </div>
-    </div>
-  );
-};
 
-export default CircuitCanvas;
+          {
+
