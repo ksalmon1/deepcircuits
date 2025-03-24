@@ -9,12 +9,15 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 
+// Use a module-level variable to persist components across re-renders
+let persistedComponents: WokwiComponent[] = [];
+
 const CircuitCanvas = () => {
   const canvasRef = useRef<HTMLDivElement>(null);
   const [isReady, setIsReady] = useState(false);
   const [loadingError, setLoadingError] = useState<string | null>(null);
   const [loadingAttempts, setLoadingAttempts] = useState(0);
-  const [components, setComponents] = useState<WokwiComponent[]>([]);
+  const [components, setComponents] = useState<WokwiComponent[]>(persistedComponents);
 
   // Function to check if Wokwi is loaded
   const checkWokwiLoaded = useCallback(async () => {
@@ -88,6 +91,11 @@ const CircuitCanvas = () => {
     return () => clearTimeout(timer);
   }, [isReady, loadingError]);
 
+  // Update the persisted components whenever the local components state changes
+  useEffect(() => {
+    persistedComponents = components;
+  }, [components]);
+
   // Handle drop event for components
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -122,7 +130,12 @@ const CircuitCanvas = () => {
       };
       
       // Add the new component to the canvas
-      setComponents(prevComponents => [...prevComponents, newComponent]);
+      const updatedComponents = [...components, newComponent];
+      setComponents(updatedComponents);
+      persistedComponents = updatedComponents; // Also update the module-level variable
+      
+      console.log('Component added:', newComponent);
+      console.log('Total components after add:', updatedComponents.length);
       
       toast.success(`Added ${componentInfo.name}`, {
         description: `Component placed at position (${left}, ${top})`,
