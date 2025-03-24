@@ -199,7 +199,10 @@ const ComponentLibrary = () => {
     useComponentDetails
   } = useComponentLibrary();
   
-  const uniqueCategories = Array.from(new Set((components || []).map(comp => comp.category)));
+  // Create a state for component details 
+  const [componentDetailsData, setComponentDetailsData] = useState<any>(null);
+  const [isLoadingComponentDetails, setIsLoadingComponentDetails] = useState(false);
+  const [componentDetailsError, setComponentDetailsError] = useState<Error | null>(null);
   
   useEffect(() => {
     const loadWokwi = async () => {
@@ -227,6 +230,55 @@ const ComponentLibrary = () => {
     
     loadWokwi();
   }, [toast]);
+
+  // Effect to load component details when selectedComponent changes and dialog is opened
+  useEffect(() => {
+    const fetchComponentDetails = async () => {
+      if (selectedComponent?.id && (isEditDialogOpen || isViewDialogOpen)) {
+        setIsLoadingComponentDetails(true);
+        setComponentDetailsError(null);
+        
+        try {
+          // Import from service to avoid hook issues
+          const { getComponentWithDetails } = await import('@/services/componentLibraryService');
+          const details = await getComponentWithDetails(selectedComponent.id);
+          
+          console.log("Component details loaded:", details);
+          setComponentDetailsData(details);
+          
+          if (isEditDialogOpen && details) {
+            const fullComponent = {
+              ...selectedComponent,
+              pins: details.pins || [],
+              properties: details.properties || {}
+            };
+            setEditedComponent(fullComponent);
+          }
+          
+          if (isViewDialogOpen && details) {
+            const fullComponent = {
+              ...selectedComponent,
+              pins: details.pins || [],
+              properties: details.properties || {}
+            };
+            setSelectedComponent(fullComponent);
+          }
+        } catch (error) {
+          console.error("Error fetching component details:", error);
+          setComponentDetailsError(error instanceof Error ? error : new Error("Failed to load component details"));
+          toast({
+            title: "Error loading component details",
+            description: "Could not load pins and properties for this component.",
+            variant: "destructive"
+          });
+        } finally {
+          setIsLoadingComponentDetails(false);
+        }
+      }
+    };
+    
+    fetchComponentDetails();
+  }, [selectedComponent?.id, isEditDialogOpen, isViewDialogOpen, toast]);
 
   if (!user) {
     return <Navigate to="/login" />;
@@ -295,53 +347,11 @@ const ComponentLibrary = () => {
     setEditedComponent({...component});
     setIsEditDialogOpen(true);
     setActiveTab("details");
-
-    const { data: componentDetails, isLoading, error } = useComponentDetails(component.id);
-
-    useEffect(() => {
-      if (componentDetails) {
-        console.log("Component details loaded:", componentDetails);
-        const fullComponent = {
-          ...component,
-          pins: componentDetails.pins || [],
-          properties: componentDetails.properties || {}
-        };
-        setEditedComponent(fullComponent);
-      } else if (error) {
-        console.error("Error loading component details:", error);
-        toast({
-          title: "Error loading component details",
-          description: "Could not load pins and properties for this component.",
-          variant: "destructive"
-        });
-      }
-    }, [componentDetails, error, component]);
   };
 
   const handleViewComponent = (component: ComponentLibraryItem) => {
     setSelectedComponent(component);
     setIsViewDialogOpen(true);
-    
-    const { data: componentDetails, isLoading, error } = useComponentDetails(component.id);
-    
-    useEffect(() => {
-      if (componentDetails) {
-        console.log("Component details loaded for view:", componentDetails);
-        const fullComponent = {
-          ...component,
-          pins: componentDetails.pins || [],
-          properties: componentDetails.properties || {}
-        };
-        setSelectedComponent(fullComponent);
-      } else if (error) {
-        console.error("Error loading component details for view:", error);
-        toast({
-          title: "Error loading component details",
-          description: "Could not load pins and properties for this component.",
-          variant: "destructive"
-        });
-      }
-    }, [componentDetails, error, component]);
   };
 
   const handleDeleteComponent = (component: ComponentLibraryItem) => {
@@ -716,7 +726,25 @@ const ComponentLibrary = () => {
               </DialogDescription>
             </DialogHeader>
 
-            {editedComponent && (
+            {isLoadingComponentDetails ? (
+              <div className="py-8 text-center">
+                <Cpu className="h-8 w-8 mx-auto mb-2 animate-spin text-primary" />
+                <p>Loading component details...</p>
+              </div>
+            ) : componentDetailsError ? (
+              <div className="py-8 text-center text-destructive">
+                <AlertCircle className="h-8 w-8 mx-auto mb-2" />
+                <p>Error loading component details</p>
+                <p className="text-sm mt-2">{componentDetailsError.message}</p>
+                <Button 
+                  className="mt-4" 
+                  variant="outline" 
+                  onClick={() => setIsEditDialogOpen(false)}
+                >
+                  Close
+                </Button>
+              </div>
+            ) : editedComponent && (
               <Tabs 
                 defaultValue="details" 
                 className="mt-4"
@@ -893,7 +921,18 @@ const ComponentLibrary = () => {
               <DialogTitle>Component Details</DialogTitle>
             </DialogHeader>
             
-            {selectedComponent && (
+            {isLoadingComponentDetails ? (
+              <div className="py-8 text-center">
+                <Cpu className="h-8 w-8 mx-auto mb-2 animate-spin text-primary" />
+                <p>Loading component details...</p>
+              </div>
+            ) : componentDetailsError ? (
+              <div className="py-8 text-center text-destructive">
+                <AlertCircle className="h-8 w-8 mx-auto mb-2" />
+                <p>Error loading component details</p>
+                <p className="text-sm mt-2">{componentDetailsError.message}</p>
+              </div>
+            ) : selectedComponent && (
               <div className="py-4">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
                   <div>
@@ -920,93 +959,4 @@ const ComponentLibrary = () => {
                 
                 <div className="mb-4">
                   <h4 className="text-sm font-medium mb-1">Description</h4>
-                  <p className="text-sm text-muted-foreground">{selectedComponent.description || "No description provided."}</p>
-                </div>
-                
-                <div className="border rounded-md bg-gray-50 p-4 mb-4">
-                  <h4 className="text-sm font-medium mb-2">Preview</h4>
-                  <div className="component-preview-container">
-                    {wokwiReady ? (
-                      <EnhancedComponentPreview
-                        componentType={selectedComponent.type}
-                        properties={selectedComponent.properties || {}}
-                      />
-                    ) : (
-                      <p className="text-sm text-muted-foreground">Preview not available</p>
-                    )}
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <h4 className="text-sm font-medium mb-2">Properties</h4>
-                    <div className="bg-gray-100 p-3 rounded-md">
-                      <pre className="text-xs overflow-auto max-h-40">
-                        {JSON.stringify(selectedComponent.properties || {}, null, 2)}
-                      </pre>
-                    </div>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium mb-2">Pin Configuration</h4>
-                    <div className="bg-gray-100 p-3 rounded-md">
-                      <pre className="text-xs overflow-auto max-h-40">
-                        {JSON.stringify(selectedComponent.pins || [], null, 2)}
-                      </pre>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            <DialogFooter>
-              <Button onClick={() => setIsViewDialogOpen(false)}>Close</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Confirm Delete</DialogTitle>
-              <DialogDescription>
-                Are you sure you want to delete this component from the library? This action cannot be undone.
-              </DialogDescription>
-            </DialogHeader>
-            
-            {selectedComponent && (
-              <div className="py-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="font-medium">Name:</span>
-                  <span>{selectedComponent.name}</span>
-                </div>
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="font-medium">Type:</span>
-                  <span>{selectedComponent.type}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">Category:</span>
-                  <span>{selectedComponent.category}</span>
-                </div>
-              </div>
-            )}
-            
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button 
-                variant="destructive" 
-                onClick={handleConfirmDelete}
-                disabled={isDeletingComponent}
-              >
-                {isDeletingComponent ? 'Deleting...' : 'Delete Component'}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
-    </PageLayout>
-  );
-};
-
-export default ComponentLibrary;
+                  <p className="text-sm text-muted-foreground
