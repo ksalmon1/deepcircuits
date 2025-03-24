@@ -31,14 +31,16 @@ export const renderWokwiComponentPreview = async (
     renderWokwiElement(componentType, elementId, properties);
     
     // Style the container for proper display
-    const wokwiElement = document.getElementById(elementId)?.firstElementChild;
-    if (wokwiElement instanceof HTMLElement) {
-      // Center the element in the container
-      wokwiElement.style.position = 'absolute';
-      wokwiElement.style.left = '50%';
-      wokwiElement.style.top = '50%';
-      wokwiElement.style.transform = 'translate(-50%, -50%)';
-    }
+    setTimeout(() => {
+      const wokwiElement = document.getElementById(elementId)?.firstElementChild;
+      if (wokwiElement instanceof HTMLElement) {
+        // Center the element in the container
+        wokwiElement.style.position = 'absolute';
+        wokwiElement.style.left = '50%';
+        wokwiElement.style.top = '50%';
+        wokwiElement.style.transform = 'translate(-50%, -50%)';
+      }
+    }, 100); // Small delay to ensure the element has rendered
   } catch (error) {
     console.error('Error rendering component preview:', error);
     container.innerHTML = `<div class="text-destructive text-center p-4">Error rendering component</div>`;

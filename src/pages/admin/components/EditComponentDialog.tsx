@@ -1,4 +1,3 @@
-
 import React from "react";
 import { ComponentLibraryItem } from "@/services/componentLibraryService";
 import { ComponentPin } from "@/types/database";
@@ -210,14 +209,15 @@ const EditComponentDialog = ({
               )}
             </TabsContent>
             
-            <TabsContent value="pins" className="py-4">
-              <div className="flex flex-col">
-                <div className="border rounded-md bg-gray-50 p-4">
+            <TabsContent value="pins" className="py-4 min-h-[400px]">
+              <div className="flex flex-col h-full">
+                <div className="border rounded-md bg-gray-50 p-4 h-full" style={{ minHeight: '400px' }}>
                   <VisualPinEditor
                     componentType={editedComponent.type}
                     pins={editedComponent.pins || []}
-                    onChange={updatePinConfiguration}
+                    onPinsChange={updatePinConfiguration}
                     readonly={false}
+                    height={400}
                   />
                 </div>
               </div>

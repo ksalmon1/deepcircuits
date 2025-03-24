@@ -1,10 +1,9 @@
-
 import React, { useState, useRef, useEffect, WheelEvent } from 'react';
 import { Move, Plus, X, ZoomIn, ZoomOut } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { isWokwiLoaded, forceLoadWokwiElements, renderWokwiElement } from '@/integrations/wokwi/WokwiIntegration';
+import { isWokwiLoaded, forceLoadWokwiElements } from '@/integrations/wokwi/WokwiIntegration';
 import { ComponentPin } from '@/types/database';
 import { renderWokwiComponentPreview } from '@/utils/componentPreviewUtils';
 
@@ -71,6 +70,7 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
         }
         
         if (componentType && previewRef.current) {
+          console.log("Rendering component preview for:", componentType);
           await renderWokwiComponentPreview(componentType, previewRef.current);
           setComponentLoaded(true);
         }
@@ -222,7 +222,7 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
   };
   
   return (
-    <div className={`flex flex-col h-full ${className}`}>
+    <div className={`flex flex-col h-full ${className}`} style={{ minHeight: '400px' }}>
       <div className="flex justify-between items-center mb-2">
         <div className="text-sm font-medium">Visual Pin Configuration</div>
         <div className="flex items-center gap-1">
@@ -259,11 +259,11 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
         </div>
       </div>
       
-      <div className="flex-1 flex gap-4">
+      <div className="flex-1 flex gap-4" style={{ minHeight: '350px' }}>
         <div 
           ref={containerRef} 
           className="flex-1 border rounded overflow-hidden relative bg-gray-50"
-          style={{ width, height: '100%', cursor: panMode ? 'move' : 'default' }}
+          style={{ width, height: '100%', cursor: panMode ? 'move' : 'default', minHeight: '300px' }}
           onMouseDown={handleCanvasMouseDown}
           onMouseMove={handleCanvasMouseMove}
           onMouseUp={handleCanvasMouseUp}
@@ -275,10 +275,12 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
             style={{ 
               transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`,
               transformOrigin: '0 0',
-              transition: isDraggingCanvas ? 'none' : 'transform 0.1s'
+              transition: isDraggingCanvas ? 'none' : 'transform 0.1s',
+              width: '100%',
+              height: '100%'
             }}
           >
-            <div ref={previewRef} className="absolute" style={{ left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}></div>
+            <div ref={previewRef} className="absolute" style={{ left: '50%', top: '50%', transform: 'translate(-50%, -50%)', zIndex: 5 }}></div>
             
             {/* Render pins */}
             {pinData.map((pin, i) => (
@@ -289,14 +291,15 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
                   left: `${pin.x}px`,
                   top: `${pin.y}px`,
                   transform: 'translate(-50%, -50%)',
-                  cursor: readonly ? 'default' : 'move'
+                  cursor: readonly ? 'default' : 'move',
+                  zIndex: 10
                 }}
               >
                 <div 
-                  className={`rounded-full w-4 h-4 border ${readonly ? 'bg-blue-200' : 'bg-blue-500'}`}
+                  className={`rounded-full w-4 h-4 border ${readonly ? 'bg-blue-200' : 'bg-blue-500 hover:bg-blue-600'} transition-colors`}
                   onClick={() => handleEditPin(i)}
                 ></div>
-                <div className="absolute whitespace-nowrap text-xs -mt-5 left-1/2 transform -translate-x-1/2">
+                <div className="absolute whitespace-nowrap text-xs -mt-5 left-1/2 transform -translate-x-1/2 bg-white/80 px-1 rounded">
                   {pin.name}
                 </div>
               </div>
