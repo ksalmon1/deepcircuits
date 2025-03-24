@@ -1,7 +1,6 @@
-
 import * as React from "react";
 import { Link } from "react-router-dom";
-import { CircuitBoard, BookOpen, Info, Users, DollarSign } from "lucide-react";
+import { CircuitBoard, BookOpen, Info, Users } from "lucide-react";
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -70,7 +69,6 @@ export function MainNavigation() {
         </NavigationMenuItem>
         <NavigationMenuItem>
           <Link to="/pricing" className={navigationMenuTriggerStyle()}>
-            <DollarSign className="mr-1 h-4 w-4" />
             Pricing
           </Link>
         </NavigationMenuItem>

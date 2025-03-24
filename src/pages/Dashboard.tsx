@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from "react";
 import PageLayout from "@/components/PageLayout";
 import { useAuth } from "@/context/AuthContext";
@@ -54,7 +55,7 @@ const sampleProjects: ProjectData[] = [
 type SortOption = "name-asc" | "name-desc" | "date-asc" | "date-desc";
 
 const Dashboard = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const navigate = useNavigate();
   const [projects, setProjects] = useState<ProjectData[]>(sampleProjects);
   const [searchQuery, setSearchQuery] = useState("");
@@ -136,7 +137,7 @@ const Dashboard = () => {
         </div>
 
         <div className="mb-8 rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="mb-4 text-xl font-semibold">Welcome, {user?.email}</h2>
+          <h2 className="mb-4 text-xl font-semibold">Welcome, {profile?.display_name || user?.email}</h2>
           <p className="text-slate-600">
             This is your dashboard where you'll manage your circuit projects.
           </p>

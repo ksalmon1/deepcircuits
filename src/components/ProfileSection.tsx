@@ -1,7 +1,3 @@
-
-// Only updating the onSubmit function in ProfileSection.tsx
-// We only need to modify this one function, leaving the rest of the file intact
-
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useProfile } from "@/hooks/use-profile";
@@ -48,10 +44,10 @@ import {
   Bell, 
   Trash2, 
   LogOut, 
-  CheckCircle2, 
-  Users, 
-  Cog, 
-  Database 
+  CheckCircle2,
+  Users,
+  Cog,
+  Database
 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -405,59 +401,6 @@ const ProfileSection = () => {
               </div>
             </CardContent>
           </Card>
-
-          {isAdmin() && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Admin Settings</CardTitle>
-                <CardDescription>
-                  Manage administrative features and settings.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="border rounded-md p-4">
-                    <div className="flex items-center gap-2 mb-3">
-                      <Users className="h-5 w-5 text-primary" />
-                      <h3 className="font-medium">User Management</h3>
-                    </div>
-                    <p className="text-sm text-slate-600 mb-3">
-                      Manage users, permissions and roles.
-                    </p>
-                    <Button variant="outline" className="mt-2" asChild>
-                      <a href="/admin/users">Manage Users</a>
-                    </Button>
-                  </div>
-
-                  <div className="border rounded-md p-4">
-                    <div className="flex items-center gap-2 mb-3">
-                      <Cog className="h-5 w-5 text-primary" />
-                      <h3 className="font-medium">System Settings</h3>
-                    </div>
-                    <p className="text-sm text-slate-600 mb-3">
-                      Configure global application settings
-                    </p>
-                    <Button variant="outline" className="mt-2" asChild>
-                      <a href="/admin/system">System Configuration</a>
-                    </Button>
-                  </div>
-
-                  <div className="border rounded-md p-4">
-                    <div className="flex items-center gap-2 mb-3">
-                      <Database className="h-5 w-5 text-primary" />
-                      <h3 className="font-medium">Component Library</h3>
-                    </div>
-                    <p className="text-sm text-slate-600 mb-3">
-                      Manage the circuit component library
-                    </p>
-                    <Button variant="outline" className="mt-2" asChild>
-                      <a href="/admin/components">Manage Components</a>
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
         </TabsContent>
 
         <TabsContent value="security" className="space-y-4">
@@ -571,3 +514,4 @@ const ProfileSection = () => {
 };
 
 export default ProfileSection;
+
