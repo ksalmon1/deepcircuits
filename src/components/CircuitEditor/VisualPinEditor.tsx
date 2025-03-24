@@ -74,20 +74,41 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
         
         if (componentType && previewRef.current) {
           console.log("Rendering component preview for:", componentType);
-          await renderWokwiComponentPreview(componentType, previewRef.current);
+          
+          // Clear previous content
+          previewRef.current.innerHTML = '';
+          
+          // Create a wrapper to position the component at a fixed location
+          const wrapper = document.createElement('div');
+          wrapper.style.position = 'relative';
+          wrapper.style.width = '100%';
+          wrapper.style.height = '100%';
+          previewRef.current.appendChild(wrapper);
+          
+          await renderWokwiComponentPreview(componentType, wrapper);
           setComponentLoaded(true);
           
-          // After component is loaded, get its dimensions to help with pin positioning
+          // After component is loaded, get its element reference
           setTimeout(() => {
-            const element = previewRef.current?.firstElementChild?.firstElementChild;
+            // The component is the first element child of the wrapper
+            const element = wrapper.firstElementChild?.firstElementChild;
             if (element instanceof HTMLElement) {
               setComponentElement(element);
-              const rect = element.getBoundingClientRect();
-              console.log("Component element dimensions:", rect);
-              setComponentCenter({
-                x: rect.width / 2,
-                y: rect.height / 2
-              });
+              console.log("Component element found and positioned at top-left (0,0)");
+              
+              // Add a visual marker at the component's origin (0,0)
+              const originMarker = document.createElement('div');
+              originMarker.style.position = 'absolute';
+              originMarker.style.width = '6px';
+              originMarker.style.height = '6px';
+              originMarker.style.backgroundColor = 'red';
+              originMarker.style.borderRadius = '50%';
+              originMarker.style.top = '0px';
+              originMarker.style.left = '0px';
+              originMarker.style.transform = 'translate(-50%, -50%)';
+              originMarker.style.zIndex = '100';
+              originMarker.title = 'Component origin (0,0)';
+              wrapper.appendChild(originMarker);
             }
           }, 200);
         }
@@ -108,19 +129,15 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
       return;
     }
     
-    const containerRect = containerRef.current?.getBoundingClientRect();
-    if (!containerRect) return;
+    // Get preview wrapper element position
+    const previewWrapper = previewRef.current?.firstElementChild;
+    if (!previewWrapper) return;
     
-    // Get component element position for relative coordinates
-    const componentRect = componentElement?.getBoundingClientRect();
-    if (!componentRect) {
-      console.error("Component element not found");
-      return;
-    }
+    const previewRect = previewWrapper.getBoundingClientRect();
     
-    // Calculate coordinates relative to component's top-left corner
-    const canvasX = (e.clientX - componentRect.left - offset.x) / zoom;
-    const canvasY = (e.clientY - componentRect.top - offset.y) / zoom;
+    // Calculate coordinates relative to component's top-left (0,0)
+    const canvasX = (e.clientX - previewRect.left - offset.x) / zoom;
+    const canvasY = (e.clientY - previewRect.top - offset.y) / zoom;
     
     // Check if clicking on an existing pin
     for (let i = 0; i < pinData.length; i++) {
@@ -147,7 +164,7 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
         signals: []
       };
       
-      console.log(`Adding new pin at coordinates (${canvasX}, ${canvasY}) relative to component`);
+      console.log(`Adding new pin at coordinates (${canvasX}, ${canvasY}) relative to component's top-left`);
       handlePinsChange([...pinData, newPin]);
     }
   };
@@ -163,12 +180,15 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
     }
     
     if (draggingPin !== null) {
-      const componentRect = componentElement?.getBoundingClientRect();
-      if (!componentRect) return;
+      // Get preview wrapper element position
+      const previewWrapper = previewRef.current?.firstElementChild;
+      if (!previewWrapper) return;
       
-      // Calculate coordinates relative to component's top-left corner
-      const canvasX = (e.clientX - componentRect.left - offset.x) / zoom;
-      const canvasY = (e.clientY - componentRect.top - offset.y) / zoom;
+      const previewRect = previewWrapper.getBoundingClientRect();
+      
+      // Calculate coordinates relative to component's top-left (0,0)
+      const canvasX = (e.clientX - previewRect.left - offset.x) / zoom;
+      const canvasY = (e.clientY - previewRect.top - offset.y) / zoom;
       
       // Update the pin position
       const updatedPins = [...pinData];
@@ -319,42 +339,36 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
               }}
             ></div>
             
-            {/* Origin marker (0,0) for the component */}
-            {componentElement && (
-              <div 
-                className="absolute w-3 h-3 border-2 border-red-500 rounded-full" 
-                style={{ 
-                  left: `${componentElement.offsetLeft}px`, 
-                  top: `${componentElement.offsetTop}px`, 
-                  zIndex: 15 
-                }}
-              ></div>
-            )}
-            
-            {/* Render pins */}
-            {componentElement && pinData.map((pin, i) => (
-              <div 
-                key={i} 
-                className="absolute" 
-                style={{
-                  left: `${componentElement.offsetLeft + Number(pin.x)}px`,
-                  top: `${componentElement.offsetTop + Number(pin.y)}px`,
-                  transform: 'translate(-50%, -50%)',
-                  cursor: readonly ? 'default' : 'move',
-                  zIndex: 10
-                }}
-              >
+            {/* Render pins - positions are now relative to component's top-left (0,0) */}
+            {pinData.map((pin, i) => {
+              const previewWrapper = previewRef.current?.firstElementChild;
+              if (!previewWrapper) return null;
+              
+              // Pin coordinates are relative to component's top-left (0,0)
+              return (
                 <div 
-                  className={`rounded-full w-5 h-5 flex items-center justify-center ${readonly ? 'bg-blue-200' : 'bg-blue-500 hover:bg-blue-600'} transition-colors`}
-                  onClick={() => handleEditPin(i)}
+                  key={i} 
+                  className="absolute" 
+                  style={{
+                    left: `${previewWrapper.offsetLeft + Number(pin.x)}px`,
+                    top: `${previewWrapper.offsetTop + Number(pin.y)}px`,
+                    transform: 'translate(-50%, -50%)',
+                    cursor: readonly ? 'default' : 'move',
+                    zIndex: 10
+                  }}
                 >
-                  <span className="text-white text-xs font-bold">{i+1}</span>
+                  <div 
+                    className={`rounded-full w-5 h-5 flex items-center justify-center ${readonly ? 'bg-blue-200' : 'bg-blue-500 hover:bg-blue-600'} transition-colors`}
+                    onClick={() => handleEditPin(i)}
+                  >
+                    <span className="text-white text-xs font-bold">{i+1}</span>
+                  </div>
+                  <div className="absolute whitespace-nowrap text-xs -mt-5 left-1/2 transform -translate-x-1/2 bg-white/90 px-1 py-0.5 rounded shadow-sm">
+                    {pin.name}
+                  </div>
                 </div>
-                <div className="absolute whitespace-nowrap text-xs -mt-5 left-1/2 transform -translate-x-1/2 bg-white/90 px-1 py-0.5 rounded shadow-sm">
-                  {pin.name}
-                </div>
-              </div>
-            ))}
+              );
+            })}
             
             {/* Reference grid */}
             <div className="absolute left-0 top-0 w-full h-full grid grid-cols-12 grid-rows-12 pointer-events-none">

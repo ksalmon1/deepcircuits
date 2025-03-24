@@ -34,7 +34,8 @@ export const renderWokwiComponentPreview = async (
     setTimeout(() => {
       const wokwiElement = document.getElementById(elementId)?.firstElementChild;
       if (wokwiElement instanceof HTMLElement) {
-        // Center the element in the container without transform to maintain coordinate system
+        // Position the element at (0,0) of the container without centering
+        // This ensures the component's top-left corner is at a known position
         wokwiElement.style.position = 'absolute';
         wokwiElement.style.left = '0';
         wokwiElement.style.top = '0';
