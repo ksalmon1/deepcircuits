@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import PageLayout from "@/components/PageLayout";
 import { useAuth } from "@/context/AuthContext";
@@ -88,9 +87,7 @@ interface PinConfig {
   signals: string[];
 }
 
-// Helper function to generate a good display name from a wokwi element type
 const getDisplayNameFromType = (type: string): string => {
-  // Remove 'wokwi-' prefix and capitalize first letter of each word
   return type
     .replace('wokwi-', '')
     .split('-')
@@ -98,9 +95,7 @@ const getDisplayNameFromType = (type: string): string => {
     .join(' ');
 };
 
-// Function to categorize components based on their type
 const getCategoryFromType = (type: string): string => {
-  // Define mappings for different categories
   const categoryMap: Record<string, string> = {
     'led': 'output',
     'resistor': 'passive',
@@ -135,18 +130,15 @@ const getCategoryFromType = (type: string): string => {
     'analog-joystick': 'input',
   };
   
-  // Check for matching keywords in the type
   for (const [keyword, category] of Object.entries(categoryMap)) {
     if (type.includes(keyword)) {
       return category;
     }
   }
   
-  // Default category if no match is found
   return 'other';
 };
 
-// Function to create default pin config and properties for components
 const getDefaultPropertiesForType = (type: string): Record<string, any> => {
   const defaults: Record<string, Record<string, any>> = {
     'wokwi-led': { color: 'red', brightness: 1 },
@@ -195,7 +187,6 @@ const ComponentLibrary = () => {
     isOriginal: true
   });
   
-  // Get our React Query hook for component library
   const { 
     components, 
     isLoadingComponents, 
@@ -207,7 +198,6 @@ const ComponentLibrary = () => {
     isDeletingComponent
   } = useComponentLibrary();
   
-  // Get unique categories for filter dropdown
   const uniqueCategories = Array.from(new Set((components || []).map(comp => comp.category)));
   
   useEffect(() => {
@@ -250,7 +240,6 @@ const ComponentLibrary = () => {
     const matchesCategory = categoryFilter === "all" || !categoryFilter ? true : component.category === categoryFilter;
     let matchesType = typeFilter === "all" || !typeFilter ? true : false;
     
-    // Handle specific type filters
     if (typeFilter === "original") {
       matchesType = component.isOriginal === true;
     } else if (typeFilter === "custom") {
@@ -272,11 +261,9 @@ const ComponentLibrary = () => {
       return;
     }
     
-    // Get default pins and properties for this component type
     const pins = getComponentPinInfo(newComponent.type as string);
     const properties = getDefaultPropertiesForType(newComponent.type as string);
     
-    // Create the complete component object
     const componentToAdd: ComponentLibraryItem = {
       name: newComponent.name,
       type: newComponent.type as string,
@@ -288,10 +275,8 @@ const ComponentLibrary = () => {
       properties
     };
     
-    // Call the mutation from our hook
     createComponent(componentToAdd);
     
-    // Reset the form
     setNewComponent({
       name: '',
       type: 'wokwi-led',
@@ -324,7 +309,6 @@ const ComponentLibrary = () => {
   const handleSaveComponent = () => {
     if (!editedComponent) return;
     
-    // Check if key fields are filled
     if (!editedComponent.name || !editedComponent.type || !editedComponent.category) {
       toast({
         title: "Validation Error",
@@ -334,12 +318,10 @@ const ComponentLibrary = () => {
       return;
     }
     
-    // Update isOriginal status based on the component type
     if (editedComponent.type !== selectedComponent?.type) {
       editedComponent.isOriginal = isOriginalWokwiComponent(editedComponent.type);
     }
     
-    // Call the mutation from our hook
     updateComponent(editedComponent);
     
     setIsEditDialogOpen(false);
@@ -348,7 +330,6 @@ const ComponentLibrary = () => {
   const handleConfirmDelete = () => {
     if (!selectedComponent || !selectedComponent.id) return;
     
-    // Fix: Pass only the id as the parameter
     deleteComponent(selectedComponent.id);
     
     setIsDeleteDialogOpen(false);
@@ -401,12 +382,11 @@ const ComponentLibrary = () => {
     
     setEditedComponent(prev => {
       if (!prev) return prev;
-      // Ensure all PinConfig objects have the required signals property
       const typedPinConfig: ComponentPin[] = pinConfig.map(pin => ({
         name: pin.name,
         x: pin.x,
         y: pin.y,
-        signals: pin.signals || []
+        signals: pin.signals
       }));
       
       return { 

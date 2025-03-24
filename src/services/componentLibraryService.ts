@@ -1,14 +1,7 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ComponentPin } from "@/types/database";
-
-export interface ComponentPin {
-  id?: string;
-  name: string;
-  x: number;
-  y: number;
-  signals?: string[];
-}
 
 export interface ComponentProperty {
   key: string;
@@ -119,7 +112,7 @@ export const createComponent = async (component: ComponentLibraryItem): Promise<
         name: pin.name,
         x: pin.x,
         y: pin.y,
-        signals: pin.signals || []
+        signals: pin.signals
       }));
 
       const { error: pinsError } = await supabase
@@ -200,7 +193,7 @@ export const updateComponent = async (component: ComponentLibraryItem): Promise<
           name: pin.name,
           x: pin.x,
           y: pin.y,
-          signals: pin.signals || []
+          signals: pin.signals
         }));
 
         const { error: insertPinsError } = await supabase
@@ -253,6 +246,7 @@ export const updateComponent = async (component: ComponentLibraryItem): Promise<
  */
 export const deleteComponent = async (componentId: string): Promise<void> => {
   try {
+    // No need to delete pins and properties separately due to cascade delete
     const { error } = await supabase
       .from('component_library')
       .delete()

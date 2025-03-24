@@ -69,3 +69,4 @@ export type ComponentPin = {
   y: number;
   signals: string[];
 };
+
