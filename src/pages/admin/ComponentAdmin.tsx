@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from "react";
 import PageLayout from "@/components/PageLayout";
 import { useAuth } from "@/context/AuthContext";
@@ -347,7 +348,7 @@ const ComponentLibrary = () => {
   const handleConfirmDelete = () => {
     if (!selectedComponent || !selectedComponent.id) return;
     
-    // Fix: Pass only the id as the first parameter and name as the second parameter
+    // Fix: Pass only the id as the parameter
     deleteComponent(selectedComponent.id);
     
     setIsDeleteDialogOpen(false);
@@ -410,7 +411,7 @@ const ComponentLibrary = () => {
       
       return { 
         ...prev, 
-        pins: typedPinConfig, 
+        pins: typedPinConfig
       };
     });
   };
@@ -955,4 +956,34 @@ const ComponentLibrary = () => {
                   <span className="font-medium">Name:</span>
                   <span>{selectedComponent.name}</span>
                 </div>
-                <div className="flex items-center gap-
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="font-medium">Type:</span>
+                  <span>{selectedComponent.type}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">Category:</span>
+                  <span>{selectedComponent.category}</span>
+                </div>
+              </div>
+            )}
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={handleConfirmDelete}
+                disabled={isDeletingComponent}
+              >
+                {isDeletingComponent ? 'Deleting...' : 'Delete Component'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </PageLayout>
+  );
+};
+
+export default ComponentLibrary;
