@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect, WheelEvent } from 'react';
 import { Move, Plus, X, ZoomIn, ZoomOut } from 'lucide-react';
 import { Button } from "@/components/ui/button";
@@ -34,12 +35,21 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
   const [componentOrigin, setComponentOrigin] = useState({ left: 0, top: 0 });
   const [currentDragPosition, setCurrentDragPosition] = useState({ x: 0, y: 0 });
   const [zoomLevel, setZoomLevel] = useState(1);
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [showReferenceLines, setShowReferenceLines] = useState(false);
 
+  // Effect to update editor size on mount and window resize
   useEffect(() => {
-    if (editorRef.current) {
-      const { width, height } = editorRef.current.getBoundingClientRect();
-      setEditorSize({ width, height });
-    }
+    const updateEditorSize = () => {
+      if (editorRef.current) {
+        const { width, height } = editorRef.current.getBoundingClientRect();
+        setEditorSize({ width, height });
+      }
+    };
+
+    updateEditorSize();
+    window.addEventListener('resize', updateEditorSize);
+    return () => window.removeEventListener('resize', updateEditorSize);
   }, []);
 
   // Create and render the component preview
@@ -84,6 +94,53 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
     }
   }, [componentType]);
 
+  // Update component origin when zoom changes
+  useEffect(() => {
+    if (componentContainerRef.current && editorRef.current) {
+      const containerRect = componentContainerRef.current.getBoundingClientRect();
+      const editorRect = editorRef.current.getBoundingClientRect();
+      
+      setComponentOrigin({
+        left: containerRect.left - editorRect.left,
+        top: containerRect.top - editorRect.top
+      });
+    }
+  }, [zoomLevel]);
+
+  // Convert editor-relative coordinates to component-relative coordinates
+  const toComponentCoordinates = (x: number, y: number) => {
+    // Calculate the component's center position
+    const componentCenterX = componentOrigin.left + (componentBounds.width * zoomLevel / 2);
+    const componentCenterY = componentOrigin.top + (componentBounds.height * zoomLevel / 2);
+    
+    // Calculate the component's top-left corner
+    const componentTopLeftX = componentCenterX - (componentBounds.width * zoomLevel / 2);
+    const componentTopLeftY = componentCenterY - (componentBounds.height * zoomLevel / 2);
+    
+    // Convert to component-relative coordinates
+    const relativeX = (x - componentTopLeftX) / zoomLevel;
+    const relativeY = (y - componentTopLeftY) / zoomLevel;
+    
+    return { x: relativeX, y: relativeY };
+  };
+
+  // Convert component-relative coordinates to editor-relative coordinates
+  const toEditorCoordinates = (x: number, y: number) => {
+    // Calculate the component's center position
+    const componentCenterX = componentOrigin.left + (componentBounds.width * zoomLevel / 2);
+    const componentCenterY = componentOrigin.top + (componentBounds.height * zoomLevel / 2);
+    
+    // Calculate the component's top-left corner
+    const componentTopLeftX = componentCenterX - (componentBounds.width * zoomLevel / 2);
+    const componentTopLeftY = componentCenterY - (componentBounds.height * zoomLevel / 2);
+    
+    // Convert to editor-relative coordinates
+    const editorX = componentTopLeftX + (x * zoomLevel);
+    const editorY = componentTopLeftY + (y * zoomLevel);
+    
+    return { x: editorX, y: editorY };
+  };
+
   const handlePinDragStart = (index: number) => {
     if (readonly) return;
     setDraggedPin(index);
@@ -95,19 +152,19 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
     const rect = editorRef.current?.getBoundingClientRect();
     if (!rect) return;
 
-    // Calculate the position within the component
-    const x = (e.clientX - rect.left) / zoomLevel;
-    const y = (e.clientY - rect.top) / zoomLevel;
-
+    // Calculate position in the editor
+    const editorX = e.clientX - rect.left;
+    const editorY = e.clientY - rect.top;
+    
     // Convert to component-relative coordinates
-    const relativeX = x - componentOrigin.left / zoomLevel;
-    const relativeY = y - componentOrigin.top / zoomLevel;
+    const { x: relativeX, y: relativeY } = toComponentCoordinates(editorX, editorY);
 
+    // Update pin position
     const updatedPins = [...pins];
     updatedPins[draggedPin] = {
       ...updatedPins[draggedPin],
-      x: relativeX,
-      y: relativeY
+      x: Math.round(relativeX),
+      y: Math.round(relativeY)
     };
 
     onChange(updatedPins);
@@ -120,26 +177,48 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
     const rect = editorRef.current?.getBoundingClientRect();
     if (!rect) return;
 
-    // Calculate position in the viewport
-    const x = (e.clientX - rect.left) / zoomLevel;
-    const y = (e.clientY - rect.top) / zoomLevel;
+    // Calculate position in the editor
+    const editorX = e.clientX - rect.left;
+    const editorY = e.clientY - rect.top;
     
     // Convert to component-relative coordinates
-    const relativeX = x - componentOrigin.left / zoomLevel;
-    const relativeY = y - componentOrigin.top / zoomLevel;
+    const { x: relativeX, y: relativeY } = toComponentCoordinates(editorX, editorY);
     
     // Store cursor position for visual feedback
-    setCurrentDragPosition({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+    setCurrentDragPosition({ x: editorX, y: editorY });
     
-    // Live update the pin position during drag
+    // Update pin position during drag
     const updatedPins = [...pins];
     updatedPins[draggedPin] = {
       ...updatedPins[draggedPin],
-      x: relativeX,
-      y: relativeY
+      x: Math.round(relativeX),
+      y: Math.round(relativeY)
     };
     
     onChange(updatedPins);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    const rect = editorRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    // Calculate position in the editor
+    const editorX = e.clientX - rect.left;
+    const editorY = e.clientY - rect.top;
+    
+    // Convert to component-relative coordinates
+    const { x: relativeX, y: relativeY } = toComponentCoordinates(editorX, editorY);
+    
+    // Update mouse position for coordinate display
+    setMousePosition({ 
+      x: Math.round(relativeX), 
+      y: Math.round(relativeY) 
+    });
+    
+    // Handle pin dragging
+    if (draggedPin !== null) {
+      handlePinDrag(e);
+    }
   };
 
   const handlePinDragEnd = () => {
@@ -166,8 +245,8 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
     
     const newPin = {
       name: `Pin ${pins.length + 1}`,
-      x: componentBounds.width / 2,
-      y: componentBounds.height / 2,
+      x: Math.round(componentBounds.width / 2),
+      y: Math.round(componentBounds.height / 2),
       signals: ['digital']
     };
     onChange([...pins, newPin]);
@@ -214,8 +293,19 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
           <Button onClick={zoomIn} size="sm" variant="outline" className="px-2">
             <ZoomIn className="h-4 w-4" />
           </Button>
-          <Button onClick={() => setShowGrid(!showGrid)} size="sm" variant="outline">
+          <Button 
+            onClick={() => setShowGrid(!showGrid)} 
+            size="sm" 
+            variant="outline"
+          >
             {showGrid ? "Hide Grid" : "Show Grid"}
+          </Button>
+          <Button 
+            onClick={() => setShowReferenceLines(!showReferenceLines)} 
+            size="sm" 
+            variant="outline"
+          >
+            {showReferenceLines ? "Hide Lines" : "Show Lines"}
           </Button>
           {!readonly && (
             <Button onClick={addNewPin} size="sm">Add Pin</Button>
@@ -223,7 +313,7 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
         </div>
       </div>
 
-      <ScrollArea className="border rounded-md h-[300px] relative" onWheel={handleZoom}>
+      <ScrollArea className="border rounded-md h-[300px] relative">
         <div 
           ref={editorRef}
           className="relative cursor-crosshair"
@@ -233,9 +323,10 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
             overflow: 'hidden'
           }}
           onClick={handleEditorClick}
-          onMouseMove={handlePinDrag}
+          onMouseMove={handleMouseMove}
           onMouseUp={handlePinDragEnd}
           onMouseLeave={handlePinDragEnd}
+          onWheel={handleZoom}
         >
           {showGrid && (
             <div className="component-grid absolute inset-0"></div>
@@ -247,7 +338,7 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
             className="absolute top-1/2 left-1/2"
             style={{ 
               transform: `translate(-50%, -50%) scale(${zoomLevel})`,
-              transformOrigin: 'center'
+              transformOrigin: 'center',
             }}
           >
             <div 
@@ -269,22 +360,18 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
 
           {/* Pin markers */}
           {pins.map((pin, index) => {
-            // Calculate position based on component's top-left
-            const pinX = componentOrigin.left + (pin.x * zoomLevel);
-            const pinY = componentOrigin.top + (pin.y * zoomLevel);
+            // Convert component-relative coordinates to editor-relative coordinates
+            const editorCoords = toEditorCoordinates(pin.x, pin.y);
             
             return (
               <div
                 key={`pin-${index}`}
                 className={`pin-marker ${draggedPin === index ? 'dragging' : ''}`}
                 style={{ 
-                  left: `${pinX}px`, 
-                  top: `${pinY}px`,
+                  left: `${editorCoords.x}px`, 
+                  top: `${editorCoords.y}px`,
                   backgroundColor: getSignalColor(pin.signals && pin.signals.length > 0 ? pin.signals[0] : 'digital'),
                   cursor: readonly ? 'default' : 'move',
-                  // Keep pin size consistent regardless of zoom
-                  width: `${10}px`,
-                  height: `${10}px`
                 }}
                 data-pin-name={pin.name}
                 onMouseEnter={() => setHoveredPin(index)}
@@ -310,14 +397,37 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
             );
           })}
 
+          {/* Reference lines for pins */}
+          {showReferenceLines && hoveredPin !== null && (
+            <>
+              <div 
+                className="pin-reference-line"
+                style={{
+                  left: `${toEditorCoordinates(pins[hoveredPin].x, 0).x}px`,
+                  top: `${componentOrigin.top}px`,
+                  width: '1px',
+                  height: `${componentBounds.height * zoomLevel}px`
+                }}
+              />
+              <div 
+                className="pin-reference-line"
+                style={{
+                  left: `${componentOrigin.left}px`,
+                  top: `${toEditorCoordinates(0, pins[hoveredPin].y).y}px`,
+                  height: '1px',
+                  width: `${componentBounds.width * zoomLevel}px`
+                }}
+              />
+            </>
+          )}
+
           {/* Pin tooltip */}
           {hoveredPin !== null && (
             <div 
               className="pin-tooltip"
               style={{ 
-                top: `${componentOrigin.top + pins[hoveredPin].y * zoomLevel - 20}px`, 
-                left: `${componentOrigin.left + pins[hoveredPin].x * zoomLevel}px`,
-                transform: 'translate(-50%, 0)',
+                top: `${toEditorCoordinates(pins[hoveredPin].x, pins[hoveredPin].y).y - 16}px`, 
+                left: `${toEditorCoordinates(pins[hoveredPin].x, pins[hoveredPin].y).x}px`,
               }}
             >
               {pins[hoveredPin].name}
@@ -335,6 +445,11 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
               Drag to position pin
             </div>
           )}
+
+          {/* Coordinate display */}
+          <div className="coordinate-display">
+            Position: ({mousePosition.x}, {mousePosition.y})
+          </div>
         </div>
       </ScrollArea>
 
@@ -366,7 +481,7 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
               )}
             </div>
             <div className="text-xs space-y-1">
-              <div>Position: <span className="font-mono">({Math.round(pin.x)}, {Math.round(pin.y)})</span></div>
+              <div>Position: <span className="font-mono">({pin.x}, {pin.y})</span></div>
               <div>
                 Signal: 
                 <select 

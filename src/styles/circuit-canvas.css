@@ -46,6 +46,8 @@
   font-size: 12px;
   white-space: nowrap;
   position: absolute;
+  transform: translate(-50%, -100%);
+  margin-top: -8px;
 }
 
 /* Component grid for pin editor */
@@ -124,4 +126,28 @@
   justify-content: center;
   font-size: 12px;
   padding: 0 8px;
+}
+
+/* Coordinate display */
+.coordinate-display {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: monospace;
+  color: #333;
+  pointer-events: none;
+  z-index: 30;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Pin-to-component reference lines */
+.pin-reference-line {
+  position: absolute;
+  background-color: rgba(76, 114, 244, 0.3);
+  pointer-events: none;
+  z-index: 15;
 }
