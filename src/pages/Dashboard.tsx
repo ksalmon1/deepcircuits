@@ -24,7 +24,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-// Sample project data - in a real app, this would come from a database
 const sampleProjects: ProjectData[] = [
   {
     id: "1",
@@ -62,12 +61,11 @@ const Dashboard = () => {
   const [sortOption, setSortOption] = useState<SortOption>("date-desc");
   const [filterType, setFilterType] = useState<string>("all");
 
-  // Analytics data (in a real app, these would be calculated or fetched)
   const analyticsData = {
     totalProjects: projects.length,
     activeProjects: projects.filter(p => new Date(p.updatedAt) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)).length,
     recentlyModified: projects.filter(p => new Date(p.updatedAt) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)).length,
-    codeCompilations: 12, // Sample value
+    codeCompilations: 12,
   };
 
   const handleCreateProject = (name: string, description: string) => {
@@ -83,7 +81,7 @@ const Dashboard = () => {
       description: `"${name}" has been created.`,
       action: {
         label: "Open Editor",
-        onClick: () => navigate(`/circuit-editor?id=${newProject.id}`),
+        onClick: () => navigate(`/circuit-editor/${newProject.id}`),
       },
     });
   };
@@ -101,25 +99,19 @@ const Dashboard = () => {
     });
   };
 
-  // Filter and sort projects
   const filteredProjects = useMemo(() => {
-    // First filter by search query
     let result = projects.filter(project => 
       project.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
       project.description?.toLowerCase().includes(searchQuery.toLowerCase())
     );
     
-    // Then filter by type if needed
     if (filterType !== "all") {
       result = result.filter(project => {
-        // This is a placeholder for actual type filtering
-        // In a real app, you'd have project types or categories
         const hasKeyword = project.description?.toLowerCase().includes(filterType.toLowerCase());
         return hasKeyword;
       });
     }
     
-    // Finally sort
     return result.sort((a, b) => {
       switch (sortOption) {
         case "name-asc":
@@ -150,7 +142,6 @@ const Dashboard = () => {
           </p>
         </div>
 
-        {/* Dashboard Analytics */}
         <DashboardAnalytics 
           totalProjects={analyticsData.totalProjects}
           activeProjects={analyticsData.activeProjects}
@@ -167,7 +158,6 @@ const Dashboard = () => {
             </Button>
           </div>
           
-          {/* Search and filter options */}
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
             <div className="relative flex-grow">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -224,12 +214,10 @@ const Dashboard = () => {
         </div>
 
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {/* New Project Card */}
           <div id="create-project-button">
             <NewProjectCard onCreateProject={handleCreateProject} />
           </div>
           
-          {/* Project Cards */}
           {filteredProjects.map((project) => (
             <ProjectCard
               key={project.id}

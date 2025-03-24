@@ -35,11 +35,12 @@ const ProjectCard = ({ project, onDelete }: ProjectCardProps) => {
   const navigate = useNavigate();
   
   const handleEdit = () => {
-    navigate(`/circuit-editor?id=${project.id}`);
+    navigate(`/circuit-editor/${project.id}`);
   };
   
   const handleView = () => {
-    navigate(`/circuit-demo?id=${project.id}`);
+    // Since we removed the circuit-demo route, we'll point to the editor in view mode
+    navigate(`/circuit-editor/${project.id}?mode=view`);
   };
   
   const handleDelete = () => {
