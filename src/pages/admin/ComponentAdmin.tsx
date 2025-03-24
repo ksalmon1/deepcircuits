@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from "react";
 import PageLayout from "@/components/PageLayout";
 import { useAuth } from "@/context/AuthContext";
@@ -160,6 +161,11 @@ const getDefaultPropertiesForType = (type: string): Record<string, any> => {
 
 const signalTypes = [
   "power", "ground", "digital", "analog", "passive", "i2c", "spi", "uart", "rx", "tx"
+];
+
+// Define a uniqueCategories array for the filter dropdown
+const uniqueCategories = [
+  'input', 'output', 'passive', 'microcontroller', 'sensor', 'display', 'power', 'base', 'other'
 ];
 
 const ComponentLibrary = () => {
@@ -959,4 +965,121 @@ const ComponentLibrary = () => {
                 
                 <div className="mb-4">
                   <h4 className="text-sm font-medium mb-1">Description</h4>
-                  <p className="text-sm text-muted-foreground
+                  <p className="text-sm text-muted-foreground">
+                    {selectedComponent.description || "No description provided."}
+                  </p>
+                </div>
+                
+                <div className="mb-4">
+                  <h4 className="text-sm font-medium mb-1">Status</h4>
+                  <Badge 
+                    variant={selectedComponent.enabled ? "default" : "outline"}
+                    className={selectedComponent.enabled ? "bg-green-500" : "text-red-500"}
+                  >
+                    {selectedComponent.enabled ? "Enabled" : "Disabled"}
+                  </Badge>
+                </div>
+                
+                <div className="mb-4">
+                  <h4 className="text-sm font-medium mb-1">Properties</h4>
+                  {selectedComponent.properties && Object.keys(selectedComponent.properties).length > 0 ? (
+                    <div className="bg-gray-100 p-3 rounded-md">
+                      <pre className="text-xs overflow-auto max-h-40">
+                        {JSON.stringify(selectedComponent.properties, null, 2)}
+                      </pre>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No properties defined.</p>
+                  )}
+                </div>
+                
+                <div>
+                  <h4 className="text-sm font-medium mb-2">Pin Configuration</h4>
+                  {selectedComponent.pins && selectedComponent.pins.length > 0 ? (
+                    <div>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Name</TableHead>
+                            <TableHead>Position X</TableHead>
+                            <TableHead>Position Y</TableHead>
+                            <TableHead>Signals</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {selectedComponent.pins.map((pin, index) => (
+                            <TableRow key={index}>
+                              <TableCell>{pin.name}</TableCell>
+                              <TableCell>{pin.x}</TableCell>
+                              <TableCell>{pin.y}</TableCell>
+                              <TableCell>
+                                {pin.signals && pin.signals.length > 0 ? (
+                                  <div className="flex flex-wrap gap-1">
+                                    {pin.signals.map((signal, idx) => (
+                                      <Badge key={idx} variant="outline">{signal}</Badge>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  "None"
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No pin configuration defined.</p>
+                  )}
+                </div>
+              </div>
+            )}
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>Close</Button>
+              <Button onClick={() => {
+                setIsViewDialogOpen(false);
+                if (selectedComponent) {
+                  handleEditComponent(selectedComponent);
+                }
+              }}>
+                Edit Component
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Confirm Delete</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete this component? This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            
+            {selectedComponent && (
+              <div className="py-4">
+                <p className="font-medium">{selectedComponent.name}</p>
+                <p className="text-sm text-muted-foreground mt-1">{selectedComponent.type}</p>
+              </div>
+            )}
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>Cancel</Button>
+              <Button 
+                variant="destructive" 
+                onClick={handleConfirmDelete}
+                disabled={isDeletingComponent}
+              >
+                {isDeletingComponent ? 'Deleting...' : 'Delete Component'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </PageLayout>
+  );
+};
+
+export default ComponentLibrary;
