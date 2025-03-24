@@ -5,7 +5,7 @@ const About = () => {
   return (
     <PageLayout>
       <section className="container py-16 md:py-24">
-        <h1 className="text-4xl font-bold text-center mb-8">About CircuitSim</h1>
+        <h1 className="text-4xl font-bold text-center mb-8">About DeepCircuits</h1>
         <p className="text-lg text-center text-slate-700 max-w-3xl mx-auto">
           Learn about our mission to make electronics education accessible to everyone.
         </p>

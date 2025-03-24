@@ -12,7 +12,7 @@ const HeroSection = () => {
               Design and Simulate Electronic Circuits in Your Browser
             </h1>
             <p className="mt-6 text-lg text-slate-600">
-              CircuitSim provides an intuitive platform for hobbyists and students to create, simulate, and collaborate on electronics projects with real-time feedback.
+              DeepCircuits provides an intuitive platform for hobbyists and students to create, simulate, and collaborate on electronics projects with real-time feedback.
             </p>
             <div className="mt-8 flex flex-col gap-4 sm:flex-row">
               <Button asChild size="lg">
