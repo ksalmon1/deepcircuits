@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from "react";
 import PageLayout from "@/components/PageLayout";
 import { useAuth } from "@/context/AuthContext";
@@ -936,4 +937,233 @@ const ComponentLibrary = () => {
                   )}
                 </TabsContent>
                 
-                <TabsContent value="pins"
+                <TabsContent value="pins" className="py-4">
+                  <div className="flex flex-col">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-medium">Pin Configuration</h3>
+                      <div className="flex items-center space-x-2">
+                        <Switch 
+                          id="showPins" 
+                          checked={showPins} 
+                          onCheckedChange={setShowPins}
+                        />
+                        <label htmlFor="showPins">Show Pins</label>
+                      </div>
+                    </div>
+                    
+                    <div className="border rounded-md bg-gray-50 p-4">
+                      <div className="component-preview-container mb-4">
+                        <div className="relative">
+                          <VisualPinEditor
+                            componentType={editedComponent.type}
+                            pins={editedComponent.pinConfig || getComponentPinInfo(editedComponent.type)}
+                            onChange={updatePinConfiguration}
+                            showPins={showPins}
+                            readonly={editedComponent.isOriginal}
+                          />
+                        </div>
+                      </div>
+                      
+                      {editedComponent.isOriginal && (
+                        <div className="bg-blue-50 text-blue-800 p-4 rounded-md mb-4 flex items-start gap-2">
+                          <AlertCircle className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <p className="font-medium">Original Component</p>
+                            <p className="text-sm">This is an original Wokwi component with predefined pin configurations. The pin positions are shown for reference but cannot be modified.</p>
+                          </div>
+                        </div>
+                      )}
+                      
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Pin Name</TableHead>
+                              <TableHead>X Position</TableHead>
+                              <TableHead>Y Position</TableHead>
+                              <TableHead>Signal Types</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {(editedComponent.pinConfig || getComponentPinInfo(editedComponent.type)).map((pin, index) => (
+                              <TableRow key={index}>
+                                <TableCell>{pin.name}</TableCell>
+                                <TableCell>{pin.x}</TableCell>
+                                <TableCell>{pin.y}</TableCell>
+                                <TableCell>
+                                  <div className="flex flex-wrap gap-1">
+                                    {pin.signals && pin.signals.map((signal, sIdx) => (
+                                      <Badge key={sIdx} variant="outline" className="text-xs">
+                                        {signal}
+                                      </Badge>
+                                    ))}
+                                    {(!pin.signals || pin.signals.length === 0) && (
+                                      <span className="text-muted-foreground text-xs">None</span>
+                                    )}
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </div>
+                  </div>
+                </TabsContent>
+                
+                <TabsContent value="preview" className="py-4">
+                  <div className="flex flex-col">
+                    <h3 className="text-lg font-medium mb-4">Component Preview</h3>
+                    
+                    <div className="border rounded-md bg-gray-50 p-6">
+                      <div className="flex justify-center items-center" ref={previewRef}>
+                        {wokwiReady ? (
+                          <EnhancedComponentPreview
+                            componentType={editedComponent.type}
+                            properties={editedComponent.properties || {}}
+                          />
+                        ) : (
+                          <div className="text-center py-8">
+                            <div className="flex justify-center mb-4">
+                              <AlertCircle className="h-8 w-8 text-amber-500" />
+                            </div>
+                            <p className="font-medium">Loading Wokwi Elements...</p>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              Please wait while the component preview is being initialized.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="mt-6 space-y-3 text-sm">
+                        <p className="font-medium">Component Properties Preview:</p>
+                        <div className="bg-gray-100 p-3 rounded-md">
+                          <pre className="text-xs overflow-auto max-h-40">
+                            {JSON.stringify(editedComponent.properties || {}, null, 2)}
+                          </pre>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </TabsContent>
+              </Tabs>
+            )}
+            
+            <DialogFooter className="mt-6">
+              <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
+              <Button onClick={handleSaveComponent}>Save Changes</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+          <DialogContent className="sm:max-w-[700px]">
+            <DialogHeader>
+              <DialogTitle>Component Details</DialogTitle>
+            </DialogHeader>
+            
+            {selectedComponent && (
+              <div className="py-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+                  <div>
+                    <h4 className="text-sm font-medium mb-1">Component Name</h4>
+                    <p>{selectedComponent.name}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium mb-1">Type</h4>
+                    <p>{selectedComponent.type}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium mb-1">Category</h4>
+                    <Badge 
+                      variant={
+                        selectedComponent.category === "microcontroller" ? "default" : 
+                        selectedComponent.category === "input" ? "secondary" : 
+                        "outline"
+                      }
+                    >
+                      {selectedComponent.category}
+                    </Badge>
+                  </div>
+                </div>
+                
+                <div className="mb-4">
+                  <h4 className="text-sm font-medium mb-1">Description</h4>
+                  <p className="text-sm text-muted-foreground">{selectedComponent.description || "No description provided."}</p>
+                </div>
+                
+                <div className="border rounded-md bg-gray-50 p-4 mb-4">
+                  <h4 className="text-sm font-medium mb-2">Preview</h4>
+                  <div className="component-preview-container">
+                    {wokwiReady ? (
+                      <EnhancedComponentPreview
+                        componentType={selectedComponent.type}
+                        properties={selectedComponent.properties || {}}
+                      />
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Preview not available</p>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="text-sm font-medium mb-2">Properties</h4>
+                    <div className="bg-gray-100 p-3 rounded-md">
+                      <pre className="text-xs overflow-auto max-h-40">
+                        {JSON.stringify(selectedComponent.properties || {}, null, 2)}
+                      </pre>
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium mb-2">Pin Configuration</h4>
+                    <div className="bg-gray-100 p-3 rounded-md">
+                      <pre className="text-xs overflow-auto max-h-40">
+                        {JSON.stringify(selectedComponent.pinConfig || getComponentPinInfo(selectedComponent.type), null, 2)}
+                      </pre>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            <DialogFooter>
+              <Button onClick={() => setIsViewDialogOpen(false)}>Close</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Confirm Delete</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete this component from the library? This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            
+            {selectedComponent && (
+              <div className="py-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="font-medium">Name:</span>
+                  <span>{selectedComponent.name}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">Type:</span>
+                  <span>{selectedComponent.type}</span>
+                </div>
+              </div>
+            )}
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>Cancel</Button>
+              <Button variant="destructive" onClick={handleConfirmDelete}>Delete</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </PageLayout>
+  );
+};
+
+export default ComponentLibrary;
