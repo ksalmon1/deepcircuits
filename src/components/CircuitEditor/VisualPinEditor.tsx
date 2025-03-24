@@ -1,533 +1,396 @@
+
 import React, { useState, useRef, useEffect, WheelEvent } from 'react';
 import { Move, Plus, X, ZoomIn, ZoomOut } from 'lucide-react';
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
-
-interface PinConfig {
-  name: string;
-  x: number;
-  y: number;
-  signals: string[];
-}
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { isWokwiLoaded, forceLoadWokwiElements, renderWokwiElement } from '@/integrations/wokwi/WokwiIntegration';
+import { ComponentPin } from '@/types/database';
+import { renderWokwiComponentPreview } from '@/utils/componentPreviewUtils';
 
 interface VisualPinEditorProps {
-  pins: PinConfig[];
+  pins: ComponentPin[];
   componentType: string;
-  onChange: (pins: PinConfig[]) => void;
+  onPinsChange?: (pins: ComponentPin[]) => void;
+  width?: number;
+  height?: number;
+  className?: string;
   readonly?: boolean;
 }
 
 /**
  * Component for visually editing pin positions on circuit components
  * Provides a visual interface for positioning and configuring pins
+ * 
+ * IMPORTANT: The coordinate system for pins is relative to the component's top-left corner (0,0)
+ * This ensures consistency with the CircuitCanvas component
  */
 const VisualPinEditor: React.FC<VisualPinEditorProps> = ({ 
   pins, 
   componentType, 
-  onChange,
+  onPinsChange, 
+  width = 300, 
+  height = 300,
+  className = '',
   readonly = false
 }) => {
-  const [draggedPin, setDraggedPin] = useState<number | null>(null);
-  const editorRef = useRef<HTMLDivElement>(null);
-  const componentContainerRef = useRef<HTMLDivElement>(null);
-  const [editorSize, setEditorSize] = useState({ width: 0, height: 0 });
-  const [showGrid, setShowGrid] = useState(true);
-  const [hoveredPin, setHoveredPin] = useState<number | null>(null);
-  const [componentElement, setComponentElement] = useState<HTMLElement | null>(null);
-  const [componentBounds, setComponentBounds] = useState({ width: 0, height: 0 });
-  const [componentOrigin, setComponentOrigin] = useState({ left: 0, top: 0 });
-  const [currentDragPosition, setCurrentDragPosition] = useState({ x: 0, y: 0 });
-  const [zoomLevel, setZoomLevel] = useState(1);
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-  const [showReferenceLines, setShowReferenceLines] = useState(false);
-
-  // Effect to update editor size on mount and window resize
+  const containerRef = useRef<HTMLDivElement>(null);
+  const componentRef = useRef<HTMLDivElement>(null);
+  const previewRef = useRef<HTMLDivElement>(null);
+  const [componentLoaded, setComponentLoaded] = useState(false);
+  const [draggingPin, setDraggingPin] = useState<number | null>(null);
+  const [editingPin, setEditingPin] = useState<number | null>(null);
+  const [newPinName, setNewPinName] = useState<string>('');
+  const [newPinSignals, setNewPinSignals] = useState<string>('');
+  const [zoom, setZoom] = useState(1);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [isDraggingCanvas, setIsDraggingCanvas] = useState(false);
+  const [panMode, setPanMode] = useState(false);
+  
+  // Ensure pins is an array
+  const pinData = Array.isArray(pins) ? pins : [];
+  
+  // Try to load Wokwi elements
   useEffect(() => {
-    const updateEditorSize = () => {
-      if (editorRef.current) {
-        const { width, height } = editorRef.current.getBoundingClientRect();
-        setEditorSize({ width, height });
+    const loadWokwi = async () => {
+      try {
+        if (!isWokwiLoaded()) {
+          await forceLoadWokwiElements();
+        }
+        
+        if (componentType && previewRef.current) {
+          await renderWokwiComponentPreview(componentType, previewRef.current);
+          setComponentLoaded(true);
+        }
+      } catch (error) {
+        console.error('Error loading component preview:', error);
       }
     };
-
-    updateEditorSize();
-    window.addEventListener('resize', updateEditorSize);
-    return () => window.removeEventListener('resize', updateEditorSize);
-  }, []);
-
-  // Create and render the component preview
-  useEffect(() => {
-    if (!componentType || !editorRef.current) return;
-
-    try {
-      const previewContainer = document.getElementById('pinEditor-component-preview');
-      if (!previewContainer) return;
-
-      // Clear previous content
-      previewContainer.innerHTML = '';
-
-      // Create the component element
-      const element = document.createElement(componentType);
-      previewContainer.appendChild(element);
-      setComponentElement(element);
-      
-      // Get the component's dimensions for accurate border
-      setTimeout(() => {
-        if (element) {
-          const rect = element.getBoundingClientRect();
-          setComponentBounds({ 
-            width: Math.ceil(rect.width), 
-            height: Math.ceil(rect.height) 
-          });
-          
-          // Store the component's position for relative pin positioning
-          if (componentContainerRef.current) {
-            const containerRect = componentContainerRef.current.getBoundingClientRect();
-            const editorRect = editorRef.current?.getBoundingClientRect() || { left: 0, top: 0 };
-            
-            setComponentOrigin({
-              left: containerRect.left - editorRect.left,
-              top: containerRect.top - editorRect.top
-            });
-          }
-        }
-      }, 100);
-    } catch (error) {
-      console.error('Error rendering component preview:', error);
-    }
+    
+    loadWokwi();
   }, [componentType]);
-
-  // Update component origin when zoom changes
-  useEffect(() => {
-    if (componentContainerRef.current && editorRef.current) {
-      const containerRect = componentContainerRef.current.getBoundingClientRect();
-      const editorRect = editorRef.current.getBoundingClientRect();
-      
-      setComponentOrigin({
-        left: containerRect.left - editorRect.left,
-        top: containerRect.top - editorRect.top
-      });
-    }
-  }, [zoomLevel]);
-
-  // Convert editor-relative coordinates to component-relative coordinates
-  const toComponentCoordinates = (x: number, y: number) => {
-    // Calculate the component's center position
-    const componentCenterX = componentOrigin.left + (componentBounds.width * zoomLevel / 2);
-    const componentCenterY = componentOrigin.top + (componentBounds.height * zoomLevel / 2);
-    
-    // Calculate the component's top-left corner
-    const componentTopLeftX = componentCenterX - (componentBounds.width * zoomLevel / 2);
-    const componentTopLeftY = componentCenterY - (componentBounds.height * zoomLevel / 2);
-    
-    // Convert to component-relative coordinates
-    const relativeX = (x - componentTopLeftX) / zoomLevel;
-    const relativeY = (y - componentTopLeftY) / zoomLevel;
-    
-    return { x: relativeX, y: relativeY };
-  };
-
-  // Convert component-relative coordinates to editor-relative coordinates
-  const toEditorCoordinates = (x: number, y: number) => {
-    // Calculate the component's center position
-    const componentCenterX = componentOrigin.left + (componentBounds.width * zoomLevel / 2);
-    const componentCenterY = componentOrigin.top + (componentBounds.height * zoomLevel / 2);
-    
-    // Calculate the component's top-left corner
-    const componentTopLeftX = componentCenterX - (componentBounds.width * zoomLevel / 2);
-    const componentTopLeftY = componentCenterY - (componentBounds.height * zoomLevel / 2);
-    
-    // Convert to editor-relative coordinates
-    const editorX = componentTopLeftX + (x * zoomLevel);
-    const editorY = componentTopLeftY + (y * zoomLevel);
-    
-    return { x: editorX, y: editorY };
-  };
-
-  const handlePinDragStart = (index: number) => {
+  
+  const handleCanvasMouseDown = (e: React.MouseEvent) => {
     if (readonly) return;
-    setDraggedPin(index);
-  };
-
-  const handleEditorClick = (e: React.MouseEvent) => {
-    if (draggedPin === null) return;
     
-    const rect = editorRef.current?.getBoundingClientRect();
-    if (!rect) return;
-
-    // Calculate position in the editor
-    const editorX = e.clientX - rect.left;
-    const editorY = e.clientY - rect.top;
+    if (panMode || e.button === 1 || e.ctrlKey) {
+      setIsDraggingCanvas(true);
+      setDragStart({ x: e.clientX - offset.x, y: e.clientY - offset.y });
+      return;
+    }
     
-    // Convert to component-relative coordinates
-    const { x: relativeX, y: relativeY } = toComponentCoordinates(editorX, editorY);
-
-    // Update pin position
-    const updatedPins = [...pins];
-    updatedPins[draggedPin] = {
-      ...updatedPins[draggedPin],
-      x: Math.round(relativeX),
-      y: Math.round(relativeY)
-    };
-
-    onChange(updatedPins);
-    setDraggedPin(null);
+    const containerRect = containerRef.current?.getBoundingClientRect();
+    if (!containerRect) return;
+    
+    const canvasX = (e.clientX - containerRect.left - offset.x) / zoom;
+    const canvasY = (e.clientY - containerRect.top - offset.y) / zoom;
+    
+    // Check if clicking on an existing pin
+    for (let i = 0; i < pinData.length; i++) {
+      const pin = pinData[i];
+      const pinX = Number(pin.x);
+      const pinY = Number(pin.y);
+      
+      const dx = canvasX - pinX;
+      const dy = canvasY - pinY;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      
+      if (distance < 10) {
+        setDraggingPin(i);
+        return;
+      }
+    }
+    
+    // If clicked outside pins and not in pan mode, add a new pin
+    if (!readonly && e.button === 0 && !e.ctrlKey) {
+      const newPin: ComponentPin = {
+        name: `pin${pinData.length + 1}`,
+        x: canvasX,
+        y: canvasY,
+        signals: []
+      };
+      
+      if (onPinsChange) {
+        onPinsChange([...pinData, newPin]);
+      }
+    }
   };
   
-  const handlePinDrag = (e: React.MouseEvent) => {
-    if (draggedPin === null) return;
+  const handleCanvasMouseMove = (e: React.MouseEvent) => {
+    if (readonly) return;
     
-    const rect = editorRef.current?.getBoundingClientRect();
-    if (!rect) return;
-
-    // Calculate position in the editor
-    const editorX = e.clientX - rect.left;
-    const editorY = e.clientY - rect.top;
+    if (isDraggingCanvas) {
+      const newX = e.clientX - dragStart.x;
+      const newY = e.clientY - dragStart.y;
+      setOffset({ x: newX, y: newY });
+      return;
+    }
     
-    // Convert to component-relative coordinates
-    const { x: relativeX, y: relativeY } = toComponentCoordinates(editorX, editorY);
-    
-    // Store cursor position for visual feedback
-    setCurrentDragPosition({ x: editorX, y: editorY });
-    
-    // Update pin position during drag
-    const updatedPins = [...pins];
-    updatedPins[draggedPin] = {
-      ...updatedPins[draggedPin],
-      x: Math.round(relativeX),
-      y: Math.round(relativeY)
-    };
-    
-    onChange(updatedPins);
-  };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    const rect = editorRef.current?.getBoundingClientRect();
-    if (!rect) return;
-
-    // Calculate position in the editor
-    const editorX = e.clientX - rect.left;
-    const editorY = e.clientY - rect.top;
-    
-    // Convert to component-relative coordinates
-    const { x: relativeX, y: relativeY } = toComponentCoordinates(editorX, editorY);
-    
-    // Update mouse position for coordinate display
-    setMousePosition({ 
-      x: Math.round(relativeX), 
-      y: Math.round(relativeY) 
-    });
-    
-    // Handle pin dragging
-    if (draggedPin !== null) {
-      handlePinDrag(e);
+    if (draggingPin !== null) {
+      const containerRect = containerRef.current?.getBoundingClientRect();
+      if (!containerRect) return;
+      
+      const canvasX = (e.clientX - containerRect.left - offset.x) / zoom;
+      const canvasY = (e.clientY - containerRect.top - offset.y) / zoom;
+      
+      // Update the pin position
+      const updatedPins = [...pinData];
+      updatedPins[draggingPin] = {
+        ...updatedPins[draggingPin],
+        x: canvasX,
+        y: canvasY
+      };
+      
+      if (onPinsChange) {
+        onPinsChange(updatedPins);
+      }
     }
   };
-
-  const handlePinDragEnd = () => {
-    setDraggedPin(null);
+  
+  const handleCanvasMouseUp = () => {
+    setDraggingPin(null);
+    setIsDraggingCanvas(false);
   };
-
-  const handleZoom = (e: WheelEvent<HTMLDivElement>) => {
+  
+  const handleCanvasMouseLeave = () => {
+    setDraggingPin(null);
+    setIsDraggingCanvas(false);
+  };
+  
+  const handleWheelZoom = (e: WheelEvent) => {
     e.preventDefault();
     const delta = e.deltaY > 0 ? -0.1 : 0.1;
-    const newZoom = Math.max(0.5, Math.min(3, zoomLevel + delta));
-    setZoomLevel(newZoom);
+    setZoom(prevZoom => Math.max(0.5, Math.min(3, prevZoom + delta)));
   };
-
-  const zoomIn = () => {
-    setZoomLevel(prev => Math.min(3, prev + 0.2));
-  };
-
-  const zoomOut = () => {
-    setZoomLevel(prev => Math.max(0.5, prev - 0.2));
-  };
-
-  const addNewPin = () => {
+  
+  const handleEditPin = (index: number) => {
     if (readonly) return;
+    setEditingPin(index);
+    setNewPinName(pinData[index].name);
+    setNewPinSignals(pinData[index].signals ? pinData[index].signals.join(',') : '');
+  };
+  
+  const handleSavePin = () => {
+    if (editingPin === null || readonly) return;
     
-    const newPin = {
-      name: `Pin ${pins.length + 1}`,
-      x: Math.round(componentBounds.width / 2),
-      y: Math.round(componentBounds.height / 2),
-      signals: ['digital']
+    const updatedPins = [...pinData];
+    updatedPins[editingPin] = {
+      ...updatedPins[editingPin],
+      name: newPinName,
+      signals: newPinSignals.split(',').map(s => s.trim()).filter(s => s)
     };
-    onChange([...pins, newPin]);
+    
+    if (onPinsChange) {
+      onPinsChange(updatedPins);
+    }
+    
+    setEditingPin(null);
+    setNewPinName('');
+    setNewPinSignals('');
   };
-
-  const removePin = (index: number) => {
+  
+  const handleDeletePin = (index: number) => {
     if (readonly) return;
     
-    const updatedPins = pins.filter((_, i) => i !== index);
-    onChange(updatedPins);
-  };
-
-  const updatePinSignal = (index: number, signal: string) => {
-    if (readonly) return;
+    const updatedPins = [...pinData];
+    updatedPins.splice(index, 1);
     
-    const updatedPins = [...pins];
-    updatedPins[index] = {
-      ...updatedPins[index],
-      signals: [signal]
-    };
-    onChange(updatedPins);
+    if (onPinsChange) {
+      onPinsChange(updatedPins);
+    }
   };
-
-  const updatePinName = (index: number, name: string) => {
-    if (readonly) return;
-    
-    const updatedPins = [...pins];
-    updatedPins[index] = {
-      ...updatedPins[index],
-      name
-    };
-    onChange(updatedPins);
+  
+  const togglePanMode = () => {
+    setPanMode(!panMode);
   };
-
+  
+  const handleZoomIn = () => {
+    setZoom(prevZoom => Math.min(prevZoom + 0.1, 3));
+  };
+  
+  const handleZoomOut = () => {
+    setZoom(prevZoom => Math.max(prevZoom - 0.1, 0.5));
+  };
+  
+  const resetView = () => {
+    setZoom(1);
+    setOffset({ x: 0, y: 0 });
+  };
+  
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-medium">Visual Pin Configuration</h3>
-        <div className="space-x-2 flex items-center">
-          <Button onClick={zoomOut} size="sm" variant="outline" className="px-2">
-            <ZoomOut className="h-4 w-4" />
-          </Button>
-          <span className="text-sm font-medium">{Math.round(zoomLevel * 100)}%</span>
-          <Button onClick={zoomIn} size="sm" variant="outline" className="px-2">
+    <div className={`flex flex-col h-full ${className}`}>
+      <div className="flex justify-between items-center mb-2">
+        <div className="text-sm font-medium">Visual Pin Configuration</div>
+        <div className="flex items-center gap-1">
+          <Button 
+            variant="outline" 
+            size="icon" 
+            className="h-7 w-7" 
+            onClick={handleZoomIn} 
+            title="Zoom In"
+          >
             <ZoomIn className="h-4 w-4" />
           </Button>
           <Button 
-            onClick={() => setShowGrid(!showGrid)} 
-            size="sm" 
-            variant="outline"
+            variant="outline" 
+            size="icon" 
+            className="h-7 w-7" 
+            onClick={handleZoomOut}
+            title="Zoom Out"
           >
-            {showGrid ? "Hide Grid" : "Show Grid"}
+            <ZoomOut className="h-4 w-4" />
           </Button>
           <Button 
-            onClick={() => setShowReferenceLines(!showReferenceLines)} 
-            size="sm" 
-            variant="outline"
+            variant="outline" 
+            size="icon" 
+            className={`h-7 w-7 ${panMode ? 'bg-muted' : ''}`} 
+            onClick={togglePanMode}
+            title="Pan Mode"
           >
-            {showReferenceLines ? "Hide Lines" : "Show Lines"}
+            <Move className="h-4 w-4" />
           </Button>
-          {!readonly && (
-            <Button onClick={addNewPin} size="sm">Add Pin</Button>
-          )}
+          <span className="text-xs ml-1">
+            {Math.round(zoom * 100)}%
+          </span>
         </div>
       </div>
-
-      <ScrollArea className="border rounded-md h-[300px] relative">
+      
+      <div className="flex-1 flex gap-4">
         <div 
-          ref={editorRef}
-          className="relative cursor-crosshair"
-          style={{ 
-            height: '300px', 
-            width: '100%',
-            overflow: 'hidden'
-          }}
-          onClick={handleEditorClick}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handlePinDragEnd}
-          onMouseLeave={handlePinDragEnd}
-          onWheel={handleZoom}
+          ref={containerRef} 
+          className="flex-1 border rounded overflow-hidden relative bg-gray-50"
+          style={{ width, height: '100%', cursor: panMode ? 'move' : 'default' }}
+          onMouseDown={handleCanvasMouseDown}
+          onMouseMove={handleCanvasMouseMove}
+          onMouseUp={handleCanvasMouseUp}
+          onMouseLeave={handleCanvasMouseLeave}
+          onWheel={handleWheelZoom}
         >
-          {showGrid && (
-            <div className="component-grid absolute inset-0"></div>
-          )}
-
-          {/* Component visual representation */}
-          <div 
-            ref={componentContainerRef}
-            className="absolute top-1/2 left-1/2"
+          <div
+            className="absolute"
             style={{ 
-              transform: `translate(-50%, -50%) scale(${zoomLevel})`,
-              transformOrigin: 'center',
+              transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`,
+              transformOrigin: '0 0',
+              transition: isDraggingCanvas ? 'none' : 'transform 0.1s'
             }}
           >
-            <div 
-              className="component-pin-container"
-              style={{ 
-                width: `${componentBounds.width}px`, 
-                height: `${componentBounds.height}px`,
-                minWidth: '80px',
-                minHeight: '80px',
-                position: 'relative',
-                transformOrigin: 'center',
-                padding: '0',
-                margin: '0'
-              }}
-            >
-              <div id="pinEditor-component-preview" className="flex items-center justify-center"></div>
-            </div>
-          </div>
-
-          {/* Pin markers */}
-          {pins.map((pin, index) => {
-            // Convert component-relative coordinates to editor-relative coordinates
-            const editorCoords = toEditorCoordinates(pin.x, pin.y);
+            <div ref={previewRef} className="absolute" style={{ left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}></div>
             
-            return (
-              <div
-                key={`pin-${index}`}
-                className={`pin-marker ${draggedPin === index ? 'dragging' : ''}`}
-                style={{ 
-                  left: `${editorCoords.x}px`, 
-                  top: `${editorCoords.y}px`,
-                  backgroundColor: getSignalColor(pin.signals && pin.signals.length > 0 ? pin.signals[0] : 'digital'),
-                  cursor: readonly ? 'default' : 'move',
+            {/* Render pins */}
+            {pinData.map((pin, i) => (
+              <div 
+                key={i} 
+                className="absolute" 
+                style={{
+                  left: `${pin.x}px`,
+                  top: `${pin.y}px`,
+                  transform: 'translate(-50%, -50%)',
+                  cursor: readonly ? 'default' : 'move'
                 }}
-                data-pin-name={pin.name}
-                onMouseEnter={() => setHoveredPin(index)}
-                onMouseLeave={() => setHoveredPin(null)}
-                onMouseDown={() => handlePinDragStart(index)}
               >
-                {!readonly && (
-                  <button 
-                    className="absolute -top-5 -right-5 bg-red-500 text-white rounded-full flex items-center justify-center"
-                    style={{
-                      width: '16px',
-                      height: '16px'
-                    }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removePin(index);
-                    }}
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                )}
+                <div 
+                  className={`rounded-full w-4 h-4 border ${readonly ? 'bg-blue-200' : 'bg-blue-500'}`}
+                  onClick={() => handleEditPin(i)}
+                ></div>
+                <div className="absolute whitespace-nowrap text-xs -mt-5 left-1/2 transform -translate-x-1/2">
+                  {pin.name}
+                </div>
               </div>
-            );
-          })}
-
-          {/* Reference lines for pins */}
-          {showReferenceLines && hoveredPin !== null && (
-            <>
-              <div 
-                className="pin-reference-line"
-                style={{
-                  left: `${toEditorCoordinates(pins[hoveredPin].x, 0).x}px`,
-                  top: `${componentOrigin.top}px`,
-                  width: '1px',
-                  height: `${componentBounds.height * zoomLevel}px`
-                }}
-              />
-              <div 
-                className="pin-reference-line"
-                style={{
-                  left: `${componentOrigin.left}px`,
-                  top: `${toEditorCoordinates(0, pins[hoveredPin].y).y}px`,
-                  height: '1px',
-                  width: `${componentBounds.width * zoomLevel}px`
-                }}
-              />
-            </>
-          )}
-
-          {/* Pin tooltip */}
-          {hoveredPin !== null && (
-            <div 
-              className="pin-tooltip"
-              style={{ 
-                top: `${toEditorCoordinates(pins[hoveredPin].x, pins[hoveredPin].y).y - 16}px`, 
-                left: `${toEditorCoordinates(pins[hoveredPin].x, pins[hoveredPin].y).x}px`,
-              }}
-            >
-              {pins[hoveredPin].name}
-              {pins[hoveredPin].signals && (
-                <span className="text-xs opacity-70 ml-1">
-                  ({pins[hoveredPin].signals.join(', ')})
-                </span>
-              )}
+            ))}
+            
+            {/* Grid lines for reference - helps align pins */}
+            <div className="absolute left-0 top-0 w-full h-full grid grid-cols-12 grid-rows-12 pointer-events-none">
+              {Array.from({ length: 13 }).map((_, i) => (
+                <div key={`h-${i}`} className="absolute left-0 right-0 border-t border-gray-200" style={{ top: `${(i / 12) * 100}%` }}></div>
+              ))}
+              {Array.from({ length: 13 }).map((_, i) => (
+                <div key={`v-${i}`} className="absolute top-0 bottom-0 border-l border-gray-200" style={{ left: `${(i / 12) * 100}%` }}></div>
+              ))}
             </div>
-          )}
-
-          {/* Drag instruction */}
-          {draggedPin !== null && (
-            <div className="absolute top-4 left-4 bg-black bg-opacity-70 text-white p-2 rounded text-sm">
-              Drag to position pin
-            </div>
-          )}
-
-          {/* Coordinate display */}
-          <div className="coordinate-display">
-            Position: ({mousePosition.x}, {mousePosition.y})
           </div>
         </div>
-      </ScrollArea>
-
-      <div className="mt-4 grid grid-cols-2 md:grid-cols-3 gap-4">
-        {pins.map((pin, index) => (
-          <div key={`pin-details-${index}`} className="border p-3 rounded-md">
-            <div className="flex justify-between items-center mb-2">
-              <div className="flex items-center gap-2">
-                <div 
-                  className="w-3 h-3 rounded-full" 
-                  style={{ backgroundColor: getSignalColor(pin.signals && pin.signals.length > 0 ? pin.signals[0] : 'digital') }}
-                ></div>
-                <input
-                  className="font-medium text-sm border-none focus:ring-0 p-0 w-full bg-transparent"
-                  value={pin.name}
-                  onChange={(e) => updatePinName(index, e.target.value)}
-                  readOnly={readonly}
-                />
+        
+        {!readonly && (
+          <div className="w-64 border rounded p-2 overflow-y-auto text-sm">
+            <h3 className="font-medium mb-2">Pin Details</h3>
+            
+            {editingPin !== null ? (
+              <div className="mb-3 space-y-2">
+                <div>
+                  <label className="text-xs font-medium">Name:</label>
+                  <Input 
+                    value={newPinName} 
+                    onChange={(e) => setNewPinName(e.target.value)} 
+                    className="h-7 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium">Signals (comma-separated):</label>
+                  <Input 
+                    value={newPinSignals} 
+                    onChange={(e) => setNewPinSignals(e.target.value)} 
+                    className="h-7 text-sm"
+                  />
+                </div>
+                <div className="flex justify-end gap-1">
+                  <Button size="sm" onClick={handleSavePin}>Save</Button>
+                  <Button size="sm" variant="outline" onClick={() => setEditingPin(null)}>Cancel</Button>
+                </div>
               </div>
-              {!readonly && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={() => handlePinDragStart(index)}
-                >
-                  <Move className="h-3 w-3" />
-                </Button>
-              )}
-            </div>
-            <div className="text-xs space-y-1">
-              <div>Position: <span className="font-mono">({pin.x}, {pin.y})</span></div>
-              <div>
-                Signal: 
-                <select 
-                  className="font-mono ml-2 text-xs p-0 h-6 border rounded"
-                  value={pin.signals && pin.signals.length > 0 ? pin.signals[0] : 'digital'}
-                  onChange={(e) => updatePinSignal(index, e.target.value)}
-                  disabled={readonly}
-                >
-                  <option value="power">Power</option>
-                  <option value="ground">Ground</option>
-                  <option value="digital">Digital</option>
-                  <option value="analog">Analog</option>
-                  <option value="passive">Passive</option>
-                  <option value="i2c">I2C</option>
-                  <option value="spi">SPI</option>
-                  <option value="uart">UART</option>
-                  <option value="rx">RX</option>
-                  <option value="tx">TX</option>
-                </select>
+            ) : (
+              <div className="space-y-1 max-h-[300px] overflow-y-auto pr-1">
+                {pinData.length > 0 ? (
+                  pinData.map((pin, i) => (
+                    <div key={i} className="flex items-center justify-between p-1 border rounded">
+                      <div className="overflow-hidden">
+                        <div className="font-medium truncate">{pin.name}</div>
+                        <div className="text-xs text-muted-foreground">
+                          x: {Math.round(Number(pin.x))}, y: {Math.round(Number(pin.y))}
+                        </div>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {pin.signals && pin.signals.length > 0 ? (
+                            pin.signals.map((signal, j) => (
+                              <Badge key={j} variant="outline" className="text-xs">{signal}</Badge>
+                            ))
+                          ) : (
+                            <span className="text-xs text-muted-foreground">No signals</span>
+                          )}
+                        </div>
+                      </div>
+                      <Button 
+                        size="icon" 
+                        variant="ghost" 
+                        className="h-6 w-6" 
+                        onClick={() => handleDeletePin(i)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-xs text-center text-muted-foreground p-2">
+                    {readonly ? "No pins defined" : "Click on the diagram to add pins"}
+                  </div>
+                )}
               </div>
+            )}
+            
+            {/* Pin position legend */}
+            <div className="mt-4 p-2 bg-muted/40 rounded text-xs">
+              <p className="font-medium mb-1">Tips:</p>
+              <ul className="list-disc pl-4 space-y-1">
+                <li>Coordinates are relative to component's top-left (0,0)</li>
+                <li>Click to add pins or drag existing pins</li>
+                <li>Click a pin to edit its properties</li>
+                <li>Use mouse wheel or buttons to zoom</li>
+              </ul>
             </div>
           </div>
-        ))}
+        )}
       </div>
     </div>
   );
 };
-
-function getSignalColor(signal: string): string {
-  const colors: Record<string, string> = {
-    'power': '#FF6384',    // Red
-    'ground': '#36A2EB',   // Blue
-    'digital': '#4BC0C0',  // Teal
-    'analog': '#FFCE56',   // Yellow
-    'passive': '#9966FF',  // Purple
-    'i2c': '#FF9F40',      // Orange
-    'spi': '#C9CBCF',      // Gray
-    'uart': '#7CFC00',     // Lime
-    'rx': '#FF00FF',       // Magenta
-    'tx': '#00FFFF',       // Cyan
-  };
-  
-  return colors[signal] || '#4BC0C0';
-}
 
 export default VisualPinEditor;

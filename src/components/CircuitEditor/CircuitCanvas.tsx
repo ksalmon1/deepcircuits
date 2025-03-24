@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { 
   isWokwiLoaded, 
@@ -24,6 +23,9 @@ const pinCache: Record<string, WokwiPin[]> = {};
 /**
  * CircuitCanvas component for rendering and interacting with circuit components
  * Provides a canvas for placing, connecting, and manipulating components
+ * 
+ * IMPORTANT: The coordinate system for pins is relative to the component's top-left corner (0,0)
+ * This ensures consistency with the VisualPinEditor component
  */
 const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) => {
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -248,7 +250,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
           console.log(`Using pins from details for ${componentInfo.type}:`, details.pins);
           pins = details.pins.map((pin: any) => ({
             name: pin.name,
-            x: Number(pin.x), 
+            x: Number(pin.x),
             y: Number(pin.y),
             signals: pin.signals || []
           }));
@@ -468,19 +470,29 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
         
         {showPins && pins && pins.length > 0 && (
           <div className="absolute top-0 left-0 z-10 pointer-events-none">
-            {pins.map((pin, index) => (
-              <div 
-                key={`pin-${id}-${index}`}
-                className="absolute pin-marker pointer-events-auto"
-                style={{ 
-                  left: `${pin.x}px`, 
-                  top: `${pin.y}px`,
-                  backgroundColor: getSignalColor(pin.signals && pin.signals.length > 0 ? pin.signals[0] : 'digital')
-                }}
-                onMouseEnter={() => handlePinHover(id, index)}
-                onMouseLeave={handlePinHoverExit}
-              ></div>
-            ))}
+            {pins.map((pin, index) => {
+              // Important: Use exact pin coordinates from the database without transformation
+              // This ensures consistency with the VisualPinEditor component
+              return (
+                <div 
+                  key={`pin-${id}-${index}`}
+                  className="absolute pin-marker pointer-events-auto"
+                  style={{ 
+                    left: `${pin.x}px`, 
+                    top: `${pin.y}px`,
+                    backgroundColor: getSignalColor(pin.signals && pin.signals.length > 0 ? pin.signals[0] : 'digital'),
+                    width: '6px',
+                    height: '6px',
+                    borderRadius: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    border: '1px solid rgba(0,0,0,0.3)',
+                    cursor: 'pointer'
+                  }}
+                  onMouseEnter={() => handlePinHover(id, index)}
+                  onMouseLeave={handlePinHoverExit}
+                />
+              );
+            })}
           </div>
         )}
         
