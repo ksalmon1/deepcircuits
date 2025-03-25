@@ -4,7 +4,6 @@ import { ComponentPin } from '@/types/database';
 
 interface PinVisualizerProps {
   pins: ComponentPin[];
-  componentElement: HTMLElement | null;
   readonly?: boolean;
   onEditPin: (index: number) => void;
 }
@@ -15,33 +14,22 @@ interface PinVisualizerProps {
  */
 const PinVisualizer: React.FC<PinVisualizerProps> = ({
   pins,
-  componentElement,
   readonly = false,
   onEditPin
 }) => {
-  if (!componentElement) return null;
-  
-  // Get component position for correct pin positioning
-  const componentLeft = componentElement.offsetLeft;
-  const componentTop = componentElement.offsetTop;
-  
   return (
     <>
       {pins.map((pin, i) => {
         const pinX = Number(pin.x);
         const pinY = Number(pin.y);
         
-        // Position pins relative to the component's origin (0,0)
-        const absoluteX = componentLeft + pinX;
-        const absoluteY = componentTop + pinY;
-        
         return (
           <div 
             key={i} 
             className="absolute" 
             style={{
-              left: `${absoluteX}px`,
-              top: `${absoluteY}px`,
+              left: `${pinX}px`,
+              top: `${pinY}px`,
               transform: 'translate(-50%, -50%)',
               cursor: readonly ? 'default' : 'move',
               zIndex: 10

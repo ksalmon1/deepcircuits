@@ -21,23 +21,20 @@ export const renderWokwiComponentPreview = async (
     // Create a unique element ID for this preview
     const elementId = `wokwi-preview-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
     
-    // Create a placeholder element
-    const placeholderElement = document.createElement('div');
-    placeholderElement.id = elementId;
-    placeholderElement.style.position = 'relative';
-    placeholderElement.style.width = '100%';
-    placeholderElement.style.height = '100%';
-    container.appendChild(placeholderElement);
+    // Create a wrapper to position the component at the top-left (0,0)
+    const wrapper = document.createElement('div');
+    wrapper.style.position = 'relative';
+    wrapper.style.width = '100%';
+    wrapper.style.height = '100%';
+    container.appendChild(wrapper);
     
-    // Call renderWokwiElement with the correct arguments
-    renderWokwiElement(componentType, elementId, properties);
+    await renderWokwiElement(componentType, elementId, properties);
     
     // Style the container for proper display
     setTimeout(() => {
       const wokwiElement = document.getElementById(elementId)?.firstElementChild;
       if (wokwiElement instanceof HTMLElement) {
-        // Position the element consistently at a fixed position (0,0)
-        // This is crucial for the pin positioning to work correctly
+        // Position the element consistently at top-left (0,0)
         wokwiElement.style.position = 'absolute';
         wokwiElement.style.left = '0';
         wokwiElement.style.top = '0';

@@ -5,29 +5,22 @@ interface ReferenceGridProps {
   size?: number;
   divisions?: number;
   showCoordinates?: boolean;
-  componentElement?: HTMLElement | null;
 }
 
 /**
  * Renders a reference grid for the canvas with optional coordinate labels
- * The grid's origin (0,0) is positioned at the component's top-left corner
+ * The grid's origin (0,0) is at the top-left corner
  */
 const ReferenceGrid: React.FC<ReferenceGridProps> = ({ 
   size = 100, 
   divisions = 12,
-  showCoordinates = true,
-  componentElement = null
+  showCoordinates = true
 }) => {
-  // Get component position if available
-  const componentLeft = componentElement ? componentElement.offsetLeft : 0;
-  const componentTop = componentElement ? componentElement.offsetTop : 0;
-  
   return (
     <div className="absolute left-0 top-0 w-full h-full pointer-events-none">
       {/* Grid lines */}
       {Array.from({ length: divisions + 1 }).map((_, i) => {
-        // Calculate real-world coordinate value for this gridline
-        const yCoord = Math.round(((i / divisions) * size) - componentTop);
+        const yCoord = Math.round((i / divisions) * size);
         
         return (
           <div 
@@ -45,8 +38,7 @@ const ReferenceGrid: React.FC<ReferenceGridProps> = ({
       })}
       
       {Array.from({ length: divisions + 1 }).map((_, i) => {
-        // Calculate real-world coordinate value for this gridline
-        const xCoord = Math.round(((i / divisions) * size) - componentLeft);
+        const xCoord = Math.round((i / divisions) * size);
         
         return (
           <div 
@@ -63,24 +55,18 @@ const ReferenceGrid: React.FC<ReferenceGridProps> = ({
         );
       })}
       
-      {/* Origin marker positioned at the component's top-left */}
+      {/* Origin marker positioned at top-left (0,0) */}
       <div 
         className="absolute w-2 h-2 bg-red-500 rounded-full transform -translate-x-1/2 -translate-y-1/2 z-10" 
-        style={{ 
-          left: `${componentLeft}px`, 
-          top: `${componentTop}px` 
-        }}
+        style={{ left: 0, top: 0 }}
         title="Origin (0,0)"
       ></div>
       
-      {/* Coordinate labels for origin */}
+      {/* Coordinate label for origin */}
       {showCoordinates && (
         <div 
           className="absolute text-[10px] text-red-500 font-semibold ml-2 mt-2"
-          style={{ 
-            left: `${componentLeft}px`, 
-            top: `${componentTop}px` 
-          }}
+          style={{ left: 0, top: 0 }}
         >
           (0,0)
         </div>
