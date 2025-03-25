@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useRef } from 'react';
 import { WokwiComponent } from '@/integrations/wokwi/WokwiIntegration';
 import { getWireColorFromSignal, getPinSignalType } from '@/utils/wireUtils';
@@ -52,8 +51,13 @@ export const useWireSystem = (components: WokwiComponent[]) => {
     if (!wire) return wire;
     
     const newPoints = [...wire.points];
-    if (newPoints.length === 1 || !wire.isComplete) {
-      // For active wire, just update the last point
+    
+    // For active wire being drawn, replace the last point or add a new one
+    if (newPoints.length === 1) {
+      // First segment - just update the end point
+      newPoints.push({ x, y });
+    } else if (!wire.isComplete) {
+      // Update the last point while drawing
       newPoints[newPoints.length - 1] = { x, y };
     } else {
       // For an existing wire, add a new point
@@ -78,17 +82,28 @@ export const useWireSystem = (components: WokwiComponent[]) => {
     
     console.log(`Completing wire to component ${targetComponentId}, pin ${targetPinIndex} at (${finalX}, ${finalY})`);
     
+    // Start with existing points
     const newPoints = [...wire.points];
-    // Ensure the last point exactly matches the target pin position
-    newPoints[newPoints.length - 1] = { x: finalX, y: finalY };
     
-    return {
+    // If we only have one point (start point), add the end point
+    if (newPoints.length === 1) {
+      newPoints.push({ x: finalX, y: finalY });
+    } else {
+      // Otherwise replace the last point with the exact target position
+      newPoints[newPoints.length - 1] = { x: finalX, y: finalY };
+    }
+    
+    const completedWire = {
       ...wire,
       targetComponentId,
       targetPinIndex,
       points: newPoints,
       isComplete: true
     };
+    
+    console.log("Wire points:", completedWire.points);
+    
+    return completedWire;
   }, []);
   
   // Find if a point is near a pin

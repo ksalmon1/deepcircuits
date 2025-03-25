@@ -21,16 +21,8 @@ interface CircuitCanvasProps {
   onComponentsChange: (components: WokwiComponent[]) => void;
 }
 
-// Helper for caching pin data outside of component rendering
 const pinCache: Record<string, WokwiPin[]> = {};
 
-/**
- * CircuitCanvas component for rendering and interacting with circuit components
- * Provides a canvas for placing, connecting, and manipulating components
- * 
- * IMPORTANT: The coordinate system for pins is relative to the component's top-left corner (0,0)
- * This ensures consistency with the VisualPinEditor component
- */
 const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) => {
   const canvasRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -39,7 +31,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
   const [loadingError, setLoadingError] = useState<string | null>(null);
   const [loadingAttempts, setLoadingAttempts] = useState(0);
   
-  // Use the navigation hook for pan and zoom
   const {
     zoom,
     offset,
@@ -55,7 +46,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     updateCanvasDimensions
   } = useCanvasNavigation(1);
   
-  // Use the wire system hook
   const {
     wires,
     activeWire,
@@ -71,11 +61,9 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
   const [hoveredPin, setHoveredPin] = useState<{componentId: string, pinIndex: number} | null>(null);
   const [renderedComponents, setRenderedComponents] = useState<Record<string, boolean>>({});
   
-  // States for handling component dragging
   const [draggingComponent, setDraggingComponent] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   
-  // Fetch all component details from the library
   const { 
     components: libraryComponents, 
     componentsDetailsMap, 
@@ -83,7 +71,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     isLoadingDetails 
   } = useComponentLibrary();
 
-  // Update canvas dimensions when container size changes
   useEffect(() => {
     const updateSize = () => {
       if (containerRef.current) {
@@ -98,7 +85,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     return () => window.removeEventListener('resize', updateSize);
   }, [updateCanvasDimensions]);
   
-  // Pre-populate the pin cache with pin data from Supabase
   useEffect(() => {
     populatePinCache();
   }, [libraryComponents, componentsDetailsMap]);
@@ -142,7 +128,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     }
   }, [libraryComponents, componentsDetailsMap]);
 
-  // Check if Wokwi is loaded and handle loading attempts
   const checkWokwiLoaded = useCallback(async () => {
     console.log('Checking if Wokwi is loaded, attempt:', loadingAttempts + 1);
     
@@ -183,7 +168,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     return false;
   }, [loadingAttempts]);
 
-  // Attempt to load Wokwi components when the component mounts
   useEffect(() => {
     const attemptLoading = async () => {
       const success = await checkWokwiLoaded();
@@ -197,7 +181,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     attemptLoading();
   }, [checkWokwiLoaded]);
 
-  // Fallback timer to force loading after a timeout
   useEffect(() => {
     const timer = setTimeout(() => {
       if (!isReady && !loadingError) {
@@ -212,7 +195,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     return () => clearTimeout(timer);
   }, [isReady, loadingError]);
 
-  // Cancel the active wire on escape key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && activeWire) {
@@ -226,16 +208,13 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     };
   }, [activeWire, cancelActiveWire]);
 
-  // Get component pin information from cache or fallbacks
   const fetchComponentPins = (type: string): WokwiPin[] => {
     try {
-      // First check our cache from Supabase data
       if (pinCache[type]) {
         console.log(`Using cached pins for ${type}:`, pinCache[type]);
         return pinCache[type];
       }
       
-      // Check if we have this component in our library with pins
       const libraryComponent = libraryComponents?.find(c => c.type === type);
       if (libraryComponent?.id && componentsDetailsMap && componentsDetailsMap[libraryComponent.id]) {
         const details = componentsDetailsMap[libraryComponent.id];
@@ -248,7 +227,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
             signals: pin.signals || []
           }));
           
-          // Cache the result
           pinCache[type] = pins;
           return pins;
         }
@@ -263,12 +241,10 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
           signals: pin.signals || []
         }));
         
-        // Cache the result
         pinCache[type] = pins;
         return pins;
       }
       
-      // Fallback to default pin info from WokwiIntegration
       console.log(`Using default pins for ${type}`);
       const defaultPins = getComponentPinInfo(type);
       pinCache[type] = defaultPins;
@@ -279,7 +255,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     }
   };
 
-  // Handle dropping components onto the canvas
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     
@@ -299,10 +274,8 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
       const left = Math.floor(x / gridSize) * gridSize;
       const top = Math.floor(y / gridSize) * gridSize;
       
-      // Find the component in the library to get pins and details
       const libraryComponent = libraryComponents?.find(c => c.type === componentInfo.type);
       
-      // Check if we have detailed pin information from Supabase
       let pins;
       if (libraryComponent?.id && componentsDetailsMap && componentsDetailsMap[libraryComponent.id]) {
         const details = componentsDetailsMap[libraryComponent.id];
@@ -317,7 +290,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
         }
       }
       
-      // Fallback to component.pins if details are not available
       if (!pins && libraryComponent?.pins) {
         console.log(`Using pins from component for ${componentInfo.type}:`, libraryComponent.pins);
         pins = libraryComponent.pins.map(pin => ({
@@ -328,7 +300,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
         }));
       }
       
-      // Last fallback to default pins
       if (!pins) {
         console.log(`Falling back to default pins for ${componentInfo.type}`);
         pins = fetchComponentPins(componentInfo.type);
@@ -359,13 +330,11 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     }
   };
 
-  // Event handler for component drag over
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'copy';
   };
 
-  // Toggle pin visibility for a component
   const togglePinVisibility = useCallback((componentId: string) => {
     setVisiblePins(prev => ({
       ...prev,
@@ -373,19 +342,16 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     }));
   }, []);
 
-  // Handle pin hover events
   const handlePinHover = (componentId: string, pinIndex: number) => {
     setHoveredPin({ componentId, pinIndex });
   };
 
-  // Handle pin hover exit events
   const handlePinHoverExit = () => {
     setHoveredPin(null);
   };
 
-  // Handle component hover events
   const handleComponentHover = useCallback((id: string, type: string) => {
-    if (draggingComponent) return; // Skip hover handling while dragging
+    if (draggingComponent) return;
     
     setHoveredComponent(id);
     
@@ -399,9 +365,8 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     }
   }, [draggingComponent]);
 
-  // Handle component hover exit events
   const handleComponentHoverExit = useCallback(() => {
-    if (draggingComponent) return; // Skip hover exit handling while dragging
+    if (draggingComponent) return;
     
     if (hoveredComponent) {
       const element = document.getElementById(`wokwi-element-${hoveredComponent}`);
@@ -413,14 +378,11 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     setHoveredPins([]);
   }, [hoveredComponent, draggingComponent]);
 
-  // Start component drag handler
   const handleComponentMouseDown = (e: React.MouseEvent, componentId: string) => {
-    // Don't start dragging if in pan mode or not left-clicking
     if (panMode || e.button !== 0) {
       return;
     }
     
-    // Check if the user clicked on a pin
     const canvasRect = canvasRef.current?.getBoundingClientRect();
     if (!canvasRect) return;
     
@@ -430,12 +392,10 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     const mouseX = (e.clientX - canvasRect.left - offset.x) / zoom;
     const mouseY = (e.clientY - canvasRect.top - offset.y) / zoom;
     
-    // Check if the user clicked near a pin on this component
     const { isPin, pinIndex } = isInteractingWithPin(mouseX, mouseY, component);
     
     if (isPin) {
       e.stopPropagation();
-      // Handle pin click for wiring
       const pin = component.pins?.[pinIndex];
       if (pin) {
         const pinPos = {
@@ -447,9 +407,8 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
       return;
     }
     
-    e.stopPropagation(); // Stop event propagation to prevent canvas pan
+    e.stopPropagation();
     
-    // Find the component in the list
     const componentElement = document.getElementById(`wokwi-element-wrapper-${componentId}`);
     if (!componentElement) return;
     
@@ -457,17 +416,14 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     const offsetX = e.clientX - rect.left;
     const offsetY = e.clientY - rect.top;
     
-    // Set dragging state
     setDraggingComponent(componentId);
     setDragOffset({ x: offsetX, y: offsetY });
     
-    // Apply visual feedback for dragging
     componentElement.style.cursor = 'grabbing';
     componentElement.style.zIndex = '100';
     componentElement.style.opacity = '0.8';
   };
-  
-  // Handle canvas mouse move for dragging components
+
   const handleCanvasMouseMove = (e: React.MouseEvent) => {
     if (isDraggingCanvas) {
       pan(e.clientX, e.clientY);
@@ -475,20 +431,16 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
       return;
     }
     
-    // Handle component dragging
     if (draggingComponent) {
       const canvasRect = canvasRef.current?.getBoundingClientRect();
       if (!canvasRect) return;
       
-      // Calculate new position considering zoom and offset
       const mouseX = (e.clientX - canvasRect.left - offset.x) / zoom;
       const mouseY = (e.clientY - canvasRect.top - offset.y) / zoom;
       
-      // Calculate new position accounting for drag offset
       const newLeft = mouseX - dragOffset.x / zoom;
       const newTop = mouseY - dragOffset.y / zoom;
       
-      // Update component position
       const updatedComponents = components.map(component => {
         if (component.id === draggingComponent) {
           return {
@@ -503,11 +455,9 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
       onComponentsChange(updatedComponents);
     }
   };
-  
-  // Handle canvas mouse up
+
   const handleCanvasMouseUp = (e: React.MouseEvent) => {
     if (draggingComponent) {
-      // Reset the dragging state
       const componentElement = document.getElementById(`wokwi-element-wrapper-${draggingComponent}`);
       if (componentElement) {
         componentElement.style.cursor = '';
@@ -523,16 +473,13 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
       });
     }
     
-    // Handle panning end
     endPan();
   };
-  
-  // Handle canvas mouse leave
+
   const handleCanvasMouseLeave = (e: React.MouseEvent) => {
     handleCanvasMouseUp(e);
   };
 
-  // Effect to render wokwi elements when they're loaded and available
   useEffect(() => {
     if (!isReady) return;
     
@@ -540,7 +487,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
       const elementId = `wokwi-element-${component.id}`;
       const element = document.getElementById(elementId);
       
-      // Only render if element exists and we haven't rendered it yet
       if (element && !renderedComponents[component.id]) {
         console.log(`Rendering component ${component.type} with id ${component.id}`);
         renderWokwiElement(component.type, elementId, component.attributes);
@@ -552,7 +498,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     });
   }, [components, isReady, renderedComponents]);
 
-  // Clear rendered component tracking when component is removed
   useEffect(() => {
     const componentIds = components.map(c => c.id);
     setRenderedComponents(prev => {
@@ -566,21 +511,17 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     });
   }, [components]);
 
-  // Handle retry after loading error
   const handleRetry = async () => {
     setLoadingError(null);
     setLoadingAttempts(0);
     await checkWokwiLoaded();
   };
 
-  // Render a single component with its pin information
   const renderComponent = (component: WokwiComponent) => {
     const { type, id, top, left, attributes } = component;
     
-    // Use component's pins if available, otherwise fetch them
     const pins = component.pins || fetchComponentPins(type);
     
-    // Always show pins on hover or if they've been toggled visible
     const showPins = visiblePins[id] || hoveredComponent === id;
     
     return (
@@ -603,25 +544,24 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
         {showPins && pins && pins.length > 0 && (
           <div className="absolute top-0 left-0 z-10 pointer-events-none">
             {pins.map((pin, index) => {
-              // Get the specific signal color for this pin
               const signalColor = pin.signals && pin.signals.length > 0 
                 ? (() => {
                     const normalizedSignal = pin.signals[0].toLowerCase().trim();
                     const signalColors: Record<string, string> = {
-                      'power': '#FF6384',   // Red
-                      '+5v': '#FF6384',     // Red (common power)
-                      '+3.3v': '#FF6384',   // Red (common power)
-                      'vcc': '#FF6384',     // Red (common power)
-                      'ground': '#36A2EB',  // Blue
-                      'gnd': '#36A2EB',     // Blue (common ground)
-                      'digital': '#4BC0C0', // Teal
-                      'analog': '#FFCE56',  // Yellow
-                      'passive': '#9966FF', // Purple
-                      'i2c': '#FF9F40',     // Orange
-                      'spi': '#C9CBCF',     // Gray
-                      'uart': '#7CFC00',    // Lime
-                      'rx': '#FF00FF',      // Magenta
-                      'tx': '#00FFFF',      // Cyan
+                      'power': '#FF6384',
+                      '+5v': '#FF6384',
+                      '+3.3v': '#FF6384',
+                      'vcc': '#FF6384',
+                      'ground': '#36A2EB',
+                      'gnd': '#36A2EB',
+                      'digital': '#4BC0C0',
+                      'analog': '#FFCE56',
+                      'passive': '#9966FF',
+                      'i2c': '#FF9F40',
+                      'spi': '#C9CBCF',
+                      'uart': '#7CFC00',
+                      'rx': '#FF00FF',
+                      'tx': '#00FFFF',
                     };
                     
                     for (const [key, color] of Object.entries(signalColors)) {
@@ -629,7 +569,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
                         return color;
                       }
                     }
-                    return '#4BC0C0'; // Default teal
+                    return '#4BC0C0';
                   })()
                 : '#4BC0C0';
                 
@@ -774,19 +714,19 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
             position: 'relative'
           }}
         >
-          {/* Render all components */}
           {components.map(component => renderComponent(component))}
-          
-          {/* Use Konva for wire rendering */}
-          <KonvaWireRenderer
-            wires={wires}
-            activeWire={activeWire}
-            stageWidth={canvasSize.width}
-            stageHeight={canvasSize.height}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleStageMouseUp}
-          />
         </div>
+        
+        <KonvaWireRenderer
+          wires={wires}
+          activeWire={activeWire}
+          stageWidth={canvasSize.width}
+          stageHeight={canvasSize.height}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleStageMouseUp}
+          zoom={zoom}
+          offset={offset}
+        />
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Layer, Line, Stage } from 'react-konva';
 import { Wire } from '@/hooks/useWireSystem';
 import { KonvaEventObject } from 'konva/lib/Node';
@@ -11,6 +11,8 @@ interface KonvaWireRendererProps {
   stageHeight: number;
   onMouseMove: (e: KonvaEventObject<MouseEvent>) => void;
   onMouseUp: () => void;
+  zoom?: number;
+  offset?: { x: number; y: number };
 }
 
 const KonvaWireRenderer: React.FC<KonvaWireRendererProps> = ({
@@ -19,15 +21,29 @@ const KonvaWireRenderer: React.FC<KonvaWireRendererProps> = ({
   stageWidth,
   stageHeight,
   onMouseMove,
-  onMouseUp
+  onMouseUp,
+  zoom = 1,
+  offset = { x: 0, y: 0 }
 }) => {
+  const stageRef = useRef<any>(null);
+  
   // Convert wire points to flat array for Konva Line
   const wirePointsToFlatArray = (wire: Wire): number[] => {
     return wire.points.flatMap(point => [point.x, point.y]);
   };
+  
+  // Apply zoom and offset when they change
+  useEffect(() => {
+    if (stageRef.current) {
+      // No need to transform the stage - we'll let the parent handle that
+      // This component just needs to match the parent's dimensions
+      console.log(`Wire renderer: zoom=${zoom}, offset=${offset.x},${offset.y}`);
+    }
+  }, [zoom, offset]);
 
   return (
     <Stage 
+      ref={stageRef}
       width={stageWidth} 
       height={stageHeight}
       onMouseMove={onMouseMove}
@@ -37,7 +53,7 @@ const KonvaWireRenderer: React.FC<KonvaWireRendererProps> = ({
         top: 0, 
         left: 0, 
         pointerEvents: 'none',
-        zIndex: 5 // Ensure wires render above the grid but below UI elements
+        zIndex: 10 // Increased z-index to ensure wires are visible
       }}
     >
       <Layer>
@@ -47,10 +63,10 @@ const KonvaWireRenderer: React.FC<KonvaWireRendererProps> = ({
             key={wire.id}
             points={wirePointsToFlatArray(wire)}
             stroke={wire.color}
-            strokeWidth={2}
+            strokeWidth={3} // Increased width for better visibility
             lineCap="round"
             lineJoin="round"
-            listening={false} // Improve performance by disabling event listening
+            listening={false}
           />
         ))}
         
@@ -59,11 +75,11 @@ const KonvaWireRenderer: React.FC<KonvaWireRendererProps> = ({
           <Line
             points={wirePointsToFlatArray(activeWire)}
             stroke={activeWire.color}
-            strokeWidth={2}
+            strokeWidth={3} // Increased width for better visibility
             lineCap="round"
             lineJoin="round"
-            dash={[4, 2]} // Dashed line for active wire
-            listening={false} // Improve performance by disabling event listening
+            dash={[5, 2]} // More visible dashed line
+            listening={false}
           />
         )}
       </Layer>
