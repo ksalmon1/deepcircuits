@@ -52,7 +52,7 @@ export const renderWokwiComponentPreview = async (
         originMarker.style.transform = 'translate(-50%, -50%)';
         originMarker.style.zIndex = '100';
         originMarker.title = 'Component origin (0,0)';
-        placeholderElement.appendChild(originMarker);
+        wrapper.appendChild(originMarker);
         
         // Log element dimensions for debugging
         console.log(`Wokwi element ${componentType} dimensions:`, {

@@ -5,6 +5,7 @@ interface ReferenceGridProps {
   size?: number;
   divisions?: number;
   showCoordinates?: boolean;
+  componentElement?: HTMLElement | null;
 }
 
 /**
@@ -14,7 +15,8 @@ interface ReferenceGridProps {
 const ReferenceGrid: React.FC<ReferenceGridProps> = ({ 
   size = 100, 
   divisions = 12,
-  showCoordinates = true
+  showCoordinates = true,
+  componentElement
 }) => {
   return (
     <div className="absolute left-0 top-0 w-full h-full pointer-events-none">

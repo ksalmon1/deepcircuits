@@ -6,6 +6,7 @@ interface PinVisualizerProps {
   pins: ComponentPin[];
   readonly?: boolean;
   onEditPin: (index: number) => void;
+  componentElement?: HTMLElement | null;
 }
 
 /**
@@ -15,7 +16,8 @@ interface PinVisualizerProps {
 const PinVisualizer: React.FC<PinVisualizerProps> = ({
   pins,
   readonly = false,
-  onEditPin
+  onEditPin,
+  componentElement
 }) => {
   return (
     <>
