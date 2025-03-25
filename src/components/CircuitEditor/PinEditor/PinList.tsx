@@ -85,6 +85,7 @@ const PinList: React.FC<PinListProps> = ({
 
   // Function to get a color based on signal type
   const getSignalColor = (signal: string): string => {
+    const normalizedSignal = signal.toLowerCase();
     const colors: Record<string, string> = {
       'power': '#FF6384',    // Red
       'ground': '#36A2EB',   // Blue
@@ -98,7 +99,7 @@ const PinList: React.FC<PinListProps> = ({
       'tx': '#00FFFF',       // Cyan
     };
     
-    return colors[signal] || '#4BC0C0';
+    return colors[normalizedSignal] || '#4BC0C0'; // Default to teal if no match
   };
   
   if (pins.length === 0) {
@@ -176,7 +177,7 @@ const PinList: React.FC<PinListProps> = ({
             {!readonly && (
               <div className="flex items-center gap-2">
                 <Select
-                  value={pin.signals && pin.signals.length > 0 ? pin.signals[0] : 'digital'}
+                  value={pin.signals && pin.signals.length > 0 ? pin.signals[0].toLowerCase() : 'digital'}
                   onValueChange={(value) => onUpdatePinSignal(i, value)}
                 >
                   <SelectTrigger className="w-full h-7 text-xs">

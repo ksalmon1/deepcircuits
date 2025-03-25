@@ -27,7 +27,7 @@ const PinVisualizer: React.FC<PinVisualizerProps> = ({
   const getSignalColor = (signals: string[] | undefined): string => {
     if (!signals || signals.length === 0) return '#4BC0C0'; // Default to teal
     
-    const signal = signals[0];
+    const signal = signals[0].toLowerCase();
     const colors: Record<string, string> = {
       'power': '#FF6384',    // Red
       'ground': '#36A2EB',   // Blue

@@ -390,7 +390,10 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
   // Handle component dragging
   const handleCanvasMouseMove = (e: React.MouseEvent) => {
     if (isPanning) {
-      // ... keep existing code (canvas panning logic)
+      const newX = e.clientX - startPanPoint.x;
+      const newY = e.clientY - startPanPoint.y;
+      setPosition({ x: newX, y: newY });
+      e.preventDefault();
       handleMouseMove(e);
       return;
     }
@@ -554,6 +557,25 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     });
   };
 
+  // Helper function to get color based on signal type
+  const getSignalColor = (signal: string): string => {
+    const normalizedSignal = signal.toLowerCase();
+    const colors: Record<string, string> = {
+      'power': '#FF6384',    // Red
+      'ground': '#36A2EB',   // Blue
+      'digital': '#4BC0C0',  // Teal
+      'analog': '#FFCE56',   // Yellow
+      'passive': '#9966FF',  // Purple
+      'i2c': '#FF9F40',      // Orange
+      'spi': '#C9CBCF',      // Gray
+      'uart': '#7CFC00',     // Lime
+      'rx': '#FF00FF',       // Magenta
+      'tx': '#00FFFF',       // Cyan
+    };
+    
+    return colors[normalizedSignal] || '#4BC0C0'; // Default to teal if no match
+  };
+
   // Render a single component with its pin information
   const renderComponent = (component: WokwiComponent) => {
     const { type, id, top, left, attributes } = component;
@@ -582,8 +604,11 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
         {showPins && pins && pins.length > 0 && (
           <div className="absolute top-0 left-0 z-10 pointer-events-none">
             {pins.map((pin, index) => {
-              // Important: Use exact pin coordinates from the database without transformation
-              // This ensures consistency with the VisualPinEditor component
+              // Get the specific signal color for this pin
+              const signalColor = pin.signals && pin.signals.length > 0 
+                ? getSignalColor(pin.signals[0]) 
+                : '#4BC0C0';
+                
               return (
                 <div 
                   key={`pin-${id}-${index}`}
@@ -591,7 +616,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
                   style={{ 
                     left: `${pin.x}px`, 
                     top: `${pin.y}px`,
-                    backgroundColor: getSignalColor(pin.signals && pin.signals.length > 0 ? pin.signals[0] : 'digital'),
+                    backgroundColor: signalColor,
                     width: '12px',
                     height: '12px',
                     borderRadius: '50%',
@@ -705,27 +730,5 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     </div>
   );
 };
-
-/**
- * Helper function to get a color based on signal type
- * @param signal The signal type to get a color for
- * @returns A hex color code for the signal
- */
-function getSignalColor(signal: string): string {
-  const colors: Record<string, string> = {
-    'power': '#FF6384',    // Red
-    'ground': '#36A2EB',   // Blue
-    'digital': '#4BC0C0',  // Teal
-    'analog': '#FFCE56',   // Yellow
-    'passive': '#9966FF',  // Purple
-    'i2c': '#FF9F40',      // Orange
-    'spi': '#C9CBCF',      // Gray
-    'uart': '#7CFC00',     // Lime
-    'rx': '#FF00FF',       // Magenta
-    'tx': '#00FFFF',       // Cyan
-  };
-  
-  return colors[signal] || '#4BC0C0';
-}
 
 export default CircuitCanvas;
