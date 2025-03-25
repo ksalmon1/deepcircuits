@@ -20,6 +20,10 @@ const PinVisualizer: React.FC<PinVisualizerProps> = ({
 }) => {
   if (!componentElement) return null;
   
+  // Get component position for correct pin positioning
+  const componentLeft = componentElement.offsetLeft;
+  const componentTop = componentElement.offsetTop;
+  
   return (
     <>
       {pins.map((pin, i) => {
@@ -31,9 +35,9 @@ const PinVisualizer: React.FC<PinVisualizerProps> = ({
             key={i} 
             className="absolute" 
             style={{
-              // Position pins relative to the component's origin
-              left: `${pinX + componentElement.offsetLeft}px`,
-              top: `${pinY + componentElement.offsetTop}px`,
+              // Position pins relative to the component's origin (0,0)
+              left: `${pinX + componentLeft}px`,
+              top: `${pinY + componentTop}px`,
               transform: 'translate(-50%, -50%)',
               cursor: readonly ? 'default' : 'move',
               zIndex: 10
@@ -46,7 +50,7 @@ const PinVisualizer: React.FC<PinVisualizerProps> = ({
               <span className="text-white text-xs font-bold">{i+1}</span>
             </div>
             <div className="absolute whitespace-nowrap text-xs -mt-5 left-1/2 transform -translate-x-1/2 bg-white/90 px-1 py-0.5 rounded shadow-sm">
-              {pin.name}
+              {pin.name} ({Math.round(pinX)}, {Math.round(pinY)})
             </div>
           </div>
         );

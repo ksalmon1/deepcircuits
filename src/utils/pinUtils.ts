@@ -35,10 +35,14 @@ export const createNewPin = (
   y: number, 
   existingPins: ComponentPin[]
 ): ComponentPin => {
+  // Round coordinates to nearest integers for easier positioning
+  const roundedX = Math.round(x);
+  const roundedY = Math.round(y);
+  
   return {
     name: `pin${existingPins.length + 1}`,
-    x,
-    y,
+    x: roundedX,
+    y: roundedY,
     signals: []
   };
 };
@@ -59,12 +63,18 @@ export const updatePinPosition = (
 ): ComponentPin[] => {
   if (pinIndex < 0 || pinIndex >= pins.length) return pins;
   
+  // Round coordinates to nearest integers for easier positioning
+  const roundedX = Math.round(x);
+  const roundedY = Math.round(y);
+  
   const updatedPins = [...pins];
   updatedPins[pinIndex] = {
     ...updatedPins[pinIndex],
-    x,
-    y
+    x: roundedX,
+    y: roundedY
   };
+  
+  console.log(`Updated pin ${pinIndex} position to (${roundedX}, ${roundedY})`);
   
   return updatedPins;
 };

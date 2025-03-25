@@ -48,6 +48,7 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
   const [newPinName, setNewPinName] = useState<string>('');
   const [newPinSignals, setNewPinSignals] = useState<string>('');
   const [componentElement, setComponentElement] = useState<HTMLElement | null>(null);
+  const [debugInfo, setDebugInfo] = useState<string>('No interactions yet');
   
   // Use the canvas navigation hook
   const {
@@ -143,9 +144,12 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
     const canvasX = (e.clientX - originX) / zoom;
     const canvasY = (e.clientY - originY) / zoom;
     
-    console.log(`Click at client coordinates: (${e.clientX}, ${e.clientY})`);
-    console.log(`Component origin at: left=${originX}, top=${originY}`);
-    console.log(`Calculated pin position relative to component origin: (${canvasX}, ${canvasY})`);
+    const debugMessage = `Click at client coordinates: (${e.clientX}, ${e.clientY})
+Component origin at: left=${originX}, top=${originY}
+Calculated pin position relative to component origin: (${canvasX}, ${canvasY})`;
+    
+    console.log(debugMessage);
+    setDebugInfo(debugMessage);
     
     // Check if clicking on an existing pin
     for (let i = 0; i < pinData.length; i++) {
@@ -155,6 +159,7 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
       
       if (isPointNearPin(canvasX, canvasY, pinX, pinY)) {
         setDraggingPin(i);
+        setDebugInfo(`Started dragging pin ${i+1} (${pin.name}) at (${pinX}, ${pinY})`);
         return;
       }
     }
@@ -165,6 +170,7 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
       
       console.log(`Adding new pin at coordinates (${canvasX}, ${canvasY}) relative to component's origin`);
       handlePinsChange([...pinData, newPin]);
+      setDebugInfo(`Added new pin at (${newPin.x}, ${newPin.y})`);
     }
   };
   
@@ -186,10 +192,15 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
       // Update the pin position
       const updatedPins = updatePinPosition(pinData, draggingPin, canvasX, canvasY);
       handlePinsChange(updatedPins);
+      
+      setDebugInfo(`Dragging pin ${draggingPin+1} to (${Math.round(canvasX)}, ${Math.round(canvasY)})`);
     }
   };
   
   const handleCanvasMouseUp = () => {
+    if (draggingPin !== null) {
+      setDebugInfo(`Finished dragging pin ${draggingPin+1}`);
+    }
     setDraggingPin(null);
     endPan();
   };
@@ -274,8 +285,19 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
               onEditPin={handleEditPin}
             />
             
-            <ReferenceGrid />
+            <ReferenceGrid 
+              size={100}
+              divisions={10}
+              showCoordinates={true}
+            />
           </div>
+
+          {/* Debug overlay (only visible during development) */}
+          {process.env.NODE_ENV === 'development' && (
+            <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-xs p-2 font-mono overflow-auto max-h-20 z-50">
+              {debugInfo}
+            </div>
+          )}
         </div>
         
         {/* Pin details panel */}
