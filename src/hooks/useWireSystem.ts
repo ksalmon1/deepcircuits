@@ -27,6 +27,8 @@ export const useWireSystem = (components: WokwiComponent[]) => {
   
   // Create a new wire from a pin
   const startWire = useCallback((componentId: string, pinIndex: number, x: number, y: number) => {
+    console.log(`Starting wire from component ${componentId}, pin ${pinIndex} at (${x}, ${y})`);
+    
     const signal = getPinSignalType(components, componentId, pinIndex);
     const color = getWireColorFromSignal(signal || '');
     
@@ -51,8 +53,10 @@ export const useWireSystem = (components: WokwiComponent[]) => {
     
     const newPoints = [...wire.points];
     if (newPoints.length === 1 || !wire.isComplete) {
+      // For active wire, just update the last point
       newPoints[newPoints.length - 1] = { x, y };
     } else {
+      // For an existing wire, add a new point
       newPoints.push({ x, y });
     }
     
@@ -72,7 +76,10 @@ export const useWireSystem = (components: WokwiComponent[]) => {
   ): Wire => {
     if (!wire) return wire;
     
+    console.log(`Completing wire to component ${targetComponentId}, pin ${targetPinIndex} at (${finalX}, ${finalY})`);
+    
     const newPoints = [...wire.points];
+    // Ensure the last point exactly matches the target pin position
     newPoints[newPoints.length - 1] = { x: finalX, y: finalY };
     
     return {
@@ -159,10 +166,13 @@ export const useWireSystem = (components: WokwiComponent[]) => {
   
   // Handle pin click to start or complete wire
   const handlePinClick = useCallback((componentId: string, pinIndex: number, x: number, y: number) => {
+    console.log(`Pin clicked: component ${componentId}, pin ${pinIndex} at (${x}, ${y})`);
+    
     // If already wiring, try to complete the wire
     if (activeWire) {
       // Don't connect to the source pin
       if (activeWire.sourceComponentId === componentId && activeWire.sourcePinIndex === pinIndex) {
+        console.log('Clicked on source pin, ignoring');
         return;
       }
       
@@ -176,10 +186,12 @@ export const useWireSystem = (components: WokwiComponent[]) => {
       );
       
       // Add the completed wire to the list
+      console.log('Wire completed:', completedWire);
       setWires(prev => [...prev, completedWire]);
       setActiveWire(null);
     } else {
       // Start a new wire
+      console.log('Starting new wire');
       startWire(componentId, pinIndex, x, y);
     }
   }, [activeWire, completeWire, startWire]);
@@ -238,6 +250,7 @@ export const useWireSystem = (components: WokwiComponent[]) => {
       );
       
       // Add the completed wire to the list
+      console.log('Wire completed via mouse up:', completedWire);
       setWires(prev => [...prev, completedWire]);
       setActiveWire(null);
       potentialTargetRef.current = null;
@@ -246,6 +259,7 @@ export const useWireSystem = (components: WokwiComponent[]) => {
   
   // Cancel active wire (e.g. on Escape key)
   const cancelActiveWire = useCallback(() => {
+    console.log('Cancelling active wire');
     setActiveWire(null);
     potentialTargetRef.current = null;
   }, []);

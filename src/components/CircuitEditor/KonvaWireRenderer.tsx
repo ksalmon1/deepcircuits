@@ -32,7 +32,13 @@ const KonvaWireRenderer: React.FC<KonvaWireRendererProps> = ({
       height={stageHeight}
       onMouseMove={onMouseMove}
       onMouseUp={onMouseUp}
-      style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }}
+      style={{ 
+        position: 'absolute', 
+        top: 0, 
+        left: 0, 
+        pointerEvents: 'none',
+        zIndex: 5 // Ensure wires render above the grid but below UI elements
+      }}
     >
       <Layer>
         {/* Render completed wires */}
@@ -44,6 +50,7 @@ const KonvaWireRenderer: React.FC<KonvaWireRendererProps> = ({
             strokeWidth={2}
             lineCap="round"
             lineJoin="round"
+            listening={false} // Improve performance by disabling event listening
           />
         ))}
         
@@ -56,6 +63,7 @@ const KonvaWireRenderer: React.FC<KonvaWireRendererProps> = ({
             lineCap="round"
             lineJoin="round"
             dash={[4, 2]} // Dashed line for active wire
+            listening={false} // Improve performance by disabling event listening
           />
         )}
       </Layer>
