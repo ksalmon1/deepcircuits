@@ -11,6 +11,15 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { ZoomIn, ZoomOut, Move } from 'lucide-react';
 import { useComponentLibrary } from '@/hooks/useComponentLibrary';
+import { 
+  Wire, 
+  createWire, 
+  updateWireEndPoint, 
+  completeWire, 
+  getPinAbsolutePosition, 
+  findPotentialPinConnections,
+  getPinSignalType
+} from '@/utils/wireUtils';
 
 interface CircuitCanvasProps {
   components: WokwiComponent[];
@@ -47,6 +56,13 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
   // New states for handling component dragging
   const [draggingComponent, setDraggingComponent] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  
+  // New states for wiring
+  const [wires, setWires] = useState<Wire[]>([]);
+  const [activeWire, setActiveWire] = useState<Wire | null>(null);
+  const [isWiring, setIsWiring] = useState(false);
+  const [wireMode, setWireMode] = useState(false);
+  const [potentialTarget, setPotentialTarget] = useState<{componentId: string, pinIndex: number} | null>(null);
   
   // Fetch all component details from the library
   const { 
@@ -387,7 +403,62 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     console.log(`Started dragging component ${componentId} with offset (${offsetX}, ${offsetY})`);
   };
   
-  // Handle component dragging
+  // New function to handle pin click for wiring
+  const handlePinClick = (e: React.MouseEvent, componentId: string, pinIndex: number) => {
+    e.stopPropagation();
+    
+    // Find the component and pin
+    const component = components.find(c => c.id === componentId);
+    if (!component || !component.pins || pinIndex >= component.pins.length) return;
+    
+    const pin = component.pins[pinIndex];
+    const pinPos = {
+      x: component.left + pin.x,
+      y: component.top + pin.y
+    };
+    
+    // If we're already wiring, check if we can complete the wire
+    if (isWiring && activeWire) {
+      // Don't connect to the source pin
+      if (activeWire.sourceComponentId === componentId && activeWire.sourcePinIndex === pinIndex) {
+        return;
+      }
+      
+      // Complete the wire
+      const signalType = getPinSignalType(components, componentId, pinIndex);
+      const completedWire = completeWire(
+        activeWire,
+        componentId,
+        pinIndex,
+        pinPos.x,
+        pinPos.y
+      );
+      
+      // Add the completed wire to the list
+      setWires(prev => [...prev, completedWire]);
+      setActiveWire(null);
+      setIsWiring(false);
+      
+      toast.success('Connection established', {
+        description: `Pin connected successfully`,
+      });
+    } else {
+      // Start a new wire
+      const signalType = getPinSignalType(components, componentId, pinIndex);
+      const newWire = createWire(
+        componentId,
+        pinIndex,
+        pinPos.x,
+        pinPos.y,
+        signalType
+      );
+      
+      setActiveWire(newWire);
+      setIsWiring(true);
+    }
+  };
+  
+  // Handle canvas mouse move for wiring
   const handleCanvasMouseMove = (e: React.MouseEvent) => {
     if (isPanning) {
       const newX = e.clientX - startPanPoint.x;
@@ -425,9 +496,52 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
       
       onComponentsChange(updatedComponents);
     }
+    
+    // Handle wire drawing
+    if (isWiring && activeWire) {
+      const canvasRect = canvasRef.current?.getBoundingClientRect();
+      if (!canvasRect) return;
+      
+      // Calculate mouse position in canvas coordinates
+      const mouseX = (e.clientX - canvasRect.left - position.x) / zoom;
+      const mouseY = (e.clientY - canvasRect.top - position.y) / zoom;
+      
+      // Check if mouse is near a potential pin connection
+      const potentialPin = findPotentialPinConnections(
+        mouseX,
+        mouseY,
+        components,
+        activeWire
+      );
+      
+      if (potentialPin) {
+        setPotentialTarget({
+          componentId: potentialPin.componentId,
+          pinIndex: potentialPin.pinIndex
+        });
+        
+        // Snap wire end to the pin position
+        const pinPos = getPinAbsolutePosition(
+          components,
+          potentialPin.componentId,
+          potentialPin.pinIndex
+        );
+        
+        if (pinPos) {
+          const updatedWire = updateWireEndPoint(activeWire, pinPos.x, pinPos.y);
+          setActiveWire(updatedWire);
+        }
+      } else {
+        setPotentialTarget(null);
+        
+        // Just follow the mouse
+        const updatedWire = updateWireEndPoint(activeWire, mouseX, mouseY);
+        setActiveWire(updatedWire);
+      }
+    }
   };
   
-  // End component drag
+  // Handle canvas mouse up
   const handleCanvasMouseUp = (e: React.MouseEvent) => {
     if (draggingComponent) {
       // Reset the dragging state
@@ -447,15 +561,61 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
       });
     }
     
+    // Handle wire completion on mouse up
+    if (isWiring && activeWire && potentialTarget) {
+      // Complete the wire to the target pin
+      const pinPos = getPinAbsolutePosition(
+        components,
+        potentialTarget.componentId,
+        potentialTarget.pinIndex
+      );
+      
+      if (pinPos) {
+        const completedWire = completeWire(
+          activeWire,
+          potentialTarget.componentId,
+          potentialTarget.pinIndex,
+          pinPos.x,
+          pinPos.y
+        );
+        
+        // Add the completed wire to the list
+        setWires(prev => [...prev, completedWire]);
+        setActiveWire(null);
+        setIsWiring(false);
+        setPotentialTarget(null);
+        
+        toast.success('Connection established', {
+          description: `Pin connected successfully`,
+        });
+      }
+    }
+    
     // Handle panning end
     handleMouseUp();
   };
   
-  // Also reset dragging state when mouse leaves the canvas
+  // Handle canvas mouse leave
   const handleCanvasMouseLeave = (e: React.MouseEvent) => {
     handleCanvasMouseUp(e);
     handleMouseLeave();
   };
+
+  // Cancel the active wire on escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isWiring) {
+        setActiveWire(null);
+        setIsWiring(false);
+        setPotentialTarget(null);
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isWiring]);
 
   // Effect to render wokwi elements when they're loaded and available
   useEffect(() => {
@@ -576,6 +736,34 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     return colors[normalizedSignal] || '#4BC0C0'; // Default to teal if no match
   };
 
+  // Render a single wire
+  const renderWire = (wire: Wire, isActive = false) => {
+    if (wire.points.length < 2) return null;
+    
+    // Create SVG path
+    let pathD = `M ${wire.points[0].x} ${wire.points[0].y}`;
+    for (let i = 1; i < wire.points.length; i++) {
+      pathD += ` L ${wire.points[i].x} ${wire.points[i].y}`;
+    }
+    
+    return (
+      <svg
+        key={wire.id}
+        className="absolute top-0 left-0 w-full h-full pointer-events-none"
+        style={{ zIndex: 15 }}
+      >
+        <path
+          d={pathD}
+          stroke={wire.color}
+          strokeWidth={2}
+          fill="none"
+          strokeLinecap="round"
+          strokeDasharray={isActive ? "4 2" : "none"}
+        />
+      </svg>
+    );
+  };
+
   // Render a single component with its pin information
   const renderComponent = (component: WokwiComponent) => {
     const { type, id, top, left, attributes } = component;
@@ -609,6 +797,11 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
                 ? getSignalColor(pin.signals[0]) 
                 : '#4BC0C0';
                 
+              // Check if this is a potential target pin
+              const isPotentialTarget = potentialTarget && 
+                potentialTarget.componentId === id && 
+                potentialTarget.pinIndex === index;
+                
               return (
                 <div 
                   key={`pin-${id}-${index}`}
@@ -621,12 +814,14 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
                     height: '12px',
                     borderRadius: '50%',
                     transform: 'translate(-50%, -50%)',
-                    border: '1px solid rgba(0,0,0,0.3)',
+                    border: isPotentialTarget ? '2px solid white' : '1px solid rgba(0,0,0,0.3)',
+                    boxShadow: isPotentialTarget ? '0 0 0 2px rgba(0,0,0,0.3)' : 'none',
                     cursor: 'pointer',
                     zIndex: 20
                   }}
                   onMouseEnter={() => handlePinHover(id, index)}
                   onMouseLeave={handlePinHoverExit}
+                  onClick={(e) => handlePinClick(e, id, index)}
                 />
               );
             })}
@@ -724,6 +919,13 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
             transition: isPanning ? 'none' : 'transform 0.1s ease-out'
           }}
         >
+          {/* Render all completed wires */}
+          {wires.map(wire => renderWire(wire))}
+          
+          {/* Render the active wire being drawn */}
+          {activeWire && renderWire(activeWire, true)}
+          
+          {/* Render all components */}
           {components.map(component => renderComponent(component))}
         </div>
       </div>
@@ -732,3 +934,4 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
 };
 
 export default CircuitCanvas;
+
