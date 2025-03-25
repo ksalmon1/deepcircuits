@@ -119,9 +119,9 @@
 
 ### 3.4 Wiring System
 - ⏳ Implement wire creation
-  - ⏳ Add pin connection logic
-  - ❌ Create wire rendering system
-  - ❌ Implement wire routing algorithm
+  - ⏳ Add pin connection via wiring logic
+  - ❌ Create a wire rendering system
+  - ❌ Implement click to add a wire node to allow custom routes
   - ❌ Add wire selection and editing
 
 ## Phase 4: Microcontroller Simulation and Compilation
