@@ -54,11 +54,6 @@ const PinVisualizer: React.FC<PinVisualizerProps> = ({
               }}
               onClick={() => onEditPin(i)}
             />
-            {isHovered && (
-              <div className="absolute whitespace-nowrap text-xs -mt-5 left-1/2 transform -translate-x-1/2 bg-white/90 px-1 py-0.5 rounded shadow-sm z-20">
-                {pin.name}
-              </div>
-            )}
           </div>
         );
       })}

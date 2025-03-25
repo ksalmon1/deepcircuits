@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { ComponentPin } from '@/types/database';
 import { isWokwiLoaded, forceLoadWokwiElements } from '@/integrations/wokwi/WokwiIntegration';
@@ -235,6 +236,18 @@ Calculated pin position relative to component origin: (${canvasX}, ${canvasY})`;
     
     handlePinsChange(updatedPins);
   };
+
+  const handleUpdatePinName = (index: number, name: string) => {
+    if (readonly) return;
+    
+    const updatedPins = [...pinData];
+    updatedPins[index] = {
+      ...updatedPins[index],
+      name
+    };
+    
+    handlePinsChange(updatedPins);
+  };
   
   useEffect(() => {
     const handleWheelEvent = (e: WheelEvent) => {
@@ -337,6 +350,7 @@ Calculated pin position relative to component origin: (${canvasX}, ${canvasY})`;
                 onEditPin={handleEditPin}
                 onHoverPin={handlePinHover}
                 onUpdatePinSignal={handleUpdatePinSignal}
+                onUpdatePinName={handleUpdatePinName}
               />
             )}
             

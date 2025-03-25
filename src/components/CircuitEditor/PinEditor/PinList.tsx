@@ -3,7 +3,8 @@ import React, { useState } from 'react';
 import { ComponentPin } from '@/types/database';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { X } from 'lucide-react';
+import { X, Edit } from 'lucide-react';
+import { Input } from "@/components/ui/input";
 import { 
   Select,
   SelectContent,
@@ -19,6 +20,7 @@ interface PinListProps {
   onEditPin: (index: number) => void;
   onHoverPin?: (index: number | null) => void;
   onUpdatePinSignal?: (index: number, signal: string) => void;
+  onUpdatePinName?: (index: number, name: string) => void;
 }
 
 const AVAILABLE_SIGNALS = [
@@ -43,8 +45,12 @@ const PinList: React.FC<PinListProps> = ({
   onDeletePin, 
   onEditPin,
   onHoverPin,
-  onUpdatePinSignal
+  onUpdatePinSignal,
+  onUpdatePinName
 }) => {
+  const [editingPinName, setEditingPinName] = useState<number | null>(null);
+  const [pinNameValue, setPinNameValue] = useState<string>("");
+
   if (pins.length === 0) {
     return (
       <div className="text-xs text-center text-muted-foreground p-2">
@@ -59,6 +65,26 @@ const PinList: React.FC<PinListProps> = ({
     }
   };
 
+  const startEditingPinName = (index: number) => {
+    setEditingPinName(index);
+    setPinNameValue(pins[index].name);
+  };
+
+  const savePinName = (index: number) => {
+    if (onUpdatePinName && pinNameValue) {
+      onUpdatePinName(index, pinNameValue);
+    }
+    setEditingPinName(null);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent, index: number) => {
+    if (e.key === 'Enter') {
+      savePinName(index);
+    } else if (e.key === 'Escape') {
+      setEditingPinName(null);
+    }
+  };
+
   return (
     <div className="space-y-1 max-h-[250px] overflow-y-auto pr-1">
       {pins.map((pin, i) => (
@@ -67,16 +93,43 @@ const PinList: React.FC<PinListProps> = ({
           className="flex items-center justify-between p-2 border rounded hover:bg-gray-50"
           onMouseEnter={() => onHoverPin && onHoverPin(i)}
           onMouseLeave={() => onHoverPin && onHoverPin(null)}
-          onClick={() => !readonly && onEditPin(i)}
         >
           <div className="overflow-hidden flex-grow">
-            <div className="font-medium truncate flex items-center gap-1">
+            <div className="font-medium truncate flex items-center gap-1 mb-1">
               <span className="bg-blue-500 text-white w-4 h-4 rounded-full flex items-center justify-center text-xs">{i+1}</span>
-              {pin.name}
+              
+              {editingPinName === i ? (
+                <div className="flex items-center gap-1 flex-grow">
+                  <Input 
+                    value={pinNameValue}
+                    onChange={(e) => setPinNameValue(e.target.value)}
+                    onBlur={() => savePinName(i)}
+                    onKeyDown={(e) => handleKeyDown(e, i)}
+                    className="h-7 text-xs"
+                    autoFocus
+                  />
+                </div>
+              ) : (
+                <div className="flex items-center gap-1 flex-grow">
+                  <span>{pin.name}</span>
+                  {!readonly && (
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-5 w-5 ml-1" 
+                      onClick={() => startEditingPinName(i)}
+                    >
+                      <Edit className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
+              )}
             </div>
-            <div className="text-xs text-muted-foreground mt-1">
+            
+            <div className="text-xs text-muted-foreground">
               x: {Math.round(Number(pin.x))}, y: {Math.round(Number(pin.y))}
             </div>
+            
             <div className="flex flex-wrap gap-1 mt-1">
               {!readonly ? (
                 <Select 
@@ -105,6 +158,7 @@ const PinList: React.FC<PinListProps> = ({
               )}
             </div>
           </div>
+          
           {!readonly && (
             <Button 
               size="icon" 
