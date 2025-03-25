@@ -52,6 +52,7 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
   // Use the canvas navigation hook
   const {
     zoom,
+    setZoom,
     offset,
     panMode,
     isDraggingCanvas,
@@ -250,7 +251,7 @@ Calculated pin position relative to component origin: (${canvasX}, ${canvasY})`;
     return () => {
       containerRef.current?.removeEventListener('wheel', handleWheelEvent);
     };
-  }, []);
+  }, [setZoom]);
   
   return (
     <div className={`flex flex-col h-full ${className}`} style={{ minHeight: '400px' }}>
