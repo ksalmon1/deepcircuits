@@ -1,5 +1,5 @@
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 
 /**
  * Hook that provides zoom and pan functionality for a canvas
@@ -10,6 +10,9 @@ export const useCanvasNavigation = (initialZoom = 1) => {
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [isDraggingCanvas, setIsDraggingCanvas] = useState(false);
   const [panMode, setPanMode] = useState(false);
+  
+  // Add a reference for maintaining canvas dimensions
+  const canvasDimensionsRef = useRef({ width: 0, height: 0 });
 
   const handleZoomIn = useCallback(() => {
     setZoom(prevZoom => Math.min(prevZoom + 0.1, 3));
@@ -50,6 +53,27 @@ export const useCanvasNavigation = (initialZoom = 1) => {
     setZoom(initialZoom);
     setOffset({ x: 0, y: 0 });
   }, [initialZoom]);
+  
+  // Update the canvas dimensions
+  const updateCanvasDimensions = useCallback((width: number, height: number) => {
+    canvasDimensionsRef.current = { width, height };
+  }, []);
+  
+  // Convert screen coordinates to canvas coordinates (accounting for zoom/pan)
+  const screenToCanvasCoordinates = useCallback((screenX: number, screenY: number) => {
+    return {
+      x: (screenX - offset.x) / zoom,
+      y: (screenY - offset.y) / zoom
+    };
+  }, [zoom, offset]);
+  
+  // Convert canvas coordinates to screen coordinates
+  const canvasToScreenCoordinates = useCallback((canvasX: number, canvasY: number) => {
+    return {
+      x: canvasX * zoom + offset.x,
+      y: canvasY * zoom + offset.y
+    };
+  }, [zoom, offset]);
 
   return {
     zoom,
@@ -57,6 +81,7 @@ export const useCanvasNavigation = (initialZoom = 1) => {
     offset,
     panMode,
     isDraggingCanvas,
+    canvasDimensions: canvasDimensionsRef.current,
     handleZoomIn,
     handleZoomOut,
     togglePanMode,
@@ -64,6 +89,9 @@ export const useCanvasNavigation = (initialZoom = 1) => {
     pan,
     endPan,
     handleWheel,
-    resetView
+    resetView,
+    updateCanvasDimensions,
+    screenToCanvasCoordinates,
+    canvasToScreenCoordinates
   };
 };
