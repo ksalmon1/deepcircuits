@@ -118,9 +118,10 @@
   - ❌ Add component resizing
 
 ### 3.4 Wiring System
-- ⏳ Implement wire creation
+- ✅ Implement wire creation
   - ✅ Add pin connection via wiring logic
   - ✅ Create a wire rendering system
+  - ✅ Implement wire mode to avoid interference with component dragging
   - ⏳ Implement click to add a wire node to allow custom routes
   - ⏳ Add wire selection and editing
 
@@ -302,11 +303,11 @@
 
 ## Current Progress Summary
 
-- **Completed**: 57 items
-- **Partially Implemented**: 15 items
+- **Completed**: 58 items
+- **Partially Implemented**: 14 items
 - **Not Started**: 75 items
 - **Total Items**: 147 items
-- **Completion Percentage**: ~42.8%
+- **Completion Percentage**: ~43.5%
 
 ## Current Focus Areas
 - Component Integration is now complete! ✅
@@ -316,6 +317,7 @@
   - Users can now connect components by clicking on pins
   - Wires are color-coded based on signal types
   - Wire connections snap to pins when nearby
+  - Added dedicated wire mode to avoid interference with component dragging
 - Component data synchronization with Supabase is now in progress ⏳
   - ✅ Phase 1: Database structure has been created
   - ✅ Phase 2: Admin interface is now connected to Supabase

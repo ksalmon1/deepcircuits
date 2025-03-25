@@ -337,3 +337,34 @@ export const getPinSignalType = (
   const pin = component.pins[pinIndex];
   return pin.signals && pin.signals.length > 0 ? pin.signals[0] : undefined;
 };
+
+/**
+ * Check if the user is trying to interact with a pin (click or hover)
+ * This helps distinguish between pin interaction and component dragging
+ */
+export const isInteractingWithPin = (
+  x: number, 
+  y: number, 
+  component: WokwiComponent,
+  threshold: number = 12
+): { isPin: boolean; pinIndex: number } => {
+  if (!component.pins) {
+    return { isPin: false, pinIndex: -1 };
+  }
+  
+  for (let i = 0; i < component.pins.length; i++) {
+    const pin = component.pins[i];
+    const pinX = component.left + pin.x;
+    const pinY = component.top + pin.y;
+    
+    const dx = x - pinX;
+    const dy = y - pinY;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    
+    if (distance < threshold) {
+      return { isPin: true, pinIndex: i };
+    }
+  }
+  
+  return { isPin: false, pinIndex: -1 };
+};
