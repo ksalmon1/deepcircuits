@@ -8,7 +8,6 @@ import { useCanvasNavigation } from '@/hooks/useCanvasNavigation';
 import CanvasToolbar from './PinEditor/CanvasToolbar';
 import PinVisualizer from './PinEditor/PinVisualizer';
 import PinList from './PinEditor/PinList';
-import PinEditForm from './PinEditor/PinEditForm';
 import ReferenceGrid from './PinEditor/ReferenceGrid';
 import { CoordinateSystemInfo, ControlsInfo } from './PinEditor/InfoPanels';
 
@@ -44,9 +43,6 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
   const previewRef = useRef<HTMLDivElement>(null);
   const [componentLoaded, setComponentLoaded] = useState(false);
   const [draggingPin, setDraggingPin] = useState<number | null>(null);
-  const [editingPin, setEditingPin] = useState<number | null>(null);
-  const [newPinName, setNewPinName] = useState<string>('');
-  const [newPinSignals, setNewPinSignals] = useState<string>('');
   const [componentElement, setComponentElement] = useState<HTMLElement | null>(null);
   const [debugInfo, setDebugInfo] = useState<string>('No interactions yet');
   const [hoveredPinIndex, setHoveredPinIndex] = useState<number | null>(null);
@@ -198,20 +194,8 @@ Calculated pin position relative to component origin: (${canvasX}, ${canvasY})`;
   
   const handleEditPin = (index: number) => {
     if (readonly) return;
-    setEditingPin(index);
-    setNewPinName(pinData[index].name);
-    setNewPinSignals(pinData[index].signals ? pinData[index].signals.join(',') : '');
-  };
-  
-  const handleSavePin = () => {
-    if (editingPin === null || readonly) return;
-    
-    const updatedPins = updatePinProperties(pinData, editingPin, newPinName, newPinSignals);
-    handlePinsChange(updatedPins);
-    
-    setEditingPin(null);
-    setNewPinName('');
-    setNewPinSignals('');
+    // This function now only exists for compatibility with PinVisualizer
+    // We're handling edits inline in the PinList component
   };
   
   const handleDeletePin = (index: number) => {
@@ -333,26 +317,15 @@ Calculated pin position relative to component origin: (${canvasX}, ${canvasY})`;
           <div className="w-72 border rounded p-3 overflow-y-auto text-sm">
             <h3 className="font-medium mb-2">Pin Details</h3>
             
-            {editingPin !== null ? (
-              <PinEditForm 
-                pinName={newPinName}
-                pinSignals={newPinSignals}
-                onPinNameChange={setNewPinName}
-                onPinSignalsChange={setNewPinSignals}
-                onSave={handleSavePin}
-                onCancel={() => setEditingPin(null)}
-              />
-            ) : (
-              <PinList 
-                pins={pinData}
-                readonly={readonly}
-                onDeletePin={handleDeletePin}
-                onEditPin={handleEditPin}
-                onHoverPin={handlePinHover}
-                onUpdatePinSignal={handleUpdatePinSignal}
-                onUpdatePinName={handleUpdatePinName}
-              />
-            )}
+            <PinList 
+              pins={pinData}
+              readonly={readonly}
+              onDeletePin={handleDeletePin}
+              onEditPin={handleEditPin}
+              onHoverPin={handlePinHover}
+              onUpdatePinSignal={handleUpdatePinSignal}
+              onUpdatePinName={handleUpdatePinName}
+            />
             
             <CoordinateSystemInfo />
             <ControlsInfo />
