@@ -38,10 +38,15 @@ const PinVisualizer: React.FC<PinVisualizerProps> = ({
             }}
           >
             <div 
-              className={`rounded-full w-5 h-5 flex items-center justify-center ${readonly ? 'bg-blue-200' : 'bg-blue-500 hover:bg-blue-600'} transition-colors`}
+              className={`rounded-full flex items-center justify-center ${readonly ? 'bg-blue-200' : 'bg-blue-500 hover:bg-blue-600'} transition-colors`}
+              style={{
+                width: '6px',
+                height: '6px',
+                border: '1px solid rgba(0,0,0,0.3)'
+              }}
               onClick={() => onEditPin(i)}
             >
-              <span className="text-white text-xs font-bold">{i+1}</span>
+              {/* Index removed to match circuit editor pins */}
             </div>
             <div className="absolute whitespace-nowrap text-xs -mt-5 left-1/2 transform -translate-x-1/2 bg-white/90 px-1 py-0.5 rounded shadow-sm">
               {pin.name} ({Math.round(pinX)}, {Math.round(pinY)})
