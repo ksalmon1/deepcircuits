@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect, WheelEvent } from 'react';
 import { Move, Plus, X, ZoomIn, ZoomOut } from 'lucide-react';
 import { Button } from "@/components/ui/button";
@@ -114,16 +115,19 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
       return;
     }
     
-    // Get preview wrapper element position
-    const previewWrapper = previewRef.current?.firstElementChild;
-    if (!previewWrapper || !componentElement) return;
+    // Get component element - crucial for accurate pin positioning
+    if (!componentElement) return;
     
-    const previewRect = previewWrapper.getBoundingClientRect();
     const componentRect = componentElement.getBoundingClientRect();
     
     // Calculate coordinates relative to component's top-left (0,0)
+    // This is the key fix: we need to get coordinates relative to the component element
     const canvasX = (e.clientX - componentRect.left) / zoom;
     const canvasY = (e.clientY - componentRect.top) / zoom;
+    
+    console.log(`Click at client coordinates: (${e.clientX}, ${e.clientY})`);
+    console.log(`Component bounding rect: left=${componentRect.left}, top=${componentRect.top}`);
+    console.log(`Calculated pin position relative to component: (${canvasX}, ${canvasY})`);
     
     // Check if clicking on an existing pin
     for (let i = 0; i < pinData.length; i++) {
@@ -323,16 +327,13 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
             
             {/* Render pins - positions are relative to component's top-left (0,0) */}
             {componentElement && pinData.map((pin, i) => {
-              // Calculate absolute position based on the component's position
-              // We cast to HTMLElement to access offsetLeft and offsetTop properties
-              const compEl = componentElement as HTMLElement;
               return (
                 <div 
                   key={i} 
                   className="absolute" 
                   style={{
-                    left: `${compEl.offsetLeft + Number(pin.x)}px`,
-                    top: `${compEl.offsetTop + Number(pin.y)}px`,
+                    left: `${Number(pin.x)}px`,
+                    top: `${Number(pin.y)}px`,
                     transform: 'translate(-50%, -50%)',
                     cursor: readonly ? 'default' : 'move',
                     zIndex: 10
@@ -363,6 +364,7 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
           </div>
         </div>
         
+        {/* Pin details panel */}
         {!readonly && (
           <div className="w-72 border rounded p-3 overflow-y-auto text-sm">
             <h3 className="font-medium mb-2">Pin Details</h3>

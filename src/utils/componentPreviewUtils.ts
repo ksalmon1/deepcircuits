@@ -25,6 +25,8 @@ export const renderWokwiComponentPreview = async (
     const placeholderElement = document.createElement('div');
     placeholderElement.id = elementId;
     placeholderElement.style.position = 'relative';
+    placeholderElement.style.width = '100%';
+    placeholderElement.style.height = '100%';
     container.appendChild(placeholderElement);
     
     // Call renderWokwiElement with the correct arguments
