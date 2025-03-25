@@ -114,19 +114,26 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
       return;
     }
     
-    // Get component element - crucial for accurate pin positioning
+    // Get component element bounds - crucial for accurate pin positioning
     if (!componentElement) return;
     
     const componentRect = componentElement.getBoundingClientRect();
+    const containerRect = containerRef.current?.getBoundingClientRect();
     
-    // Calculate coordinates relative to component's top-left (0,0)
-    // This is the key fix: we need to get coordinates relative to the component element
-    const canvasX = (e.clientX - componentRect.left) / zoom;
-    const canvasY = (e.clientY - componentRect.top) / zoom;
+    if (!containerRect) return;
+    
+    // Calculate the position of the red dot (component's origin)
+    const originX = componentRect.left;
+    const originY = componentRect.top;
+    
+    // Calculate coordinates relative to component's origin (0,0)
+    // This is the key fix: we're using the component element's position as the origin
+    const canvasX = (e.clientX - originX) / zoom;
+    const canvasY = (e.clientY - originY) / zoom;
     
     console.log(`Click at client coordinates: (${e.clientX}, ${e.clientY})`);
-    console.log(`Component bounding rect: left=${componentRect.left}, top=${componentRect.top}`);
-    console.log(`Calculated pin position relative to component: (${canvasX}, ${canvasY})`);
+    console.log(`Component origin at: left=${originX}, top=${originY}`);
+    console.log(`Calculated pin position relative to component origin: (${canvasX}, ${canvasY})`);
     
     // Check if clicking on an existing pin
     for (let i = 0; i < pinData.length; i++) {
@@ -153,7 +160,7 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
         signals: []
       };
       
-      console.log(`Adding new pin at coordinates (${canvasX}, ${canvasY}) relative to component's top-left`);
+      console.log(`Adding new pin at coordinates (${canvasX}, ${canvasY}) relative to component's origin`);
       handlePinsChange([...pinData, newPin]);
     }
   };
@@ -171,7 +178,7 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
     if (draggingPin !== null && componentElement) {
       const componentRect = componentElement.getBoundingClientRect();
       
-      // Calculate coordinates relative to component's top-left (0,0)
+      // Calculate coordinates relative to component's origin (0,0)
       const canvasX = (e.clientX - componentRect.left) / zoom;
       const canvasY = (e.clientY - componentRect.top) / zoom;
       
@@ -324,15 +331,19 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
               }}
             ></div>
             
-            {/* Render pins - positions are relative to component's top-left (0,0) */}
+            {/* Render pins - positions are relative to component's origin (0,0) */}
             {componentElement && pinData.map((pin, i) => {
+              const pinX = Number(pin.x);
+              const pinY = Number(pin.y);
+              
               return (
                 <div 
                   key={i} 
                   className="absolute" 
                   style={{
-                    left: `${Number(pin.x)}px`,
-                    top: `${Number(pin.y)}px`,
+                    // Position pins relative to the component's origin
+                    left: `${pinX + componentElement.offsetLeft}px`,
+                    top: `${pinY + componentElement.offsetTop}px`,
                     transform: 'translate(-50%, -50%)',
                     cursor: readonly ? 'default' : 'move',
                     zIndex: 10

@@ -36,11 +36,12 @@ export const renderWokwiComponentPreview = async (
     setTimeout(() => {
       const wokwiElement = document.getElementById(elementId)?.firstElementChild;
       if (wokwiElement instanceof HTMLElement) {
-        // Position the element at (0,0) of the container without centering
-        // This ensures the component's top-left corner is at a known position
+        // Position the element consistently at a fixed position (0,0)
+        // This is crucial for the pin positioning to work correctly
         wokwiElement.style.position = 'absolute';
         wokwiElement.style.left = '0';
         wokwiElement.style.top = '0';
+        wokwiElement.style.transformOrigin = 'top left';
         
         // Add a visible origin marker to help users see the (0,0) point
         const originMarker = document.createElement('div');
@@ -59,7 +60,11 @@ export const renderWokwiComponentPreview = async (
         // Log element dimensions for debugging
         console.log(`Wokwi element ${componentType} dimensions:`, {
           width: wokwiElement.offsetWidth,
-          height: wokwiElement.offsetHeight
+          height: wokwiElement.offsetHeight,
+          position: {
+            left: wokwiElement.offsetLeft,
+            top: wokwiElement.offsetTop
+          }
         });
       }
     }, 100); // Small delay to ensure the element has rendered
