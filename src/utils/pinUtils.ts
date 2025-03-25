@@ -25,8 +25,8 @@ export const isPointNearPin = (
 
 /**
  * Creates a new pin at the specified coordinates
- * @param x - Pin x coordinate
- * @param y - Pin y coordinate
+ * @param x - Pin x coordinate (relative to component origin)
+ * @param y - Pin y coordinate (relative to component origin)
  * @param existingPins - Array of existing pins
  * @returns New ComponentPin object
  */
@@ -38,6 +38,8 @@ export const createNewPin = (
   // Round coordinates to nearest integers for easier positioning
   const roundedX = Math.round(x);
   const roundedY = Math.round(y);
+  
+  console.log(`Creating new pin at (${roundedX}, ${roundedY}) relative to component origin`);
   
   return {
     name: `pin${existingPins.length + 1}`,
@@ -51,8 +53,8 @@ export const createNewPin = (
  * Updates a pin's position
  * @param pins - Array of pins
  * @param pinIndex - Index of the pin to update
- * @param x - New x coordinate
- * @param y - New y coordinate
+ * @param x - New x coordinate (relative to component origin)
+ * @param y - New y coordinate (relative to component origin)
  * @returns Updated array of pins
  */
 export const updatePinPosition = (
@@ -74,7 +76,7 @@ export const updatePinPosition = (
     y: roundedY
   };
   
-  console.log(`Updated pin ${pinIndex} position to (${roundedX}, ${roundedY})`);
+  console.log(`Updated pin ${pinIndex} position to (${roundedX}, ${roundedY}) relative to component origin`);
   
   return updatedPins;
 };

@@ -289,6 +289,7 @@ Calculated pin position relative to component origin: (${canvasX}, ${canvasY})`;
               size={100}
               divisions={10}
               showCoordinates={true}
+              componentElement={componentElement}
             />
           </div>
 

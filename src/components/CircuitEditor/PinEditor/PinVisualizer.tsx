@@ -11,6 +11,7 @@ interface PinVisualizerProps {
 
 /**
  * Visual representation of pins on the component preview
+ * Pins are positioned relative to the component's top-left corner (0,0)
  */
 const PinVisualizer: React.FC<PinVisualizerProps> = ({
   pins,
@@ -30,14 +31,17 @@ const PinVisualizer: React.FC<PinVisualizerProps> = ({
         const pinX = Number(pin.x);
         const pinY = Number(pin.y);
         
+        // Position pins relative to the component's origin (0,0)
+        const absoluteX = componentLeft + pinX;
+        const absoluteY = componentTop + pinY;
+        
         return (
           <div 
             key={i} 
             className="absolute" 
             style={{
-              // Position pins relative to the component's origin (0,0)
-              left: `${pinX + componentLeft}px`,
-              top: `${pinY + componentTop}px`,
+              left: `${absoluteX}px`,
+              top: `${absoluteY}px`,
               transform: 'translate(-50%, -50%)',
               cursor: readonly ? 'default' : 'move',
               zIndex: 10
