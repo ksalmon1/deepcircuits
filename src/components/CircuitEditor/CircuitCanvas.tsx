@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { 
   isWokwiLoaded, 
@@ -10,7 +9,7 @@ import {
 } from '@/integrations/wokwi/WokwiIntegration';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
-import { ZoomIn, ZoomOut, Move, Zap } from 'lucide-react';
+import { ZoomIn, ZoomOut, Move } from 'lucide-react';
 import { useComponentLibrary } from '@/hooks/useComponentLibrary';
 import { 
   Wire, 
@@ -51,12 +50,10 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     zoom,
     offset,
     panMode,
-    wireMode,
     isDraggingCanvas,
     handleZoomIn,
     handleZoomOut,
     togglePanMode,
-    toggleWireMode,
     startPan,
     pan,
     endPan,
@@ -69,11 +66,11 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
   const [hoveredPin, setHoveredPin] = useState<{componentId: string, pinIndex: number} | null>(null);
   const [renderedComponents, setRenderedComponents] = useState<Record<string, boolean>>({});
   
-  // New states for handling component dragging
+  // States for handling component dragging
   const [draggingComponent, setDraggingComponent] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   
-  // New states for wiring
+  // States for wiring
   const [wires, setWires] = useState<Wire[]>([]);
   const [activeWire, setActiveWire] = useState<Wire | null>(null);
   const [isWiring, setIsWiring] = useState(false);
@@ -390,16 +387,15 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
 
   // Start component drag handler
   const handleComponentMouseDown = (e: React.MouseEvent, componentId: string) => {
-    // If in wire mode, don't start dragging
-    if (wireMode || panMode || e.button !== 0) {
+    // Don't start dragging if in pan mode or not left-clicking
+    if (panMode || e.button !== 0) {
       return;
     }
     
-    // Prevent dragging when clicking on pins
+    // Check if the user clicked on a pin
     const canvasRect = canvasRef.current?.getBoundingClientRect();
     if (!canvasRect) return;
     
-    // Check if the user clicked on a pin
     const component = components.find(c => c.id === componentId);
     if (!component) return;
     
@@ -435,7 +431,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     console.log(`Started dragging component ${componentId} with offset (${offsetX}, ${offsetY})`);
   };
   
-  // New function to handle pin click for wiring
+  // Handle pin click for wiring
   const handlePinClick = (e: React.MouseEvent, componentId: string, pinIndex: number) => {
     e.stopPropagation();
     
@@ -493,11 +489,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
       
       setActiveWire(newWire);
       setIsWiring(true);
-      
-      // When starting a wire, automatically enter wire mode
-      if (!wireMode) {
-        toggleWireMode();
-      }
     }
   };
   
@@ -731,7 +722,9 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     
     // Use component's pins if available, otherwise fetch them
     const pins = component.pins || fetchComponentPins(type);
-    const showPins = wireMode || visiblePins[id] || hoveredComponent === id;
+    
+    // Always show pins on hover or if they've been toggled visible
+    const showPins = visiblePins[id] || hoveredComponent === id;
     
     return (
       <div 
@@ -741,7 +734,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
         style={{ 
           top: `${top}px`, 
           left: `${left}px`,
-          cursor: wireMode ? 'default' : (draggingComponent === id ? 'grabbing' : 'grab')
+          cursor: draggingComponent === id ? 'grabbing' : 'grab'
         }}
         onMouseDown={(e) => handleComponentMouseDown(e, id)}
         onMouseEnter={() => handleComponentHover(id, type)}
@@ -880,26 +873,14 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
         >
           <Move size={18} />
         </button>
-        <button
-          onClick={toggleWireMode}
-          className={`p-1 hover:bg-gray-100 rounded ${wireMode ? 'bg-yellow-200' : ''}`}
-          title="Wire Mode (for creating connections)"
-        >
-          <Zap size={18} />
-        </button>
         <div className="px-2 flex items-center text-xs text-gray-600">
           {Math.round(zoom * 100)}%
         </div>
       </div>
       
-      {wireMode && (
+      {isWiring && (
         <div className="absolute top-12 right-2 bg-yellow-100 text-sm p-2 rounded-md shadow-md z-20">
-          Wire mode is active. Click on pins to create connections.
-          {isWiring && (
-            <div className="text-xs text-gray-600 mt-1">
-              Currently wiring: Click another pin to complete the connection, or press Esc to cancel.
-            </div>
-          )}
+          Creating wire: Click another pin to complete the connection, or press Esc to cancel.
         </div>
       )}
       
@@ -925,7 +906,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
             transform: `scale(${zoom}) translate(${offset.x / zoom}px, ${offset.y / zoom}px)`,
             transformOrigin: '0 0',
             transition: isDraggingCanvas ? 'none' : 'transform 0.1s ease-out',
-            cursor: panMode ? 'move' : (wireMode ? 'crosshair' : 'default')
+            cursor: panMode ? 'move' : 'default'
           }}
         >
           {/* Render all completed wires */}

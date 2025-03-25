@@ -10,8 +10,6 @@ export const useCanvasNavigation = (initialZoom = 1) => {
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [isDraggingCanvas, setIsDraggingCanvas] = useState(false);
   const [panMode, setPanMode] = useState(false);
-  // Add a new state for wire mode
-  const [wireMode, setWireMode] = useState(false);
 
   const handleZoomIn = useCallback(() => {
     setZoom(prevZoom => Math.min(prevZoom + 0.1, 3));
@@ -23,22 +21,7 @@ export const useCanvasNavigation = (initialZoom = 1) => {
 
   const togglePanMode = useCallback(() => {
     setPanMode(prev => !prev);
-    
-    // If enabling pan mode, disable wire mode
-    if (!panMode) {
-      setWireMode(false);
-    }
-  }, [panMode]);
-  
-  // Add a function to toggle wire mode
-  const toggleWireMode = useCallback(() => {
-    setWireMode(prev => !prev);
-    
-    // If enabling wire mode, disable pan mode
-    if (!wireMode) {
-      setPanMode(false);
-    }
-  }, [wireMode]);
+  }, []);
 
   const startPan = useCallback((x: number, y: number) => {
     setIsDraggingCanvas(true);
@@ -73,12 +56,10 @@ export const useCanvasNavigation = (initialZoom = 1) => {
     setZoom,
     offset,
     panMode,
-    wireMode,
     isDraggingCanvas,
     handleZoomIn,
     handleZoomOut,
     togglePanMode,
-    toggleWireMode,
     startPan,
     pan,
     endPan,
