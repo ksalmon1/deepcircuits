@@ -33,6 +33,9 @@ const AVAILABLE_SIGNALS = [
   "Clock",
   "Data",
   "Reset",
+  "Passive",
+  "I2C",
+  "SPI",
   "Custom"
 ];
 
