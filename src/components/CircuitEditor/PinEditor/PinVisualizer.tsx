@@ -47,10 +47,9 @@ const PinVisualizer: React.FC<PinVisualizerProps> = ({
             <div 
               className={`rounded-full flex items-center justify-center ${isHovered ? 'bg-yellow-400' : readonly ? 'bg-blue-200' : 'bg-blue-500 hover:bg-blue-600'} transition-colors`}
               style={{
-                width: '6px',
-                height: '6px',
-                border: '1px solid rgba(0,0,0,0.3)',
-                boxShadow: isHovered ? '0 0 0 2px rgba(255, 204, 0, 0.5)' : 'none'
+                width: '12px',
+                height: '12px',
+                border: isHovered ? '1px solid rgba(0,0,0,0.5)' : '1px solid rgba(0,0,0,0.3)'
               }}
               onClick={() => onEditPin(i)}
             />

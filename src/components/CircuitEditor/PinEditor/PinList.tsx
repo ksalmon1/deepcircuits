@@ -99,7 +99,7 @@ const PinList: React.FC<PinListProps> = ({
         >
           <div className="overflow-hidden flex-grow">
             <div className="font-medium truncate flex items-center gap-1 mb-1">
-              <span className="bg-blue-500 text-white w-4 h-4 rounded-full flex items-center justify-center text-xs">{i+1}</span>
+              <span className="bg-blue-500 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs">{i+1}</span>
               
               {editingPinName === i ? (
                 <div className="flex items-center gap-1 flex-grow">

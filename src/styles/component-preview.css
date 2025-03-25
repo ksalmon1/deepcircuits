@@ -1,4 +1,3 @@
-
 /* Component preview styles */
 .component-preview-container {
   display: flex;
@@ -32,21 +31,20 @@ wokwi-esp32-devkit-v1 {
 /* Pin markers */
 .pin-marker {
   position: absolute;
-  width: 8px;
-  height: 8px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   background-color: #ff6384;
   border: 1px solid #ffffff;
   transform: translate(-50%, -50%);
   z-index: 10;
-  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+  box-shadow: none;
   cursor: move;
-  transition: transform 0.1s ease-in-out, box-shadow 0.1s ease-in-out;
+  transition: transform 0.1s ease-in-out;
 }
 
 .pin-marker:hover {
   transform: translate(-50%, -50%) scale(1.5);
-  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.2);
   z-index: 20;
 }
 
