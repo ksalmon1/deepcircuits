@@ -1,9 +1,8 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ComponentPin } from '@/types/database';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { X, Edit } from 'lucide-react';
+import { X, Edit, Check, Trash2 } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import { 
   Select,
@@ -40,87 +39,128 @@ const AVAILABLE_SIGNALS = [
 ];
 
 /**
- * Displays a list of pins with their details and provides controls to edit or delete them
+ * List of pins with their properties
+ * Displays each pin with its name, coordinates, and allows editing
  */
-const PinList: React.FC<PinListProps> = ({ 
-  pins, 
+const PinList: React.FC<PinListProps> = ({
+  pins,
   readonly = false,
-  onDeletePin, 
+  onDeletePin,
   onEditPin,
   onHoverPin,
-  onUpdatePinSignal,
-  onUpdatePinName
+  onUpdatePinName,
+  onUpdatePinSignal
 }) => {
   const [editingPinName, setEditingPinName] = useState<number | null>(null);
-  const [pinNameValue, setPinNameValue] = useState<string>("");
-
-  if (pins.length === 0) {
-    return (
-      <div className="text-xs text-center text-muted-foreground p-2">
-        {readonly ? "No pins defined" : "Click on the diagram to add pins"}
-      </div>
-    );
-  }
-
-  const handleSignalChange = (index: number, value: string) => {
-    if (onUpdatePinSignal) {
-      onUpdatePinSignal(index, value);
+  const [editingPinNameValue, setEditingPinNameValue] = useState<string>('');
+  
+  const inputRef = useRef<HTMLInputElement>(null);
+  
+  useEffect(() => {
+    if (editingPinName !== null && inputRef.current) {
+      inputRef.current.focus();
     }
-  };
+  }, [editingPinName]);
 
-  const startEditingPinName = (index: number) => {
+  const handleStartEditName = (index: number) => {
+    if (readonly) return;
     setEditingPinName(index);
-    setPinNameValue(pins[index].name);
+    setEditingPinNameValue(pins[index].name);
   };
 
-  const savePinName = (index: number) => {
-    if (onUpdatePinName && pinNameValue) {
-      onUpdatePinName(index, pinNameValue);
+  const handleSubmitNameEdit = () => {
+    if (editingPinName !== null && editingPinNameValue.trim()) {
+      onUpdatePinName(editingPinName, editingPinNameValue.trim());
+      setEditingPinName(null);
     }
-    setEditingPinName(null);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent, index: number) => {
+  const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
-      savePinName(index);
+      handleSubmitNameEdit();
     } else if (e.key === 'Escape') {
       setEditingPinName(null);
     }
   };
 
+  // Function to get a color based on signal type
+  const getSignalColor = (signal: string): string => {
+    const colors: Record<string, string> = {
+      'power': '#FF6384',    // Red
+      'ground': '#36A2EB',   // Blue
+      'digital': '#4BC0C0',  // Teal
+      'analog': '#FFCE56',   // Yellow
+      'passive': '#9966FF',  // Purple
+      'i2c': '#FF9F40',      // Orange
+      'spi': '#C9CBCF',      // Gray
+      'uart': '#7CFC00',     // Lime
+      'rx': '#FF00FF',       // Magenta
+      'tx': '#00FFFF',       // Cyan
+    };
+    
+    return colors[signal] || '#4BC0C0';
+  };
+  
+  if (pins.length === 0) {
+    return (
+      <div className="p-4 text-center text-gray-500 italic bg-gray-50 rounded">
+        No pins defined yet. Click on the component preview to add pins.
+      </div>
+    );
+  }
+  
   return (
-    <div className="space-y-1 max-h-[250px] overflow-y-auto pr-1">
+    <div className="space-y-3 mb-6">
       {pins.map((pin, i) => (
         <div 
-          key={i} 
-          className="flex items-center justify-between p-2 border rounded hover:bg-gray-50"
-          onMouseEnter={() => onHoverPin && onHoverPin(i)}
-          onMouseLeave={() => onHoverPin && onHoverPin(null)}
+          key={i}
+          className="border rounded p-2 relative group"
+          onMouseEnter={() => onHoverPin(i)}
+          onMouseLeave={() => onHoverPin(null)}
         >
           <div className="overflow-hidden flex-grow">
             <div className="font-medium truncate flex items-center gap-1 mb-1">
-              <span className="bg-blue-500 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs">{i+1}</span>
+              <span 
+                className="text-white w-5 h-5 rounded-full flex items-center justify-center text-xs"
+                style={{ 
+                  backgroundColor: pin.signals && pin.signals.length > 0
+                    ? getSignalColor(pin.signals[0])
+                    : '#4BC0C0' 
+                }}
+              >
+                {i+1}
+              </span>
               
               {editingPinName === i ? (
                 <div className="flex items-center gap-1 flex-grow">
-                  <Input 
-                    value={pinNameValue}
-                    onChange={(e) => setPinNameValue(e.target.value)}
-                    onBlur={() => savePinName(i)}
-                    onKeyDown={(e) => handleKeyDown(e, i)}
-                    className="h-7 text-xs"
-                    autoFocus
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={editingPinNameValue}
+                    onChange={(e) => setEditingPinNameValue(e.target.value)}
+                    onBlur={handleSubmitNameEdit}
+                    onKeyDown={handleKeyPress}
+                    className="text-sm border rounded p-1 flex-grow"
+                    placeholder="Pin name"
                   />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 text-gray-500"
+                    onClick={handleSubmitNameEdit}
+                  >
+                    <Check className="h-3 w-3" />
+                  </Button>
                 </div>
               ) : (
-                <div className="flex items-center gap-1 flex-grow">
-                  <span>{pin.name}</span>
+                <div className="flex items-center justify-between w-full">
+                  <span className="truncate">{pin.name}</span>
                   {!readonly && (
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-5 w-5 ml-1" 
-                      onClick={() => startEditingPinName(i)}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => handleStartEditName(i)}
                     >
                       <Edit className="h-3 w-3" />
                     </Button>
@@ -129,52 +169,44 @@ const PinList: React.FC<PinListProps> = ({
               )}
             </div>
             
-            <div className="text-xs text-muted-foreground">
-              x: {Math.round(Number(pin.x))}, y: {Math.round(Number(pin.y))}
+            <div className="flex items-center justify-between text-xs text-gray-600 mb-2">
+              <span>x: {Math.round(Number(pin.x))}, y: {Math.round(Number(pin.y))}</span>
             </div>
             
-            <div className="flex flex-wrap gap-1 mt-1">
-              {!readonly ? (
-                <Select 
-                  value={(pin.signals && pin.signals[0]) || ""}
-                  onValueChange={(value) => handleSignalChange(i, value)}
+            {!readonly && (
+              <div className="flex items-center gap-2">
+                <Select
+                  value={pin.signals && pin.signals.length > 0 ? pin.signals[0] : 'digital'}
+                  onValueChange={(value) => onUpdatePinSignal(i, value)}
                 >
-                  <SelectTrigger className="h-7 w-full text-xs">
-                    <SelectValue placeholder="Select signal type" />
+                  <SelectTrigger className="w-full h-7 text-xs">
+                    <SelectValue placeholder="Signal type" />
                   </SelectTrigger>
                   <SelectContent>
-                    {AVAILABLE_SIGNALS.map(signal => (
-                      <SelectItem key={signal} value={signal} className="text-xs">
-                        {signal}
-                      </SelectItem>
-                    ))}
+                    <SelectItem value="power">Power</SelectItem>
+                    <SelectItem value="ground">Ground</SelectItem>
+                    <SelectItem value="digital">Digital</SelectItem>
+                    <SelectItem value="analog">Analog</SelectItem>
+                    <SelectItem value="passive">Passive</SelectItem>
+                    <SelectItem value="i2c">I2C</SelectItem>
+                    <SelectItem value="spi">SPI</SelectItem>
+                    <SelectItem value="uart">UART</SelectItem>
+                    <SelectItem value="rx">RX</SelectItem>
+                    <SelectItem value="tx">TX</SelectItem>
                   </SelectContent>
                 </Select>
-              ) : (
-                pin.signals && pin.signals.length > 0 ? (
-                  pin.signals.map((signal, j) => (
-                    <Badge key={j} variant="outline" className="text-xs">{signal}</Badge>
-                  ))
-                ) : (
-                  <span className="text-xs text-muted-foreground">No signals</span>
-                )
-              )}
-            </div>
+                
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-gray-500 hover:text-red-500"
+                  onClick={() => onDeletePin(i)}
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+            )}
           </div>
-          
-          {!readonly && (
-            <Button 
-              size="icon" 
-              variant="ghost" 
-              className="h-6 w-6 ml-2 flex-shrink-0" 
-              onClick={(e) => {
-                e.stopPropagation();
-                onDeletePin(i);
-              }}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          )}
         </div>
       ))}
     </div>

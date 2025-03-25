@@ -23,12 +23,34 @@ const PinVisualizer: React.FC<PinVisualizerProps> = ({
 }) => {
   const [hoveredPin, setHoveredPin] = useState<number | null>(null);
   
+  // Get a color based on signal type
+  const getSignalColor = (signals: string[] | undefined): string => {
+    if (!signals || signals.length === 0) return '#4BC0C0'; // Default to teal
+    
+    const signal = signals[0];
+    const colors: Record<string, string> = {
+      'power': '#FF6384',    // Red
+      'ground': '#36A2EB',   // Blue
+      'digital': '#4BC0C0',  // Teal
+      'analog': '#FFCE56',   // Yellow
+      'passive': '#9966FF',  // Purple
+      'i2c': '#FF9F40',      // Orange
+      'spi': '#C9CBCF',      // Gray
+      'uart': '#7CFC00',     // Lime
+      'rx': '#FF00FF',       // Magenta
+      'tx': '#00FFFF',       // Cyan
+    };
+    
+    return colors[signal] || '#4BC0C0'; // Default to teal if no match
+  };
+  
   return (
     <>
       {pins.map((pin, i) => {
         const pinX = Number(pin.x);
         const pinY = Number(pin.y);
         const isHovered = hoveredPin === i || hoveredPinIndex === i;
+        const pinColor = getSignalColor(pin.signals);
         
         return (
           <div 
@@ -45,10 +67,11 @@ const PinVisualizer: React.FC<PinVisualizerProps> = ({
             onMouseLeave={() => setHoveredPin(null)}
           >
             <div 
-              className={`rounded-full flex items-center justify-center ${isHovered ? 'bg-yellow-400' : readonly ? 'bg-blue-200' : 'bg-blue-500 hover:bg-blue-600'} transition-colors`}
+              className={`rounded-full flex items-center justify-center transition-colors`}
               style={{
                 width: '12px',
                 height: '12px',
+                backgroundColor: isHovered ? '#FFCE56' : pinColor,
                 border: isHovered ? '1px solid rgba(0,0,0,0.5)' : '1px solid rgba(0,0,0,0.3)'
               }}
               onClick={() => onEditPin(i)}
