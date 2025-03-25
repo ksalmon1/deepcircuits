@@ -48,6 +48,7 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
   const [newPinSignals, setNewPinSignals] = useState<string>('');
   const [componentElement, setComponentElement] = useState<HTMLElement | null>(null);
   const [debugInfo, setDebugInfo] = useState<string>('No interactions yet');
+  const [hoveredPinIndex, setHoveredPinIndex] = useState<number | null>(null);
   
   const {
     zoom,
@@ -218,6 +219,22 @@ Calculated pin position relative to component origin: (${canvasX}, ${canvasY})`;
     const updatedPins = deletePin(pinData, index);
     handlePinsChange(updatedPins);
   };
+
+  const handlePinHover = (index: number | null) => {
+    setHoveredPinIndex(index);
+  };
+
+  const handleUpdatePinSignal = (index: number, signal: string) => {
+    if (readonly) return;
+    
+    const updatedPins = [...pinData];
+    updatedPins[index] = {
+      ...updatedPins[index],
+      signals: [signal]
+    };
+    
+    handlePinsChange(updatedPins);
+  };
   
   useEffect(() => {
     const handleWheelEvent = (e: WheelEvent) => {
@@ -281,6 +298,7 @@ Calculated pin position relative to component origin: (${canvasX}, ${canvasY})`;
               componentElement={componentElement}
               readonly={readonly}
               onEditPin={handleEditPin}
+              hoveredPinIndex={hoveredPinIndex}
             />
             
             <ReferenceGrid 
@@ -317,6 +335,8 @@ Calculated pin position relative to component origin: (${canvasX}, ${canvasY})`;
                 readonly={readonly}
                 onDeletePin={handleDeletePin}
                 onEditPin={handleEditPin}
+                onHoverPin={handlePinHover}
+                onUpdatePinSignal={handleUpdatePinSignal}
               />
             )}
             

@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { ComponentPin } from '@/types/database';
 
 interface PinVisualizerProps {
@@ -7,6 +7,7 @@ interface PinVisualizerProps {
   readonly?: boolean;
   onEditPin: (index: number) => void;
   componentElement?: HTMLElement | null;
+  hoveredPinIndex?: number | null;
 }
 
 /**
@@ -17,13 +18,17 @@ const PinVisualizer: React.FC<PinVisualizerProps> = ({
   pins,
   readonly = false,
   onEditPin,
-  componentElement
+  componentElement,
+  hoveredPinIndex
 }) => {
+  const [hoveredPin, setHoveredPin] = useState<number | null>(null);
+  
   return (
     <>
       {pins.map((pin, i) => {
         const pinX = Number(pin.x);
         const pinY = Number(pin.y);
+        const isHovered = hoveredPin === i || hoveredPinIndex === i;
         
         return (
           <div 
@@ -36,21 +41,24 @@ const PinVisualizer: React.FC<PinVisualizerProps> = ({
               cursor: readonly ? 'default' : 'move',
               zIndex: 10
             }}
+            onMouseEnter={() => setHoveredPin(i)}
+            onMouseLeave={() => setHoveredPin(null)}
           >
             <div 
-              className={`rounded-full flex items-center justify-center ${readonly ? 'bg-blue-200' : 'bg-blue-500 hover:bg-blue-600'} transition-colors`}
+              className={`rounded-full flex items-center justify-center ${isHovered ? 'bg-yellow-400' : readonly ? 'bg-blue-200' : 'bg-blue-500 hover:bg-blue-600'} transition-colors`}
               style={{
                 width: '6px',
                 height: '6px',
-                border: '1px solid rgba(0,0,0,0.3)'
+                border: '1px solid rgba(0,0,0,0.3)',
+                boxShadow: isHovered ? '0 0 0 2px rgba(255, 204, 0, 0.5)' : 'none'
               }}
               onClick={() => onEditPin(i)}
-            >
-              {/* Index removed to match circuit editor pins */}
-            </div>
-            <div className="absolute whitespace-nowrap text-xs -mt-5 left-1/2 transform -translate-x-1/2 bg-white/90 px-1 py-0.5 rounded shadow-sm">
-              {pin.name} ({Math.round(pinX)}, {Math.round(pinY)})
-            </div>
+            />
+            {isHovered && (
+              <div className="absolute whitespace-nowrap text-xs -mt-5 left-1/2 transform -translate-x-1/2 bg-white/90 px-1 py-0.5 rounded shadow-sm z-20">
+                {pin.name}
+              </div>
+            )}
           </div>
         );
       })}
