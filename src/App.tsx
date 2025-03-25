@@ -18,7 +18,7 @@ import Pricing from "@/pages/Pricing";
 import NotFound from "@/pages/NotFound";
 import ForgotPassword from "@/pages/ForgotPassword";
 import ResetPassword from "@/pages/ResetPassword";
-import CircuitEditorPage from "@/components/CircuitEditor/CircuitEditorPage";
+import CircuitEditorLayout from "@/components/CircuitEditor/CircuitEditorLayout";
 import { ProtectedRoute, PublicOnlyRoute } from "@/components/ProtectedRoute";
 import { AdminRoute } from "@/components/AdminRoute";
 import { AuthProvider } from "@/context/AuthContext";
@@ -77,7 +77,7 @@ function App() {
             path="/circuit-editor/:id"
             element={
               <ProtectedRoute>
-                <CircuitEditorPage />
+                <CircuitEditorLayout />
               </ProtectedRoute>
             }
           />

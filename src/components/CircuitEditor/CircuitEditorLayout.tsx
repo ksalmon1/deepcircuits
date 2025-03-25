@@ -10,14 +10,14 @@ import {
   Code, MonitorUp, SplitSquareVertical, SplitSquareHorizontal 
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { WokwiComponent } from '@/integrations/wokwi/WokwiIntegration';
 
 export const CircuitEditorLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const searchParams = new URLSearchParams(location.search);
-  const projectId = searchParams.get('id');
+  const params = useParams();
+  const projectId = params.id || null;
   
   const [circuitName, setCircuitName] = useState<string>('Untitled Circuit');
   const [isSaving, setIsSaving] = useState<boolean>(false);
