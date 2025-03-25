@@ -1,0 +1,68 @@
+
+import { useState, useCallback } from 'react';
+
+/**
+ * Hook that provides zoom and pan functionality for a canvas
+ */
+export const useCanvasNavigation = (initialZoom = 1) => {
+  const [zoom, setZoom] = useState(initialZoom);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [isDraggingCanvas, setIsDraggingCanvas] = useState(false);
+  const [panMode, setPanMode] = useState(false);
+
+  const handleZoomIn = useCallback(() => {
+    setZoom(prevZoom => Math.min(prevZoom + 0.1, 3));
+  }, []);
+
+  const handleZoomOut = useCallback(() => {
+    setZoom(prevZoom => Math.max(prevZoom - 0.1, 0.5));
+  }, []);
+
+  const togglePanMode = useCallback(() => {
+    setPanMode(prev => !prev);
+  }, []);
+
+  const startPan = useCallback((x: number, y: number) => {
+    setIsDraggingCanvas(true);
+    setDragStart({ x: x - offset.x, y: y - offset.y });
+  }, [offset]);
+
+  const pan = useCallback((x: number, y: number) => {
+    if (isDraggingCanvas) {
+      const newX = x - dragStart.x;
+      const newY = y - dragStart.y;
+      setOffset({ x: newX, y: newY });
+    }
+  }, [isDraggingCanvas, dragStart]);
+
+  const endPan = useCallback(() => {
+    setIsDraggingCanvas(false);
+  }, []);
+
+  const handleWheel = useCallback((e: React.WheelEvent) => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -0.1 : 0.1;
+    setZoom(prevZoom => Math.max(0.5, Math.min(3, prevZoom + delta)));
+  }, []);
+
+  const resetView = useCallback(() => {
+    setZoom(initialZoom);
+    setOffset({ x: 0, y: 0 });
+  }, [initialZoom]);
+
+  return {
+    zoom,
+    offset,
+    panMode,
+    isDraggingCanvas,
+    handleZoomIn,
+    handleZoomOut,
+    togglePanMode,
+    startPan,
+    pan,
+    endPan,
+    handleWheel,
+    resetView
+  };
+};
