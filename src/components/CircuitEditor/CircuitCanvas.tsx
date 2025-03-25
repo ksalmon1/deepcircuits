@@ -44,6 +44,10 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
   const [hoveredPin, setHoveredPin] = useState<{componentId: string, pinIndex: number} | null>(null);
   const [renderedComponents, setRenderedComponents] = useState<Record<string, boolean>>({});
   
+  // New states for handling component dragging
+  const [draggingComponent, setDraggingComponent] = useState<string | null>(null);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  
   // Fetch all component details from the library
   const { 
     components: libraryComponents, 
@@ -325,6 +329,8 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
 
   // Handle component hover events
   const handleComponentHover = useCallback((id: string, type: string) => {
+    if (draggingComponent) return; // Skip hover handling while dragging
+    
     setHoveredComponent(id);
     
     const pins = fetchComponentPins(type);
@@ -335,10 +341,12 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
       (element.firstChild as HTMLElement).style.outline = '2px solid #4C72F4';
       (element.firstChild as HTMLElement).style.outlineOffset = '2px';
     }
-  }, []);
+  }, [draggingComponent]);
 
   // Handle component hover exit events
   const handleComponentHoverExit = useCallback(() => {
+    if (draggingComponent) return; // Skip hover exit handling while dragging
+    
     if (hoveredComponent) {
       const element = document.getElementById(`wokwi-element-${hoveredComponent}`);
       if (element && element.firstChild) {
@@ -347,7 +355,104 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     }
     setHoveredComponent(null);
     setHoveredPins([]);
-  }, [hoveredComponent]);
+  }, [hoveredComponent, draggingComponent]);
+
+  // Start component drag handler
+  const handleComponentMouseDown = (e: React.MouseEvent, componentId: string) => {
+    if (panMode || e.button !== 0) return; // Only handle left mouse button clicks
+    
+    e.stopPropagation(); // Stop event propagation to prevent canvas pan
+    
+    // Find the component in the list
+    const component = components.find(c => c.id === componentId);
+    if (!component) return;
+    
+    // Calculate offset from the component's top-left corner
+    const componentElement = document.getElementById(`wokwi-element-wrapper-${componentId}`);
+    if (!componentElement) return;
+    
+    const rect = componentElement.getBoundingClientRect();
+    const offsetX = e.clientX - rect.left;
+    const offsetY = e.clientY - rect.top;
+    
+    // Set dragging state
+    setDraggingComponent(componentId);
+    setDragOffset({ x: offsetX, y: offsetY });
+    
+    // Apply visual feedback for dragging
+    componentElement.style.cursor = 'grabbing';
+    componentElement.style.zIndex = '100';
+    componentElement.style.opacity = '0.8';
+    
+    console.log(`Started dragging component ${componentId} with offset (${offsetX}, ${offsetY})`);
+  };
+  
+  // Handle component dragging
+  const handleCanvasMouseMove = (e: React.MouseEvent) => {
+    if (isPanning) {
+      // ... keep existing code (canvas panning logic)
+      handleMouseMove(e);
+      return;
+    }
+    
+    // Handle component dragging
+    if (draggingComponent) {
+      const canvasRect = canvasRef.current?.getBoundingClientRect();
+      if (!canvasRect) return;
+      
+      // Calculate new position considering zoom and offset
+      const mouseX = (e.clientX - canvasRect.left - position.x) / zoom;
+      const mouseY = (e.clientY - canvasRect.top - position.y) / zoom;
+      
+      // Calculate new position accounting for drag offset
+      const newLeft = mouseX - dragOffset.x / zoom;
+      const newTop = mouseY - dragOffset.y / zoom;
+      
+      // Update component position
+      const updatedComponents = components.map(component => {
+        if (component.id === draggingComponent) {
+          return {
+            ...component,
+            left: newLeft,
+            top: newTop
+          };
+        }
+        return component;
+      });
+      
+      onComponentsChange(updatedComponents);
+    }
+  };
+  
+  // End component drag
+  const handleCanvasMouseUp = (e: React.MouseEvent) => {
+    if (draggingComponent) {
+      // Reset the dragging state
+      const componentElement = document.getElementById(`wokwi-element-wrapper-${draggingComponent}`);
+      if (componentElement) {
+        componentElement.style.cursor = '';
+        componentElement.style.zIndex = '';
+        componentElement.style.opacity = '1';
+      }
+      
+      setDraggingComponent(null);
+      console.log(`Finished dragging component ${draggingComponent}`);
+      
+      toast.success("Component repositioned", {
+        description: "You can continue to reposition components by dragging them.",
+        duration: 2000,
+      });
+    }
+    
+    // Handle panning end
+    handleMouseUp();
+  };
+  
+  // Also reset dragging state when mouse leaves the canvas
+  const handleCanvasMouseLeave = (e: React.MouseEvent) => {
+    handleCanvasMouseUp(e);
+    handleMouseLeave();
+  };
 
   // Effect to render wokwi elements when they're loaded and available
   useEffect(() => {
@@ -460,8 +565,14 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     return (
       <div 
         key={id}
+        id={`wokwi-element-wrapper-${id}`}
         className="absolute"
-        style={{ top: `${top}px`, left: `${left}px` }}
+        style={{ 
+          top: `${top}px`, 
+          left: `${left}px`,
+          cursor: draggingComponent === id ? 'grabbing' : 'grab'
+        }}
+        onMouseDown={(e) => handleComponentMouseDown(e, id)}
         onMouseEnter={() => handleComponentHover(id, type)}
         onMouseLeave={handleComponentHoverExit}
         onDoubleClick={() => togglePinVisibility(id)}
@@ -579,9 +690,9 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
           onDrop={handleDrop}
           onDragOver={handleDragOver}
           onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseLeave}
+          onMouseMove={handleCanvasMouseMove}
+          onMouseUp={handleCanvasMouseUp}
+          onMouseLeave={handleCanvasMouseLeave}
           style={{
             transform: `scale(${zoom}) translate(${position.x / zoom}px, ${position.y / zoom}px)`,
             transformOrigin: '0 0',
