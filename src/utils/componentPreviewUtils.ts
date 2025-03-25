@@ -21,16 +21,18 @@ export const renderWokwiComponentPreview = async (
     // Create a unique element ID for this preview
     const elementId = `wokwi-preview-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
     
-    // Create a wrapper to position the component at the top-left (0,0)
-    const wrapper = document.createElement('div');
-    wrapper.style.position = 'relative';
-    wrapper.style.width = '100%';
-    wrapper.style.height = '100%';
-    container.appendChild(wrapper);
+    // Add element to the DOM - append directly to the container
+    const elementContainer = document.createElement('div');
+    elementContainer.id = elementId;
+    elementContainer.style.position = 'relative';
+    elementContainer.style.width = '100%';
+    elementContainer.style.height = '100%';
+    container.appendChild(elementContainer);
     
+    // Render the wokwi element
     await renderWokwiElement(componentType, elementId, properties);
     
-    // Style the container for proper display
+    // Add positioning and styling after a small delay to ensure element has loaded
     setTimeout(() => {
       const wokwiElement = document.getElementById(elementId)?.firstElementChild;
       if (wokwiElement instanceof HTMLElement) {
@@ -52,7 +54,7 @@ export const renderWokwiComponentPreview = async (
         originMarker.style.transform = 'translate(-50%, -50%)';
         originMarker.style.zIndex = '100';
         originMarker.title = 'Component origin (0,0)';
-        wrapper.appendChild(originMarker);
+        container.appendChild(originMarker);
         
         // Log element dimensions for debugging
         console.log(`Wokwi element ${componentType} dimensions:`, {
@@ -63,8 +65,10 @@ export const renderWokwiComponentPreview = async (
             top: wokwiElement.offsetTop
           }
         });
+      } else {
+        console.error(`Could not find wokwi element in container ${elementId}`);
       }
-    }, 100); // Small delay to ensure the element has rendered
+    }, 100);
   } catch (error) {
     console.error('Error rendering component preview:', error);
     container.innerHTML = `<div class="text-destructive text-center p-4">Error rendering component</div>`;

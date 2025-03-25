@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { ComponentPin } from '@/types/database';
 import { isWokwiLoaded, forceLoadWokwiElements } from '@/integrations/wokwi/WokwiIntegration';
@@ -235,6 +234,24 @@ Calculated pin position relative to component origin: (${canvasX}, ${canvasY})`;
     handlePinsChange(updatedPins);
   };
   
+  useEffect(() => {
+    const handleWheelEvent = (e: WheelEvent) => {
+      if (containerRef.current && containerRef.current.contains(e.target as Node)) {
+        e.preventDefault();
+        const delta = e.deltaY > 0 ? -0.1 : 0.1;
+        setZoom(prevZoom => Math.max(0.5, Math.min(3, prevZoom + delta)));
+      }
+    };
+    
+    // Add the wheel event listener with the passive option set to false
+    containerRef.current?.addEventListener('wheel', handleWheelEvent, { passive: false });
+    
+    // Clean up the event listener when the component unmounts
+    return () => {
+      containerRef.current?.removeEventListener('wheel', handleWheelEvent);
+    };
+  }, []);
+  
   return (
     <div className={`flex flex-col h-full ${className}`} style={{ minHeight: '400px' }}>
       <CanvasToolbar 
@@ -254,7 +271,6 @@ Calculated pin position relative to component origin: (${canvasX}, ${canvasY})`;
           onMouseMove={handleCanvasMouseMove}
           onMouseUp={handleCanvasMouseUp}
           onMouseLeave={handleCanvasMouseLeave}
-          onWheel={handleWheel}
         >
           <div
             className="absolute"
@@ -270,9 +286,8 @@ Calculated pin position relative to component origin: (${canvasX}, ${canvasY})`;
               ref={previewRef} 
               className="absolute" 
               style={{ 
-                left: '50%', 
-                top: '50%', 
-                transform: 'translate(-50%, -50%)', 
+                left: '0', 
+                top: '0', 
                 zIndex: 5,
                 border: '1px dashed rgba(0, 0, 0, 0.2)'
               }}
