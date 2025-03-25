@@ -49,7 +49,6 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
   const [componentElement, setComponentElement] = useState<HTMLElement | null>(null);
   const [debugInfo, setDebugInfo] = useState<string>('No interactions yet');
   
-  // Use the canvas navigation hook
   const {
     zoom,
     setZoom,
@@ -65,10 +64,8 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
     handleWheel
   } = useCanvasNavigation(1);
   
-  // Ensure pins is an array
   const pinData = Array.isArray(pins) ? pins : [];
   
-  // Handle backward compatibility for onChange vs onPinsChange
   const handlePinsChange = (updatedPins: ComponentPin[]) => {
     if (onPinsChange) {
       onPinsChange(updatedPins);
@@ -77,7 +74,6 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
     }
   };
   
-  // Try to load Wokwi elements
   useEffect(() => {
     const loadWokwi = async () => {
       try {
@@ -88,10 +84,8 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
         if (componentType && previewRef.current) {
           console.log("Rendering component preview for:", componentType);
           
-          // Clear previous content
           previewRef.current.innerHTML = '';
           
-          // Create a wrapper to position the component at a fixed location
           const wrapper = document.createElement('div');
           wrapper.style.position = 'relative';
           wrapper.style.width = '100%';
@@ -101,9 +95,7 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
           await renderWokwiComponentPreview(componentType, wrapper);
           setComponentLoaded(true);
           
-          // After component is loaded, get its element reference
           setTimeout(() => {
-            // The component is the first element child of the wrapper
             const element = wrapper.firstElementChild?.firstElementChild;
             if (element instanceof HTMLElement) {
               setComponentElement(element);
@@ -127,7 +119,6 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
       return;
     }
     
-    // Get component element bounds - crucial for accurate pin positioning
     if (!componentElement) return;
     
     const componentRect = componentElement.getBoundingClientRect();
@@ -135,12 +126,9 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
     
     if (!containerRect) return;
     
-    // Calculate the position of the red dot (component's origin)
     const originX = componentRect.left;
     const originY = componentRect.top;
     
-    // Calculate coordinates relative to component's origin (0,0)
-    // This is the key fix: we're using the component element's position as the origin
     const canvasX = (e.clientX - originX) / zoom;
     const canvasY = (e.clientY - originY) / zoom;
     
@@ -151,7 +139,6 @@ Calculated pin position relative to component origin: (${canvasX}, ${canvasY})`;
     console.log(debugMessage);
     setDebugInfo(debugMessage);
     
-    // Check if clicking on an existing pin
     for (let i = 0; i < pinData.length; i++) {
       const pin = pinData[i];
       const pinX = Number(pin.x);
@@ -164,7 +151,6 @@ Calculated pin position relative to component origin: (${canvasX}, ${canvasY})`;
       }
     }
     
-    // If clicked outside pins and not in pan mode, add a new pin
     if (!readonly && e.button === 0 && !e.ctrlKey) {
       const newPin = createNewPin(canvasX, canvasY, pinData);
       
@@ -185,11 +171,9 @@ Calculated pin position relative to component origin: (${canvasX}, ${canvasY})`;
     if (draggingPin !== null && componentElement) {
       const componentRect = componentElement.getBoundingClientRect();
       
-      // Calculate coordinates relative to component's origin (0,0)
       const canvasX = (e.clientX - componentRect.left) / zoom;
       const canvasY = (e.clientY - componentRect.top) / zoom;
       
-      // Update the pin position
       const updatedPins = updatePinPosition(pinData, draggingPin, canvasX, canvasY);
       handlePinsChange(updatedPins);
       
@@ -244,10 +228,8 @@ Calculated pin position relative to component origin: (${canvasX}, ${canvasY})`;
       }
     };
     
-    // Add the wheel event listener with the passive option set to false
     containerRef.current?.addEventListener('wheel', handleWheelEvent, { passive: false });
     
-    // Clean up the event listener when the component unmounts
     return () => {
       containerRef.current?.removeEventListener('wheel', handleWheelEvent);
     };
@@ -309,7 +291,6 @@ Calculated pin position relative to component origin: (${canvasX}, ${canvasY})`;
             />
           </div>
 
-          {/* Debug overlay (only visible during development) */}
           {process.env.NODE_ENV === 'development' && (
             <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-xs p-2 font-mono overflow-auto max-h-20 z-50">
               {debugInfo}
@@ -317,7 +298,6 @@ Calculated pin position relative to component origin: (${canvasX}, ${canvasY})`;
           )}
         </div>
         
-        {/* Pin details panel */}
         {!readonly && (
           <div className="w-72 border rounded p-3 overflow-y-auto text-sm">
             <h3 className="font-medium mb-2">Pin Details</h3>

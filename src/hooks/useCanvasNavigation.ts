@@ -53,6 +53,7 @@ export const useCanvasNavigation = (initialZoom = 1) => {
 
   return {
     zoom,
+    setZoom, // Explicitly export setZoom
     offset,
     panMode,
     isDraggingCanvas,
