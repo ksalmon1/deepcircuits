@@ -53,7 +53,9 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     handlePinClick,
     handleMouseMove,
     handleStageMouseUp,
-    cancelActiveWire
+    cancelActiveWire,
+    potentialTarget,
+    potentialTargetRef
   } = useWireSystem(components);
   
   const [hoveredComponent, setHoveredComponent] = useState<string | null>(null);
@@ -523,7 +525,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     const showPins = visiblePins[id] || 
                     hoveredComponent === id || 
                     (activeWire && (activeWire.sourceComponentId === id || 
-                                   potentialTargetRef.current?.componentId === id));
+                                   (potentialTargetRef && potentialTargetRef.current?.componentId === id)));
     
     return (
       <div 
@@ -734,3 +736,4 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
 };
 
 export default CircuitCanvas;
+
