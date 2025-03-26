@@ -55,7 +55,7 @@ const SelectContent = React.forwardRef<
         )}
         style={{ 
           maxHeight: "300px",
-          overflowY: "auto"
+          overflowY: "auto" 
         }}
       >
         {children}
