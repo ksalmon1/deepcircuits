@@ -32,14 +32,25 @@ const KonvaWireRenderer: React.FC<KonvaWireRendererProps> = ({
     return wire.points.flatMap(point => [point.x, point.y]);
   };
   
-  // Apply zoom and offset when they change
-  useEffect(() => {
-    if (stageRef.current) {
-      // No need to transform the stage - we'll let the parent handle that
-      // This component just needs to match the parent's dimensions
-      console.log(`Wire renderer: zoom=${zoom}, offset=${offset.x},${offset.y}`);
+  // Apply zoom and offset to transform points
+  const transformPoints = (points: number[]): number[] => {
+    const transformedPoints: number[] = [];
+    for (let i = 0; i < points.length; i += 2) {
+      transformedPoints.push(points[i] * zoom + offset.x);
+      transformedPoints.push(points[i + 1] * zoom + offset.y);
     }
-  }, [zoom, offset]);
+    return transformedPoints;
+  };
+  
+  // Log wire information for debugging
+  useEffect(() => {
+    console.log(`Wire renderer updated: ${wires.length} wires, active wire: ${activeWire ? 'yes' : 'no'}`);
+    console.log(`Zoom: ${zoom}, Offset: ${offset.x},${offset.y}`);
+    
+    if (activeWire) {
+      console.log('Active wire points:', activeWire.points);
+    }
+  }, [wires, activeWire, zoom, offset]);
 
   return (
     <Stage 
@@ -52,34 +63,41 @@ const KonvaWireRenderer: React.FC<KonvaWireRendererProps> = ({
         position: 'absolute', 
         top: 0, 
         left: 0, 
-        pointerEvents: 'none',
-        zIndex: 10 // Increased z-index to ensure wires are visible
+        pointerEvents: activeWire ? 'auto' : 'none',
+        zIndex: 20 // Higher z-index to ensure wires are visible above other elements
       }}
     >
       <Layer>
         {/* Render completed wires */}
-        {wires.map(wire => (
-          <Line
-            key={wire.id}
-            points={wirePointsToFlatArray(wire)}
-            stroke={wire.color}
-            strokeWidth={3} // Increased width for better visibility
-            lineCap="round"
-            lineJoin="round"
-            listening={false}
-          />
-        ))}
+        {wires.map(wire => {
+          const flatPoints = wirePointsToFlatArray(wire);
+          const transformedPoints = transformPoints(flatPoints);
+          
+          return (
+            <Line
+              key={wire.id}
+              points={transformedPoints}
+              stroke={wire.color}
+              strokeWidth={4} // Increased width for better visibility
+              lineCap="round"
+              lineJoin="round"
+              listening={false}
+              opacity={1.0}
+            />
+          );
+        })}
         
         {/* Render active wire being drawn */}
         {activeWire && (
           <Line
-            points={wirePointsToFlatArray(activeWire)}
+            points={transformPoints(wirePointsToFlatArray(activeWire))}
             stroke={activeWire.color}
-            strokeWidth={3} // Increased width for better visibility
+            strokeWidth={4} // Increased width for better visibility
             lineCap="round"
             lineJoin="round"
-            dash={[5, 2]} // More visible dashed line
+            dash={[6, 3]} // More visible dashed line for the wire being drawn
             listening={false}
+            opacity={0.8}
           />
         )}
       </Layer>
