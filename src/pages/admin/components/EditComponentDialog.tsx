@@ -128,7 +128,7 @@ const EditComponentDialog = ({
                     />
                   </div>
                   <div className="grid gap-2">
-                    <label htmlFor="type">Wokwi Element Type</label>
+                    <label htmlFor="type">Component Type</label>
                     <Select 
                       value={editedComponent.type}
                       onValueChange={(value) => updateComponentProperty('type', value)}
@@ -136,7 +136,8 @@ const EditComponentDialog = ({
                       <SelectTrigger>
                         <SelectValue placeholder="Select type" />
                       </SelectTrigger>
-                      <SelectContent className="max-h-[300px] overflow-y-auto">
+                      <SelectContent className="overflow-y-auto max-h-[300px]">
+                        <SelectItem key="custom" value="custom">Custom</SelectItem>
                         {ORIGINAL_WOKWI_COMPONENTS.map(type => (
                           <SelectItem key={type} value={type}>{type}</SelectItem>
                         ))}
