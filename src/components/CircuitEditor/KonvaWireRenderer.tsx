@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 import { Layer, Line, Stage, Circle, Group } from 'react-konva';
 import { Wire } from '@/hooks/useWireSystem';
@@ -30,11 +29,9 @@ const KonvaWireRenderer: React.FC<KonvaWireRendererProps> = ({
   onPointMove
 }) => {
   const stageRef = useRef<any>(null);
-  // Track point dragging state more explicitly
-  const [isDragging, setIsDragging] = useState(false);
-  const [draggedPoint, setDraggedPoint] = useState<{wireId: string, pointIndex: number} | null>(null);
   const [hoveredPoint, setHoveredPoint] = useState<{wireId: string, pointIndex: number} | null>(null);
-  const lastMousePosition = useRef<{x: number, y: number} | null>(null);
+  const [draggingPoint, setDraggingPoint] = useState<{wireId: string, pointIndex: number} | null>(null);
+  const [mousePosition, setMousePosition] = useState<{x: number, y: number} | null>(null);
   
   // Convert wire points to flat array for Konva Line
   const wirePointsToFlatArray = (wire: Wire): number[] => {
@@ -67,78 +64,65 @@ const KonvaWireRenderer: React.FC<KonvaWireRendererProps> = ({
     };
   };
   
-  // Handle stage mouse down for point dragging
-  const handleStageMouseDown = (e: KonvaEventObject<MouseEvent>) => {
-    if (!draggedPoint) return;
+  // Start point dragging
+  const handlePointMouseDown = (e: KonvaEventObject<MouseEvent>, wireId: string, pointIndex: number) => {
+    e.cancelBubble = true;  // Stop event propagation
     
-    setIsDragging(true);
-    
-    // Capture initial mouse position
-    const stage = e.target.getStage();
-    if (stage) {
-      const pos = stage.getPointerPosition();
-      if (pos) {
-        lastMousePosition.current = { x: pos.x, y: pos.y };
-      }
+    // Only allow dragging intermediate points (not start/end points)
+    const wire = wires.find(w => w.id === wireId);
+    if (wire && wire.isComplete && (pointIndex === 0 || pointIndex === wire.points.length - 1)) {
+      return; // Don't allow dragging endpoints
     }
     
-    // Prevent event bubbling
-    e.cancelBubble = true;
+    setDraggingPoint({ wireId, pointIndex });
+    console.log('Started dragging point:', wireId, pointIndex);
   };
   
-  // Handle stage mouse move during dragging
+  // Handle stage mouse move for both wire creation and point dragging
   const handleStageMouseMove = (e: KonvaEventObject<MouseEvent>) => {
-    // First, handle the parent's mouse move callback for wire creation
-    if (onMouseMove) {
-      onMouseMove(e);
-    }
-    
-    // Then, handle our internal point dragging logic
-    if (!isDragging || !draggedPoint || !lastMousePosition.current) return;
-    
     const stage = e.target.getStage();
     if (!stage) return;
     
     const pos = stage.getPointerPosition();
     if (!pos) return;
     
-    // Convert the current screen position to canvas coordinates
-    const canvasPos = untransformPoint(pos);
+    setMousePosition(pos);
     
-    // Update the point position if a handler is provided
-    if (onPointMove) {
-      console.log(`Moving point: wire ${draggedPoint.wireId}, point ${draggedPoint.pointIndex} to:`, canvasPos);
-      onPointMove(draggedPoint.wireId, draggedPoint.pointIndex, canvasPos.x, canvasPos.y);
+    // Handle point dragging
+    if (draggingPoint) {
+      e.cancelBubble = true; // Stop event propagation
+      
+      // Convert the current screen position to canvas coordinates
+      const canvasPos = untransformPoint(pos);
+      
+      // Update the point position if a handler is provided
+      if (onPointMove) {
+        onPointMove(
+          draggingPoint.wireId, 
+          draggingPoint.pointIndex, 
+          canvasPos.x, 
+          canvasPos.y
+        );
+      }
+    } 
+    // Handle wire creation/drawing
+    else if (onMouseMove) {
+      onMouseMove(e);
     }
-    
-    // Update last mouse position
-    lastMousePosition.current = { x: pos.x, y: pos.y };
-    
-    // Prevent event bubbling
-    e.cancelBubble = true;
   };
   
   // Handle stage mouse up to end dragging
   const handleStageMouseUp = (e: KonvaEventObject<MouseEvent>) => {
-    // First, handle the parent's mouse up callback for wire completion
-    if (onMouseUp) {
+    // If we were dragging a point, end the drag operation
+    if (draggingPoint) {
+      console.log('Stopped dragging point');
+      setDraggingPoint(null);
+      e.cancelBubble = true;  // Stop event propagation
+    } 
+    // Otherwise, handle normal wire completion
+    else if (onMouseUp) {
       onMouseUp();
     }
-    
-    // Then, handle our internal point dragging end logic
-    if (isDragging) {
-      setIsDragging(false);
-      console.log('Point drag ended');
-    }
-    
-    // Reset dragging state
-    lastMousePosition.current = null;
-  };
-  
-  // Handle point mouse down to start dragging
-  const handlePointMouseDown = (wireId: string, pointIndex: number) => {
-    console.log(`Point mouse down: wire ${wireId}, point ${pointIndex}`);
-    setDraggedPoint({ wireId, pointIndex });
   };
   
   // Handle point hover
@@ -152,11 +136,9 @@ const KonvaWireRenderer: React.FC<KonvaWireRendererProps> = ({
   };
   
   // Handle direct click on the stage (not on a point)
-  const handleClick = (e: KonvaEventObject<MouseEvent>) => {
-    console.log("KonvaWireRenderer: Stage clicked");
-    
+  const handleStageClick = (e: KonvaEventObject<MouseEvent>) => {
     // Only pass the click event up if we're not ending a drag operation
-    if (!isDragging && onClick) {
+    if (!draggingPoint && onClick) {
       onClick(e);
     }
   };
@@ -176,26 +158,28 @@ const KonvaWireRenderer: React.FC<KonvaWireRendererProps> = ({
       ref={stageRef}
       width={stageWidth} 
       height={stageHeight}
-      onMouseDown={handleStageMouseDown}
+      onMouseDown={e => e.target === e.currentTarget && handleStageClick(e)}
       onMouseMove={handleStageMouseMove}
       onMouseUp={handleStageMouseUp}
-      onClick={handleClick}
+      onClick={handleStageClick}
       style={{ 
         position: 'absolute', 
         top: 0, 
         left: 0, 
-        pointerEvents: activeWire || isDragging ? 'auto' : 'none',
-        zIndex: 20 // Higher z-index to ensure wires are visible above other elements but below pin tooltips
+        pointerEvents: 'auto',
+        zIndex: 20
       }}
     >
       <Layer>
         {/* Render completed wires */}
         {wires.map((wire) => {
-          const wireKey = `wire-${wire.id}`;
+          const wireId = wire.id; // Extract for use in keys
+          
           return (
-            <Group key={wireKey}>
+            <Group key={`wire-group-${wireId}`}>
+              {/* Wire line */}
               <Line
-                key={`${wireKey}-line`}
+                key={`wire-line-${wireId}`}
                 points={transformPoints(wirePointsToFlatArray(wire))}
                 stroke={wire.color}
                 strokeWidth={4}
@@ -205,44 +189,45 @@ const KonvaWireRenderer: React.FC<KonvaWireRendererProps> = ({
                 opacity={1.0}
               />
               
-              {/* Render wire points for each wire */}
+              {/* Render wire points */}
               {wire.points.map((point, pointIndex) => {
-                // Skip rendering points for the first and last points of completed wires
-                if (wire.isComplete && (pointIndex === 0 || pointIndex === wire.points.length - 1)) {
+                const isEndpoint = wire.isComplete && (pointIndex === 0 || pointIndex === wire.points.length - 1);
+                
+                // Skip rendering control points for endpoints of completed wires
+                if (isEndpoint) {
                   return null;
                 }
                 
                 const transformedPoint = transformPoint(point);
+                const pointId = `${wireId}-point-${pointIndex}`;
                 
-                // Determine if this point can be dragged (not first or last point of completed wire)
-                const canDrag = wire.isComplete && (pointIndex !== 0 && pointIndex !== wire.points.length - 1);
-                
-                // Determine if this point is currently being hovered
+                // Check if this point is being hovered or dragged
                 const isHovered = hoveredPoint && 
-                                  hoveredPoint.wireId === wire.id && 
+                                  hoveredPoint.wireId === wireId && 
                                   hoveredPoint.pointIndex === pointIndex;
+                                  
+                const isDragging = draggingPoint && 
+                                  draggingPoint.wireId === wireId && 
+                                  draggingPoint.pointIndex === pointIndex;
                 
-                // Determine if this point is currently being dragged
-                const isDraggingThisPoint = isDragging && 
-                                          draggedPoint && 
-                                          draggedPoint.wireId === wire.id && 
-                                          draggedPoint.pointIndex === pointIndex;
-                
-                const pointKey = `${wireKey}-point-${pointIndex}`;
+                // Visual properties based on state
+                const radius = (isHovered || isDragging) ? 8 : 5;
+                const fill = (isHovered || isDragging) ? '#9B87F5' : wire.color;
+                const strokeWidth = (isHovered || isDragging) ? 2 : 1;
+                const opacity = (isHovered || isDragging) ? 1 : 0.8;
                 
                 return (
                   <Circle
-                    key={pointKey}
+                    key={`circle-${pointId}`}
                     x={transformedPoint.x}
                     y={transformedPoint.y}
-                    radius={isHovered || isDraggingThisPoint ? 7 : 5}
-                    fill={isHovered || isDraggingThisPoint ? '#9B87F5' : wire.color}
-                    stroke={isHovered || isDraggingThisPoint ? '#FFFFFF' : '#FFFFFF'}
-                    strokeWidth={isHovered || isDraggingThisPoint ? 2 : 1}
-                    opacity={isHovered || isDraggingThisPoint ? 1 : 0.8}
-                    listening={canDrag}
-                    onMouseDown={canDrag ? () => handlePointMouseDown(wire.id, pointIndex) : undefined}
-                    onMouseEnter={() => handlePointHover(wire.id, pointIndex)}
+                    radius={radius}
+                    fill={fill}
+                    stroke="#FFFFFF"
+                    strokeWidth={strokeWidth}
+                    opacity={opacity}
+                    onMouseDown={e => handlePointMouseDown(e, wireId, pointIndex)}
+                    onMouseEnter={() => handlePointHover(wireId, pointIndex)}
                     onMouseLeave={handlePointHoverExit}
                   />
                 );
@@ -253,7 +238,7 @@ const KonvaWireRenderer: React.FC<KonvaWireRendererProps> = ({
         
         {/* Render active wire being drawn */}
         {activeWire && (
-          <Group key={`active-wire-${activeWire.id}`}>
+          <Group key={`active-wire-group-${activeWire.id}`}>
             <Line
               key={`active-wire-line-${activeWire.id}`}
               points={transformPoints(wirePointsToFlatArray(activeWire))}
