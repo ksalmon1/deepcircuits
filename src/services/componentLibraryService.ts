@@ -1,12 +1,14 @@
+
 import { supabase } from '@/integrations/supabase/client';
-import { ComponentLibraryItem } from './componentLibrary/types';
+import { WokwiPin } from '@/integrations/wokwi/WokwiIntegration';
 import { CUSTOM_COMPONENTS } from '@/integrations/custom/CustomComponents';
+import { ComponentLibraryItem } from './componentLibrary/types';
 
 // Get all components from the library
 export const getAllComponents = async (): Promise<ComponentLibraryItem[]> => {
   try {
     const { data: supabaseComponents, error } = await supabase
-      .from('components')
+      .from('component_library')
       .select('*')
       .order('name');
 
@@ -31,8 +33,22 @@ export const getAllComponents = async (): Promise<ComponentLibraryItem[]> => {
       updatedAt: new Date().toISOString()
     }));
 
+    // Map database components to ComponentLibraryItem format
+    const mappedDbComponents: ComponentLibraryItem[] = (supabaseComponents || []).map(comp => ({
+      id: comp.id,
+      name: comp.name,
+      type: comp.type,
+      category: comp.category,
+      description: comp.description,
+      svgPath: comp.svg_path,
+      enabled: comp.enabled,
+      isOriginal: comp.is_original,
+      createdAt: comp.created_at,
+      updatedAt: comp.updated_at
+    }));
+
     // Combine database components with custom components
-    return [...(supabaseComponents || []), ...customComponents];
+    return [...mappedDbComponents, ...customComponents];
   } catch (error) {
     console.error('Error in getAllComponents:', error);
     return [];
@@ -43,7 +59,7 @@ export const getAllComponents = async (): Promise<ComponentLibraryItem[]> => {
 export const getComponent = async (id: string): Promise<ComponentLibraryItem | null> => {
   try {
     const { data, error } = await supabase
-      .from('components')
+      .from('component_library')
       .select('*')
       .eq('id', id)
       .single();
@@ -53,7 +69,20 @@ export const getComponent = async (id: string): Promise<ComponentLibraryItem | n
       throw error;
     }
 
-    return data;
+    if (!data) return null;
+
+    return {
+      id: data.id,
+      name: data.name,
+      type: data.type,
+      category: data.category,
+      description: data.description,
+      svgPath: data.svg_path,
+      enabled: data.enabled,
+      isOriginal: data.is_original,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at
+    };
   } catch (error) {
     console.error('Error in getComponent:', error);
     return null;
@@ -64,8 +93,16 @@ export const getComponent = async (id: string): Promise<ComponentLibraryItem | n
 export const createComponent = async (component: ComponentLibraryItem): Promise<ComponentLibraryItem | null> => {
   try {
     const { data, error } = await supabase
-      .from('components')
-      .insert([component])
+      .from('component_library')
+      .insert([{
+        name: component.name,
+        type: component.type,
+        category: component.category,
+        description: component.description,
+        svg_path: component.svgPath,
+        enabled: component.enabled,
+        is_original: component.isOriginal
+      }])
       .select()
       .single();
 
@@ -74,7 +111,18 @@ export const createComponent = async (component: ComponentLibraryItem): Promise<
       throw error;
     }
 
-    return data;
+    return {
+      id: data.id,
+      name: data.name,
+      type: data.type,
+      category: data.category,
+      description: data.description,
+      svgPath: data.svg_path,
+      enabled: data.enabled,
+      isOriginal: data.is_original,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at
+    };
   } catch (error) {
     console.error('Error in createComponent:', error);
     return null;
@@ -85,8 +133,16 @@ export const createComponent = async (component: ComponentLibraryItem): Promise<
 export const updateComponent = async (component: ComponentLibraryItem): Promise<ComponentLibraryItem | null> => {
   try {
     const { data, error } = await supabase
-      .from('components')
-      .update(component)
+      .from('component_library')
+      .update({
+        name: component.name,
+        type: component.type,
+        category: component.category,
+        description: component.description,
+        svg_path: component.svgPath,
+        enabled: component.enabled,
+        is_original: component.isOriginal
+      })
       .eq('id', component.id)
       .select()
       .single();
@@ -96,7 +152,18 @@ export const updateComponent = async (component: ComponentLibraryItem): Promise<
       throw error;
     }
 
-    return data;
+    return {
+      id: data.id,
+      name: data.name,
+      type: data.type,
+      category: data.category,
+      description: data.description,
+      svgPath: data.svg_path,
+      enabled: data.enabled,
+      isOriginal: data.is_original,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at
+    };
   } catch (error) {
     console.error('Error in updateComponent:', error);
     return null;
@@ -107,7 +174,7 @@ export const updateComponent = async (component: ComponentLibraryItem): Promise<
 export const deleteComponent = async (id: string): Promise<string | null> => {
   try {
     const { data, error } = await supabase
-      .from('components')
+      .from('component_library')
       .delete()
       .eq('id', id);
 
@@ -148,10 +215,10 @@ export const getComponentWithDetails = async (id: string): Promise<ComponentLibr
 
   try {
     const { data, error } = await supabase
-      .from('components')
+      .from('component_library')
       .select(`
         *,
-        pins (*)
+        component_pins(*)
       `)
       .eq('id', id)
       .single();
@@ -161,9 +228,46 @@ export const getComponentWithDetails = async (id: string): Promise<ComponentLibr
       throw error;
     }
 
-    return data;
+    if (!data) return null;
+
+    // Get properties separately since we can't do a nested select easily
+    const { data: propertiesData, error: propertiesError } = await supabase
+      .from('component_properties')
+      .select('*')
+      .eq('component_id', id);
+
+    if (propertiesError) {
+      console.error('Error fetching component properties:', propertiesError);
+    }
+
+    // Convert properties to key-value object
+    let properties: Record<string, any> = {};
+    if (propertiesData && propertiesData.length > 0) {
+      properties = propertiesData.reduce((props, prop) => {
+        props[prop.property_key] = prop.property_value;
+        return props;
+      }, {} as Record<string, any>);
+    }
+
+    return {
+      id: data.id,
+      name: data.name,
+      type: data.type,
+      category: data.category,
+      description: data.description,
+      svgPath: data.svg_path,
+      enabled: data.enabled,
+      isOriginal: data.is_original,
+      pins: data.component_pins || [],
+      properties: properties,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at
+    };
   } catch (error) {
     console.error('Error in getComponentWithDetails:', error);
     return null;
   }
 };
+
+// Export ComponentLibraryItem type
+export type { ComponentLibraryItem };

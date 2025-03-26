@@ -1,5 +1,5 @@
 
-import { ComponentPin } from "@/types/database";
+import { WokwiPin } from "@/integrations/wokwi/WokwiIntegration";
 
 export interface ComponentProperty {
   key: string;
@@ -15,7 +15,7 @@ export interface ComponentLibraryItem {
   svgPath?: string;
   enabled: boolean;
   isOriginal: boolean;
-  pins?: ComponentPin[];
+  pins?: WokwiPin[];
   properties?: Record<string, any>;
   createdAt?: string;
   updatedAt?: string;
