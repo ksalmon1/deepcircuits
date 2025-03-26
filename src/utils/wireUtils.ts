@@ -5,9 +5,10 @@
 
 import { WokwiPin } from '@/integrations/wokwi/WokwiIntegration';
 import { WokwiComponent } from '@/integrations/wokwi/WokwiIntegration';
+import { Wire } from '@/hooks/useWireSystem';
 
 // Define a wire type to represent connections between components
-export interface Wire {
+export interface WireUtilsWire {
   id: string;
   sourceComponentId: string;
   sourcePinIndex: number;
@@ -27,7 +28,7 @@ export const createWire = (
   startX: number,
   startY: number,
   pinSignal: string | undefined
-): Wire => {
+): WireUtilsWire => {
   // Determine wire color based on signal type
   const color = getWireColorFromSignal(pinSignal || '');
   
@@ -47,10 +48,10 @@ export const createWire = (
  * Updates a wire with a new point (for when the user is dragging)
  */
 export const updateWireEndPoint = (
-  wire: Wire,
+  wire: WireUtilsWire,
   x: number,
   y: number
-): Wire => {
+): WireUtilsWire => {
   const newPoints = [...wire.points];
   
   // If this is just a move during wire creation, update the last point
@@ -71,10 +72,10 @@ export const updateWireEndPoint = (
  * Adds an intermediate point to a wire (for custom routing)
  */
 export const addWireIntermediatePoint = (
-  wire: Wire,
+  wire: WireUtilsWire | Wire,
   x: number,
   y: number
-): Wire => {
+): WireUtilsWire | Wire => {
   if (!wire) return wire;
   
   const newPoints = [...wire.points];

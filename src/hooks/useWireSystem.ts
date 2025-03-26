@@ -1,7 +1,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { WokwiComponent } from '@/integrations/wokwi/WokwiIntegration';
-import { getWireColorFromSignal, getPinSignalType, addWireIntermediatePoint } from '@/utils/wireUtils';
+import { getWireColorFromSignal, getPinSignalType } from '@/utils/wireUtils';
 import { KonvaEventObject } from 'konva/lib/Node';
 
 export interface WirePoint {
@@ -74,8 +74,14 @@ export const useWireSystem = (components: WokwiComponent[]) => {
     const distance = Math.sqrt(Math.pow(x - lastPoint.x, 2) + Math.pow(y - lastPoint.y, 2));
     if (distance < 10) return; // Minimum distance between points
     
-    const updatedWire = addWireIntermediatePoint(activeWire, x, y);
+    // Create a new point and add it to the wire
+    const updatedWire = {
+      ...activeWire,
+      points: [...activeWire.points, { x, y }]
+    };
+    
     console.log(`Added intermediate point at (${x}, ${y})`);
+    console.log('Updated wire points:', updatedWire.points);
     setActiveWire(updatedWire);
   }, [activeWire]);
   
@@ -90,13 +96,9 @@ export const useWireSystem = (components: WokwiComponent[]) => {
     
     console.log(`Completing wire to component ${targetComponentId}, pin ${targetPinIndex} at (${finalX}, ${finalY})`);
     
+    // Get current points and add the final point
     const newPoints = [...wire.points];
-    
-    if (newPoints.length === 1) {
-      newPoints.push({ x: finalX, y: finalY });
-    } else {
-      newPoints[newPoints.length - 1] = { x: finalX, y: finalY };
-    }
+    newPoints[newPoints.length - 1] = { x: finalX, y: finalY };
     
     const completedWire = {
       ...wire,
@@ -106,7 +108,7 @@ export const useWireSystem = (components: WokwiComponent[]) => {
       isComplete: true
     };
     
-    console.log("Wire points:", completedWire.points);
+    console.log("Wire points at completion:", completedWire.points);
     
     return completedWire;
   }, []);
@@ -211,11 +213,32 @@ export const useWireSystem = (components: WokwiComponent[]) => {
     
     // If we're near a pin, don't add an intermediate point
     const potentialPin = findPotentialPinConnection(x, y);
-    if (potentialPin) return;
+    if (potentialPin) {
+      // If near a pin and it's not the source pin, complete the wire
+      if (potentialPin.componentId === activeWire.sourceComponentId && 
+          potentialPin.pinIndex === activeWire.sourcePinIndex) {
+        console.log('Clicked near source pin, ignoring');
+        return;
+      }
+      
+      const completedWire = completeWire(
+        activeWire,
+        potentialPin.componentId,
+        potentialPin.pinIndex,
+        potentialPin.x,
+        potentialPin.y
+      );
+      
+      console.log('Wire completed via canvas click:', completedWire);
+      setWires(prev => [...prev, completedWire]);
+      setActiveWire(null);
+      return;
+    }
     
-    // Add an intermediate point to the wire
+    // Add an intermediate point to the wire if we're not near a pin
+    console.log('Adding intermediate point at', x, y);
     addIntermediatePoint(x, y);
-  }, [activeWire, findPotentialPinConnection, addIntermediatePoint]);
+  }, [activeWire, findPotentialPinConnection, addIntermediatePoint, completeWire]);
   
   const handleMouseMove = useCallback((e: KonvaEventObject<MouseEvent>) => {
     if (!activeWire) return;
@@ -274,6 +297,21 @@ export const useWireSystem = (components: WokwiComponent[]) => {
       potentialTargetRef.current = null;
     }
   }, [activeWire, components, completeWire]);
+  
+  const handleKonvaClick = useCallback((e: KonvaEventObject<MouseEvent>) => {
+    if (!activeWire) return;
+    
+    const stage = e.target.getStage();
+    if (!stage) return;
+    
+    const pointerPos = stage.getPointerPosition();
+    if (!pointerPos) return;
+    
+    const canvasX = (pointerPos.x - stage.x()) / stage.scaleX();
+    const canvasY = (pointerPos.y - stage.y()) / stage.scaleY();
+    
+    handleCanvasClick(canvasX, canvasY);
+  }, [activeWire, handleCanvasClick]);
   
   const cancelActiveWire = useCallback(() => {
     console.log('Cancelling active wire');
@@ -339,6 +377,7 @@ export const useWireSystem = (components: WokwiComponent[]) => {
     handleCanvasClick,
     handleMouseMove,
     handleStageMouseUp,
+    handleKonvaClick, // Add handleKonvaClick to export
     cancelActiveWire,
     potentialTarget: potentialTargetRef.current,
     potentialTargetRef
