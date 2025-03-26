@@ -5,7 +5,7 @@
 
 import { WokwiPin } from '@/integrations/wokwi/WokwiIntegration';
 import { WokwiComponent } from '@/integrations/wokwi/WokwiIntegration';
-import { Wire } from '@/hooks/useWireSystem';
+import { Wire } from '@/hooks/useWireState';
 
 // Define a wire type to represent connections between components
 export interface WireUtilsWire {
@@ -254,16 +254,18 @@ export const getWireColorFromSignal = (signal: string): string => {
 /**
  * Find potential pin connections based on proximity
  */
-export const findPotentialPinConnections = (
+export const findPotentialPinConnection = (
   x: number,
   y: number,
   components: WokwiComponent[],
   activeWire: Wire | null,
   threshold: number = 15
 ): { componentId: string; pinIndex: number; distance: number } | null => {
+  if (!activeWire) return null;
+  
   // Don't connect to the source pin
-  const sourceComponentId = activeWire?.sourceComponentId;
-  const sourcePinIndex = activeWire?.sourcePinIndex;
+  const sourceComponentId = activeWire.sourceComponentId;
+  const sourcePinIndex = activeWire.sourcePinIndex;
   
   let closestPin: { componentId: string; pinIndex: number; distance: number } | null = null;
   let minDistance = threshold;
