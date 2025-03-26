@@ -16,7 +16,7 @@ import { useCanvasNavigation } from '@/hooks/useCanvasNavigation';
 import { useWireSystem } from '@/hooks/useWireSystem';
 import KonvaWireRenderer from './KonvaWireRenderer';
 import { isCustomComponent, renderCustomComponent } from '@/integrations/custom/CustomComponents';
-import { fetchComponentPins } from '@/utils/componentUtils';
+import { fetchComponentPins, debugDragAndDrop, prepareComponentForDrag } from '@/utils/componentUtils';
 
 interface CircuitCanvasProps {
   components: WokwiComponent[];
@@ -217,110 +217,38 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     };
   }, [activeWire, cancelActiveWire]);
 
-  const fetchComponentPins = (type: string): WokwiPin[] => {
-    try {
-      if (pinCache[type]) {
-        console.log(`Using cached pins for ${type}:`, pinCache[type]);
-        return pinCache[type];
-      }
-      
-      const libraryComponent = libraryComponents?.find(c => c.type === type);
-      if (libraryComponent?.id && componentsDetailsMap && componentsDetailsMap[libraryComponent.id]) {
-        const details = componentsDetailsMap[libraryComponent.id];
-        if (details && details.pins && details.pins.length > 0) {
-          console.log(`Found pins for ${type} in component details:`, details.pins);
-          const pins = details.pins.map((pin: any) => ({
-            name: pin.name,
-            x: Number(pin.x),
-            y: Number(pin.y),
-            signals: pin.signals || []
-          }));
-          
-          pinCache[type] = pins;
-          return pins;
-        }
-      }
-      
-      if (libraryComponent?.pins && libraryComponent.pins.length > 0) {
-        console.log(`Found pins for ${type} in library:`, libraryComponent.pins);
-        const pins = libraryComponent.pins.map(pin => ({
-          name: pin.name,
-          x: Number(pin.x),
-          y: Number(pin.y),
-          signals: pin.signals || []
-        }));
-        
-        pinCache[type] = pins;
-        return pins;
-      }
-      
-      console.log(`Using default pins for ${type}`);
-      const defaultPins = getComponentPinInfo(type);
-      pinCache[type] = defaultPins;
-      return defaultPins;
-    } catch (err) {
-      console.error(`Error in fetchComponentPins for ${type}:`, err);
-      return getComponentPinInfo(type);
-    }
-  };
-
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
-    console.log('[DragDrop] Component dropped on canvas');
+    debugDragAndDrop('Component dropped on canvas');
     
     try {
-      const componentData = e.dataTransfer.getData('component');
-      if (!componentData) {
-        console.error('[DragDrop] No component data in drop event');
+      const componentDataJson = e.dataTransfer.getData('application/json') || e.dataTransfer.getData('component');
+      const componentInfo = prepareComponentForDrag(componentDataJson);
+      
+      if (!componentInfo) {
+        console.error('[DragDrop] Could not process component data from drop event');
         return;
       }
       
-      console.log('[DragDrop] Component data received:', componentData);
-      const componentInfo = JSON.parse(componentData);
+      debugDragAndDrop('Processing dropped component', componentInfo);
       
       const rect = canvasRef.current?.getBoundingClientRect();
       if (!rect) {
-        console.error('[DragDrop] Canvas rect not found');
+        debugDragAndDrop('Canvas element not found');
         return;
       }
       
-      const x = (e.clientX - rect.left - offset.x) / zoom;
-      const y = (e.clientY - rect.top - offset.y) / zoom;
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+      const canvasCoords = screenToCanvasCoordinates(mouseX, mouseY);
       
       const gridSize = 25;
-      const left = Math.floor(x / gridSize) * gridSize;
-      const top = Math.floor(y / gridSize) * gridSize;
+      const left = Math.floor(canvasCoords.x / gridSize) * gridSize;
+      const top = Math.floor(canvasCoords.y / gridSize) * gridSize;
       
-      const libraryComponent = libraryComponents?.find(c => c.type === componentInfo.type);
+      debugDragAndDrop('Calculated position', { mouseX, mouseY, canvasX: canvasCoords.x, canvasY: canvasCoords.y, left, top });
       
-      let pins;
-      if (libraryComponent?.id && componentsDetailsMap && componentsDetailsMap[libraryComponent.id]) {
-        const details = componentsDetailsMap[libraryComponent.id];
-        if (details && details.pins && details.pins.length > 0) {
-          console.log(`[DragDrop] Using pins from details for ${componentInfo.type}:`, details.pins);
-          pins = details.pins.map((pin: any) => ({
-            name: pin.name,
-            x: Number(pin.x),
-            y: Number(pin.y),
-            signals: pin.signals || []
-          }));
-        }
-      }
-      
-      if (!pins && libraryComponent?.pins) {
-        console.log(`[DragDrop] Using pins from component for ${componentInfo.type}:`, libraryComponent.pins);
-        pins = libraryComponent.pins.map(pin => ({
-          name: pin.name,
-          x: Number(pin.x),
-          y: Number(pin.y),
-          signals: pin.signals || []
-        }));
-      }
-      
-      if (!pins) {
-        console.log(`[DragDrop] Falling back to default pins for ${componentInfo.type}`);
-        pins = fetchComponentPins(componentInfo.type);
-      }
+      const pins = fetchComponentPins(componentInfo.type, pinCache);
       
       const newComponent: WokwiComponent = {
         type: componentInfo.type,
@@ -334,8 +262,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
       const updatedComponents = [...components, newComponent];
       onComponentsChange(updatedComponents);
       
-      console.log('[DragDrop] Component added:', newComponent);
-      console.log('[DragDrop] Total components after add:', updatedComponents.length);
+      debugDragAndDrop('Component added to canvas', newComponent);
       
       toast.success(`Added ${componentInfo.name}`, {
         description: `Component placed at position (${left}, ${top})`,
@@ -343,13 +270,28 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
       });
     } catch (error) {
       console.error('[DragDrop] Error adding component:', error);
-      toast.error('Failed to add component');
+      toast.error('Failed to add component', {
+        description: 'There was an error adding the component to the circuit.',
+        duration: 3000,
+      });
     }
   };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'copy';
+  };
+
+  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
+    if (e.currentTarget === canvasRef.current) {
+      canvasRef.current.classList.add('drag-over');
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    if (e.currentTarget === canvasRef.current) {
+      canvasRef.current.classList.remove('drag-over');
+    }
   };
 
   const togglePinVisibility = useCallback((componentId: string) => {
@@ -370,7 +312,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
   const handleComponentHover = useCallback((id: string, type: string) => {
     setHoveredComponent(id);
     
-    const pins = fetchComponentPins(type);
+    const pins = fetchComponentPins(type, pinCache);
     setHoveredPins(pins);
     
     const element = document.getElementById(`wokwi-element-${id}`);
@@ -558,7 +500,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
   const renderComponent = (component: WokwiComponent) => {
     const { type, id, top, left, attributes } = component;
     
-    const pins = component.pins || fetchComponentPins(type);
+    const pins = component.pins || fetchComponentPins(type, pinCache);
     
     const showPins = visiblePins[id] || 
                     hoveredComponent === id || 
@@ -738,9 +680,11 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
       >
         <div 
           ref={canvasRef} 
-          className="h-full w-full grid grid-cols-[repeat(40,25px)] grid-rows-[repeat(30,25px)] bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjUiIGhlaWdodD0iMjUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSIyNSIgaGVpZ2h0PSIyNSIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAwIDAgTCAyNSAwIE0gMCAwIEwgMCAyNSIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZTJlOGYwIiBzdHJva2Utd2lkdGg9IjEiPjwvcGF0aD48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JpZCkiPjwvcmVjdD48L3N2Zz4=')]"
+          className="h-full w-full grid grid-cols-[repeat(40,25px)] grid-rows-[repeat(30,25px)] bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjUiIGhlaWdodD0iMjUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSIyNSIgaGVpZ2h0PSIyNSIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAwIDAgTCAyNSAwIE0gMCAwIEwgMCAyNSIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZTJlOGYwIiBzdHJva2Utd2lkdGg9IjEiPjwvcGF0aD48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JpZCkiPjwvcmVjdD48L3N2Zz4=')] drop-target"
           onDrop={handleDrop}
           onDragOver={handleDragOver}
+          onDragEnter={handleDragEnter}
+          onDragLeave={handleDragLeave}
           onMouseDown={(e) => {
             if (panMode || e.button === 1 || e.ctrlKey) {
               startPan(e.clientX, e.clientY);

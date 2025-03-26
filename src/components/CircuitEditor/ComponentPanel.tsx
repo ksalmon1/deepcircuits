@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -21,6 +22,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useComponentLibrary } from '@/hooks/useComponentLibrary';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { debugDragAndDrop } from '@/utils/componentUtils';
 
 interface ComponentCategory {
   id: string;
@@ -103,22 +105,39 @@ const ComponentPanel = () => {
   }, [components]);
 
   const handleDragStart = (e: React.DragEvent, component: ComponentItem) => {
-    console.log('[DragDrop] Started dragging component:', component.name);
+    debugDragAndDrop('Started dragging component', component);
     
+    // Set the drag data with stringified component info
     const componentData = JSON.stringify(component);
-    e.dataTransfer.setData('component', componentData);
+    e.dataTransfer.setData('application/json', componentData);
+    e.dataTransfer.setData('component', componentData); // Keep for compatibility
     e.dataTransfer.effectAllowed = 'copy';
     
-    const dragIcon = document.createElement('div');
-    dragIcon.innerHTML = `<div class="bg-primary text-white px-2 py-1 rounded text-xs">${component.name}</div>`;
-    document.body.appendChild(dragIcon);
-    dragIcon.style.position = 'absolute';
-    dragIcon.style.top = '-1000px';
-    e.dataTransfer.setDragImage(dragIcon, 25, 25);
+    // Create a visual drag image
+    const dragImage = document.createElement('div');
+    dragImage.innerHTML = `<div class="bg-primary text-white px-2 py-1 rounded text-xs">${component.name}</div>`;
+    document.body.appendChild(dragImage);
+    dragImage.style.position = 'absolute';
+    dragImage.style.top = '-1000px';
+    e.dataTransfer.setDragImage(dragImage, 25, 25);
     
+    // Add custom cursor styles during drag
+    document.body.classList.add('dragging-component');
+    
+    // Clean up after drag start
     setTimeout(() => {
-      document.body.removeChild(dragIcon);
+      document.body.removeChild(dragImage);
     }, 0);
+    
+    debugDragAndDrop('Drag data set', { 
+      componentName: component.name, 
+      componentType: component.type 
+    });
+  };
+
+  const handleDragEnd = (e: React.DragEvent) => {
+    document.body.classList.remove('dragging-component');
+    debugDragAndDrop('Drag ended');
   };
 
   const toggleCategory = (categoryId: string) => {
@@ -210,6 +229,7 @@ const ComponentPanel = () => {
                               className="justify-start h-auto py-1.5 text-sm w-full cursor-grab"
                               draggable={true}
                               onDragStart={(e) => handleDragStart(e, component)}
+                              onDragEnd={handleDragEnd}
                               data-component-type={component.type}
                               data-component-name={component.name}
                             >

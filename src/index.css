@@ -14,7 +14,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
 
-    --primary: 222.2 47.4% 11.2%;
+    --primary: 221.2 83.2% 53.3%;
     --primary-foreground: 210 40% 98%;
 
     --secondary: 210 40% 96.1%;
@@ -31,25 +31,9 @@
 
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --ring: 221.2 83.2% 53.3%;
 
     --radius: 0.5rem;
-
-    --sidebar-background: 0 0% 98%;
-
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
   .dark {
@@ -62,7 +46,7 @@
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 210 40% 98%;
+    --primary: 217.2 91.2% 59.8%;
     --primary-foreground: 222.2 47.4% 11.2%;
 
     --secondary: 217.2 32.6% 17.5%;
@@ -80,14 +64,6 @@
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
   }
 }
 
@@ -95,41 +71,48 @@
   * {
     @apply border-border;
   }
-
   body {
     @apply bg-background text-foreground;
   }
 }
 
-/* Enhanced pin marker styles to improve hover reliability */
+/* Circuit canvas styles */
+.drop-target {
+  box-sizing: border-box;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.drop-target.drag-over {
+  box-shadow: inset 0 0 0 2px #4C72F4;
+  background-color: rgba(76, 114, 244, 0.05) !important;
+}
+
+.dragging-component {
+  cursor: grabbing !important;
+}
+
+/* Wire styles */
+.wire-highlight {
+  stroke-width: 6px !important;
+  filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.7));
+}
+
 .pin-marker {
-  position: absolute;
-  pointer-events: auto;
-  touch-action: none;
-  transform-origin: center;
-  z-index: 20;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .pin-marker:hover {
-  z-index: 30;
+  transform: translate(-50%, -50%) scale(1.2) !important;
+  box-shadow: 0 0 0 3px rgba(76, 114, 244, 0.3) !important;
 }
 
-/* Wire point interaction styles */
-.wire-point {
-  cursor: move;
-  position: absolute;
-  pointer-events: auto;
-  transition: transform 0.1s ease, box-shadow 0.1s ease;
-}
-
-.wire-point:hover {
-  transform: scale(1.5);
-  box-shadow: 0 0 8px rgba(255, 255, 0, 0.8);
-  z-index: 100;
-}
-
-.wire-point-dragging {
-  z-index: 100;
-  transform: scale(1.5);
-  box-shadow: 0 0 12px rgba(255, 165, 0, 0.8);
+.pin-label {
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 2px 4px;
+  border-radius: 2px;
+  font-size: 10px;
+  pointer-events: none;
+  white-space: nowrap;
 }

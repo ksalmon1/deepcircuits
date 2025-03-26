@@ -34,3 +34,25 @@ export const fetchComponentPins = (type: string, pinCache: Record<string, WokwiP
 export const debugDragAndDrop = (message: string, data?: any) => {
   console.log(`[DragDrop] ${message}`, data || '');
 };
+
+// Helper function to validate and prepare component data for drag operations
+export const prepareComponentForDrag = (componentData: string): any => {
+  try {
+    if (!componentData) {
+      console.error('[DragDrop] No component data provided');
+      return null;
+    }
+    
+    const parsedData = JSON.parse(componentData);
+    
+    if (!parsedData.type) {
+      console.error('[DragDrop] Invalid component data: missing type property', parsedData);
+      return null;
+    }
+    
+    return parsedData;
+  } catch (err) {
+    console.error('[DragDrop] Error parsing component data:', err);
+    return null;
+  }
+};
