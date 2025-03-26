@@ -22,8 +22,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useComponentLibrary } from '@/hooks/useComponentLibrary';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { debugDragAndDrop } from '@/utils/componentUtils';
 
+// Interface for component categories
 interface ComponentCategory {
   id: string;
   label: string;
@@ -31,6 +31,7 @@ interface ComponentCategory {
   components: ComponentItem[];
 }
 
+// Interface for component items
 interface ComponentItem {
   id: string;
   name: string;
@@ -41,19 +42,23 @@ interface ComponentItem {
 const ComponentPanel = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({
-    'controllers': true,
-    'basic': true
+    'controllers': true, // Open by default
+    'basic': true       // Open by default
   });
-
+  
   const [categories, setCategories] = useState<ComponentCategory[]>([]);
   const { components, isLoadingComponents, componentsError } = useComponentLibrary();
 
+  // Process components into categories when loaded
   useEffect(() => {
     if (!components || components.length === 0) return;
 
+    // Create a map to organize components by category
     const categoryMap: Record<string, ComponentItem[]> = {};
     
+    // Process each component
     components.forEach(component => {
+      // Skip disabled components
       if (!component.enabled) return;
       
       const category = component.category || 'other';
@@ -70,6 +75,7 @@ const ComponentPanel = () => {
       });
     });
     
+    // Map to get appropriate icon for each category
     const getCategoryIcon = (categoryId: string) => {
       switch(categoryId) {
         case 'microcontroller':
@@ -92,6 +98,7 @@ const ComponentPanel = () => {
       }
     };
     
+    // Convert the map to array of categories
     const categoriesArray: ComponentCategory[] = Object.keys(categoryMap).map(categoryId => ({
       id: categoryId,
       label: categoryId.charAt(0).toUpperCase() + categoryId.slice(1),
@@ -99,45 +106,14 @@ const ComponentPanel = () => {
       components: categoryMap[categoryId].sort((a, b) => a.name.localeCompare(b.name))
     }));
     
+    // Sort categories alphabetically
     categoriesArray.sort((a, b) => a.label.localeCompare(b.label));
     
     setCategories(categoriesArray);
   }, [components]);
 
   const handleDragStart = (e: React.DragEvent, component: ComponentItem) => {
-    debugDragAndDrop('Started dragging component', component);
-    
-    // Set the drag data with stringified component info
-    const componentData = JSON.stringify(component);
-    e.dataTransfer.setData('application/json', componentData);
-    e.dataTransfer.setData('component', componentData); // Keep for compatibility
-    e.dataTransfer.effectAllowed = 'copy';
-    
-    // Create a visual drag image
-    const dragImage = document.createElement('div');
-    dragImage.innerHTML = `<div class="bg-primary text-white px-2 py-1 rounded text-xs">${component.name}</div>`;
-    document.body.appendChild(dragImage);
-    dragImage.style.position = 'absolute';
-    dragImage.style.top = '-1000px';
-    e.dataTransfer.setDragImage(dragImage, 25, 25);
-    
-    // Add custom cursor styles during drag
-    document.body.classList.add('dragging-component');
-    
-    // Clean up after drag start
-    setTimeout(() => {
-      document.body.removeChild(dragImage);
-    }, 0);
-    
-    debugDragAndDrop('Drag data set', { 
-      componentName: component.name, 
-      componentType: component.type 
-    });
-  };
-
-  const handleDragEnd = (e: React.DragEvent) => {
-    document.body.classList.remove('dragging-component');
-    debugDragAndDrop('Drag ended');
+    e.dataTransfer.setData('component', JSON.stringify(component));
   };
 
   const toggleCategory = (categoryId: string) => {
@@ -147,6 +123,7 @@ const ComponentPanel = () => {
     }));
   };
 
+  // Filter components based on search term
   const filteredCategories = searchTerm 
     ? categories.map(category => ({
         ...category,
@@ -227,11 +204,8 @@ const ComponentPanel = () => {
                               variant="ghost"
                               size="sm"
                               className="justify-start h-auto py-1.5 text-sm w-full cursor-grab"
-                              draggable={true}
+                              draggable
                               onDragStart={(e) => handleDragStart(e, component)}
-                              onDragEnd={handleDragEnd}
-                              data-component-type={component.type}
-                              data-component-name={component.name}
                             >
                               <span className="truncate">{component.name}</span>
                             </Button>

@@ -41,24 +41,7 @@ const PinVisualizer: React.FC<PinVisualizerProps> = ({
       'tx': '#00FFFF',       // Cyan
     };
     
-    // Check if the signal contains any of the color keys
-    for (const key of Object.keys(colors)) {
-      if (signal.includes(key)) {
-        return colors[key];
-      }
-    }
-    
     return colors[signal] || '#4BC0C0'; // Default to teal if no match
-  };
-  
-  // Handle mouse enter for pins with debounce to ensure reliable hovering
-  const handlePinMouseEnter = (index: number) => {
-    setHoveredPin(index);
-  };
-  
-  // Handle mouse leave for pins
-  const handlePinMouseLeave = () => {
-    setHoveredPin(null);
   };
   
   return (
@@ -71,39 +54,28 @@ const PinVisualizer: React.FC<PinVisualizerProps> = ({
         
         return (
           <div 
-            key={`pin-${i}`}
-            className="absolute pin-marker" 
+            key={i} 
+            className="absolute" 
             style={{
               left: `${pinX}px`,
               top: `${pinY}px`,
               transform: 'translate(-50%, -50%)',
-              cursor: readonly ? 'default' : 'pointer',
-              zIndex: isHovered ? 30 : 10
+              cursor: readonly ? 'default' : 'move',
+              zIndex: 10
             }}
-            onMouseEnter={() => handlePinMouseEnter(i)}
-            onMouseLeave={handlePinMouseLeave}
-            onClick={() => onEditPin(i)}
-            data-pin-index={i}
-            data-testid={`pin-${i}`}
+            onMouseEnter={() => setHoveredPin(i)}
+            onMouseLeave={() => setHoveredPin(null)}
           >
             <div 
-              className="rounded-full flex items-center justify-center transition-all duration-150"
+              className={`rounded-full flex items-center justify-center transition-colors`}
               style={{
-                width: isHovered ? '16px' : '12px',
-                height: isHovered ? '16px' : '12px',
+                width: '12px',
+                height: '12px',
                 backgroundColor: isHovered ? '#FFCE56' : pinColor,
-                border: isHovered ? '2px solid rgba(0,0,0,0.7)' : '1px solid rgba(0,0,0,0.3)',
-                boxShadow: isHovered ? '0 0 6px rgba(255,206,86,0.6)' : 'none'
+                border: isHovered ? '1px solid rgba(0,0,0,0.5)' : '1px solid rgba(0,0,0,0.3)'
               }}
+              onClick={() => onEditPin(i)}
             />
-            {isHovered && (
-              <div className="absolute text-xs bg-black text-white px-2 py-1 rounded whitespace-nowrap -mt-6 left-1/2 transform -translate-x-1/2 z-20">
-                {pin.name || `Pin ${i+1}`}
-                {pin.signals && pin.signals.length > 0 && (
-                  <span className="ml-1 opacity-70">{pin.signals.join(', ')}</span>
-                )}
-              </div>
-            )}
           </div>
         );
       })}
