@@ -41,6 +41,13 @@ const PinVisualizer: React.FC<PinVisualizerProps> = ({
       'tx': '#00FFFF',       // Cyan
     };
     
+    // Try to match any part of the signal name with the color map
+    for (const [key, color] of Object.entries(colors)) {
+      if (signal.includes(key)) {
+        return color;
+      }
+    }
+    
     return colors[signal] || '#4BC0C0'; // Default to teal if no match
   };
   

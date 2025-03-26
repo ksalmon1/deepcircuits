@@ -17,22 +17,6 @@ export const getAllComponents = async (): Promise<ComponentLibraryItem[]> => {
       throw error;
     }
 
-    // Convert array of CUSTOM_COMPONENTS to ComponentLibraryItem array
-    const customComponents: ComponentLibraryItem[] = Object.values(CUSTOM_COMPONENTS).map(comp => ({
-      id: comp.type,
-      name: comp.name,
-      type: comp.type,
-      category: comp.category,
-      description: comp.description,
-      svgPath: comp.svgPath,
-      enabled: true,
-      isOriginal: false,
-      pins: comp.pins,
-      properties: comp.properties,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }));
-
     // Map database components to ComponentLibraryItem format
     const mappedDbComponents: ComponentLibraryItem[] = (supabaseComponents || []).map(comp => ({
       id: comp.id,
@@ -47,8 +31,7 @@ export const getAllComponents = async (): Promise<ComponentLibraryItem[]> => {
       updatedAt: comp.updated_at
     }));
 
-    // Combine database components with custom components
-    return [...mappedDbComponents, ...customComponents];
+    return mappedDbComponents;
   } catch (error) {
     console.error('Error in getAllComponents:', error);
     return [];
@@ -192,27 +175,6 @@ export const deleteComponent = async (id: string): Promise<string | null> => {
 
 // Get a component with all its details
 export const getComponentWithDetails = async (id: string): Promise<ComponentLibraryItem | null> => {
-  // Check if it's a custom component first
-  if (id.startsWith('custom-')) {
-    const customComp = CUSTOM_COMPONENTS[id];
-    if (customComp) {
-      return {
-        id: customComp.type,
-        name: customComp.name,
-        type: customComp.type,
-        category: customComp.category,
-        description: customComp.description,
-        svgPath: customComp.svgPath,
-        enabled: true,
-        isOriginal: false,
-        pins: customComp.pins,
-        properties: customComp.properties,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-    }
-  }
-
   try {
     const { data, error } = await supabase
       .from('component_library')

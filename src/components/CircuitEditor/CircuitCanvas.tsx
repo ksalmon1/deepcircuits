@@ -552,9 +552,17 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     const pins = component.pins || fetchComponentPins(type);
     
     const showPins = visiblePins[id] || 
-                    hoveredComponent === id || 
-                    (activeWire && (activeWire.sourceComponentId === id || 
-                                  (potentialTargetRef && potentialTargetRef.current?.componentId === id)));
+                  hoveredComponent === id || 
+                  (activeWire && (activeWire.sourceComponentId === id || 
+                                (potentialTargetRef && potentialTargetRef.current?.componentId === id)));
+    
+    let svgPath = '';
+    if (isCustomComponent(type)) {
+      const libraryComponent = libraryComponents?.find(c => c.type === type);
+      if (libraryComponent && libraryComponent.svgPath) {
+        svgPath = libraryComponent.svgPath;
+      }
+    }
     
     return (
       <div 
@@ -571,7 +579,10 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
         onMouseLeave={handleComponentHoverExit}
         onDoubleClick={() => togglePinVisibility(id)}
       >
-        <div id={`wokwi-element-${id}`}></div>
+        <div 
+          id={`wokwi-element-${id}`} 
+          data-svg-path={svgPath}
+        ></div>
         
         {showPins && pins && pins.length > 0 && (
           <div className="absolute top-0 left-0 z-30 pointer-events-none">
