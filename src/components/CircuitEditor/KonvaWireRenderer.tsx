@@ -1,9 +1,8 @@
 
-import React, { useEffect, useRef, useState } from 'react';
-import { Layer, Line, Stage, Circle, Group, Rect } from 'react-konva';
+import React, { useEffect, useRef } from 'react';
+import { Layer, Line, Stage, Circle, Group } from 'react-konva';
 import { Wire } from '@/hooks/useWireSystem';
 import { KonvaEventObject } from 'konva/lib/Node';
-import { findClosestPointOnWire } from '@/utils/wireUtils';
 
 interface KonvaWireRendererProps {
   wires: Wire[];
@@ -29,8 +28,6 @@ const KonvaWireRenderer: React.FC<KonvaWireRendererProps> = ({
   offset = { x: 0, y: 0 }
 }) => {
   const stageRef = useRef<any>(null);
-  const [hoveredSegment, setHoveredSegment] = useState<{ wireId: string, segmentIndex: number } | null>(null);
-  const [ghostPoint, setGhostPoint] = useState<{ x: number; y: number } | null>(null);
   
   // Convert wire points to flat array for Konva Line
   const wirePointsToFlatArray = (wire: Wire): number[] => {
@@ -53,55 +50,6 @@ const KonvaWireRenderer: React.FC<KonvaWireRendererProps> = ({
       x: point.x * zoom + offset.x,
       y: point.y * zoom + offset.y
     };
-  };
-  
-  // Untransform a point (from screen to canvas coordinates)
-  const untransformPoint = (point: { x: number; y: number }): { x: number; y: number } => {
-    return {
-      x: (point.x - offset.x) / zoom,
-      y: (point.y - offset.y) / zoom
-    };
-  };
-  
-  // Handle mouse move to show ghost point for potential wire point addition
-  const handleStageMouseMove = (e: KonvaEventObject<MouseEvent>) => {
-    if (!activeWire) {
-      // When not creating a wire, check if hovering over an existing wire
-      const stage = e.target.getStage();
-      if (!stage) return;
-      
-      const pointerPos = stage.getPointerPosition();
-      if (!pointerPos) return;
-      
-      const canvasX = (pointerPos.x - offset.x) / zoom;
-      const canvasY = (pointerPos.y - offset.y) / zoom;
-      
-      let foundHoveredSegment = false;
-      
-      // Check each wire to see if mouse is near a segment
-      for (const wire of wires) {
-        if (!wire.isComplete) continue;
-        
-        const { segmentIndex, distance, point } = findClosestPointOnWire(canvasX, canvasY, wire);
-        
-        if (distance < 10) {
-          setHoveredSegment({ wireId: wire.id, segmentIndex });
-          setGhostPoint(point);
-          foundHoveredSegment = true;
-          break;
-        }
-      }
-      
-      if (!foundHoveredSegment) {
-        setHoveredSegment(null);
-        setGhostPoint(null);
-      }
-    }
-    
-    // Call the original onMouseMove handler
-    if (onMouseMove) {
-      onMouseMove(e);
-    }
   };
   
   const handleClick = (e: KonvaEventObject<MouseEvent>) => {
@@ -150,44 +98,20 @@ const KonvaWireRenderer: React.FC<KonvaWireRendererProps> = ({
       );
     });
   };
-  
-  // Render the ghost point that shows where a new point could be added
-  const renderGhostPoint = () => {
-    if (!ghostPoint || !hoveredSegment) return null;
-    
-    const transformedPoint = transformPoint(ghostPoint);
-    
-    // Find the wire that matches the hoveredSegment
-    const hoveredWire = wires.find(w => w.id === hoveredSegment.wireId);
-    if (!hoveredWire) return null;
-    
-    return (
-      <Circle
-        x={transformedPoint.x}
-        y={transformedPoint.y}
-        radius={6}
-        fill="rgba(255, 255, 255, 0.7)"
-        stroke={hoveredWire.color}
-        strokeWidth={2}
-        dash={[3, 3]}
-        listening={false}
-      />
-    );
-  };
 
   return (
     <Stage 
       ref={stageRef}
       width={stageWidth} 
       height={stageHeight}
-      onMouseMove={handleStageMouseMove}
+      onMouseMove={onMouseMove}
       onMouseUp={onMouseUp}
       onClick={handleClick}
       style={{ 
         position: 'absolute', 
         top: 0, 
         left: 0, 
-        pointerEvents: activeWire || hoveredSegment ? 'auto' : 'none',
+        pointerEvents: activeWire ? 'auto' : 'none',
         zIndex: 20 // Higher z-index to ensure wires are visible above other elements but below pin tooltips
       }}
     >
@@ -224,9 +148,6 @@ const KonvaWireRenderer: React.FC<KonvaWireRendererProps> = ({
             {renderWirePoints(activeWire, true)}
           </Group>
         )}
-        
-        {/* Render ghost point for wire editing */}
-        {renderGhostPoint()}
       </Layer>
     </Stage>
   );
