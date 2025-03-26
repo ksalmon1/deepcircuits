@@ -41,6 +41,13 @@ const PinVisualizer: React.FC<PinVisualizerProps> = ({
       'tx': '#00FFFF',       // Cyan
     };
     
+    // Check if the signal contains any of the color keys
+    for (const key of Object.keys(colors)) {
+      if (signal.includes(key)) {
+        return colors[key];
+      }
+    }
+    
     return colors[signal] || '#4BC0C0'; // Default to teal if no match
   };
   
@@ -54,7 +61,7 @@ const PinVisualizer: React.FC<PinVisualizerProps> = ({
         
         return (
           <div 
-            key={i} 
+            key={`pin-${i}`}
             className="absolute" 
             style={{
               left: `${pinX}px`,
@@ -67,15 +74,24 @@ const PinVisualizer: React.FC<PinVisualizerProps> = ({
             onMouseLeave={() => setHoveredPin(null)}
           >
             <div 
-              className={`rounded-full flex items-center justify-center transition-colors`}
+              className="rounded-full flex items-center justify-center transition-all duration-150"
               style={{
-                width: '12px',
-                height: '12px',
+                width: isHovered ? '14px' : '12px',
+                height: isHovered ? '14px' : '12px',
                 backgroundColor: isHovered ? '#FFCE56' : pinColor,
-                border: isHovered ? '1px solid rgba(0,0,0,0.5)' : '1px solid rgba(0,0,0,0.3)'
+                border: isHovered ? '2px solid rgba(0,0,0,0.7)' : '1px solid rgba(0,0,0,0.3)',
+                boxShadow: isHovered ? '0 0 4px rgba(0,0,0,0.3)' : 'none'
               }}
               onClick={() => onEditPin(i)}
             />
+            {isHovered && (
+              <div className="absolute text-xs bg-black text-white px-2 py-1 rounded whitespace-nowrap -mt-6 left-1/2 transform -translate-x-1/2 z-20">
+                {pin.name || `Pin ${i+1}`}
+                {pin.signals && pin.signals.length > 0 && (
+                  <span className="ml-1 opacity-70">{pin.signals.join(', ')}</span>
+                )}
+              </div>
+            )}
           </div>
         );
       })}
