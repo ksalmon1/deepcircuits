@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -98,4 +99,37 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Enhanced pin marker styles to improve hover reliability */
+.pin-marker {
+  position: absolute;
+  pointer-events: auto;
+  touch-action: none;
+  transform-origin: center;
+  z-index: 20;
+}
+
+.pin-marker:hover {
+  z-index: 30;
+}
+
+/* Wire point interaction styles */
+.wire-point {
+  cursor: move;
+  position: absolute;
+  pointer-events: auto;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.wire-point:hover {
+  transform: scale(1.5);
+  box-shadow: 0 0 8px rgba(255, 255, 0, 0.8);
+  z-index: 100;
+}
+
+.wire-point-dragging {
+  z-index: 100;
+  transform: scale(1.5);
+  box-shadow: 0 0 12px rgba(255, 165, 0, 0.8);
 }
