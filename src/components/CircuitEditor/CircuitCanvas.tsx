@@ -43,7 +43,8 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     pan,
     endPan,
     handleWheel,
-    updateCanvasDimensions
+    updateCanvasDimensions,
+    screenToCanvasCoordinates
   } = useCanvasNavigation(1);
   
   const {
@@ -351,8 +352,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
   };
 
   const handleComponentHover = useCallback((id: string, type: string) => {
-    if (draggingComponent) return;
-    
     setHoveredComponent(id);
     
     const pins = fetchComponentPins(type);
@@ -363,7 +362,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
       (element.firstChild as HTMLElement).style.outline = '2px solid #4C72F4';
       (element.firstChild as HTMLElement).style.outlineOffset = '2px';
     }
-  }, [draggingComponent]);
+  }, []);
 
   const handleComponentHoverExit = useCallback(() => {
     if (draggingComponent) return;
@@ -374,9 +373,12 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
         (element.firstChild as HTMLElement).style.outline = 'none';
       }
     }
-    setHoveredComponent(null);
-    setHoveredPins([]);
-  }, [hoveredComponent, draggingComponent]);
+    
+    if (!activeWire) {
+      setHoveredComponent(null);
+      setHoveredPins([]);
+    }
+  }, [hoveredComponent, draggingComponent, activeWire]);
 
   const handleComponentMouseDown = (e: React.MouseEvent, componentId: string) => {
     if (panMode || e.button !== 0) {
@@ -435,18 +437,14 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
       const canvasRect = canvasRef.current?.getBoundingClientRect();
       if (!canvasRect) return;
       
-      const mouseX = (e.clientX - canvasRect.left - offset.x) / zoom;
-      const mouseY = (e.clientY - canvasRect.top - offset.y) / zoom;
-      
-      const newLeft = mouseX - dragOffset.x / zoom;
-      const newTop = mouseY - dragOffset.y / zoom;
+      const coords = screenToCanvasCoordinates(e.clientX - canvasRect.left, e.clientY - canvasRect.top);
       
       const updatedComponents = components.map(component => {
         if (component.id === draggingComponent) {
           return {
             ...component,
-            left: newLeft,
-            top: newTop
+            left: coords.x - dragOffset.x / zoom,
+            top: coords.y - dragOffset.y / zoom
           };
         }
         return component;
@@ -522,7 +520,10 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     
     const pins = component.pins || fetchComponentPins(type);
     
-    const showPins = visiblePins[id] || hoveredComponent === id;
+    const showPins = visiblePins[id] || 
+                    hoveredComponent === id || 
+                    (activeWire && (activeWire.sourceComponentId === id || 
+                                   potentialTargetRef.current?.componentId === id));
     
     return (
       <div 
@@ -542,7 +543,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
         <div id={`wokwi-element-${id}`}></div>
         
         {showPins && pins && pins.length > 0 && (
-          <div className="absolute top-0 left-0 z-10 pointer-events-none">
+          <div className="absolute top-0 left-0 z-30 pointer-events-none">
             {pins.map((pin, index) => {
               const signalColor = pin.signals && pin.signals.length > 0 
                 ? (() => {
@@ -613,7 +614,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
         
         {hoveredPin && hoveredPin.componentId === id && pins && pins[hoveredPin.pinIndex] && (
           <div 
-            className="absolute z-20 bg-black text-white text-xs px-1 py-0.5 rounded-sm opacity-80"
+            className="absolute z-40 bg-black text-white text-xs px-1 py-0.5 rounded-sm opacity-80"
             style={{ 
               top: `${pins[hoveredPin.pinIndex].y}px`, 
               left: `${pins[hoveredPin.pinIndex].x}px`, 
@@ -710,7 +711,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
             transform: `scale(${zoom}) translate(${offset.x / zoom}px, ${offset.y / zoom}px)`,
             transformOrigin: '0 0',
             transition: isDraggingCanvas ? 'none' : 'transform 0.1s ease-out',
-            cursor: panMode ? 'move' : 'default',
+            cursor: panMode ? 'move' : activeWire ? 'crosshair' : 'default',
             position: 'relative'
           }}
         >

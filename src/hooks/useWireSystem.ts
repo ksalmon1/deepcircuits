@@ -1,4 +1,5 @@
-import { useState, useCallback, useRef } from 'react';
+
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { WokwiComponent } from '@/integrations/wokwi/WokwiIntegration';
 import { getWireColorFromSignal, getPinSignalType } from '@/utils/wireUtils';
 import { KonvaEventObject } from 'konva/lib/Node';
@@ -23,6 +24,7 @@ export const useWireSystem = (components: WokwiComponent[]) => {
   const [wires, setWires] = useState<Wire[]>([]);
   const [activeWire, setActiveWire] = useState<Wire | null>(null);
   const potentialTargetRef = useRef<{componentId: string, pinIndex: number} | null>(null);
+  const lastMousePositionRef = useRef<{x: number, y: number} | null>(null);
   
   // Create a new wire from a pin
   const startWire = useCallback((componentId: string, pinIndex: number, x: number, y: number) => {
@@ -221,8 +223,14 @@ export const useWireSystem = (components: WokwiComponent[]) => {
     const pointerPos = stage.getPointerPosition();
     if (!pointerPos) return;
     
+    lastMousePositionRef.current = { x: pointerPos.x, y: pointerPos.y };
+    
+    // Convert screen coordinates to canvas coordinates
+    const canvasX = (pointerPos.x - stage.x()) / stage.scaleX();
+    const canvasY = (pointerPos.y - stage.y()) / stage.scaleY();
+    
     // Check if we're near a potential pin
-    const potentialPin = findPotentialPinConnection(pointerPos.x, pointerPos.y);
+    const potentialPin = findPotentialPinConnection(canvasX, canvasY);
     
     if (potentialPin) {
       potentialTargetRef.current = {
@@ -237,7 +245,7 @@ export const useWireSystem = (components: WokwiComponent[]) => {
       potentialTargetRef.current = null;
       
       // Just follow the mouse
-      const updatedWire = updateWireEndPoint(activeWire, pointerPos.x, pointerPos.y);
+      const updatedWire = updateWireEndPoint(activeWire, canvasX, canvasY);
       setActiveWire(updatedWire);
     }
   }, [activeWire, updateWireEndPoint, findPotentialPinConnection]);
@@ -278,6 +286,48 @@ export const useWireSystem = (components: WokwiComponent[]) => {
     setActiveWire(null);
     potentialTargetRef.current = null;
   }, []);
+  
+  // Update wire positions when components move
+  useEffect(() => {
+    if (wires.length === 0) return;
+    
+    const updatedWires = wires.map(wire => {
+      if (!wire.isComplete) return wire;
+      
+      const sourceComponent = components.find(c => c.id === wire.sourceComponentId);
+      const targetComponent = components.find(c => c.id === wire.targetComponentId);
+      
+      if (!sourceComponent || !targetComponent || !sourceComponent.pins || !targetComponent.pins) {
+        return wire;
+      }
+      
+      const sourcePin = sourceComponent.pins[wire.sourcePinIndex];
+      const targetPin = targetComponent.pins[wire.targetPinIndex!];
+      
+      if (!sourcePin || !targetPin) return wire;
+      
+      // Calculate new pin positions
+      const sourceX = sourceComponent.left + sourcePin.x;
+      const sourceY = sourceComponent.top + sourcePin.y;
+      const targetX = targetComponent.left + targetPin.x;
+      const targetY = targetComponent.top + targetPin.y;
+      
+      // Simple straight line - just source and target
+      return {
+        ...wire,
+        points: [
+          { x: sourceX, y: sourceY },
+          { x: targetX, y: targetY }
+        ]
+      };
+    });
+    
+    // Only update if wires actually changed
+    const wiresChanged = JSON.stringify(updatedWires) !== JSON.stringify(wires);
+    if (wiresChanged) {
+      setWires(updatedWires);
+    }
+  }, [components, wires]);
   
   return {
     wires,

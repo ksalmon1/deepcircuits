@@ -64,7 +64,7 @@ const KonvaWireRenderer: React.FC<KonvaWireRendererProps> = ({
         top: 0, 
         left: 0, 
         pointerEvents: activeWire ? 'auto' : 'none',
-        zIndex: 20 // Higher z-index to ensure wires are visible above other elements
+        zIndex: 20 // Higher z-index to ensure wires are visible above other elements but below pin tooltips
       }}
     >
       <Layer>
