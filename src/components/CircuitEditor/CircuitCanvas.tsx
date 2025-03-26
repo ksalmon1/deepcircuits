@@ -15,6 +15,8 @@ import { isInteractingWithPin } from '@/utils/wireUtils';
 import { useCanvasNavigation } from '@/hooks/useCanvasNavigation';
 import { useWireSystem } from '@/hooks/useWireSystem';
 import KonvaWireRenderer from './KonvaWireRenderer';
+import { isCustomComponent, renderCustomComponent } from '@/integrations/custom/CustomComponents';
+import { fetchComponentPins } from '@/utils/componentUtils';
 
 interface CircuitCanvasProps {
   components: WokwiComponent[];
@@ -489,7 +491,13 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
       
       if (element && !renderedComponents[component.id]) {
         console.log(`Rendering component ${component.type} with id ${component.id}`);
-        renderWokwiElement(component.type, elementId, component.attributes);
+        
+        if (isCustomComponent(component.type)) {
+          renderCustomComponent(component.type, elementId, component.attributes);
+        } else {
+          renderWokwiElement(component.type, elementId, component.attributes);
+        }
+        
         setRenderedComponents(prev => ({
           ...prev,
           [component.id]: true
@@ -525,7 +533,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     const showPins = visiblePins[id] || 
                     hoveredComponent === id || 
                     (activeWire && (activeWire.sourceComponentId === id || 
-                                   (potentialTargetRef && potentialTargetRef.current?.componentId === id)));
+                                  (potentialTargetRef && potentialTargetRef.current?.componentId === id)));
     
     return (
       <div 
@@ -736,4 +744,3 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
 };
 
 export default CircuitCanvas;
-
