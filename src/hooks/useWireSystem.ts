@@ -132,6 +132,31 @@ export const useWireSystem = (components: WokwiComponent[]) => {
     setWires(updatedWires);
   }, [wires]);
   
+  // Move an existing point in a wire
+  const moveWirePoint = useCallback((wireId: string, pointIndex: number, newX: number, newY: number): void => {
+    setWires(prevWires => {
+      return prevWires.map(wire => {
+        if (wire.id === wireId) {
+          // Don't allow moving the first or last points of completed wires (they're connected to pins)
+          if (wire.isComplete && (pointIndex === 0 || pointIndex === wire.points.length - 1)) {
+            return wire;
+          }
+          
+          const newPoints = [...wire.points];
+          newPoints[pointIndex] = { x: newX, y: newY };
+          
+          console.log(`Moved point ${pointIndex} of wire ${wireId} to (${newX}, ${newY})`);
+          
+          return {
+            ...wire,
+            points: newPoints
+          };
+        }
+        return wire;
+      });
+    });
+  }, []);
+  
   // Complete a wire by connecting it to a target pin
   const completeWire = useCallback((
     wire: Wire,
@@ -459,10 +484,11 @@ export const useWireSystem = (components: WokwiComponent[]) => {
     handleCanvasClick,
     handleMouseMove,
     handleStageMouseUp,
-    handleKonvaClick, // This is essential for proper wire point creation
+    handleKonvaClick,
     cancelActiveWire,
     potentialTarget: potentialTargetRef.current,
     potentialTargetRef,
-    addPointToExistingWire
+    addPointToExistingWire,
+    moveWirePoint
   };
 };

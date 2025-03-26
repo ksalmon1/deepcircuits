@@ -1,5 +1,5 @@
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Layer, Line, Stage, Circle, Group } from 'react-konva';
 import { Wire } from '@/hooks/useWireSystem';
 import { KonvaEventObject } from 'konva/lib/Node';
@@ -14,6 +14,7 @@ interface KonvaWireRendererProps {
   onClick: (e: KonvaEventObject<MouseEvent>) => void;
   zoom?: number;
   offset?: { x: number; y: number };
+  onPointMove?: (wireId: string, pointIndex: number, newX: number, newY: number) => void;
 }
 
 const KonvaWireRenderer: React.FC<KonvaWireRendererProps> = ({
@@ -25,9 +26,11 @@ const KonvaWireRenderer: React.FC<KonvaWireRendererProps> = ({
   onMouseUp,
   onClick,
   zoom = 1,
-  offset = { x: 0, y: 0 }
+  offset = { x: 0, y: 0 },
+  onPointMove
 }) => {
   const stageRef = useRef<any>(null);
+  const [draggingPoint, setDraggingPoint] = useState<{wireId: string, pointIndex: number} | null>(null);
   
   // Convert wire points to flat array for Konva Line
   const wirePointsToFlatArray = (wire: Wire): number[] => {
@@ -52,6 +55,14 @@ const KonvaWireRenderer: React.FC<KonvaWireRendererProps> = ({
     };
   };
   
+  // Untransform a point (from screen to canvas coordinates)
+  const untransformPoint = (point: { x: number; y: number }): { x: number; y: number } => {
+    return {
+      x: (point.x - offset.x) / zoom,
+      y: (point.y - offset.y) / zoom
+    };
+  };
+  
   const handleClick = (e: KonvaEventObject<MouseEvent>) => {
     console.log("KonvaWireRenderer: Stage clicked");
     
@@ -71,6 +82,33 @@ const KonvaWireRenderer: React.FC<KonvaWireRendererProps> = ({
     }
   }, [wires, activeWire, zoom, offset]);
 
+  // Handle point drag start
+  const handlePointDragStart = (wireId: string, pointIndex: number) => {
+    setDraggingPoint({ wireId, pointIndex });
+  };
+
+  // Handle point drag move
+  const handlePointDragMove = (e: KonvaEventObject<DragEvent>) => {
+    if (!draggingPoint || !onPointMove) return;
+    
+    const stage = e.target.getStage();
+    if (!stage) return;
+    
+    const pos = stage.getPointerPosition();
+    if (!pos) return;
+    
+    // Convert from screen coordinates to canvas coordinates
+    const canvasPos = untransformPoint({ x: pos.x, y: pos.y });
+    
+    // Report the point move to the parent component
+    onPointMove(draggingPoint.wireId, draggingPoint.pointIndex, canvasPos.x, canvasPos.y);
+  };
+
+  // Handle point drag end
+  const handlePointDragEnd = () => {
+    setDraggingPoint(null);
+  };
+
   // Render dots for intermediate wire points
   const renderWirePoints = (wire: Wire, isActive: boolean = false) => {
     if (wire.points.length <= 2 && !isActive) return null; // No intermediate points for completed wires with only 2 points
@@ -83,6 +121,9 @@ const KonvaWireRenderer: React.FC<KonvaWireRendererProps> = ({
       
       const transformedPoint = transformPoint(point);
       
+      // Determine if this point can be dragged
+      const canDrag = !isActive && index !== 0 && index !== wire.points.length - 1;
+      
       return (
         <Circle
           key={`wire-${wire.id}-point-${index}`}
@@ -93,7 +134,11 @@ const KonvaWireRenderer: React.FC<KonvaWireRendererProps> = ({
           stroke="#fff"
           strokeWidth={1}
           opacity={isActive ? 0.8 : 1}
-          listening={false}
+          listening={canDrag}
+          draggable={canDrag}
+          onDragStart={() => handlePointDragStart(wire.id, index)}
+          onDragMove={handlePointDragMove}
+          onDragEnd={handlePointDragEnd}
         />
       );
     });
@@ -111,7 +156,7 @@ const KonvaWireRenderer: React.FC<KonvaWireRendererProps> = ({
         position: 'absolute', 
         top: 0, 
         left: 0, 
-        pointerEvents: activeWire ? 'auto' : 'none',
+        pointerEvents: activeWire || draggingPoint ? 'auto' : 'none',
         zIndex: 20 // Higher z-index to ensure wires are visible above other elements but below pin tooltips
       }}
     >
