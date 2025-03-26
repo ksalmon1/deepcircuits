@@ -1,3 +1,4 @@
+
 import { WokwiPin } from '@/integrations/wokwi/WokwiIntegration';
 import { getComponentPinInfo } from '@/integrations/wokwi/WokwiIntegration';
 import { getCustomComponent } from '@/integrations/custom/CustomComponents';
@@ -27,4 +28,9 @@ export const fetchComponentPins = (type: string, pinCache: Record<string, WokwiP
     console.error(`Error fetching pins for ${type}:`, err);
     return getComponentPinInfo(type);
   }
+};
+
+// For debugging drag and drop operations
+export const debugDragAndDrop = (message: string, data?: any) => {
+  console.log(`[DragDrop] ${message}`, data || '');
 };

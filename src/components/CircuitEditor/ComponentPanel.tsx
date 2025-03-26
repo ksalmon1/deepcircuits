@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -23,7 +22,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useComponentLibrary } from '@/hooks/useComponentLibrary';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
-// Interface for component categories
 interface ComponentCategory {
   id: string;
   label: string;
@@ -31,7 +29,6 @@ interface ComponentCategory {
   components: ComponentItem[];
 }
 
-// Interface for component items
 interface ComponentItem {
   id: string;
   name: string;
@@ -42,23 +39,19 @@ interface ComponentItem {
 const ComponentPanel = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({
-    'controllers': true, // Open by default
-    'basic': true       // Open by default
+    'controllers': true,
+    'basic': true
   });
-  
+
   const [categories, setCategories] = useState<ComponentCategory[]>([]);
   const { components, isLoadingComponents, componentsError } = useComponentLibrary();
 
-  // Process components into categories when loaded
   useEffect(() => {
     if (!components || components.length === 0) return;
 
-    // Create a map to organize components by category
     const categoryMap: Record<string, ComponentItem[]> = {};
     
-    // Process each component
     components.forEach(component => {
-      // Skip disabled components
       if (!component.enabled) return;
       
       const category = component.category || 'other';
@@ -75,7 +68,6 @@ const ComponentPanel = () => {
       });
     });
     
-    // Map to get appropriate icon for each category
     const getCategoryIcon = (categoryId: string) => {
       switch(categoryId) {
         case 'microcontroller':
@@ -98,7 +90,6 @@ const ComponentPanel = () => {
       }
     };
     
-    // Convert the map to array of categories
     const categoriesArray: ComponentCategory[] = Object.keys(categoryMap).map(categoryId => ({
       id: categoryId,
       label: categoryId.charAt(0).toUpperCase() + categoryId.slice(1),
@@ -106,14 +97,28 @@ const ComponentPanel = () => {
       components: categoryMap[categoryId].sort((a, b) => a.name.localeCompare(b.name))
     }));
     
-    // Sort categories alphabetically
     categoriesArray.sort((a, b) => a.label.localeCompare(b.label));
     
     setCategories(categoriesArray);
   }, [components]);
 
   const handleDragStart = (e: React.DragEvent, component: ComponentItem) => {
-    e.dataTransfer.setData('component', JSON.stringify(component));
+    console.log('[DragDrop] Started dragging component:', component.name);
+    
+    const componentData = JSON.stringify(component);
+    e.dataTransfer.setData('component', componentData);
+    e.dataTransfer.effectAllowed = 'copy';
+    
+    const dragIcon = document.createElement('div');
+    dragIcon.innerHTML = `<div class="bg-primary text-white px-2 py-1 rounded text-xs">${component.name}</div>`;
+    document.body.appendChild(dragIcon);
+    dragIcon.style.position = 'absolute';
+    dragIcon.style.top = '-1000px';
+    e.dataTransfer.setDragImage(dragIcon, 25, 25);
+    
+    setTimeout(() => {
+      document.body.removeChild(dragIcon);
+    }, 0);
   };
 
   const toggleCategory = (categoryId: string) => {
@@ -123,7 +128,6 @@ const ComponentPanel = () => {
     }));
   };
 
-  // Filter components based on search term
   const filteredCategories = searchTerm 
     ? categories.map(category => ({
         ...category,
@@ -204,8 +208,10 @@ const ComponentPanel = () => {
                               variant="ghost"
                               size="sm"
                               className="justify-start h-auto py-1.5 text-sm w-full cursor-grab"
-                              draggable
+                              draggable={true}
                               onDragStart={(e) => handleDragStart(e, component)}
+                              data-component-type={component.type}
+                              data-component-name={component.name}
                             >
                               <span className="truncate">{component.name}</span>
                             </Button>

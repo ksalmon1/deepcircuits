@@ -266,15 +266,23 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
+    console.log('[DragDrop] Component dropped on canvas');
     
     try {
       const componentData = e.dataTransfer.getData('component');
-      if (!componentData) return;
+      if (!componentData) {
+        console.error('[DragDrop] No component data in drop event');
+        return;
+      }
       
+      console.log('[DragDrop] Component data received:', componentData);
       const componentInfo = JSON.parse(componentData);
       
       const rect = canvasRef.current?.getBoundingClientRect();
-      if (!rect) return;
+      if (!rect) {
+        console.error('[DragDrop] Canvas rect not found');
+        return;
+      }
       
       const x = (e.clientX - rect.left - offset.x) / zoom;
       const y = (e.clientY - rect.top - offset.y) / zoom;
@@ -289,7 +297,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
       if (libraryComponent?.id && componentsDetailsMap && componentsDetailsMap[libraryComponent.id]) {
         const details = componentsDetailsMap[libraryComponent.id];
         if (details && details.pins && details.pins.length > 0) {
-          console.log(`Using pins from details for ${componentInfo.type}:`, details.pins);
+          console.log(`[DragDrop] Using pins from details for ${componentInfo.type}:`, details.pins);
           pins = details.pins.map((pin: any) => ({
             name: pin.name,
             x: Number(pin.x),
@@ -300,7 +308,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
       }
       
       if (!pins && libraryComponent?.pins) {
-        console.log(`Using pins from component for ${componentInfo.type}:`, libraryComponent.pins);
+        console.log(`[DragDrop] Using pins from component for ${componentInfo.type}:`, libraryComponent.pins);
         pins = libraryComponent.pins.map(pin => ({
           name: pin.name,
           x: Number(pin.x),
@@ -310,7 +318,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
       }
       
       if (!pins) {
-        console.log(`Falling back to default pins for ${componentInfo.type}`);
+        console.log(`[DragDrop] Falling back to default pins for ${componentInfo.type}`);
         pins = fetchComponentPins(componentInfo.type);
       }
       
@@ -326,15 +334,15 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
       const updatedComponents = [...components, newComponent];
       onComponentsChange(updatedComponents);
       
-      console.log('Component added:', newComponent);
-      console.log('Total components after add:', updatedComponents.length);
+      console.log('[DragDrop] Component added:', newComponent);
+      console.log('[DragDrop] Total components after add:', updatedComponents.length);
       
       toast.success(`Added ${componentInfo.name}`, {
         description: `Component placed at position (${left}, ${top})`,
         duration: 2000,
       });
     } catch (error) {
-      console.error('Error adding component:', error);
+      console.error('[DragDrop] Error adding component:', error);
       toast.error('Failed to add component');
     }
   };
