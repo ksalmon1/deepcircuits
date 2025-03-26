@@ -44,7 +44,8 @@ export const useWireRendering = (
     
     const wiresChanged = JSON.stringify(updatedWires) !== JSON.stringify(wires);
     if (wiresChanged) {
-      setWires(updatedWires);
+      // Fix: Use the updater function pattern instead of directly passing the array
+      setWires(() => updatedWires);
     }
   }, [components, wires, setWires]);
 
