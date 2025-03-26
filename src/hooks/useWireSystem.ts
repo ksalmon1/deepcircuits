@@ -1,6 +1,7 @@
+
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { WokwiComponent } from '@/integrations/wokwi/WokwiIntegration';
-import { getWireColorFromSignal, getPinSignalType } from '@/utils/wireUtils';
+import { getWireColorFromSignal, getPinSignalType, createAutoRoutedPoints, addWireIntermediatePoint, findClosestPointOnWire } from '@/utils/wireUtils';
 import { KonvaEventObject } from 'konva/lib/Node';
 
 export interface WirePoint {
@@ -24,7 +25,9 @@ export const useWireSystem = (components: WokwiComponent[]) => {
   const [activeWire, setActiveWire] = useState<Wire | null>(null);
   const potentialTargetRef = useRef<{componentId: string, pinIndex: number} | null>(null);
   const lastMousePositionRef = useRef<{x: number, y: number} | null>(null);
+  const [wireBeingEdited, setWireBeingEdited] = useState<string | null>(null);
   
+  // Start a new wire from a component pin
   const startWire = useCallback((componentId: string, pinIndex: number, x: number, y: number) => {
     console.log(`Starting wire from component ${componentId}, pin ${pinIndex} at (${x}, ${y})`);
     
@@ -46,6 +49,7 @@ export const useWireSystem = (components: WokwiComponent[]) => {
     return newWire;
   }, [components]);
   
+  // Update the endpoint of an active wire (during dragging)
   const updateWireEndPoint = useCallback((wire: Wire, x: number, y: number): Wire => {
     if (!wire) return wire;
     
@@ -65,23 +69,70 @@ export const useWireSystem = (components: WokwiComponent[]) => {
     };
   }, []);
   
+  // Add an intermediate point to the active wire
   const addIntermediatePoint = useCallback((x: number, y: number): void => {
     if (!activeWire) return;
     
-    const lastPoint = activeWire.points[activeWire.points.length - 1];
-    const distance = Math.sqrt(Math.pow(x - lastPoint.x, 2) + Math.pow(y - lastPoint.y, 2));
-    if (distance < 10) return;
-    
-    const updatedWire = {
-      ...activeWire,
-      points: [...activeWire.points, { x, y }]
-    };
-    
-    console.log(`Added intermediate point at (${x}, ${y})`);
-    console.log('Updated wire points:', updatedWire.points);
-    setActiveWire(updatedWire);
+    // If the wire has at least 2 points, find the best place to insert the new point
+    if (activeWire.points.length >= 2) {
+      const result = findClosestPointOnWire(x, y, activeWire);
+      const segmentIndex = result.segmentIndex;
+      
+      // Insert the new point after the segment's start point
+      const updatedPoints = [...activeWire.points];
+      updatedPoints.splice(segmentIndex + 1, 0, { x, y });
+      
+      const updatedWire = {
+        ...activeWire,
+        points: updatedPoints
+      };
+      
+      console.log(`Added intermediate point at (${x}, ${y}) at segment ${segmentIndex}`);
+      setActiveWire(updatedWire);
+    } else {
+      // If the wire has only one point (start point), just add the new point
+      const lastPoint = activeWire.points[activeWire.points.length - 1];
+      const distance = Math.sqrt(Math.pow(x - lastPoint.x, 2) + Math.pow(y - lastPoint.y, 2));
+      
+      // Only add if the point is not too close to the last point
+      if (distance < 10) return;
+      
+      const updatedWire = {
+        ...activeWire,
+        points: [...activeWire.points, { x, y }]
+      };
+      
+      console.log(`Added intermediate point at (${x}, ${y})`);
+      setActiveWire(updatedWire);
+    }
   }, [activeWire]);
   
+  // Add point to an existing wire (not the active wire)
+  const addPointToExistingWire = useCallback((wireId: string, x: number, y: number): void => {
+    const wireToEdit = wires.find(w => w.id === wireId);
+    if (!wireToEdit) return;
+    
+    const result = findClosestPointOnWire(x, y, wireToEdit);
+    const segmentIndex = result.segmentIndex;
+    
+    const updatedWires = wires.map(wire => {
+      if (wire.id === wireId) {
+        const updatedPoints = [...wire.points];
+        updatedPoints.splice(segmentIndex + 1, 0, { x, y });
+        
+        return {
+          ...wire,
+          points: updatedPoints
+        };
+      }
+      return wire;
+    });
+    
+    console.log(`Added point to existing wire ${wireId} at segment ${segmentIndex}`);
+    setWires(updatedWires);
+  }, [wires]);
+  
+  // Complete a wire by connecting it to a target pin
   const completeWire = useCallback((
     wire: Wire,
     targetComponentId: string,
@@ -93,8 +144,17 @@ export const useWireSystem = (components: WokwiComponent[]) => {
     
     console.log(`Completing wire to component ${targetComponentId}, pin ${targetPinIndex} at (${finalX}, ${finalY})`);
     
-    const newPoints = [...wire.points];
-    newPoints[newPoints.length - 1] = { x: finalX, y: finalY };
+    let newPoints: WirePoint[];
+    
+    if (wire.points.length <= 2) {
+      // For simple wires with just start and end points, create an auto-routed path
+      const startPoint = wire.points[0];
+      newPoints = createAutoRoutedPoints(startPoint.x, startPoint.y, finalX, finalY);
+    } else {
+      // For manually routed wires, just ensure the last point is at the target pin
+      newPoints = [...wire.points];
+      newPoints[newPoints.length - 1] = { x: finalX, y: finalY };
+    }
     
     const completedWire = {
       ...wire,
@@ -109,6 +169,7 @@ export const useWireSystem = (components: WokwiComponent[]) => {
     return completedWire;
   }, []);
   
+  // Find a potential pin connection based on proximity
   const findPotentialPinConnection = useCallback((
     x: number,
     y: number,
@@ -178,6 +239,7 @@ export const useWireSystem = (components: WokwiComponent[]) => {
     } : null;
   }, [components, activeWire]);
   
+  // Handle pin click (start or complete a wire)
   const handlePinClick = useCallback((componentId: string, pinIndex: number, x: number, y: number) => {
     console.log(`Pin clicked: component ${componentId}, pin ${pinIndex} at (${x}, ${y})`);
     
@@ -204,35 +266,53 @@ export const useWireSystem = (components: WokwiComponent[]) => {
     }
   }, [activeWire, completeWire, startWire]);
   
+  // Handle click on the canvas (either add a point to active wire or add to existing wire)
   const handleCanvasClick = useCallback((x: number, y: number) => {
-    if (!activeWire) return;
-    
-    const potentialPin = findPotentialPinConnection(x, y);
-    if (potentialPin) {
-      if (potentialPin.componentId === activeWire.sourceComponentId && 
-          potentialPin.pinIndex === activeWire.sourcePinIndex) {
-        console.log('Clicked near source pin, ignoring');
+    if (activeWire) {
+      const potentialPin = findPotentialPinConnection(x, y);
+      if (potentialPin) {
+        if (potentialPin.componentId === activeWire.sourceComponentId && 
+            potentialPin.pinIndex === activeWire.sourcePinIndex) {
+          console.log('Clicked near source pin, ignoring');
+          return;
+        }
+        
+        const completedWire = completeWire(
+          activeWire,
+          potentialPin.componentId,
+          potentialPin.pinIndex,
+          potentialPin.x,
+          potentialPin.y
+        );
+        
+        console.log('Wire completed via canvas click:', completedWire);
+        setWires(prev => [...prev, completedWire]);
+        setActiveWire(null);
         return;
       }
       
-      const completedWire = completeWire(
-        activeWire,
-        potentialPin.componentId,
-        potentialPin.pinIndex,
-        potentialPin.x,
-        potentialPin.y
-      );
-      
-      console.log('Wire completed via canvas click:', completedWire);
-      setWires(prev => [...prev, completedWire]);
-      setActiveWire(null);
+      console.log('Adding intermediate point at', x, y);
+      addIntermediatePoint(x, y);
       return;
     }
     
-    console.log('Adding intermediate point at', x, y);
-    addIntermediatePoint(x, y);
-  }, [activeWire, findPotentialPinConnection, addIntermediatePoint, completeWire]);
+    // If we're not creating a wire, see if the click is near an existing wire
+    if (!activeWire) {
+      for (const wire of wires) {
+        if (!wire.isComplete) continue;
+        
+        const { segmentIndex, distance } = findClosestPointOnWire(x, y, wire);
+        
+        if (distance < 10) {
+          console.log(`Click near wire ${wire.id}, segment ${segmentIndex}`);
+          addPointToExistingWire(wire.id, x, y);
+          return;
+        }
+      }
+    }
+  }, [activeWire, findPotentialPinConnection, addIntermediatePoint, addPointToExistingWire, completeWire, wires]);
   
+  // Handle mouse move (update active wire end point or handle potential connections)
   const handleMouseMove = useCallback((e: KonvaEventObject<MouseEvent>) => {
     if (!activeWire) return;
     
@@ -265,6 +345,7 @@ export const useWireSystem = (components: WokwiComponent[]) => {
     }
   }, [activeWire, updateWireEndPoint, findPotentialPinConnection]);
   
+  // Handle mouse up (complete a wire if over a valid pin)
   const handleStageMouseUp = useCallback(() => {
     if (activeWire && potentialTargetRef.current) {
       const { componentId, pinIndex } = potentialTargetRef.current;
@@ -291,75 +372,38 @@ export const useWireSystem = (components: WokwiComponent[]) => {
     }
   }, [activeWire, components, completeWire]);
   
+  // Handle click on the Konva stage
   const handleKonvaClick = useCallback((e: KonvaEventObject<MouseEvent>) => {
-    if (!activeWire) {
-      console.log("No active wire, ignoring Konva click");
-      return;
-    }
-    
-    const stage = e.target.getStage();
-    if (!stage) {
+    if (!e.target.getStage()) {
       console.log("No stage found, ignoring Konva click");
       return;
     }
     
+    const stage = e.target.getStage();
     const pointerPos = stage.getPointerPosition();
     if (!pointerPos) {
       console.log("No pointer position found, ignoring Konva click");
       return;
     }
     
+    // Convert from screen coordinates to canvas coordinates
     const canvasX = (pointerPos.x - stage.x()) / stage.scaleX();
     const canvasY = (pointerPos.y - stage.y()) / stage.scaleY();
     
     console.log("Konva stage clicked at:", canvasX, canvasY);
     
-    const potentialPin = findPotentialPinConnection(canvasX, canvasY);
-    if (potentialPin) {
-      if (potentialPin.componentId === activeWire.sourceComponentId && 
-          potentialPin.pinIndex === activeWire.sourcePinIndex) {
-        console.log('Clicked on source pin, ignoring');
-        return;
-      }
-      
-      const completedWire = completeWire(
-        activeWire,
-        potentialPin.componentId,
-        potentialPin.pinIndex,
-        potentialPin.x,
-        potentialPin.y
-      );
-      
-      console.log('Wire completed via Konva click on pin:', completedWire);
-      setWires(prev => [...prev, completedWire]);
-      setActiveWire(null);
-      return;
-    }
-    
-    // This is the key part for adding intermediate points
-    const lastPoint = activeWire.points[activeWire.points.length - 1];
-    const distance = Math.sqrt(Math.pow(canvasX - lastPoint.x, 2) + Math.pow(canvasY - lastPoint.y, 2));
-    
-    if (distance >= 10) {
-      console.log('Adding intermediate point via Konva click', { canvasX, canvasY });
-      const updatedWire = {
-        ...activeWire,
-        points: [...activeWire.points, { x: canvasX, y: canvasY }]
-      };
-      
-      console.log('Updated wire points via Konva click:', updatedWire.points);
-      setActiveWire(updatedWire);
-    } else {
-      console.log('Points too close, not adding new point');
-    }
-  }, [activeWire, findPotentialPinConnection, completeWire]);
+    // Use the common canvas click handler
+    handleCanvasClick(canvasX, canvasY);
+  }, [handleCanvasClick]);
   
+  // Cancel the active wire being created
   const cancelActiveWire = useCallback(() => {
     console.log('Cancelling active wire');
     setActiveWire(null);
     potentialTargetRef.current = null;
   }, []);
   
+  // Update wires when components move
   useEffect(() => {
     if (wires.length === 0) return;
     
@@ -384,14 +428,13 @@ export const useWireSystem = (components: WokwiComponent[]) => {
       const targetY = targetComponent.top + targetPin.y;
       
       if (wire.points.length === 2) {
+        // For simple wires with just start and end points, recreate the auto-routed path
         return {
           ...wire,
-          points: [
-            { x: sourceX, y: sourceY },
-            { x: targetX, y: targetY }
-          ]
+          points: createAutoRoutedPoints(sourceX, sourceY, targetX, targetY)
         };
       } else {
+        // For manually routed wires, just update the start and end points
         const updatedPoints = [...wire.points];
         updatedPoints[0] = { x: sourceX, y: sourceY };
         updatedPoints[updatedPoints.length - 1] = { x: targetX, y: targetY };
@@ -416,9 +459,10 @@ export const useWireSystem = (components: WokwiComponent[]) => {
     handleCanvasClick,
     handleMouseMove,
     handleStageMouseUp,
-    handleKonvaClick,
+    handleKonvaClick, // This is essential for proper wire point creation
     cancelActiveWire,
     potentialTarget: potentialTargetRef.current,
-    potentialTargetRef
+    potentialTargetRef,
+    addPointToExistingWire
   };
 };
