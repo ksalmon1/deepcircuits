@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { 
   isWokwiLoaded, 
@@ -57,7 +56,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     handleCanvasClick,
     handleMouseMove,
     handleStageMouseUp,
-    handleKonvaClick, // Make sure to destructure handleKonvaClick from the hook
+    handleKonvaClick,
     cancelActiveWire,
     potentialTarget,
     potentialTargetRef
@@ -760,7 +759,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
           stageHeight={canvasSize.height}
           onMouseMove={handleMouseMove}
           onMouseUp={handleStageMouseUp}
-          onClick={handleKonvaClick} // Pass the handleKonvaClick function to KonvaWireRenderer
+          onClick={handleKonvaClick}
           zoom={zoom}
           offset={offset}
         />

@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { WokwiComponent } from '@/integrations/wokwi/WokwiIntegration';
 import { getWireColorFromSignal, getPinSignalType } from '@/utils/wireUtils';
@@ -69,12 +68,10 @@ export const useWireSystem = (components: WokwiComponent[]) => {
   const addIntermediatePoint = useCallback((x: number, y: number): void => {
     if (!activeWire) return;
     
-    // Don't add a point that's too close to the last point to avoid duplicates
     const lastPoint = activeWire.points[activeWire.points.length - 1];
     const distance = Math.sqrt(Math.pow(x - lastPoint.x, 2) + Math.pow(y - lastPoint.y, 2));
-    if (distance < 10) return; // Minimum distance between points
+    if (distance < 10) return;
     
-    // Create a new point and add it to the wire
     const updatedWire = {
       ...activeWire,
       points: [...activeWire.points, { x, y }]
@@ -96,7 +93,6 @@ export const useWireSystem = (components: WokwiComponent[]) => {
     
     console.log(`Completing wire to component ${targetComponentId}, pin ${targetPinIndex} at (${finalX}, ${finalY})`);
     
-    // Get current points and add the final point
     const newPoints = [...wire.points];
     newPoints[newPoints.length - 1] = { x: finalX, y: finalY };
     
@@ -211,10 +207,8 @@ export const useWireSystem = (components: WokwiComponent[]) => {
   const handleCanvasClick = useCallback((x: number, y: number) => {
     if (!activeWire) return;
     
-    // If we're near a pin, don't add an intermediate point
     const potentialPin = findPotentialPinConnection(x, y);
     if (potentialPin) {
-      // If near a pin and it's not the source pin, complete the wire
       if (potentialPin.componentId === activeWire.sourceComponentId && 
           potentialPin.pinIndex === activeWire.sourcePinIndex) {
         console.log('Clicked near source pin, ignoring');
@@ -235,7 +229,6 @@ export const useWireSystem = (components: WokwiComponent[]) => {
       return;
     }
     
-    // Add an intermediate point to the wire if we're not near a pin
     console.log('Adding intermediate point at', x, y);
     addIntermediatePoint(x, y);
   }, [activeWire, findPotentialPinConnection, addIntermediatePoint, completeWire]);
@@ -307,13 +300,11 @@ export const useWireSystem = (components: WokwiComponent[]) => {
     const pointerPos = stage.getPointerPosition();
     if (!pointerPos) return;
     
-    // Convert the pointer position to canvas coordinates
     const canvasX = (pointerPos.x - stage.x()) / stage.scaleX();
     const canvasY = (pointerPos.y - stage.y()) / stage.scaleY();
     
     console.log("Konva stage clicked at:", canvasX, canvasY);
     
-    // Check if we're clicking on a pin, or just adding an intermediate point
     const potentialPin = findPotentialPinConnection(canvasX, canvasY);
     if (potentialPin) {
       if (potentialPin.componentId === activeWire.sourceComponentId && 
@@ -322,7 +313,6 @@ export const useWireSystem = (components: WokwiComponent[]) => {
         return;
       }
       
-      // Complete the wire if we're clicking on a target pin
       const completedWire = completeWire(
         activeWire,
         potentialPin.componentId,
@@ -335,14 +325,10 @@ export const useWireSystem = (components: WokwiComponent[]) => {
       setWires(prev => [...prev, completedWire]);
       setActiveWire(null);
     } else {
-      // Add an intermediate point if we're not clicking on a pin
-      console.log('Adding intermediate point via Konva click at', canvasX, canvasY);
-      
-      // Ensure we don't add duplicate points
       const lastPoint = activeWire.points[activeWire.points.length - 1];
       const distance = Math.sqrt(Math.pow(canvasX - lastPoint.x, 2) + Math.pow(canvasY - lastPoint.y, 2));
       
-      if (distance >= 10) { // Minimum distance between points
+      if (distance >= 10) {
         const updatedWire = {
           ...activeWire,
           points: [...activeWire.points, { x: canvasX, y: canvasY }]
@@ -383,8 +369,6 @@ export const useWireSystem = (components: WokwiComponent[]) => {
       const targetX = targetComponent.left + targetPin.x;
       const targetY = targetComponent.top + targetPin.y;
       
-      // If there are only two points, update them to match the pins
-      // If there are more than two points (custom routing), only update the first and last
       if (wire.points.length === 2) {
         return {
           ...wire,
