@@ -84,6 +84,7 @@ const KonvaWireRenderer: React.FC<KonvaWireRendererProps> = ({
 
   // Handle point drag start
   const handlePointDragStart = (wireId: string, pointIndex: number) => {
+    console.log(`Point drag started: wire ${wireId}, point ${pointIndex}`);
     setDraggingPoint({ wireId, pointIndex });
   };
 
@@ -94,11 +95,14 @@ const KonvaWireRenderer: React.FC<KonvaWireRendererProps> = ({
     const stage = e.target.getStage();
     if (!stage) return;
     
+    // Get the current position in stage coordinates
     const pos = stage.getPointerPosition();
     if (!pos) return;
     
     // Convert from screen coordinates to canvas coordinates
     const canvasPos = untransformPoint({ x: pos.x, y: pos.y });
+    
+    console.log(`Point dragging: wire ${draggingPoint.wireId}, point ${draggingPoint.pointIndex} to position:`, canvasPos);
     
     // Report the point move to the parent component
     onPointMove(draggingPoint.wireId, draggingPoint.pointIndex, canvasPos.x, canvasPos.y);
@@ -106,6 +110,7 @@ const KonvaWireRenderer: React.FC<KonvaWireRendererProps> = ({
 
   // Handle point drag end
   const handlePointDragEnd = () => {
+    console.log('Point drag ended');
     setDraggingPoint(null);
   };
 
@@ -128,9 +133,9 @@ const KonvaWireRenderer: React.FC<KonvaWireRendererProps> = ({
       <Layer>
         {/* Render completed wires */}
         {wires.map((wire, wireIndex) => (
-          <Group key={`wire-group-${wire.id}-${wireIndex}`}>
+          <Group key={`wire-group-${wire.id}`}>
             <Line
-              key={`wire-line-${wire.id}-${wireIndex}`}
+              key={`wire-line-${wire.id}`}
               points={transformPoints(wirePointsToFlatArray(wire))}
               stroke={wire.color}
               strokeWidth={4} // Increased width for better visibility
@@ -149,11 +154,11 @@ const KonvaWireRenderer: React.FC<KonvaWireRendererProps> = ({
               const transformedPoint = transformPoint(point);
               
               // Determine if this point can be dragged (not first or last point of completed wire)
-              const canDrag = wire.isComplete ? (pointIndex !== 0 && pointIndex !== wire.points.length - 1) : false;
+              const canDrag = wire.isComplete && (pointIndex !== 0 && pointIndex !== wire.points.length - 1);
               
               return (
                 <Circle
-                  key={`wire-${wire.id}-point-${pointIndex}-${wireIndex}`}
+                  key={`wire-${wire.id}-point-${pointIndex}`}
                   x={transformedPoint.x}
                   y={transformedPoint.y}
                   radius={5}
