@@ -31,6 +31,7 @@ const KonvaWireRenderer: React.FC<KonvaWireRendererProps> = ({
 }) => {
   const stageRef = useRef<any>(null);
   const [draggingPoint, setDraggingPoint] = useState<{wireId: string, pointIndex: number} | null>(null);
+  const [hoveredPoint, setHoveredPoint] = useState<{wireId: string, pointIndex: number} | null>(null);
   
   // Convert wire points to flat array for Konva Line
   const wirePointsToFlatArray = (wire: Wire): number[] => {
@@ -95,16 +96,17 @@ const KonvaWireRenderer: React.FC<KonvaWireRendererProps> = ({
     const stage = e.target.getStage();
     if (!stage) return;
     
-    // Get the current position in stage coordinates
+    // Get the current pointer position in stage coordinates
     const pos = stage.getPointerPosition();
     if (!pos) return;
     
-    // Convert from screen coordinates to canvas coordinates
+    // Convert position from screen coordinates to canvas coordinates
+    // This is critical - we need to account for zoom and offset correctly
     const canvasPos = untransformPoint({ x: pos.x, y: pos.y });
     
     console.log(`Point dragging: wire ${draggingPoint.wireId}, point ${draggingPoint.pointIndex} to position:`, canvasPos);
     
-    // Report the point move to the parent component
+    // Report the point move to the parent component using canvas coordinates
     onPointMove(draggingPoint.wireId, draggingPoint.pointIndex, canvasPos.x, canvasPos.y);
   };
 
@@ -112,6 +114,16 @@ const KonvaWireRenderer: React.FC<KonvaWireRendererProps> = ({
   const handlePointDragEnd = () => {
     console.log('Point drag ended');
     setDraggingPoint(null);
+  };
+  
+  // Handle point hover
+  const handlePointHover = (wireId: string, pointIndex: number) => {
+    setHoveredPoint({ wireId, pointIndex });
+  };
+  
+  // Handle point hover exit
+  const handlePointHoverExit = () => {
+    setHoveredPoint(null);
   };
 
   return (
@@ -132,65 +144,79 @@ const KonvaWireRenderer: React.FC<KonvaWireRendererProps> = ({
     >
       <Layer>
         {/* Render completed wires */}
-        {wires.map((wire, wireIndex) => (
-          <Group key={`wire-group-${wire.id}`}>
-            <Line
-              key={`wire-line-${wire.id}`}
-              points={transformPoints(wirePointsToFlatArray(wire))}
-              stroke={wire.color}
-              strokeWidth={4} // Increased width for better visibility
-              lineCap="round"
-              lineJoin="round"
-              listening={false}
-              opacity={1.0}
-            />
-            {/* Render wire points for each wire */}
-            {wire.points.map((point, pointIndex) => {
-              // Skip rendering points for the first and last points of completed wires
-              if (wire.isComplete && (pointIndex === 0 || pointIndex === wire.points.length - 1)) {
-                return null;
-              }
+        {wires.map((wire) => {
+          const wireKey = `wire-${wire.id}`;
+          return (
+            <Group key={wireKey}>
+              <Line
+                key={`${wireKey}-line`}
+                points={transformPoints(wirePointsToFlatArray(wire))}
+                stroke={wire.color}
+                strokeWidth={4}
+                lineCap="round"
+                lineJoin="round"
+                listening={false}
+                opacity={1.0}
+              />
               
-              const transformedPoint = transformPoint(point);
-              
-              // Determine if this point can be dragged (not first or last point of completed wire)
-              const canDrag = wire.isComplete && (pointIndex !== 0 && pointIndex !== wire.points.length - 1);
-              
-              return (
-                <Circle
-                  key={`wire-${wire.id}-point-${pointIndex}`}
-                  x={transformedPoint.x}
-                  y={transformedPoint.y}
-                  radius={5}
-                  fill={wire.color}
-                  stroke="#fff"
-                  strokeWidth={1}
-                  opacity={1}
-                  listening={canDrag}
-                  draggable={canDrag}
-                  onDragStart={() => handlePointDragStart(wire.id, pointIndex)}
-                  onDragMove={handlePointDragMove}
-                  onDragEnd={handlePointDragEnd}
-                />
-              );
-            })}
-          </Group>
-        ))}
+              {/* Render wire points for each wire */}
+              {wire.points.map((point, pointIndex) => {
+                // Skip rendering points for the first and last points of completed wires
+                if (wire.isComplete && (pointIndex === 0 || pointIndex === wire.points.length - 1)) {
+                  return null;
+                }
+                
+                const transformedPoint = transformPoint(point);
+                
+                // Determine if this point can be dragged (not first or last point of completed wire)
+                const canDrag = wire.isComplete && (pointIndex !== 0 && pointIndex !== wire.points.length - 1);
+                
+                // Determine if this point is currently being hovered
+                const isHovered = hoveredPoint && 
+                                  hoveredPoint.wireId === wire.id && 
+                                  hoveredPoint.pointIndex === pointIndex;
+                
+                const pointKey = `${wireKey}-point-${pointIndex}`;
+                
+                return (
+                  <Circle
+                    key={pointKey}
+                    x={transformedPoint.x}
+                    y={transformedPoint.y}
+                    radius={isHovered ? 7 : 5}
+                    fill={isHovered ? '#9B87F5' : wire.color}
+                    stroke={isHovered ? '#FFFFFF' : '#FFFFFF'}
+                    strokeWidth={isHovered ? 2 : 1}
+                    opacity={isHovered ? 1 : 0.8}
+                    listening={canDrag}
+                    draggable={canDrag}
+                    onDragStart={() => handlePointDragStart(wire.id, pointIndex)}
+                    onDragMove={handlePointDragMove}
+                    onDragEnd={handlePointDragEnd}
+                    onMouseEnter={() => handlePointHover(wire.id, pointIndex)}
+                    onMouseLeave={handlePointHoverExit}
+                  />
+                );
+              })}
+            </Group>
+          );
+        })}
         
         {/* Render active wire being drawn */}
         {activeWire && (
-          <Group key={`active-wire-group-${activeWire.id}`}>
+          <Group key={`active-wire-${activeWire.id}`}>
             <Line
               key={`active-wire-line-${activeWire.id}`}
               points={transformPoints(wirePointsToFlatArray(activeWire))}
               stroke={activeWire.color}
-              strokeWidth={4} // Increased width for better visibility
+              strokeWidth={4}
               lineCap="round"
               lineJoin="round"
-              dash={[6, 3]} // More visible dashed line for the wire being drawn
+              dash={[6, 3]}
               listening={false}
               opacity={0.8}
             />
+            
             {/* Render active wire points */}
             {activeWire.points.map((point, pointIndex) => {
               // Skip rendering the last point for active wire (follows the mouse)
