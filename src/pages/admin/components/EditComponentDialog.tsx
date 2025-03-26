@@ -1,61 +1,37 @@
-import React, { useState } from 'react';
-import { ComponentLibraryItem } from '@/services/componentLibraryService';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogFooter, 
-  DialogHeader, 
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+import React from "react";
+import { ComponentLibraryItem } from "@/services/componentLibraryService";
+import { ComponentPin } from "@/types/database";
 import { Button } from "@/components/ui/button";
-import { 
-  Tabs, 
-  TabsContent, 
-  TabsList, 
-  TabsTrigger 
-} from "@/components/ui/tabs";
-import { 
-  Form, 
-  FormControl, 
-  FormDescription, 
-  FormField, 
-  FormItem, 
-  FormLabel, 
-  FormMessage 
-} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, ListFilter } from "lucide-react";
-import { PinEditorTab } from './PinEditorTab';
-import { PropertiesTab } from './PropertiesTab';
-import { PreviewTab } from './PreviewTab';
-import { useToast } from '@/hooks/use-toast';
+import { Badge } from "@/components/ui/badge";
+import { 
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger
+} from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  isWokwiLoaded,
-  forceLoadWokwiElements,
-  isOriginalWokwiComponent,
-  getComponentPinInfo,
-  WokwiPin
-} from '@/integrations/wokwi/WokwiIntegration';
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { AlertCircle, Cpu } from "lucide-react";
+import { ORIGINAL_WOKWI_COMPONENTS } from "@/integrations/wokwi/WokwiIntegration";
+import VisualPinEditor from "@/components/CircuitEditor/VisualPinEditor";
+import DynamicPropertyEditor from "@/components/CircuitEditor/DynamicPropertyEditor";
+import EnhancedComponentPreview from "@/components/CircuitEditor/EnhancedComponentPreview";
 
-// Interface for our custom component properties
-export interface CustomComponentConfig {
-  type: string;
+interface PinConfig {
   name: string;
-  description: string;
-  category: string;
-  svgPath: string;
-  pins: WokwiPin[];
-  properties?: Record<string, any>;
+  x: number;
+  y: number;
+  signals: string[];
 }
 
 interface EditComponentDialogProps {
@@ -72,13 +48,9 @@ interface EditComponentDialogProps {
   isUpdatingComponent: boolean;
   updateComponentProperty: (property: string, value: any) => void;
   updateComponentProperties: (properties: Record<string, any>) => void;
-  updatePinConfiguration: (pinConfig: any[]) => void;
+  updatePinConfiguration: (pinConfig: PinConfig[]) => void;
 }
 
-/**
- * Component Edit Dialog
- * Provides a modal interface for editing component details
- */
 const EditComponentDialog = ({
   isOpen,
   onOpenChange,
@@ -93,191 +65,210 @@ const EditComponentDialog = ({
   isUpdatingComponent,
   updateComponentProperty,
   updateComponentProperties,
-  updatePinConfiguration,
+  updatePinConfiguration
 }: EditComponentDialogProps) => {
-  const { toast } = useToast();
-  
-  // Get all unique component types from available elements
-  const getAvailableComponentTypes = () => {
-    if (!editedComponent) return [];
-    
-    // Get all available component types from wokwi-elements
-    const availableElements = (window as any).wokwiElements || {};
-    
-    // Filter out custom components
-    const componentTypes = Object.keys(availableElements).filter(
-      type => !type.startsWith('custom-')
-    );
-    
-    return componentTypes;
-  };
-
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-4xl">
+      <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Edit Component</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            Edit Component
+            {editedComponent?.isOriginal && (
+              <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200">
+                Original Wokwi Component
+              </Badge>
+            )}
+          </DialogTitle>
           <DialogDescription>
-            Update details for this component in the component library
+            Modify component properties and configuration.
           </DialogDescription>
         </DialogHeader>
 
-        {!editedComponent ? (
-          <div className="flex justify-center items-center p-6">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <span className="ml-2">Loading component details...</span>
+        {isLoadingComponentDetails ? (
+          <div className="py-8 text-center">
+            <Cpu className="h-8 w-8 mx-auto mb-2 animate-spin text-primary" />
+            <p>Loading component details...</p>
           </div>
-        ) : (
-          <Tabs value={activeTab} onValueChange={onActiveTabChange} className="space-y-4">
-            <TabsList className="grid w-full grid-cols-3">
+        ) : componentDetailsError ? (
+          <div className="py-8 text-center text-destructive">
+            <AlertCircle className="h-8 w-8 mx-auto mb-2" />
+            <p>Error loading component details</p>
+            <p className="text-sm mt-2">{componentDetailsError.message}</p>
+            <Button 
+              className="mt-4" 
+              variant="outline" 
+              onClick={() => onOpenChange(false)}
+            >
+              Close
+            </Button>
+          </div>
+        ) : editedComponent && (
+          <Tabs 
+            defaultValue="details" 
+            className="mt-4"
+            value={activeTab}
+            onValueChange={onActiveTabChange}
+          >
+            <TabsList className="grid grid-cols-4">
               <TabsTrigger value="details">Basic Details</TabsTrigger>
-              <TabsTrigger value="pins">Pin Configuration</TabsTrigger>
               <TabsTrigger value="properties">Properties</TabsTrigger>
+              <TabsTrigger value="pins">Pin Configuration</TabsTrigger>
+              <TabsTrigger value="preview">Preview</TabsTrigger>
             </TabsList>
-
-            <TabsContent value="details" className="space-y-4">
+            
+            <TabsContent value="details" className="py-4">
               <div className="grid gap-4">
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <FormLabel htmlFor="name">Component Name</FormLabel>
-                    <Input
-                      id="name"
-                      value={editedComponent.name}
+                  <div className="grid gap-2">
+                    <label htmlFor="name">Component Name</label>
+                    <Input 
+                      id="name" 
+                      value={editedComponent.name} 
                       onChange={(e) => updateComponentProperty('name', e.target.value)}
-                      className="mt-1"
                     />
-                    <FormDescription>
-                      The display name for this component
-                    </FormDescription>
                   </div>
-                  
-                  <div>
-                    <FormLabel htmlFor="category">Category</FormLabel>
+                  <div className="grid gap-2">
+                    <label htmlFor="type">Wokwi Element Type</label>
                     <Select 
-                      value={editedComponent.category} 
+                      value={editedComponent.type}
+                      onValueChange={(value) => updateComponentProperty('type', value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select type" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-[300px] overflow-y-auto">
+                        {ORIGINAL_WOKWI_COMPONENTS.map(type => (
+                          <SelectItem key={type} value={type}>{type}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <label htmlFor="category">Category</label>
+                    <Select 
+                      value={editedComponent.category}
                       onValueChange={(value) => updateComponentProperty('category', value)}
                     >
-                      <SelectTrigger className="mt-1">
-                        <SelectValue placeholder="Select a category" />
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select category" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="input">Input</SelectItem>
                         <SelectItem value="output">Output</SelectItem>
-                        <SelectItem value="power">Power</SelectItem>
-                        <SelectItem value="microcontrollers">Microcontrollers</SelectItem>
                         <SelectItem value="passive">Passive</SelectItem>
-                        <SelectItem value="integrated">Integrated Circuits</SelectItem>
+                        <SelectItem value="microcontroller">Microcontroller</SelectItem>
+                        <SelectItem value="sensor">Sensor</SelectItem>
+                        <SelectItem value="display">Display</SelectItem>
+                        <SelectItem value="power">Power</SelectItem>
                         <SelectItem value="other">Other</SelectItem>
                       </SelectContent>
                     </Select>
-                    <FormDescription>
-                      The category this component belongs to
-                    </FormDescription>
+                  </div>
+                  <div className="grid gap-2">
+                    <label htmlFor="svgPath">SVG Path (Optional)</label>
+                    <Input 
+                      id="svgPath" 
+                      value={editedComponent.svgPath || ''} 
+                      onChange={(e) => updateComponentProperty('svgPath', e.target.value)}
+                      placeholder="URL or path to custom SVG"
+                    />
                   </div>
                 </div>
-
+                
                 <div className="grid gap-2">
-                  <FormLabel htmlFor="type">Component Type</FormLabel>
-                  <Select 
-                    value={editedComponent.type} 
-                    onValueChange={(value) => updateComponentProperty('type', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a component type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="custom">Custom</SelectItem>
-                      {getAvailableComponentTypes().map((type) => (
-                        <SelectItem key={type} value={type}>
-                          {type}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormDescription>
-                    The identifier or type of component (e.g. wokwi-led, wokwi-resistor)
-                  </FormDescription>
-                </div>
-
-                <div>
-                  <FormLabel htmlFor="description">Description</FormLabel>
-                  <Textarea
-                    id="description"
-                    value={editedComponent.description}
+                  <label htmlFor="description">Description</label>
+                  <Textarea 
+                    id="description" 
+                    value={editedComponent.description || ''} 
                     onChange={(e) => updateComponentProperty('description', e.target.value)}
-                    className="mt-1"
+                    rows={3}
                   />
-                  <FormDescription>
-                    A brief description of the component and its function
-                  </FormDescription>
                 </div>
-
-                <div className="flex items-center space-x-2 pt-2">
-                  <Switch
-                    id="component-active"
-                    checked={editedComponent.enabled}
+                
+                <div className="flex items-center space-x-2">
+                  <Switch 
+                    id="enabled" 
+                    checked={editedComponent.enabled} 
                     onCheckedChange={(checked) => updateComponentProperty('enabled', checked)}
                   />
-                  <FormLabel htmlFor="component-active" className="cursor-pointer">
-                    Component Active
-                  </FormLabel>
+                  <label htmlFor="enabled">Enable component for users</label>
                 </div>
               </div>
             </TabsContent>
-
-            <TabsContent value="pins">
-              {isLoadingComponentDetails ? (
-                <div className="flex justify-center items-center p-6">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  <span className="ml-2">Loading pin details...</span>
-                </div>
-              ) : componentDetailsError ? (
-                <div className="text-center p-6 text-destructive">
-                  Error loading pin details: {componentDetailsError.message}
-                </div>
-              ) : (
-                <PinEditorTab 
-                  component={editedComponent}
-                  updatePinConfiguration={updatePinConfiguration}
-                  wokwiReady={wokwiReady}
+            
+            <TabsContent value="properties" className="py-4">
+              {editedComponent && (
+                <DynamicPropertyEditor 
+                  properties={editedComponent.properties || {}}
+                  onChange={updateComponentProperties}
+                  componentType={editedComponent.type}
                 />
               )}
             </TabsContent>
-
-            <TabsContent value="properties">
-              {isLoadingComponentDetails ? (
-                <div className="flex justify-center items-center p-6">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  <span className="ml-2">Loading properties...</span>
+            
+            <TabsContent value="pins" className="py-4 min-h-[450px]">
+              <div className="flex flex-col h-full">
+                <div className="border rounded-md bg-gray-50 p-4 h-full" style={{ minHeight: '500px' }}>
+                  <VisualPinEditor
+                    componentType={editedComponent.type}
+                    pins={editedComponent.pins || []}
+                    onPinsChange={updatePinConfiguration}
+                    readonly={false}
+                    height={500}
+                  />
                 </div>
-              ) : componentDetailsError ? (
-                <div className="text-center p-6 text-destructive">
-                  Error loading properties: {componentDetailsError.message}
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="preview" className="py-4">
+              <div className="flex flex-col">
+                <h3 className="text-lg font-medium mb-4">Component Preview</h3>
+                
+                <div className="border rounded-md bg-gray-50 p-6">
+                  <div className="flex justify-center items-center">
+                    {wokwiReady ? (
+                      <EnhancedComponentPreview
+                        componentType={editedComponent.type}
+                        properties={editedComponent.properties || {}}
+                        previewId={`preview-${editedComponent.id}`}
+                      />
+                    ) : (
+                      <div className="text-center py-8">
+                        <div className="flex justify-center mb-4">
+                          <AlertCircle className="h-8 w-8 text-amber-500" />
+                        </div>
+                        <p className="font-medium">Loading Wokwi Elements...</p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Please wait while the component preview is being initialized.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="mt-6 space-y-3 text-sm">
+                    <p className="font-medium">Component Properties Preview:</p>
+                    <div className="bg-gray-100 p-3 rounded-md">
+                      <pre className="text-xs overflow-auto max-h-40">
+                        {JSON.stringify(editedComponent.properties || {}, null, 2)}
+                      </pre>
+                    </div>
+                  </div>
                 </div>
-              ) : (
-                <PropertiesTab 
-                  component={editedComponent}
-                  updateComponentProperties={updateComponentProperties}
-                />
-              )}
+              </div>
             </TabsContent>
           </Tabs>
         )}
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
+        
+        <DialogFooter className="mt-6">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button 
-            onClick={onSaveComponent} 
-            disabled={isUpdatingComponent || isLoadingComponentDetails}
+            onClick={onSaveComponent}
+            disabled={isUpdatingComponent}
           >
-            {isUpdatingComponent ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Saving...
-              </>
-            ) : "Save Changes"}
+            {isUpdatingComponent ? 'Saving...' : 'Save Changes'}
           </Button>
         </DialogFooter>
       </DialogContent>
