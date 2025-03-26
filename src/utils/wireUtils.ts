@@ -68,6 +68,25 @@ export const updateWireEndPoint = (
 };
 
 /**
+ * Adds an intermediate point to a wire (for custom routing)
+ */
+export const addWireIntermediatePoint = (
+  wire: Wire,
+  x: number,
+  y: number
+): Wire => {
+  if (!wire) return wire;
+  
+  const newPoints = [...wire.points];
+  newPoints.push({ x, y });
+  
+  return {
+    ...wire,
+    points: newPoints
+  };
+};
+
+/**
  * Completes a wire by connecting it to a target pin
  */
 export const completeWire = (

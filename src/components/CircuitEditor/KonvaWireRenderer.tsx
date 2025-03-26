@@ -1,6 +1,6 @@
 
 import React, { useEffect, useRef } from 'react';
-import { Layer, Line, Stage } from 'react-konva';
+import { Layer, Line, Stage, Circle, Group } from 'react-konva';
 import { Wire } from '@/hooks/useWireSystem';
 import { KonvaEventObject } from 'konva/lib/Node';
 
@@ -52,6 +52,34 @@ const KonvaWireRenderer: React.FC<KonvaWireRendererProps> = ({
     }
   }, [wires, activeWire, zoom, offset]);
 
+  // Render dots for intermediate wire points
+  const renderWirePoints = (wire: Wire, isActive: boolean = false) => {
+    if (wire.points.length <= 2) return null; // No intermediate points
+
+    return wire.points.map((point, index) => {
+      // Skip first and last points (those are on pins)
+      if (isActive && index === wire.points.length - 1) return null;
+      if (!isActive && (index === 0 || index === wire.points.length - 1)) return null;
+      
+      const x = point.x * zoom + offset.x;
+      const y = point.y * zoom + offset.y;
+      
+      return (
+        <Circle
+          key={`wire-${wire.id}-point-${index}`}
+          x={x}
+          y={y}
+          radius={5}
+          fill={wire.color}
+          stroke="#fff"
+          strokeWidth={1}
+          opacity={isActive ? 0.8 : 1}
+          listening={false}
+        />
+      );
+    });
+  };
+
   return (
     <Stage 
       ref={stageRef}
@@ -69,14 +97,10 @@ const KonvaWireRenderer: React.FC<KonvaWireRendererProps> = ({
     >
       <Layer>
         {/* Render completed wires */}
-        {wires.map(wire => {
-          const flatPoints = wirePointsToFlatArray(wire);
-          const transformedPoints = transformPoints(flatPoints);
-          
-          return (
+        {wires.map(wire => (
+          <Group key={wire.id}>
             <Line
-              key={wire.id}
-              points={transformedPoints}
+              points={transformPoints(wirePointsToFlatArray(wire))}
               stroke={wire.color}
               strokeWidth={4} // Increased width for better visibility
               lineCap="round"
@@ -84,21 +108,25 @@ const KonvaWireRenderer: React.FC<KonvaWireRendererProps> = ({
               listening={false}
               opacity={1.0}
             />
-          );
-        })}
+            {renderWirePoints(wire)}
+          </Group>
+        ))}
         
         {/* Render active wire being drawn */}
         {activeWire && (
-          <Line
-            points={transformPoints(wirePointsToFlatArray(activeWire))}
-            stroke={activeWire.color}
-            strokeWidth={4} // Increased width for better visibility
-            lineCap="round"
-            lineJoin="round"
-            dash={[6, 3]} // More visible dashed line for the wire being drawn
-            listening={false}
-            opacity={0.8}
-          />
+          <Group>
+            <Line
+              points={transformPoints(wirePointsToFlatArray(activeWire))}
+              stroke={activeWire.color}
+              strokeWidth={4} // Increased width for better visibility
+              lineCap="round"
+              lineJoin="round"
+              dash={[6, 3]} // More visible dashed line for the wire being drawn
+              listening={false}
+              opacity={0.8}
+            />
+            {renderWirePoints(activeWire, true)}
+          </Group>
         )}
       </Layer>
     </Stage>

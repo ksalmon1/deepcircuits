@@ -1,6 +1,7 @@
+
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { WokwiComponent } from '@/integrations/wokwi/WokwiIntegration';
-import { getWireColorFromSignal, getPinSignalType } from '@/utils/wireUtils';
+import { getWireColorFromSignal, getPinSignalType, addWireIntermediatePoint } from '@/utils/wireUtils';
 import { KonvaEventObject } from 'konva/lib/Node';
 
 export interface WirePoint {
@@ -64,6 +65,19 @@ export const useWireSystem = (components: WokwiComponent[]) => {
       points: newPoints
     };
   }, []);
+  
+  const addIntermediatePoint = useCallback((x: number, y: number): void => {
+    if (!activeWire) return;
+    
+    // Don't add a point that's too close to the last point to avoid duplicates
+    const lastPoint = activeWire.points[activeWire.points.length - 1];
+    const distance = Math.sqrt(Math.pow(x - lastPoint.x, 2) + Math.pow(y - lastPoint.y, 2));
+    if (distance < 10) return; // Minimum distance between points
+    
+    const updatedWire = addWireIntermediatePoint(activeWire, x, y);
+    console.log(`Added intermediate point at (${x}, ${y})`);
+    setActiveWire(updatedWire);
+  }, [activeWire]);
   
   const completeWire = useCallback((
     wire: Wire,
@@ -192,6 +206,17 @@ export const useWireSystem = (components: WokwiComponent[]) => {
     }
   }, [activeWire, completeWire, startWire]);
   
+  const handleCanvasClick = useCallback((x: number, y: number) => {
+    if (!activeWire) return;
+    
+    // If we're near a pin, don't add an intermediate point
+    const potentialPin = findPotentialPinConnection(x, y);
+    if (potentialPin) return;
+    
+    // Add an intermediate point to the wire
+    addIntermediatePoint(x, y);
+  }, [activeWire, findPotentialPinConnection, addIntermediatePoint]);
+  
   const handleMouseMove = useCallback((e: KonvaEventObject<MouseEvent>) => {
     if (!activeWire) return;
     
@@ -279,13 +304,25 @@ export const useWireSystem = (components: WokwiComponent[]) => {
       const targetX = targetComponent.left + targetPin.x;
       const targetY = targetComponent.top + targetPin.y;
       
-      return {
-        ...wire,
-        points: [
-          { x: sourceX, y: sourceY },
-          { x: targetX, y: targetY }
-        ]
-      };
+      // If there are only two points, update them to match the pins
+      // If there are more than two points (custom routing), only update the first and last
+      if (wire.points.length === 2) {
+        return {
+          ...wire,
+          points: [
+            { x: sourceX, y: sourceY },
+            { x: targetX, y: targetY }
+          ]
+        };
+      } else {
+        const updatedPoints = [...wire.points];
+        updatedPoints[0] = { x: sourceX, y: sourceY };
+        updatedPoints[updatedPoints.length - 1] = { x: targetX, y: targetY };
+        return {
+          ...wire,
+          points: updatedPoints
+        };
+      }
     });
     
     const wiresChanged = JSON.stringify(updatedWires) !== JSON.stringify(wires);
@@ -299,6 +336,7 @@ export const useWireSystem = (components: WokwiComponent[]) => {
     setWires,
     activeWire,
     handlePinClick,
+    handleCanvasClick,
     handleMouseMove,
     handleStageMouseUp,
     cancelActiveWire,

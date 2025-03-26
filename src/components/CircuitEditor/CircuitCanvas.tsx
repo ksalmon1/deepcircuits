@@ -53,6 +53,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     wires,
     activeWire,
     handlePinClick,
+    handleCanvasClick,
     handleMouseMove,
     handleStageMouseUp,
     cancelActiveWire,
@@ -430,6 +431,24 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     componentElement.style.opacity = '0.8';
   };
 
+  const handleCanvasMouseDown = (e: React.MouseEvent) => {
+    if (panMode || e.button !== 0 || isDraggingCanvas || draggingComponent) {
+      return;
+    }
+    
+    if (activeWire && e.target === canvasRef.current) {
+      e.stopPropagation();
+      
+      const canvasRect = canvasRef.current?.getBoundingClientRect();
+      if (!canvasRect) return;
+      
+      const canvasX = (e.clientX - canvasRect.left - offset.x) / zoom;
+      const canvasY = (e.clientY - canvasRect.top - offset.y) / zoom;
+      
+      handleCanvasClick(canvasX, canvasY);
+    }
+  };
+
   const handleCanvasMouseMove = (e: React.MouseEvent) => {
     if (isDraggingCanvas) {
       pan(e.clientX, e.clientY);
@@ -695,7 +714,9 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
       
       {activeWire && (
         <div className="absolute top-12 right-2 bg-yellow-100 text-sm p-2 rounded-md shadow-md z-20">
-          Creating wire: Click another pin to complete the connection, or press Esc to cancel.
+          {activeWire.points.length > 1 ? 
+            "Creating wire: Click canvas to add points, click a pin to complete, or press Esc to cancel." :
+            "Creating wire: Click another pin to complete the connection, or press Esc to cancel."}
         </div>
       )}
       
@@ -712,6 +733,8 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
           onMouseDown={(e) => {
             if (panMode || e.button === 1 || e.ctrlKey) {
               startPan(e.clientX, e.clientY);
+            } else {
+              handleCanvasMouseDown(e);
             }
           }}
           onMouseMove={handleCanvasMouseMove}
@@ -744,3 +767,4 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
 };
 
 export default CircuitCanvas;
+
