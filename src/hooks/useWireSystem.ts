@@ -292,13 +292,22 @@ export const useWireSystem = (components: WokwiComponent[]) => {
   }, [activeWire, components, completeWire]);
   
   const handleKonvaClick = useCallback((e: KonvaEventObject<MouseEvent>) => {
-    if (!activeWire) return;
+    if (!activeWire) {
+      console.log("No active wire, ignoring Konva click");
+      return;
+    }
     
     const stage = e.target.getStage();
-    if (!stage) return;
+    if (!stage) {
+      console.log("No stage found, ignoring Konva click");
+      return;
+    }
     
     const pointerPos = stage.getPointerPosition();
-    if (!pointerPos) return;
+    if (!pointerPos) {
+      console.log("No pointer position found, ignoring Konva click");
+      return;
+    }
     
     const canvasX = (pointerPos.x - stage.x()) / stage.scaleX();
     const canvasY = (pointerPos.y - stage.y()) / stage.scaleY();
@@ -324,19 +333,24 @@ export const useWireSystem = (components: WokwiComponent[]) => {
       console.log('Wire completed via Konva click on pin:', completedWire);
       setWires(prev => [...prev, completedWire]);
       setActiveWire(null);
-    } else {
-      const lastPoint = activeWire.points[activeWire.points.length - 1];
-      const distance = Math.sqrt(Math.pow(canvasX - lastPoint.x, 2) + Math.pow(canvasY - lastPoint.y, 2));
+      return;
+    }
+    
+    // This is the key part for adding intermediate points
+    const lastPoint = activeWire.points[activeWire.points.length - 1];
+    const distance = Math.sqrt(Math.pow(canvasX - lastPoint.x, 2) + Math.pow(canvasY - lastPoint.y, 2));
+    
+    if (distance >= 10) {
+      console.log('Adding intermediate point via Konva click', { canvasX, canvasY });
+      const updatedWire = {
+        ...activeWire,
+        points: [...activeWire.points, { x: canvasX, y: canvasY }]
+      };
       
-      if (distance >= 10) {
-        const updatedWire = {
-          ...activeWire,
-          points: [...activeWire.points, { x: canvasX, y: canvasY }]
-        };
-        
-        console.log('Updated wire points via Konva click:', updatedWire.points);
-        setActiveWire(updatedWire);
-      }
+      console.log('Updated wire points via Konva click:', updatedWire.points);
+      setActiveWire(updatedWire);
+    } else {
+      console.log('Points too close, not adding new point');
     }
   }, [activeWire, findPotentialPinConnection, completeWire]);
   

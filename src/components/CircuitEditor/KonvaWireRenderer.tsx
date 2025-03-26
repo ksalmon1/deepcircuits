@@ -85,6 +85,14 @@ const KonvaWireRenderer: React.FC<KonvaWireRendererProps> = ({
   const handleClick = (e: KonvaEventObject<MouseEvent>) => {
     console.log("KonvaWireRenderer: Stage clicked");
     if (onClick) {
+      // Ensure we're correctly passing the event to the parent handler
+      const stage = e.target.getStage();
+      if (stage) {
+        const pointerPos = stage.getPointerPosition();
+        if (pointerPos) {
+          console.log("Click position:", pointerPos);
+        }
+      }
       onClick(e);
     }
   };
