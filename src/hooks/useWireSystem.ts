@@ -1,6 +1,7 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+
+import { useState, useCallback, useRef } from 'react';
 import { WokwiComponent } from '@/integrations/wokwi/WokwiIntegration';
-import { getWireColorFromSignal, getPinSignalType, createAutoRoutedPoints, addWireIntermediatePoint, findClosestPointOnWire } from '@/utils/wireUtils';
+import { getWireColorFromSignal, getPinSignalType, createAutoRoutedPoints } from '@/utils/wireUtils';
 import { KonvaEventObject } from 'konva/lib/Node';
 
 export interface WirePoint {
@@ -24,7 +25,6 @@ export const useWireSystem = (components: WokwiComponent[]) => {
   const [activeWire, setActiveWire] = useState<Wire | null>(null);
   const potentialTargetRef = useRef<{componentId: string, pinIndex: number} | null>(null);
   const lastMousePositionRef = useRef<{x: number, y: number} | null>(null);
-  const [wireBeingEdited, setWireBeingEdited] = useState<string | null>(null);
   
   const startWire = useCallback((componentId: string, pinIndex: number, x: number, y: number) => {
     console.log(`Starting wire from component ${componentId}, pin ${pinIndex} at (${x}, ${y})`);
@@ -70,18 +70,15 @@ export const useWireSystem = (components: WokwiComponent[]) => {
     if (!activeWire) return;
     
     if (activeWire.points.length >= 2) {
-      const result = findClosestPointOnWire(x, y, activeWire);
-      const segmentIndex = result.segmentIndex;
-      
       const updatedPoints = [...activeWire.points];
-      updatedPoints.splice(segmentIndex + 1, 0, { x, y });
+      updatedPoints.splice(updatedPoints.length - 1, 0, { x, y });
       
       const updatedWire = {
         ...activeWire,
         points: updatedPoints
       };
       
-      console.log(`Added intermediate point at (${x}, ${y}) at segment ${segmentIndex}`);
+      console.log(`Added intermediate point at (${x}, ${y})`);
       setActiveWire(updatedWire);
     } else {
       const lastPoint = activeWire.points[activeWire.points.length - 1];
@@ -98,57 +95,6 @@ export const useWireSystem = (components: WokwiComponent[]) => {
       setActiveWire(updatedWire);
     }
   }, [activeWire]);
-  
-  const addPointToExistingWire = useCallback((wireId: string, x: number, y: number): void => {
-    const wireToEdit = wires.find(w => w.id === wireId);
-    if (!wireToEdit) return;
-    
-    const result = findClosestPointOnWire(x, y, wireToEdit);
-    const segmentIndex = result.segmentIndex;
-    
-    const updatedWires = wires.map(wire => {
-      if (wire.id === wireId) {
-        const updatedPoints = [...wire.points];
-        updatedPoints.splice(segmentIndex + 1, 0, { x, y });
-        
-        return {
-          ...wire,
-          points: updatedPoints
-        };
-      }
-      return wire;
-    });
-    
-    console.log(`Added point to existing wire ${wireId} at segment ${segmentIndex}`);
-    setWires(updatedWires);
-  }, [wires]);
-  
-  const moveWirePoint = useCallback((wireId: string, pointIndex: number, newX: number, newY: number): void => {
-    console.log(`moveWirePoint called with wireId=${wireId}, pointIndex=${pointIndex}, newX=${newX}, newY=${newY}`);
-    
-    setWires(prevWires => {
-      return prevWires.map(wire => {
-        if (wire.id === wireId) {
-          if (wire.isComplete && (pointIndex === 0 || pointIndex === wire.points.length - 1)) {
-            console.log('Tried to move endpoint, ignoring');
-            return wire;
-          }
-          
-          const newPoints = [...wire.points];
-          newPoints[pointIndex] = { x: newX, y: newY };
-          
-          console.log(`Moved point ${pointIndex} of wire ${wireId} to (${newX}, ${newY})`);
-          console.log('New wire points:', newPoints);
-          
-          return {
-            ...wire,
-            points: newPoints
-          };
-        }
-        return wire;
-      });
-    });
-  }, []);
   
   const completeWire = useCallback((
     wire: Wire,
@@ -307,21 +253,7 @@ export const useWireSystem = (components: WokwiComponent[]) => {
       addIntermediatePoint(x, y);
       return;
     }
-    
-    if (!activeWire) {
-      for (const wire of wires) {
-        if (!wire.isComplete) continue;
-        
-        const { segmentIndex, distance } = findClosestPointOnWire(x, y, wire);
-        
-        if (distance < 10) {
-          console.log(`Click near wire ${wire.id}, segment ${segmentIndex}`);
-          addPointToExistingWire(wire.id, x, y);
-          return;
-        }
-      }
-    }
-  }, [activeWire, findPotentialPinConnection, addIntermediatePoint, addPointToExistingWire, completeWire, wires]);
+  }, [activeWire, findPotentialPinConnection, addIntermediatePoint, completeWire]);
   
   const handleMouseMove = useCallback((e: KonvaEventObject<MouseEvent>) => {
     if (!activeWire) return;
@@ -408,51 +340,6 @@ export const useWireSystem = (components: WokwiComponent[]) => {
     potentialTargetRef.current = null;
   }, []);
   
-  useEffect(() => {
-    if (wires.length === 0) return;
-    
-    const updatedWires = wires.map(wire => {
-      if (!wire.isComplete) return wire;
-      
-      const sourceComponent = components.find(c => c.id === wire.sourceComponentId);
-      const targetComponent = components.find(c => c.id === wire.targetComponentId);
-      
-      if (!sourceComponent || !targetComponent || !sourceComponent.pins || !targetComponent.pins) {
-        return wire;
-      }
-      
-      const sourcePin = sourceComponent.pins[wire.sourcePinIndex];
-      const targetPin = targetComponent.pins[wire.targetPinIndex!];
-      
-      if (!sourcePin || !targetPin) return wire;
-      
-      const sourceX = sourceComponent.left + sourcePin.x;
-      const sourceY = sourceComponent.top + sourcePin.y;
-      const targetX = targetComponent.left + targetPin.x;
-      const targetY = targetComponent.top + targetPin.y;
-      
-      if (wire.points.length === 2) {
-        return {
-          ...wire,
-          points: createAutoRoutedPoints(sourceX, sourceY, targetX, targetY)
-        };
-      } else {
-        const updatedPoints = [...wire.points];
-        updatedPoints[0] = { x: sourceX, y: sourceY };
-        updatedPoints[updatedPoints.length - 1] = { x: targetX, y: targetY };
-        return {
-          ...wire,
-          points: updatedPoints
-        };
-      }
-    });
-    
-    const wiresChanged = JSON.stringify(updatedWires) !== JSON.stringify(wires);
-    if (wiresChanged) {
-      setWires(updatedWires);
-    }
-  }, [components, wires]);
-  
   return {
     wires,
     setWires,
@@ -464,8 +351,6 @@ export const useWireSystem = (components: WokwiComponent[]) => {
     handleKonvaClick,
     cancelActiveWire,
     potentialTarget: potentialTargetRef.current,
-    potentialTargetRef,
-    addPointToExistingWire,
-    moveWirePoint
+    potentialTargetRef
   };
 };

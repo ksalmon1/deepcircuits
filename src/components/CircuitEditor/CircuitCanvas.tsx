@@ -60,8 +60,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     handleKonvaClick,
     cancelActiveWire,
     potentialTarget,
-    potentialTargetRef,
-    moveWirePoint
+    potentialTargetRef
   } = useWireSystem(components);
   
   const [hoveredComponent, setHoveredComponent] = useState<string | null>(null);
@@ -764,7 +763,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
           onClick={handleKonvaClick}
           zoom={zoom}
           offset={offset}
-          onPointMove={moveWirePoint}
         />
       </div>
     </div>

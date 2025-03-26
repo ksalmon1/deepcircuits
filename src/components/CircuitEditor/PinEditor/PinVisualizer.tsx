@@ -60,7 +60,7 @@ const PinVisualizer: React.FC<PinVisualizerProps> = ({
               left: `${pinX}px`,
               top: `${pinY}px`,
               transform: 'translate(-50%, -50%)',
-              cursor: readonly ? 'default' : 'move',
+              cursor: readonly ? 'default' : 'pointer',
               zIndex: 10
             }}
             onMouseEnter={() => setHoveredPin(i)}
