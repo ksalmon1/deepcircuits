@@ -109,41 +109,6 @@ const KonvaWireRenderer: React.FC<KonvaWireRendererProps> = ({
     setDraggingPoint(null);
   };
 
-  // Render dots for intermediate wire points
-  const renderWirePoints = (wire: Wire, isActive: boolean = false) => {
-    if (wire.points.length <= 2 && !isActive) return null; // No intermediate points for completed wires with only 2 points
-
-    return wire.points.map((point, index) => {
-      // For completed wires, skip first and last points (those are on pins)
-      if (!isActive && (index === 0 || index === wire.points.length - 1)) return null;
-      // For active wire, skip the last point (it follows the mouse)
-      if (isActive && index === wire.points.length - 1) return null;
-      
-      const transformedPoint = transformPoint(point);
-      
-      // Determine if this point can be dragged
-      const canDrag = !isActive && index !== 0 && index !== wire.points.length - 1;
-      
-      return (
-        <Circle
-          key={`wire-${wire.id}-point-${index}`}
-          x={transformedPoint.x}
-          y={transformedPoint.y}
-          radius={5}
-          fill={wire.color}
-          stroke="#fff"
-          strokeWidth={1}
-          opacity={isActive ? 0.8 : 1}
-          listening={canDrag}
-          draggable={canDrag}
-          onDragStart={() => handlePointDragStart(wire.id, index)}
-          onDragMove={handlePointDragMove}
-          onDragEnd={handlePointDragEnd}
-        />
-      );
-    });
-  };
-
   return (
     <Stage 
       ref={stageRef}
@@ -162,9 +127,10 @@ const KonvaWireRenderer: React.FC<KonvaWireRendererProps> = ({
     >
       <Layer>
         {/* Render completed wires */}
-        {wires.map(wire => (
-          <Group key={wire.id}>
+        {wires.map((wire, wireIndex) => (
+          <Group key={`wire-group-${wire.id}-${wireIndex}`}>
             <Line
+              key={`wire-line-${wire.id}-${wireIndex}`}
               points={transformPoints(wirePointsToFlatArray(wire))}
               stroke={wire.color}
               strokeWidth={4} // Increased width for better visibility
@@ -173,14 +139,44 @@ const KonvaWireRenderer: React.FC<KonvaWireRendererProps> = ({
               listening={false}
               opacity={1.0}
             />
-            {renderWirePoints(wire)}
+            {/* Render wire points for each wire */}
+            {wire.points.map((point, pointIndex) => {
+              // Skip rendering points for the first and last points of completed wires
+              if (wire.isComplete && (pointIndex === 0 || pointIndex === wire.points.length - 1)) {
+                return null;
+              }
+              
+              const transformedPoint = transformPoint(point);
+              
+              // Determine if this point can be dragged (not first or last point of completed wire)
+              const canDrag = wire.isComplete ? (pointIndex !== 0 && pointIndex !== wire.points.length - 1) : false;
+              
+              return (
+                <Circle
+                  key={`wire-${wire.id}-point-${pointIndex}-${wireIndex}`}
+                  x={transformedPoint.x}
+                  y={transformedPoint.y}
+                  radius={5}
+                  fill={wire.color}
+                  stroke="#fff"
+                  strokeWidth={1}
+                  opacity={1}
+                  listening={canDrag}
+                  draggable={canDrag}
+                  onDragStart={() => handlePointDragStart(wire.id, pointIndex)}
+                  onDragMove={handlePointDragMove}
+                  onDragEnd={handlePointDragEnd}
+                />
+              );
+            })}
           </Group>
         ))}
         
         {/* Render active wire being drawn */}
         {activeWire && (
-          <Group>
+          <Group key={`active-wire-group-${activeWire.id}`}>
             <Line
+              key={`active-wire-line-${activeWire.id}`}
               points={transformPoints(wirePointsToFlatArray(activeWire))}
               stroke={activeWire.color}
               strokeWidth={4} // Increased width for better visibility
@@ -190,7 +186,30 @@ const KonvaWireRenderer: React.FC<KonvaWireRendererProps> = ({
               listening={false}
               opacity={0.8}
             />
-            {renderWirePoints(activeWire, true)}
+            {/* Render active wire points */}
+            {activeWire.points.map((point, pointIndex) => {
+              // Skip rendering the last point for active wire (follows the mouse)
+              if (pointIndex === activeWire.points.length - 1) {
+                return null;
+              }
+              
+              const transformedPoint = transformPoint(point);
+              
+              return (
+                <Circle
+                  key={`active-wire-${activeWire.id}-point-${pointIndex}`}
+                  x={transformedPoint.x}
+                  y={transformedPoint.y}
+                  radius={5}
+                  fill={activeWire.color}
+                  stroke="#fff"
+                  strokeWidth={1}
+                  opacity={0.8}
+                  listening={false}
+                  draggable={false}
+                />
+              );
+            })}
           </Group>
         )}
       </Layer>
