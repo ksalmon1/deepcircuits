@@ -11,7 +11,7 @@ interface KonvaWireRendererProps {
   stageHeight: number;
   onMouseMove: (e: KonvaEventObject<MouseEvent>) => void;
   onMouseUp: () => void;
-  onClick?: (e: KonvaEventObject<MouseEvent>) => void; // Add onClick handler
+  onClick: (e: KonvaEventObject<MouseEvent>) => void; // Make onClick required
   zoom?: number;
   offset?: { x: number; y: number };
 }
@@ -89,7 +89,7 @@ const KonvaWireRenderer: React.FC<KonvaWireRendererProps> = ({
       height={stageHeight}
       onMouseMove={onMouseMove}
       onMouseUp={onMouseUp}
-      onClick={onClick} // Add onClick event handler
+      onClick={onClick} // Ensure onClick is connected
       style={{ 
         position: 'absolute', 
         top: 0, 

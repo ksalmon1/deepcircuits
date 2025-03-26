@@ -307,11 +307,52 @@ export const useWireSystem = (components: WokwiComponent[]) => {
     const pointerPos = stage.getPointerPosition();
     if (!pointerPos) return;
     
+    // Convert the pointer position to canvas coordinates
     const canvasX = (pointerPos.x - stage.x()) / stage.scaleX();
     const canvasY = (pointerPos.y - stage.y()) / stage.scaleY();
     
-    handleCanvasClick(canvasX, canvasY);
-  }, [activeWire, handleCanvasClick]);
+    console.log("Konva stage clicked at:", canvasX, canvasY);
+    
+    // Check if we're clicking on a pin, or just adding an intermediate point
+    const potentialPin = findPotentialPinConnection(canvasX, canvasY);
+    if (potentialPin) {
+      if (potentialPin.componentId === activeWire.sourceComponentId && 
+          potentialPin.pinIndex === activeWire.sourcePinIndex) {
+        console.log('Clicked on source pin, ignoring');
+        return;
+      }
+      
+      // Complete the wire if we're clicking on a target pin
+      const completedWire = completeWire(
+        activeWire,
+        potentialPin.componentId,
+        potentialPin.pinIndex,
+        potentialPin.x,
+        potentialPin.y
+      );
+      
+      console.log('Wire completed via Konva click on pin:', completedWire);
+      setWires(prev => [...prev, completedWire]);
+      setActiveWire(null);
+    } else {
+      // Add an intermediate point if we're not clicking on a pin
+      console.log('Adding intermediate point via Konva click at', canvasX, canvasY);
+      
+      // Ensure we don't add duplicate points
+      const lastPoint = activeWire.points[activeWire.points.length - 1];
+      const distance = Math.sqrt(Math.pow(canvasX - lastPoint.x, 2) + Math.pow(canvasY - lastPoint.y, 2));
+      
+      if (distance >= 10) { // Minimum distance between points
+        const updatedWire = {
+          ...activeWire,
+          points: [...activeWire.points, { x: canvasX, y: canvasY }]
+        };
+        
+        console.log('Updated wire points via Konva click:', updatedWire.points);
+        setActiveWire(updatedWire);
+      }
+    }
+  }, [activeWire, findPotentialPinConnection, completeWire]);
   
   const cancelActiveWire = useCallback(() => {
     console.log('Cancelling active wire');
@@ -377,7 +418,7 @@ export const useWireSystem = (components: WokwiComponent[]) => {
     handleCanvasClick,
     handleMouseMove,
     handleStageMouseUp,
-    handleKonvaClick, // Add handleKonvaClick to export
+    handleKonvaClick,
     cancelActiveWire,
     potentialTarget: potentialTargetRef.current,
     potentialTargetRef

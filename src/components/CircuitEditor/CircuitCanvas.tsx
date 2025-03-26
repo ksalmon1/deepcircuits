@@ -758,6 +758,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
           stageHeight={canvasSize.height}
           onMouseMove={handleMouseMove}
           onMouseUp={handleStageMouseUp}
+          onClick={handleKonvaClick}
           zoom={zoom}
           offset={offset}
         />
@@ -767,4 +768,3 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
 };
 
 export default CircuitCanvas;
-
