@@ -120,7 +120,7 @@ const KonvaWireRenderer: React.FC<KonvaWireRendererProps> = ({
           position: 'absolute', 
           top: 0, 
           left: 0, 
-          pointerEvents: 'auto', // Changed from 'activeWire ? 'auto' : 'none'' to always enable interactions
+          pointerEvents: wires.length > 0 || activeWire ? 'auto' : 'none', // Only enable interactions when wires exist
           zIndex: 20 // Higher z-index to ensure wires are visible above other elements but below pin tooltips
         }}
       >
