@@ -16,7 +16,8 @@ import {
   useReactFlow,
   useOnSelectionChange,
   BackgroundVariant,
-  ReactFlowProvider
+  ReactFlowProvider,
+  ReactFlowInstance
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { toast } from 'sonner';
@@ -48,7 +49,7 @@ const CircuitCanvas: React.FC<CircuitCanvasProps> = ({
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
-  const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
+  const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
   const { screenToFlowPosition, getZoom, setViewport } = useReactFlow();
   const [panMode, setPanMode] = useState(false);
 
