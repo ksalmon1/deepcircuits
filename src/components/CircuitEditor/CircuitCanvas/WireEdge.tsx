@@ -47,7 +47,7 @@ const WireEdge: React.FC<EdgeProps<WireEdgeData>> = ({
   // Default wire color and customize based on the data
   const wireColor = data?.color || '#FF0000';
   const wireStyle = {
-    stroke: wireColor as string,
+    stroke: wireColor,
     strokeWidth: selected ? 3 : 2,
     ...style,
   };
@@ -128,7 +128,7 @@ const WireEdge: React.FC<EdgeProps<WireEdgeData>> = ({
                   width: '10px',
                   height: '10px',
                   borderRadius: '50%',
-                  backgroundColor: wireColor as string,
+                  backgroundColor: wireColor,
                   border: '2px solid white',
                   transform: 'translate(-50%, -50%)',
                   cursor: 'move',
