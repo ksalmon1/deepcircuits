@@ -16,10 +16,11 @@ const ScrollArea = React.forwardRef<
     <ScrollAreaPrimitive.Viewport 
       className="h-full w-full rounded-[inherit]"
       style={{ 
-        overflow: "auto", // Change from overflowY to overflow for better touch support
         WebkitOverflowScrolling: "touch",
-        msOverflowStyle: "auto", // Add IE/Edge support
-        scrollbarWidth: "thin" // Add Firefox support
+        scrollbarWidth: "none", // Hide default Firefox scrollbar
+        msOverflowStyle: "none", // Hide default IE/Edge scrollbar
+        scrollbarWidth: "none", // Firefox
+        "&::-webkit-scrollbar": { display: "none" } // Webkit browsers
       }}
     >
       {children}

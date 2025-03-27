@@ -54,10 +54,13 @@ const SelectContent = React.forwardRef<
           position === "popper" &&
             "h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]"
         )}
+        style={{
+          maxHeight: "180px",
+          overflow: "auto",
+          WebkitOverflowScrolling: "touch"
+        }}
       >
-        <ScrollArea className="h-[180px]">
-          {children}
-        </ScrollArea>
+        {children}
       </SelectPrimitive.Viewport>
     </SelectPrimitive.Content>
   </SelectPrimitive.Portal>
