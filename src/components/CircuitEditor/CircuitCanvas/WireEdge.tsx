@@ -17,14 +17,11 @@ interface WireEdgeData {
   onStartEdit?: (id: string) => void;
   onFinishEdit?: (id: string) => void;
   onControlPointDrag?: (id: string, index: number, e: React.MouseEvent) => void;
+  [key: string]: unknown; // Add index signature to match Record<string, unknown>
 }
 
-// Extended EdgeProps to include our custom data
-interface WireEdgeProps extends EdgeProps {
-  data?: WireEdgeData;
-}
-
-const WireEdge: React.FC<WireEdgeProps> = ({
+// Use EdgeProps with proper generic type for data
+const WireEdge: React.FC<EdgeProps<WireEdgeData>> = ({
   id,
   sourceX,
   sourceY,
