@@ -49,14 +49,15 @@ const SelectContent = React.forwardRef<
     >
       <SelectPrimitive.Viewport
         className={cn(
-          "p-1 overflow-y-auto scrollbar scrollbar-thumb-border scrollbar-track-transparent",
+          "p-1",
           position === "popper" &&
             "h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]"
         )}
         style={{ 
-          maxHeight: "180px", // Keeping the reduced height from previous update
-          overflowY: "auto", // Explicitly setting overflowY in the style as well
-          WebkitOverflowScrolling: 'touch' // Fixed: Proper camelCase format for React style properties
+          maxHeight: "180px",
+          overflow: "auto", 
+          overflowY: "auto",
+          WebkitOverflowScrolling: "touch"
         }}
       >
         {children}
