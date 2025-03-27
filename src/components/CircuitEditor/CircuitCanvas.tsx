@@ -14,14 +14,46 @@ import { useComponentLibrary } from '@/hooks/useComponentLibrary';
 import { isInteractingWithPin } from '@/utils/wireUtils';
 import { useCanvasNavigation } from '@/hooks/useCanvasNavigation';
 import { useWireSystem } from '@/hooks/useWireSystem';
-import KonvaWireRenderer from './KonvaWireRenderer';
 import { isCustomComponent, renderCustomComponent } from '@/integrations/custom/CustomComponents';
 import { fetchComponentPins } from '@/utils/componentUtils';
+import {
+  ReactFlow,
+  Controls,
+  Background,
+  useNodesState,
+  useEdgesState,
+  addEdge,
+  Connection,
+  Edge,
+  Node,
+  NodeTypes,
+  EdgeTypes,
+  Panel,
+  useReactFlow,
+  BackgroundVariant,
+  ReactFlowProvider,
+  ReactFlowInstance,
+  useOnSelectionChange,
+  ConnectionLineType
+} from '@xyflow/react';
+import '@xyflow/react/dist/style.css';
+import WokwiComponentNode from './CircuitCanvas/WokwiComponentNode';
+import WireEdge from './CircuitCanvas/WireEdge';
+import { componentToNode, wiresToEdges } from './CircuitCanvas/utils';
 
 interface CircuitCanvasProps {
   components: WokwiComponent[];
   onComponentsChange: (components: WokwiComponent[]) => void;
 }
+
+// Define the custom node and edge types
+const nodeTypes: NodeTypes = {
+  wokwiComponent: WokwiComponentNode,
+};
+
+const edgeTypes: EdgeTypes = {
+  wire: WireEdge,
+};
 
 const pinCache: Record<string, WokwiPin[]> = {};
 
@@ -55,14 +87,18 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     activeWire,
     handlePinClick,
     handleCanvasClick,
-    handleMouseMove,
-    handleStageMouseUp,
-    handleKonvaClick,
     cancelActiveWire,
-    deleteWire,
-    potentialTarget,
-    potentialTargetRef
+    potentialTargetRef,
+    deleteWire
   } = useWireSystem(components);
+  
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
+  const [editingEdgeId, setEditingEdgeId] = useState<string | null>(null);
+  const [controlPoints, setControlPoints] = useState<Record<string, { x: number, y: number }[]>>({});
+  const [isDraggingControlPoint, setIsDraggingControlPoint] = useState(false);
+  const [activeControlPoint, setActiveControlPoint] = useState<{edgeId: string, pointIndex: number} | null>(null);
   
   const [hoveredComponent, setHoveredComponent] = useState<string | null>(null);
   const [hoveredPins, setHoveredPins] = useState<WokwiPin[]>([]);
@@ -79,6 +115,34 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     isLoadingComponents, 
     isLoadingDetails 
   } = useComponentLibrary();
+
+  // Convert components to nodes when components change
+  React.useEffect(() => {
+    const initialNodes = components.map(comp => componentToNode({
+      id: comp.id,
+      type: comp.type,
+      left: comp.left,
+      top: comp.top,
+      attributes: comp.attributes,
+      pins: comp.pins || []
+    }));
+    setNodes(initialNodes);
+  }, [components, setNodes]);
+  
+  // Convert wires to edges when wires change
+  React.useEffect(() => {
+    // Convert completed wires to edges
+    const completedWires = wires.filter(wire => wire.isComplete && wire.targetComponentId);
+    
+    const wireEdges = wiresToEdges(completedWires, components, editingEdgeId, controlPoints, {
+      onStartEdit: startEdgeEdit,
+      onFinishEdit: finishEdgeEdit,
+      onControlPointDrag: handleControlPointDragStart,
+      onAddControlPoint: addControlPoint
+    });
+    
+    setEdges(wireEdges);
+  }, [wires, components, editingEdgeId, controlPoints]);
 
   useEffect(() => {
     const updateSize = () => {
@@ -136,6 +200,265 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
       console.log('Pin cache after loading:', pinCache);
     }
   }, [libraryComponents, componentsDetailsMap]);
+
+  // Start wire editing mode
+  const startEdgeEdit = useCallback((edgeId: string) => {
+    // Find the edge
+    const edge = edges.find(e => e.id === edgeId);
+    if (!edge) return;
+    
+    // Initialize control points if not already present
+    if (!controlPoints[edgeId]) {
+      // Find corresponding wire to get all points
+      const wire = wires.find(w => w.id === edgeId);
+      
+      if (wire && wire.points.length > 2) {
+        // Use inner points as control points (exclude source and target)
+        setControlPoints(prev => ({
+          ...prev,
+          [edgeId]: wire.points.slice(1, -1).map(p => ({ x: p.x, y: p.y }))
+        }));
+      } else {
+        // For a simple bezier curve, we can add a control point in the middle
+        const sourceX = edge.sourceX || 0;
+        const sourceY = edge.sourceY || 0;
+        const targetX = edge.targetX || 0;
+        const targetY = edge.targetY || 0;
+        
+        // Create a central control point
+        const middleX = (sourceX + targetX) / 2;
+        const middleY = (sourceY + targetY) / 2;
+        
+        setControlPoints(prev => ({
+          ...prev,
+          [edgeId]: [{ x: middleX, y: middleY }]
+        }));
+      }
+    }
+    
+    // Set the edge to edit mode
+    setEditingEdgeId(edgeId);
+    
+    // Update the edge with editing mode and control points
+    setEdges(eds => 
+      eds.map(e => {
+        if (e.id === edgeId) {
+          return {
+            ...e,
+            data: {
+              ...e.data,
+              isEditing: true,
+              controlPoints: controlPoints[edgeId] || [{ 
+                x: (e.sourceX || 0 + e.targetX || 0) / 2, 
+                y: (e.sourceY || 0 + e.targetY || 0) / 2 
+              }],
+              onControlPointDrag: handleControlPointDragStart,
+              onFinishEdit: finishEdgeEdit,
+              onAddControlPoint: addControlPoint
+            }
+          };
+        }
+        return e;
+      })
+    );
+    
+    toast.info('Editing wire path. Drag control points to adjust the wire.', {
+      duration: 3000,
+    });
+  }, [edges, controlPoints, wires]);
+  
+  // Handle control point drag start
+  const handleControlPointDragStart = useCallback((edgeId: string, pointIndex: number, e: React.MouseEvent) => {
+    setIsDraggingControlPoint(true);
+    setActiveControlPoint({ edgeId, pointIndex });
+    
+    // Add mouse move and mouse up event listeners to the document
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      if (!reactFlowInstance || !activeControlPoint) return;
+      
+      // Convert screen coordinates to flow coordinates
+      const { x, y } = reactFlowInstance.screenToFlowPosition({
+        x: moveEvent.clientX,
+        y: moveEvent.clientY
+      });
+      
+      // Update the control point position
+      setControlPoints(prev => {
+        if (!prev[edgeId]) return prev;
+        
+        const edgePoints = [...prev[edgeId]];
+        if (pointIndex >= edgePoints.length) return prev;
+        
+        edgePoints[pointIndex] = { x, y };
+        return {
+          ...prev,
+          [edgeId]: edgePoints
+        };
+      });
+      
+      // Update the edge with the new control points
+      setEdges(eds => 
+        eds.map(e => {
+          if (e.id === edgeId) {
+            return {
+              ...e,
+              data: {
+                ...e.data,
+                controlPoints: controlPoints[edgeId] || []
+              }
+            };
+          }
+          return e;
+        })
+      );
+      
+      // Also update the wire with the new points
+      setWires(prevWires => 
+        prevWires.map(wire => {
+          if (wire.id === edgeId) {
+            // Get current control points
+            const edgeControlPoints = controlPoints[edgeId] || [];
+            // First and last points remain the same (connection points)
+            const sourcePoint = wire.points[0];
+            const targetPoint = wire.points[wire.points.length - 1];
+            
+            // Rebuild points array with updated control points in the middle
+            return {
+              ...wire,
+              points: [
+                sourcePoint,
+                ...edgeControlPoints.map(p => ({ x: p.x, y: p.y })),
+                targetPoint
+              ]
+            };
+          }
+          return wire;
+        })
+      );
+    };
+    
+    const handleMouseUp = () => {
+      setIsDraggingControlPoint(false);
+      setActiveControlPoint(null);
+      
+      // Remove event listeners
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+    
+    // Add event listeners
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  }, [reactFlowInstance, activeControlPoint, controlPoints, setWires]);
+  
+  // Add another control point to the wire
+  const addControlPoint = useCallback((edgeId: string) => {
+    if (!controlPoints[edgeId]) return;
+    
+    const edge = edges.find(e => e.id === edgeId);
+    if (!edge) return;
+    
+    const points = [...(controlPoints[edgeId] || [])];
+    
+    // Find the corresponding wire
+    const wire = wires.find(w => w.id === edgeId);
+    if (!wire) return;
+    
+    // Add a new point - for simplicity, place it between the last control point and target
+    if (points.length > 0) {
+      const lastPoint = points[points.length - 1];
+      const targetPoint = wire.points[wire.points.length - 1];
+      
+      const newPoint = {
+        x: (lastPoint.x + targetPoint.x) / 2,
+        y: (lastPoint.y + targetPoint.y) / 2
+      };
+      
+      points.push(newPoint);
+    } else {
+      // If no points yet, add one in the middle
+      const sourcePoint = wire.points[0];
+      const targetPoint = wire.points[wire.points.length - 1];
+      
+      points.push({
+        x: (sourcePoint.x + targetPoint.x) / 2,
+        y: (sourcePoint.y + targetPoint.y) / 2
+      });
+    }
+    
+    setControlPoints(prev => ({
+      ...prev,
+      [edgeId]: points
+    }));
+    
+    // Update the edge with the new control points
+    setEdges(eds => 
+      eds.map(e => {
+        if (e.id === edgeId) {
+          return {
+            ...e,
+            data: {
+              ...e.data,
+              controlPoints: points
+            }
+          };
+        }
+        return e;
+      })
+    );
+    
+    // Also update the wire
+    setWires(prevWires => 
+      prevWires.map(wire => {
+        if (wire.id === edgeId) {
+          // Rebuild points with the new control point
+          const sourcePoint = wire.points[0];
+          const targetPoint = wire.points[wire.points.length - 1];
+          
+          return {
+            ...wire,
+            points: [
+              sourcePoint,
+              ...points.map(p => ({ x: p.x, y: p.y })),
+              targetPoint
+            ]
+          };
+        }
+        return wire;
+      })
+    );
+    
+    toast.info('Control point added. Drag to adjust the wire path.', {
+      duration: 2000,
+    });
+  }, [edges, controlPoints, wires, setWires]);
+  
+  // Finish wire editing mode
+  const finishEdgeEdit = useCallback((edgeId: string) => {
+    setEditingEdgeId(null);
+    
+    // Update the edge to exit edit mode but keep the control points
+    setEdges(eds => 
+      eds.map(e => {
+        if (e.id === edgeId) {
+          return {
+            ...e,
+            data: {
+              ...e.data,
+              isEditing: false,
+              controlPoints: controlPoints[edgeId] || [],
+              onStartEdit: startEdgeEdit
+            }
+          };
+        }
+        return e;
+      })
+    );
+    
+    toast.success('Wire path updated', {
+      duration: 2000,
+    });
+  }, [controlPoints, setEdges]);
 
   const checkWokwiLoaded = useCallback(async () => {
     console.log('Checking if Wokwi is loaded, attempt:', loadingAttempts + 1);
@@ -217,52 +540,52 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     };
   }, [activeWire, cancelActiveWire]);
 
-  const fetchComponentPins = (type: string): WokwiPin[] => {
-    try {
-      if (pinCache[type]) {
-        console.log(`Using cached pins for ${type}:`, pinCache[type]);
-        return pinCache[type];
+  // Handle connecting nodes (creating wires)
+  const onConnect = useCallback(
+    (params: Connection) => {
+      if (!params.source || !params.target || !params.sourceHandle || !params.targetHandle) {
+        console.error("Invalid connection parameters:", params);
+        return;
       }
       
-      const libraryComponent = libraryComponents?.find(c => c.type === type);
-      if (libraryComponent?.id && componentsDetailsMap && componentsDetailsMap[libraryComponent.id]) {
-        const details = componentsDetailsMap[libraryComponent.id];
-        if (details && details.pins && details.pins.length > 0) {
-          console.log(`Found pins for ${type} in component details:`, details.pins);
-          const pins = details.pins.map((pin: any) => ({
-            name: pin.name,
-            x: Number(pin.x),
-            y: Number(pin.y),
-            signals: pin.signals || []
-          }));
-          
-          pinCache[type] = pins;
-          return pins;
-        }
+      // Extract pin indices from handle IDs
+      const sourcePinIndex = parseInt(params.sourceHandle.split('-')[1]);
+      const targetPinIndex = parseInt(params.targetHandle.split('-')[1]);
+      
+      // Find source and target component
+      const sourceComponent = components.find(c => c.id === params.source);
+      const targetComponent = components.find(c => c.id === params.target);
+      
+      if (!sourceComponent || !targetComponent) {
+        console.error("Source or target component not found");
+        return;
       }
       
-      if (libraryComponent?.pins && libraryComponent.pins.length > 0) {
-        console.log(`Found pins for ${type} in library:`, libraryComponent.pins);
-        const pins = libraryComponent.pins.map(pin => ({
-          name: pin.name,
-          x: Number(pin.x),
-          y: Number(pin.y),
-          signals: pin.signals || []
-        }));
-        
-        pinCache[type] = pins;
-        return pins;
+      // Get pin positions
+      const sourcePin = sourceComponent.pins?.[sourcePinIndex];
+      const targetPin = targetComponent.pins?.[targetPinIndex];
+      
+      if (!sourcePin || !targetPin) {
+        console.error("Source or target pin not found");
+        return;
       }
       
-      console.log(`Using default pins for ${type}`);
-      const defaultPins = getComponentPinInfo(type);
-      pinCache[type] = defaultPins;
-      return defaultPins;
-    } catch (err) {
-      console.error(`Error in fetchComponentPins for ${type}:`, err);
-      return getComponentPinInfo(type);
-    }
-  };
+      // Use the handlePinClick method from useWireSystem to create the wire
+      handlePinClick(sourceComponent.id, sourcePinIndex, 
+                    sourceComponent.left + sourcePin.x, 
+                    sourceComponent.top + sourcePin.y);
+      
+      handlePinClick(targetComponent.id, targetPinIndex, 
+                    targetComponent.left + targetPin.x, 
+                    targetComponent.top + targetPin.y);
+                    
+      toast.success('Connection created', {
+        description: 'Wire added between components',
+        duration: 1500,
+      });
+    },
+    [components, handlePinClick]
+  );
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -311,7 +634,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
       
       if (!pins) {
         console.log(`Falling back to default pins for ${componentInfo.type}`);
-        pins = fetchComponentPins(componentInfo.type);
+        pins = getComponentPinInfo(componentInfo.type);
       }
       
       const newComponent: WokwiComponent = {
@@ -344,337 +667,10 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     e.dataTransfer.dropEffect = 'copy';
   };
 
-  const togglePinVisibility = useCallback((componentId: string) => {
-    setVisiblePins(prev => ({
-      ...prev,
-      [componentId]: !prev[componentId]
-    }));
-  }, []);
-
-  const handlePinHover = (componentId: string, pinIndex: number) => {
-    setHoveredPin({ componentId, pinIndex });
-  };
-
-  const handlePinHoverExit = () => {
-    setHoveredPin(null);
-  };
-
-  const handleComponentHover = useCallback((id: string, type: string) => {
-    setHoveredComponent(id);
-    
-    const pins = fetchComponentPins(type);
-    setHoveredPins(pins);
-    
-    const element = document.getElementById(`wokwi-element-${id}`);
-    if (element && element.firstChild) {
-      (element.firstChild as HTMLElement).style.outline = '2px solid #4C72F4';
-      (element.firstChild as HTMLElement).style.outlineOffset = '2px';
-    }
-  }, []);
-
-  const handleComponentHoverExit = useCallback(() => {
-    if (draggingComponent) return;
-    
-    if (hoveredComponent) {
-      const element = document.getElementById(`wokwi-element-${hoveredComponent}`);
-      if (element && element.firstChild) {
-        (element.firstChild as HTMLElement).style.outline = 'none';
-      }
-    }
-    
-    if (!activeWire) {
-      setHoveredComponent(null);
-      setHoveredPins([]);
-    }
-  }, [hoveredComponent, draggingComponent, activeWire]);
-
-  const handleComponentMouseDown = (e: React.MouseEvent, componentId: string) => {
-    if (panMode || e.button !== 0) {
-      return;
-    }
-    
-    const canvasRect = canvasRef.current?.getBoundingClientRect();
-    if (!canvasRect) return;
-    
-    const component = components.find(c => c.id === componentId);
-    if (!component) return;
-    
-    const mouseX = (e.clientX - canvasRect.left - offset.x) / zoom;
-    const mouseY = (e.clientY - canvasRect.top - offset.y) / zoom;
-    
-    const { isPin, pinIndex } = isInteractingWithPin(mouseX, mouseY, component);
-    
-    if (isPin) {
-      e.stopPropagation();
-      const pin = component.pins?.[pinIndex];
-      if (pin) {
-        const pinPos = {
-          x: component.left + pin.x,
-          y: component.top + pin.y
-        };
-        handlePinClick(componentId, pinIndex, pinPos.x, pinPos.y);
-      }
-      return;
-    }
-    
-    e.stopPropagation();
-    
-    const componentElement = document.getElementById(`wokwi-element-wrapper-${componentId}`);
-    if (!componentElement) return;
-    
-    const rect = componentElement.getBoundingClientRect();
-    const offsetX = e.clientX - rect.left;
-    const offsetY = e.clientY - rect.top;
-    
-    setDraggingComponent(componentId);
-    setDragOffset({ x: offsetX, y: offsetY });
-    
-    componentElement.style.cursor = 'grabbing';
-    componentElement.style.zIndex = '100';
-    componentElement.style.opacity = '0.8';
-  };
-
-  const handleCanvasMouseDown = (e: React.MouseEvent) => {
-    if (panMode || e.button !== 0 || isDraggingCanvas || draggingComponent) {
-      return;
-    }
-    
-    if (activeWire && e.target === canvasRef.current) {
-      e.stopPropagation();
-      
-      const canvasRect = canvasRef.current?.getBoundingClientRect();
-      if (!canvasRect) return;
-      
-      const canvasX = (e.clientX - canvasRect.left - offset.x) / zoom;
-      const canvasY = (e.clientY - canvasRect.top - offset.y) / zoom;
-      
-      handleCanvasClick(canvasX, canvasY);
-    }
-  };
-
-  const handleCanvasMouseMove = (e: React.MouseEvent) => {
-    if (isDraggingCanvas) {
-      pan(e.clientX, e.clientY);
-      e.preventDefault();
-      return;
-    }
-    
-    if (draggingComponent) {
-      const canvasRect = canvasRef.current?.getBoundingClientRect();
-      if (!canvasRect) return;
-      
-      const coords = screenToCanvasCoordinates(e.clientX - canvasRect.left, e.clientY - canvasRect.top);
-      
-      const updatedComponents = components.map(component => {
-        if (component.id === draggingComponent) {
-          return {
-            ...component,
-            left: coords.x - dragOffset.x / zoom,
-            top: coords.y - dragOffset.y / zoom
-          };
-        }
-        return component;
-      });
-      
-      onComponentsChange(updatedComponents);
-    }
-  };
-
-  const handleCanvasMouseUp = (e: React.MouseEvent) => {
-    if (draggingComponent) {
-      const componentElement = document.getElementById(`wokwi-element-wrapper-${draggingComponent}`);
-      if (componentElement) {
-        componentElement.style.cursor = '';
-        componentElement.style.zIndex = '';
-        componentElement.style.opacity = '1';
-      }
-      
-      setDraggingComponent(null);
-      
-      toast.success("Component repositioned", {
-        description: "You can continue to reposition components by dragging them.",
-        duration: 2000,
-      });
-    }
-    
-    endPan();
-  };
-
-  const handleCanvasMouseLeave = (e: React.MouseEvent) => {
-    handleCanvasMouseUp(e);
-  };
-
-  useEffect(() => {
-    if (!isReady) return;
-    
-    components.forEach(component => {
-      const elementId = `wokwi-element-${component.id}`;
-      const element = document.getElementById(elementId);
-      
-      if (element && !renderedComponents[component.id]) {
-        console.log(`Rendering component ${component.type} with id ${component.id}`);
-        
-        if (isCustomComponent(component.type)) {
-          renderCustomComponent(component.type, elementId, component.attributes);
-        } else {
-          renderWokwiElement(component.type, elementId, component.attributes);
-        }
-        
-        setRenderedComponents(prev => ({
-          ...prev,
-          [component.id]: true
-        }));
-      }
-    });
-  }, [components, isReady, renderedComponents]);
-
-  useEffect(() => {
-    const componentIds = components.map(c => c.id);
-    setRenderedComponents(prev => {
-      const newState = { ...prev };
-      Object.keys(newState).forEach(id => {
-        if (!componentIds.includes(id)) {
-          delete newState[id];
-        }
-      });
-      return newState;
-    });
-  }, [components]);
-
   const handleRetry = async () => {
     setLoadingError(null);
     setLoadingAttempts(0);
     await checkWokwiLoaded();
-  };
-
-  const renderComponent = (component: WokwiComponent) => {
-    const { type, id, top, left, attributes } = component;
-    
-    const pins = component.pins || fetchComponentPins(type);
-    
-    const showPins = visiblePins[id] || 
-                  hoveredComponent === id || 
-                  (activeWire && (activeWire.sourceComponentId === id || 
-                                (potentialTargetRef && potentialTargetRef.current?.componentId === id)));
-    
-    let svgPath = '';
-    if (isCustomComponent(type)) {
-      const libraryComponent = libraryComponents?.find(c => c.type === type);
-      if (libraryComponent && libraryComponent.svgPath) {
-        svgPath = libraryComponent.svgPath;
-      }
-    }
-    
-    return (
-      <div 
-        key={id}
-        id={`wokwi-element-wrapper-${id}`}
-        className="absolute"
-        style={{ 
-          top: `${top}px`, 
-          left: `${left}px`,
-          cursor: draggingComponent === id ? 'grabbing' : 'grab'
-        }}
-        onMouseDown={(e) => handleComponentMouseDown(e, id)}
-        onMouseEnter={() => handleComponentHover(id, type)}
-        onMouseLeave={handleComponentHoverExit}
-        onDoubleClick={() => togglePinVisibility(id)}
-      >
-        <div 
-          id={`wokwi-element-${id}`} 
-          data-svg-path={svgPath}
-        ></div>
-        
-        {showPins && pins && pins.length > 0 && (
-          <div className="absolute top-0 left-0 z-30 pointer-events-none">
-            {pins.map((pin, index) => {
-              const signalColor = pin.signals && pin.signals.length > 0 
-                ? (() => {
-                    const normalizedSignal = pin.signals[0].toLowerCase().trim();
-                    const signalColors: Record<string, string> = {
-                      'power': '#FF6384',
-                      '+5v': '#FF6384',
-                      '+3.3v': '#FF6384',
-                      'vcc': '#FF6384',
-                      'ground': '#36A2EB',
-                      'gnd': '#36A2EB',
-                      'digital': '#4BC0C0',
-                      'analog': '#FFCE56',
-                      'passive': '#9966FF',
-                      'i2c': '#FF9F40',
-                      'spi': '#C9CBCF',
-                      'uart': '#7CFC00',
-                      'rx': '#FF00FF',
-                      'tx': '#00FFFF',
-                    };
-                    
-                    for (const [key, color] of Object.entries(signalColors)) {
-                      if (normalizedSignal.includes(key)) {
-                        return color;
-                      }
-                    }
-                    return '#4BC0C0';
-                  })()
-                : '#4BC0C0';
-                
-              const isPotentialTarget = activeWire && 
-                activeWire.sourceComponentId !== id && 
-                hoveredPin?.componentId === id && 
-                hoveredPin?.pinIndex === index;
-                
-              return (
-                <div 
-                  key={`pin-${id}-${index}`}
-                  className="absolute pin-marker pointer-events-auto"
-                  style={{ 
-                    left: `${pin.x}px`, 
-                    top: `${pin.y}px`,
-                    backgroundColor: signalColor,
-                    width: '12px',
-                    height: '12px',
-                    borderRadius: '50%',
-                    transform: 'translate(-50%, -50%)',
-                    border: isPotentialTarget ? '2px solid white' : '1px solid rgba(0,0,0,0.3)',
-                    boxShadow: isPotentialTarget ? '0 0 0 2px rgba(0,0,0,0.3)' : 'none',
-                    cursor: 'pointer',
-                    zIndex: 20
-                  }}
-                  onMouseEnter={() => handlePinHover(id, index)}
-                  onMouseLeave={handlePinHoverExit}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    const pinPos = {
-                      x: component.left + pin.x,
-                      y: component.top + pin.y
-                    };
-                    handlePinClick(id, index, pinPos.x, pinPos.y);
-                  }}
-                />
-              );
-            })}
-          </div>
-        )}
-        
-        {hoveredPin && hoveredPin.componentId === id && pins && pins[hoveredPin.pinIndex] && (
-          <div 
-            className="absolute z-40 bg-black text-white text-xs px-1 py-0.5 rounded-sm opacity-80"
-            style={{ 
-              top: `${pins[hoveredPin.pinIndex].y}px`, 
-              left: `${pins[hoveredPin.pinIndex].x}px`, 
-              transform: 'translate(-50%, -100%)',
-              marginTop: '-5px'
-            }}
-          >
-            {pins[hoveredPin.pinIndex].name}
-            {pins[hoveredPin.pinIndex].signals && pins[hoveredPin.pinIndex].signals.length > 0 && (
-              <span className="text-xs opacity-70 ml-1">
-                ({pins[hoveredPin.pinIndex].signals.join(', ')})
-              </span>
-            )}
-          </div>
-        )}
-      </div>
-    );
   };
 
   return (
@@ -737,49 +733,52 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
       <div 
         ref={containerRef}
         className="h-full w-full overflow-hidden"
-        onWheel={handleWheel}
       >
-        <div 
-          ref={canvasRef} 
-          className="h-full w-full grid grid-cols-[repeat(40,25px)] grid-rows-[repeat(30,25px)] bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjUiIGhlaWdodD0iMjUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSIyNSIgaGVpZ2h0PSIyNSIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAwIDAgTCAyNSAwIE0gMCAwIEwgMCAyNSIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZTJlOGYwIiBzdHJva2Utd2lkdGg9IjEiPjwvcGF0aD48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JpZCkiPjwvcmVjdD48L3N2Zz4=')]"
+        <ReactFlow
+          ref={canvasRef}
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onConnect={onConnect}
+          nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
+          onInit={setReactFlowInstance}
           onDrop={handleDrop}
           onDragOver={handleDragOver}
-          onMouseDown={(e) => {
-            if (panMode || e.button === 1 || e.ctrlKey) {
-              startPan(e.clientX, e.clientY);
-            } else {
-              handleCanvasMouseDown(e);
-            }
-          }}
-          onMouseMove={handleCanvasMouseMove}
-          onMouseUp={handleCanvasMouseUp}
-          onMouseLeave={handleCanvasMouseLeave}
-          style={{
-            transform: `scale(${zoom}) translate(${offset.x / zoom}px, ${offset.y / zoom}px)`,
-            transformOrigin: '0 0',
-            transition: isDraggingCanvas ? 'none' : 'transform 0.1s ease-out',
-            cursor: panMode ? 'move' : activeWire ? 'crosshair' : 'default',
-            position: 'relative'
-          }}
+          minZoom={0.5}
+          maxZoom={4}
+          defaultViewport={{ x: 0, y: 0, zoom: 1 }}
+          fitView
+          snapToGrid={true}
+          snapGrid={[25, 25]}
         >
-          {components.map(component => renderComponent(component))}
-        </div>
-        
-        <KonvaWireRenderer
-          wires={wires}
-          activeWire={activeWire}
-          stageWidth={canvasSize.width}
-          stageHeight={canvasSize.height}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleStageMouseUp}
-          onClick={handleKonvaClick}
-          onWireDelete={deleteWire}
-          zoom={zoom}
-          offset={offset}
-        />
+          <Background 
+            variant={BackgroundVariant.Dots} 
+            gap={25} 
+            size={1} 
+            color="#e2e8f0" 
+          />
+          <Controls position="bottom-right" showInteractive={false} />
+          
+          {/* Show editing mode indicator */}
+          {editingEdgeId && (
+            <Panel position="top-left" className="bg-amber-100 border border-amber-300 rounded-md shadow-sm p-2 flex items-center gap-2">
+              <span className="text-sm text-amber-800">
+                Editing wire path. Double-click to add points, drag to adjust.
+              </span>
+            </Panel>
+          )}
+        </ReactFlow>
       </div>
     </div>
   );
 };
 
-export default CircuitCanvas;
+export default function CircuitCanvasWithProvider({ components, onComponentsChange }: CircuitCanvasProps) {
+  return (
+    <ReactFlowProvider>
+      <CircuitCanvas components={components} onComponentsChange={onComponentsChange} />
+    </ReactFlowProvider>
+  );
+}

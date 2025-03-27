@@ -3,13 +3,13 @@ import React, { useCallback } from 'react';
 import { EdgeProps, BaseEdge, getBezierPath, EdgeLabelRenderer, useReactFlow } from '@xyflow/react';
 import { X, Edit, Check, Plus } from 'lucide-react';
 
-// Define the type for control points
+// Define control point type
 interface ControlPoint {
   x: number;
   y: number;
 }
 
-// Define the type for edge data
+// Define custom edge data
 interface WireEdgeData {
   color?: string;
   isEditing?: boolean;
@@ -18,10 +18,10 @@ interface WireEdgeData {
   onFinishEdit?: (id: string) => void;
   onControlPointDrag?: (id: string, index: number, e: React.MouseEvent) => void;
   onAddControlPoint?: (id: string) => void;
-  [key: string]: unknown; // Add index signature to match Record<string, unknown>
+  [key: string]: any; // Add index signature for additional properties
 }
 
-// Use EdgeProps with proper generic type for data
+// Use proper EdgeProps with correct generic type
 const WireEdge: React.FC<EdgeProps<WireEdgeData>> = ({
   id,
   sourceX,

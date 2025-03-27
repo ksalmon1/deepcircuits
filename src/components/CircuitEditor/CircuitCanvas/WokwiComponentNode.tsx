@@ -1,16 +1,20 @@
+
 import React, { useEffect, memo } from 'react';
 import { Handle, Position, NodeProps } from '@xyflow/react';
 import { WokwiComponent } from '@/integrations/wokwi/WokwiIntegration';
 import { toast } from 'sonner';
 
-const WokwiComponentNode: React.FC<NodeProps<WokwiComponent>> = ({ 
+// Define the type for our node data
+interface WokwiNodeData extends WokwiComponent {
+  // Any additional fields needed for rendering
+}
+
+const WokwiComponentNode: React.FC<NodeProps<WokwiNodeData>> = ({ 
   id, 
   data,
-  selected,
-  xPos,
-  yPos
+  selected
 }) => {
-  const { type, attributes, pins = [] } = data;
+  const { type, attributes, pins = [] } = data || {};
   
   useEffect(() => {
     const elementId = `wokwi-element-${id}`;

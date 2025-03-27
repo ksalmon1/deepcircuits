@@ -121,6 +121,19 @@ export const useWireSystem = (components: WokwiComponent[]) => {
     }
   }, [activeWire, addIntermediatePoint]);
   
+  const deleteWire = useCallback((wireId: string) => {
+    console.log(`Deleting wire ${wireId}`);
+    setWires(prev => prev.filter(wire => wire.id !== wireId));
+  }, []);
+  
+  const handleMouseMove = useCallback((x: number, y: number) => {
+    if (activeWire) {
+      // Update the active wire endpoint
+      const updatedWire = updateWireEndPoint(activeWire, x, y);
+      setActiveWire(updatedWire);
+    }
+  }, [activeWire, updateWireEndPoint]);
+  
   return {
     wires,
     setWires,
@@ -129,6 +142,12 @@ export const useWireSystem = (components: WokwiComponent[]) => {
     handlePinClick,
     handleCanvasClick,
     cancelActiveWire,
-    potentialTargetRef
+    potentialTargetRef,
+    // Add the missing functions
+    handleMouseMove,
+    handleStageMouseUp: cancelActiveWire, // Alias for canceling the active wire
+    handleKonvaClick: handleCanvasClick, // Alias for handleCanvasClick
+    deleteWire,
+    potentialTarget: potentialTargetRef.current
   };
 };

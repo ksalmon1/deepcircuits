@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect } from 'react';
 import CircuitCanvas from './CircuitCanvas';
 import CodeEditor from './CodeEditor';
@@ -13,6 +14,42 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import DynamicPropertyEditor from './DynamicPropertyEditor';
 import { useMediaQuery } from '@/hooks/use-mobile';
+
+// Default initial code for Arduino sketch
+const initialCode = `// Arduino sketch
+void setup() {
+  Serial.begin(9600);
+  pinMode(LED_BUILTIN, OUTPUT);
+}
+
+void loop() {
+  digitalWrite(LED_BUILTIN, HIGH);
+  Serial.println("LED ON");
+  delay(1000);
+  digitalWrite(LED_BUILTIN, LOW);
+  Serial.println("LED OFF");
+  delay(1000);
+}`;
+
+// Interface definitions for component props
+interface ComponentPanelProps {
+  onComponentSelect: (component: WokwiComponent) => void;
+}
+
+interface CodeEditorProps {
+  code: string;
+  onChange: (code: string) => void;
+}
+
+interface SerialMonitorProps {
+  isSimulationRunning: boolean;
+  serialOutput: string[];
+}
+
+interface PropertyEditorProps {
+  component: WokwiComponent;
+  onUpdateAttributes: (attributes: Record<string, any>) => void;
+}
 
 const CircuitEditorPage = () => {
   const [components, setComponents] = useState<WokwiComponent[]>([]);
@@ -74,6 +111,15 @@ const CircuitEditorPage = () => {
     toast.success('Project imported successfully!');
   };
   
+  // Define the ComponentPanel component with the appropriate props
+  const ComponentPanelWithProps = ComponentPanel as React.FC<ComponentPanelProps>;
+  // Define the CodeEditor component with the appropriate props
+  const CodeEditorWithProps = CodeEditor as React.FC<CodeEditorProps>;
+  // Define the SerialMonitor component with the appropriate props
+  const SerialMonitorWithProps = SerialMonitor as React.FC<SerialMonitorProps>;
+  // Define the DynamicPropertyEditor component with the appropriate props
+  const PropertyEditorWithProps = DynamicPropertyEditor as React.FC<PropertyEditorProps>;
+  
   return (
     <div className="h-full flex flex-col">
       <div className="flex items-center gap-2 p-2 border-b">
@@ -122,7 +168,7 @@ const CircuitEditorPage = () => {
         {!isMobile ? (
           <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>
             <div className="h-full overflow-auto p-2">
-              <ComponentPanel onComponentSelect={handleComponentSelect} />
+              <ComponentPanelWithProps onComponentSelect={handleComponentSelect} />
             </div>
           </ResizablePanel>
         ) : (
@@ -133,7 +179,7 @@ const CircuitEditorPage = () => {
               </Button>
             </SheetTrigger>
             <SheetContent side="left">
-              <ComponentPanel onComponentSelect={handleComponentSelect} />
+              <ComponentPanelWithProps onComponentSelect={handleComponentSelect} />
             </SheetContent>
           </Sheet>
         )}
@@ -162,12 +208,12 @@ const CircuitEditorPage = () => {
             </TabsList>
             
             <TabsContent value="code" className="h-[calc(100%-40px)]">
-              <CodeEditor code={code} onChange={setCode} />
+              <CodeEditorWithProps code={code} onChange={setCode} />
             </TabsContent>
             
             <TabsContent value="properties" className="h-[calc(100%-40px)] overflow-auto p-4">
               {selectedComponent ? (
-                <DynamicPropertyEditor
+                <PropertyEditorWithProps
                   component={selectedComponent}
                   onUpdateAttributes={(attributes) =>
                     handleUpdateComponentAttributes(selectedComponent.id, attributes)
@@ -181,7 +227,7 @@ const CircuitEditorPage = () => {
             </TabsContent>
             
             <TabsContent value="serial" className="h-[calc(100%-40px)]">
-              <SerialMonitor 
+              <SerialMonitorWithProps 
                 isSimulationRunning={isSimulationRunning} 
                 serialOutput={serialOutput} 
               />
