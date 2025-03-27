@@ -4,7 +4,10 @@ import { Handle, Position, NodeProps } from '@xyflow/react';
 import { WokwiNodeData } from '@/types/circuit';
 import { toast } from 'sonner';
 
-interface WokwiComponentNodeProps extends NodeProps<WokwiNodeData> {}
+// Define the component props correctly
+interface WokwiComponentNodeProps extends NodeProps {
+  data: WokwiNodeData;
+}
 
 const WokwiComponentNode = ({ 
   id, 

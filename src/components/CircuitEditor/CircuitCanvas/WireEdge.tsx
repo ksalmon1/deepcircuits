@@ -3,7 +3,10 @@ import React, { useCallback } from 'react';
 import { EdgeProps, BaseEdge, getBezierPath, EdgeLabelRenderer, useReactFlow } from '@xyflow/react';
 import { WireEdgeData } from '@/types/circuit';
 
-interface WireEdgeProps extends EdgeProps<WireEdgeData> {}
+// Define properly typed props interface
+interface WireEdgeProps extends EdgeProps {
+  data?: WireEdgeData;
+}
 
 const WireEdge = ({
   id,
@@ -25,7 +28,7 @@ const WireEdge = ({
   const wireStyle = {
     stroke: wireColor,
     strokeWidth: selected ? 3 : 2,
-    ...(style || {}),
+    ...style,
   };
 
   // Determine if edge is in edit mode

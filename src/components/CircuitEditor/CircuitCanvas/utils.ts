@@ -85,7 +85,10 @@ export const convertWireToEdge = (
       color: wire.color,
       isEditing,
       controlPoints: edgeControlPoints,
-      ...handlers
+      onStartEdit: handlers.onStartEdit,
+      onFinishEdit: handlers.onFinishEdit,
+      onControlPointDrag: handlers.onControlPointDrag,
+      onAddControlPoint: handlers.onAddControlPoint
     },
     animated: false,
   };
