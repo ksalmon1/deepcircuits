@@ -59,6 +59,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     handleStageMouseUp,
     handleKonvaClick,
     cancelActiveWire,
+    deleteWire,
     potentialTarget,
     potentialTargetRef
   } = useWireSystem(components);
@@ -772,6 +773,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
           onMouseMove={handleMouseMove}
           onMouseUp={handleStageMouseUp}
           onClick={handleKonvaClick}
+          onWireDelete={deleteWire}
           zoom={zoom}
           offset={offset}
         />

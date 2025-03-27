@@ -1,8 +1,8 @@
-
 import { useState, useCallback, useRef } from 'react';
 import { WokwiComponent } from '@/integrations/wokwi/WokwiIntegration';
 import { getWireColorFromSignal, getPinSignalType, createAutoRoutedPoints } from '@/utils/wireUtils';
 import { KonvaEventObject } from 'konva/lib/Node';
+import { toast } from 'sonner';
 
 export interface WirePoint {
   x: number;
@@ -340,6 +340,21 @@ export const useWireSystem = (components: WokwiComponent[]) => {
     potentialTargetRef.current = null;
   }, []);
   
+  const deleteWire = useCallback((wireId: string) => {
+    console.log(`Deleting wire with ID: ${wireId}`);
+    
+    setWires(prevWires => {
+      const updatedWires = prevWires.filter(wire => wire.id !== wireId);
+      
+      toast.success("Wire deleted", {
+        description: "Connection has been removed from the circuit",
+        duration: 2000,
+      });
+      
+      return updatedWires;
+    });
+  }, []);
+  
   return {
     wires,
     setWires,
@@ -350,6 +365,7 @@ export const useWireSystem = (components: WokwiComponent[]) => {
     handleStageMouseUp,
     handleKonvaClick,
     cancelActiveWire,
+    deleteWire,
     potentialTarget: potentialTargetRef.current,
     potentialTargetRef
   };
