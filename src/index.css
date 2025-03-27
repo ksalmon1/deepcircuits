@@ -99,14 +99,3 @@
     @apply bg-background text-foreground;
   }
 }
-
-/* We're keeping the class definition but not using it by default */
-.scrollbar-hidden::-webkit-scrollbar {
-  display: none;
-}
-
-.scrollbar-hidden {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-  overflow-y: auto;
-}
