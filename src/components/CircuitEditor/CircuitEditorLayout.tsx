@@ -138,6 +138,12 @@ export const CircuitEditorLayout = () => {
     setVerticalSplit(!verticalSplit);
   };
 
+  const handleComponentSelect = (component: WokwiComponent) => {
+    console.log('Component selected:', component);
+    // In a real implementation, this would add the component to the canvas
+    setCircuitComponents(prev => [...prev, component]);
+  };
+
   return (
     <div className="h-full flex flex-col">
       {/* Top toolbar */}
@@ -229,7 +235,7 @@ export const CircuitEditorLayout = () => {
       <div className="flex-1 flex">
         {/* Left panel - Component palette */}
         <div className="w-64 border-r bg-gray-50 p-4 overflow-y-auto">
-          <ComponentPanel />
+          <ComponentPanel onComponentSelect={handleComponentSelect} />
         </div>
 
         {/* Main area with circuit canvas and optional editors */}
@@ -256,22 +262,22 @@ export const CircuitEditorLayout = () => {
                 {showCodeEditor && showSerialMonitor ? (
                   <>
                     <div className={`${verticalSplit ? 'h-1/2' : 'w-1/2'} overflow-hidden`}>
-                      <CodeEditor projectId={projectId || undefined} onCompile={handleCompileCode} />
+                      <CodeEditor onCompile={handleCompileCode} />
                     </div>
                     <div className={`${verticalSplit ? 'h-1/2 border-t' : 'w-1/2 border-l'} overflow-hidden`}>
-                      <SerialMonitor projectId={projectId || undefined} />
+                      <SerialMonitor />
                     </div>
                   </>
                 ) : (
                   <>
                     {showCodeEditor && (
                       <div className="flex-1 overflow-hidden">
-                        <CodeEditor projectId={projectId || undefined} onCompile={handleCompileCode} />
+                        <CodeEditor onCompile={handleCompileCode} />
                       </div>
                     )}
                     {showSerialMonitor && (
                       <div className="flex-1 overflow-hidden">
-                        <SerialMonitor projectId={projectId || undefined} />
+                        <SerialMonitor />
                       </div>
                     )}
                   </>

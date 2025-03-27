@@ -9,7 +9,9 @@ const WokwiComponentNode: React.FC<NodeProps<WokwiNodeData>> = ({
   data,
   selected
 }) => {
-  const { type, attributes, pins = [] } = data || {};
+  // Ensure data is not undefined
+  const safeData = data || { type: '', attributes: {}, pins: [] };
+  const { type, attributes, pins = [] } = safeData;
   
   useEffect(() => {
     const elementId = `wokwi-element-${id}`;
