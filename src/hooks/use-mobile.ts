@@ -23,3 +23,10 @@ export const useMediaQuery = (query: string): boolean => {
 
   return matches;
 };
+
+/**
+ * Hook to detect if the current viewport is mobile-sized
+ */
+export const useIsMobile = (): boolean => {
+  return useMediaQuery("(max-width: 768px)");
+};

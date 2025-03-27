@@ -134,6 +134,21 @@ export const useWireSystem = (components: WokwiComponent[]) => {
     }
   }, [activeWire, updateWireEndPoint]);
   
+  const handleStageMouseUp = useCallback(() => {
+    // Alias for canceling the active wire on canvas mouse up when clicking empty space
+    if (activeWire) {
+      // Only cancel if no potential target is set
+      if (!potentialTargetRef.current) {
+        cancelActiveWire();
+      }
+    }
+  }, [activeWire, cancelActiveWire]);
+  
+  const handleKonvaClick = useCallback((x: number, y: number) => {
+    // Alias for handleCanvasClick
+    handleCanvasClick(x, y);
+  }, [handleCanvasClick]);
+
   return {
     wires,
     setWires,
@@ -143,10 +158,9 @@ export const useWireSystem = (components: WokwiComponent[]) => {
     handleCanvasClick,
     cancelActiveWire,
     potentialTargetRef,
-    // Add the missing functions
     handleMouseMove,
-    handleStageMouseUp: cancelActiveWire, // Alias for canceling the active wire
-    handleKonvaClick: handleCanvasClick, // Alias for handleCanvasClick
+    handleStageMouseUp,
+    handleKonvaClick,
     deleteWire,
     potentialTarget: potentialTargetRef.current
   };

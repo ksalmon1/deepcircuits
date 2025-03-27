@@ -5,8 +5,15 @@ import { WokwiComponent } from '@/integrations/wokwi/WokwiIntegration';
 import { toast } from 'sonner';
 
 // Define the type for our node data
-interface WokwiNodeData extends WokwiComponent {
-  // Any additional fields needed for rendering
+interface WokwiNodeData {
+  type: string;
+  attributes?: Record<string, any>;
+  pins?: Array<{
+    name: string;
+    x: number;
+    y: number;
+    signals?: string[];
+  }>;
 }
 
 const WokwiComponentNode: React.FC<NodeProps<WokwiNodeData>> = ({ 
@@ -65,7 +72,7 @@ const WokwiComponentNode: React.FC<NodeProps<WokwiNodeData>> = ({
     const nodeElement = document.getElementById(`node-${id}`);
     if (nodeElement) {
       nodeElement.setAttribute('data-component-id', id);
-      nodeElement.setAttribute('data-component-type', type);
+      nodeElement.setAttribute('data-component-type', type || '');
     }
   }, [id, type]);
   

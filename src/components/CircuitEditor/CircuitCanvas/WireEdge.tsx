@@ -1,7 +1,6 @@
 
 import React, { useCallback } from 'react';
 import { EdgeProps, BaseEdge, getBezierPath, EdgeLabelRenderer, useReactFlow } from '@xyflow/react';
-import { X, Edit, Check, Plus } from 'lucide-react';
 
 // Define control point type
 interface ControlPoint {
@@ -18,11 +17,10 @@ interface WireEdgeData {
   onFinishEdit?: (id: string) => void;
   onControlPointDrag?: (id: string, index: number, e: React.MouseEvent) => void;
   onAddControlPoint?: (id: string) => void;
-  [key: string]: any; // Add index signature for additional properties
 }
 
-// Use proper EdgeProps with correct generic type
-const WireEdge: React.FC<EdgeProps<WireEdgeData>> = ({
+// Use proper EdgeProps with our custom data
+const WireEdge = ({
   id,
   sourceX,
   sourceY,
@@ -34,7 +32,7 @@ const WireEdge: React.FC<EdgeProps<WireEdgeData>> = ({
   markerEnd,
   data,
   selected,
-}) => {
+}: EdgeProps) => {
   const reactFlowInstance = useReactFlow();
   
   // Default wire color and customize based on the data
@@ -177,7 +175,10 @@ const WireEdge: React.FC<EdgeProps<WireEdgeData>> = ({
                     borderRadius: '2px',
                   }}
                 >
-                  <Edit size={12} color="#555" />
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                  </svg>
                 </button>
                 <button
                   className="wire-control-button wire-delete-button"
@@ -198,7 +199,10 @@ const WireEdge: React.FC<EdgeProps<WireEdgeData>> = ({
                     borderRadius: '2px',
                   }}
                 >
-                  <X size={12} color="#F56565" />
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#F56565" strokeWidth="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
                 </button>
               </>
             ) : (
@@ -223,7 +227,10 @@ const WireEdge: React.FC<EdgeProps<WireEdgeData>> = ({
                     borderRadius: '2px',
                   }}
                 >
-                  <Plus size={12} color="#555" />
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                  </svg>
                 </button>
                 <button
                   className="wire-control-button wire-done-button"
@@ -245,7 +252,9 @@ const WireEdge: React.FC<EdgeProps<WireEdgeData>> = ({
                     borderRadius: '2px',
                   }}
                 >
-                  <Check size={12} color="#38A169" />
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#38A169" strokeWidth="2">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                  </svg>
                 </button>
               </>
             )}
