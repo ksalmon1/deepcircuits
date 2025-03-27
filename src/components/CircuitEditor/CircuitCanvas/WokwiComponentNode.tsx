@@ -4,13 +4,15 @@ import { Handle, Position, NodeProps } from '@xyflow/react';
 import { WokwiNodeData } from '@/types/circuit';
 import { toast } from 'sonner';
 
+interface WokwiComponentNodeProps extends NodeProps<WokwiNodeData> {}
+
 const WokwiComponentNode = ({ 
   id, 
   data,
   selected
-}: NodeProps<WokwiNodeData>) => {
-  // Ensure data is not undefined
-  const safeData = data || { type: '', attributes: {}, pins: [] };
+}: WokwiComponentNodeProps) => {
+  // Ensure data is not undefined and has the correct type
+  const safeData: WokwiNodeData = data || { type: '', attributes: {}, pins: [] };
   const { type, attributes, pins = [] } = safeData;
   
   useEffect(() => {

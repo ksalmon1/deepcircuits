@@ -27,7 +27,14 @@ export const CircuitEditorLayout = () => {
   const [verticalSplit, setVerticalSplit] = useState<boolean>(true);
   // Circuit components state - lifted up from CircuitCanvas
   const [circuitComponents, setCircuitComponents] = useState<WokwiComponent[]>([]);
-
+  
+  // State for CodeEditor
+  const [code, setCode] = useState<string>('// Write your Arduino code here\nvoid setup() {\n  // Initialize components\n}\n\nvoid loop() {\n  // Main program loop\n}\n');
+  
+  // State for SerialMonitor
+  const [isSimulationRunning, setIsSimulationRunning] = useState<boolean>(false);
+  const [serialOutput, setSerialOutput] = useState<string[]>([]);
+  
   // Load project data based on ID (mock implementation)
   useEffect(() => {
     if (projectId) {
@@ -66,6 +73,8 @@ export const CircuitEditorLayout = () => {
 
   const handleSimulate = () => {
     setShowSerialMonitor(true);
+    setIsSimulationRunning(true);
+    setSerialOutput(prev => [...prev, 'Starting simulation...', 'Initializing components...', 'Simulation running.']);
     toast.info('Starting simulation...', {
       description: 'Simulation started. Check the serial monitor for output.',
     });
@@ -109,12 +118,19 @@ export const CircuitEditorLayout = () => {
     }
   };
 
-  const handleCompileCode = async (code: string) => {
-    console.log('Compiling code:', code);
+  const handleCompileCode = async (codeToCompile: string) => {
+    console.log('Compiling code:', codeToCompile);
     // In a real app, this would send the code to a backend API
-    // For now, we'll just show a toast message
+    // For now, we'll just show a toast message and update serial output
+    setSerialOutput(prev => [...prev, 'Compiling code...']);
     await new Promise(resolve => setTimeout(resolve, 1000));
+    setSerialOutput(prev => [...prev, 'Compilation successful', 'Uploading to microcontroller...', 'Running program.']);
     toast.success('Code compiled and uploaded to simulated microcontroller');
+  };
+
+  const handleCodeChange = (newCode: string) => {
+    setCode(newCode);
+    setIsModified(true);
   };
 
   // Update isModified when circuit components change
@@ -262,22 +278,36 @@ export const CircuitEditorLayout = () => {
                 {showCodeEditor && showSerialMonitor ? (
                   <>
                     <div className={`${verticalSplit ? 'h-1/2' : 'w-1/2'} overflow-hidden`}>
-                      <CodeEditor onCompile={handleCompileCode} />
+                      <CodeEditor 
+                        code={code} 
+                        onChange={handleCodeChange} 
+                        onCompile={handleCompileCode} 
+                      />
                     </div>
                     <div className={`${verticalSplit ? 'h-1/2 border-t' : 'w-1/2 border-l'} overflow-hidden`}>
-                      <SerialMonitor />
+                      <SerialMonitor 
+                        isSimulationRunning={isSimulationRunning} 
+                        serialOutput={serialOutput} 
+                      />
                     </div>
                   </>
                 ) : (
                   <>
                     {showCodeEditor && (
                       <div className="flex-1 overflow-hidden">
-                        <CodeEditor onCompile={handleCompileCode} />
+                        <CodeEditor 
+                          code={code} 
+                          onChange={handleCodeChange} 
+                          onCompile={handleCompileCode} 
+                        />
                       </div>
                     )}
                     {showSerialMonitor && (
                       <div className="flex-1 overflow-hidden">
-                        <SerialMonitor />
+                        <SerialMonitor 
+                          isSimulationRunning={isSimulationRunning} 
+                          serialOutput={serialOutput} 
+                        />
                       </div>
                     )}
                   </>

@@ -7,7 +7,7 @@ import { WokwiNodeData, WireEdgeData } from '@/types/circuit';
 /**
  * Converts a Wokwi component to an XY Flow node
  */
-export const componentToNode = (component: WokwiComponent): Node => {
+export const componentToNode = (component: WokwiComponent): Node<WokwiNodeData> => {
   return {
     id: component.id,
     type: 'wokwiComponent',
@@ -16,7 +16,7 @@ export const componentToNode = (component: WokwiComponent): Node => {
       type: component.type,
       attributes: component.attributes,
       pins: component.pins || []
-    } as WokwiNodeData,
+    },
   };
 };
 
@@ -34,7 +34,7 @@ export const wiresToEdges = (
     onControlPointDrag: (id: string, index: number, e: React.MouseEvent) => void;
     onAddControlPoint: (id: string) => void;
   }
-): Edge[] => {
+): Edge<WireEdgeData>[] => {
   return wires.map(wire => {
     // Skip wires that don't have source and target components
     if (!wire.sourceComponentId || !wire.targetComponentId) return null;
@@ -55,7 +55,7 @@ export const wiresToEdges = (
       controlPoints[wire.id] || [],
       handlers
     );
-  }).filter(Boolean) as Edge[];
+  }).filter(Boolean) as Edge<WireEdgeData>[];
 };
 
 /**
@@ -73,7 +73,7 @@ export const convertWireToEdge = (
     onControlPointDrag: (id: string, index: number, e: React.MouseEvent) => void;
     onAddControlPoint: (id: string) => void;
   }
-): Edge => {
+): Edge<WireEdgeData> => {
   return {
     id: wire.id,
     source: wire.sourceComponentId,
@@ -86,7 +86,7 @@ export const convertWireToEdge = (
       isEditing,
       controlPoints: edgeControlPoints,
       ...handlers
-    } as WireEdgeData,
+    },
     animated: false,
   };
 };

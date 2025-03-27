@@ -3,6 +3,8 @@ import React, { useCallback } from 'react';
 import { EdgeProps, BaseEdge, getBezierPath, EdgeLabelRenderer, useReactFlow } from '@xyflow/react';
 import { WireEdgeData } from '@/types/circuit';
 
+interface WireEdgeProps extends EdgeProps<WireEdgeData> {}
+
 const WireEdge = ({
   id,
   sourceX,
@@ -15,7 +17,7 @@ const WireEdge = ({
   markerEnd,
   data,
   selected,
-}: EdgeProps<WireEdgeData>) => {
+}: WireEdgeProps) => {
   const reactFlowInstance = useReactFlow();
   
   // Default wire color and customize based on the data
