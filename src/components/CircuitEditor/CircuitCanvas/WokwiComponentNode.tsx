@@ -1,194 +1,150 @@
+import React, { useEffect, memo } from 'react';
+import { Handle, Position, NodeProps } from '@xyflow/react';
+import { WokwiComponent } from '@/integrations/wokwi/WokwiIntegration';
+import { toast } from 'sonner';
 
-import React, { useEffect, useState, useRef } from 'react';
-import { Handle, Position, NodeProps, NodeResizer } from '@xyflow/react';
-import { 
-  renderWokwiElement, 
-  isWokwiLoaded, 
-  WokwiComponent,
-  WokwiPin
-} from '@/integrations/wokwi/WokwiIntegration';
-import { fetchComponentPins } from '@/utils/componentUtils';
-import { isCustomComponent, renderCustomComponent } from '@/integrations/custom/CustomComponents';
-import { useComponentLibrary } from '@/hooks/useComponentLibrary';
-
-const WokwiComponentNode: React.FC<NodeProps> = ({ id, data, selected }) => {
-  const nodeRef = useRef<HTMLDivElement>(null);
-  const [pins, setPins] = useState<WokwiPin[]>([]);
-  const [showPins, setShowPins] = useState(false);
-  const [hoveredPin, setHoveredPin] = useState<number | null>(null);
-  const { componentsDetailsMap } = useComponentLibrary();
+const WokwiComponentNode: React.FC<NodeProps<WokwiComponent>> = ({ 
+  id, 
+  data,
+  selected,
+  xPos,
+  yPos
+}) => {
+  const { type, attributes, pins = [] } = data;
   
-  // Fetch pins and render component when component is ready
   useEffect(() => {
-    if (!data?.component || !isWokwiLoaded()) return;
-    
-    const component = data.component as WokwiComponent;
-    
-    // Fetch pins for this component type
-    const componentPins = fetchComponentPins(component.type);
-    setPins(componentPins);
-    
-    // Render the Wokwi element
     const elementId = `wokwi-element-${id}`;
     
-    if (isCustomComponent(component.type)) {
-      renderCustomComponent(component.type, elementId, component.attributes);
-    } else {
-      renderWokwiElement(component.type, elementId, component.attributes);
-    }
-  }, [id, data?.component]);
+    const renderWokwiElement = async () => {
+      try {
+        let elementContainer = document.getElementById(elementId);
+        
+        if (!elementContainer) {
+          elementContainer = document.createElement('div');
+          elementContainer.id = elementId;
+          
+          const nodeElement = document.getElementById(`node-${id}`);
+          if (nodeElement) {
+            nodeElement.appendChild(elementContainer);
+          }
+        }
+        
+        if (elementContainer) {
+          elementContainer.innerHTML = '';
+          
+          const integration = await import('@/integrations/wokwi/WokwiIntegration');
+          const customIntegration = await import('@/integrations/custom/CustomComponents');
+          
+          if (customIntegration.isCustomComponent(type)) {
+            await customIntegration.renderCustomComponent(type, elementId, attributes);
+          } else {
+            await integration.renderWokwiElement(type, elementId, attributes);
+          }
+        }
+      } catch (error) {
+        console.error(`Error rendering Wokwi component ${type}:`, error);
+        toast.error(`Failed to render component ${type}`);
+      }
+    };
+    
+    renderWokwiElement();
+    
+    return () => {
+      const elementContainer = document.getElementById(elementId);
+      if (elementContainer) {
+        elementContainer.innerHTML = '';
+      }
+    };
+  }, [id, type, attributes]);
   
-  // Show/hide pins on hover
-  const handleMouseEnter = () => {
-    setShowPins(true);
-  };
-  
-  const handleMouseLeave = () => {
-    if (!selected) {
-      setShowPins(false);
-    }
-  };
-  
-  // Select/deselect component
   useEffect(() => {
-    if (selected) {
-      setShowPins(true);
-    } else {
-      setShowPins(false);
+    const nodeElement = document.getElementById(`node-${id}`);
+    if (nodeElement) {
+      nodeElement.setAttribute('data-component-id', id);
+      nodeElement.setAttribute('data-component-type', type);
     }
-  }, [selected]);
+  }, [id, type]);
   
-  // Handle pin hover
-  const handlePinHover = (index: number) => {
-    setHoveredPin(index);
+  const nodeStyle: React.CSSProperties = {
+    background: 'transparent',
+    border: selected ? '1px dashed #4C72F4' : 'none',
+    padding: selected ? '8px' : '0',
+    borderRadius: '4px',
+    position: 'relative',
+    width: 'auto',
+    height: 'auto',
+    minWidth: '30px',
+    minHeight: '30px',
   };
   
-  const handlePinLeave = () => {
-    setHoveredPin(null);
-  };
+  useEffect(() => {
+    const nodeElement = document.getElementById(`node-${id}`);
+    if (nodeElement) {
+      nodeElement.ondragstart = (e) => {
+        e.preventDefault();
+        return false;
+      };
+    }
+  }, [id]);
   
-  if (!data?.component) {
-    return <div>Invalid Component</div>;
-  }
+  const getSignalColor = (signals: string[] = []) => {
+    if (!signals || signals.length === 0) return '#4BC0C0';
+    
+    const signal = signals[0].toLowerCase();
+    
+    if (signal.includes('power') || signal.includes('+5v') || signal.includes('+3.3v') || signal.includes('vcc')) {
+      return '#FF6384';
+    }
+    if (signal.includes('ground') || signal.includes('gnd')) {
+      return '#36A2EB';
+    }
+    if (signal.includes('analog')) {
+      return '#FFCE56';
+    }
+    if (signal.includes('i2c')) {
+      return '#FF9F40';
+    }
+    if (signal.includes('spi')) {
+      return '#C9CBCF';
+    }
+    if (signal.includes('uart') || signal.includes('rx') || signal.includes('tx')) {
+      return '#7CFC00';
+    }
+    
+    return '#4BC0C0';
+  };
   
   return (
-    <div 
-      ref={nodeRef}
-      className="wokwi-component-node"
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-      onDoubleClick={() => setShowPins(!showPins)}
-    >
-      {/* Component container */}
-      <div id={`wokwi-element-${id}`} className="wokwi-element-container" />
+    <div id={`node-${id}`} style={nodeStyle}>
+      <div id={`wokwi-element-${id}`} />
       
-      {/* Connection handles for each pin */}
-      {pins && pins.length > 0 && showPins && (
-        <div className="pin-handles">
-          {pins.map((pin, index) => {
-            // Calculate position based on pin coordinates relative to component
-            const handlePosition = getHandlePosition(pin);
-            const isHovered = hoveredPin === index;
-            
-            return (
-              <React.Fragment key={`${id}-pin-${index}`}>
-                <Handle
-                  type="source"
-                  position={handlePosition}
-                  id={`pin-${index}-out`}
-                  style={{
-                    left: pin.x,
-                    top: pin.y,
-                    width: isHovered ? '12px' : '8px',
-                    height: isHovered ? '12px' : '8px',
-                    backgroundColor: getPinColor(pin.signals),
-                    border: isHovered ? '2px solid #ffffff' : '1px solid rgba(0,0,0,0.3)',
-                    zIndex: 10,
-                  }}
-                  onMouseEnter={() => handlePinHover(index)}
-                  onMouseLeave={handlePinLeave}
-                />
-                <Handle
-                  type="target"
-                  position={handlePosition}
-                  id={`pin-${index}-in`}
-                  style={{
-                    left: pin.x,
-                    top: pin.y,
-                    width: isHovered ? '12px' : '8px',
-                    height: isHovered ? '12px' : '8px',
-                    backgroundColor: getPinColor(pin.signals),
-                    border: isHovered ? '2px solid #ffffff' : '1px solid rgba(0,0,0,0.3)',
-                    zIndex: 10,
-                  }}
-                  onMouseEnter={() => handlePinHover(index)}
-                  onMouseLeave={handlePinLeave}
-                />
-                
-                {/* Pin tooltip */}
-                {isHovered && (
-                  <div 
-                    className="pin-tooltip"
-                    style={{
-                      left: pin.x,
-                      top: pin.y,
-                      transform: 'translate(-50%, -100%)',
-                      marginTop: '-5px'
-                    }}
-                  >
-                    {pin.name}
-                    {pin.signals && pin.signals.length > 0 && (
-                      <span className="pin-signals">
-                        ({pin.signals.join(', ')})
-                      </span>
-                    )}
-                  </div>
-                )}
-              </React.Fragment>
-            );
-          })}
-        </div>
-      )}
+      {pins && pins.map((pin, index) => {
+        const style = {
+          top: pin.y,
+          left: pin.x,
+          background: getSignalColor(pin.signals),
+          width: '8px',
+          height: '8px',
+          zIndex: 10
+        };
+        
+        let position = Position.Right;
+        
+        return (
+          <Handle
+            key={`pin-${index}`}
+            id={`pin-${index}`}
+            type="source"
+            position={position}
+            style={style}
+            className="custom-handle"
+            isConnectable={true}
+            title={pin.name}
+          />
+        );
+      })}
     </div>
   );
 };
 
-// Helper function to determine the proper handle position based on pin coordinates
-function getHandlePosition(pin: WokwiPin): Position {
-  // This is simplified - ideally you'd use the relative position to determine this
-  // If pin is on left side, use Position.Left, etc.
-  return Position.Right;
-}
-
-// Helper function to get pin color based on signals
-function getPinColor(signals: string[] = []): string {
-  if (!signals || signals.length === 0) return '#4BC0C0';
-  
-  const normalizedSignal = signals[0].toLowerCase().trim();
-  const signalColors: Record<string, string> = {
-    'power': '#FF6384',
-    '+5v': '#FF6384',
-    '+3.3v': '#FF6384',
-    'vcc': '#FF6384',
-    'ground': '#36A2EB',
-    'gnd': '#36A2EB',
-    'digital': '#4BC0C0',
-    'analog': '#FFCE56',
-    'passive': '#9966FF',
-    'i2c': '#FF9F40',
-    'spi': '#C9CBCF',
-    'uart': '#7CFC00',
-    'rx': '#FF00FF',
-    'tx': '#00FFFF',
-  };
-  
-  for (const [key, color] of Object.entries(signalColors)) {
-    if (normalizedSignal.includes(key)) {
-      return color;
-    }
-  }
-  
-  return '#4BC0C0';
-}
-
-export default WokwiComponentNode;
+export default memo(WokwiComponentNode);

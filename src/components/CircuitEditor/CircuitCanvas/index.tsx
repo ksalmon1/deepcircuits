@@ -13,10 +13,11 @@ import {
   EdgeTypes,
   Panel,
   useReactFlow,
-  useOnSelectionChange,
   BackgroundVariant,
   ReactFlowProvider,
-  ReactFlowInstance
+  ReactFlowInstance,
+  useOnSelectionChange,
+  ConnectionLineType
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { toast } from 'sonner';
@@ -24,7 +25,9 @@ import { ZoomIn, ZoomOut, Move, Trash2 } from 'lucide-react';
 import { WokwiComponent } from '@/integrations/wokwi/WokwiIntegration';
 import WokwiComponentNode from './WokwiComponentNode';
 import WireEdge from './WireEdge';
-import { componentToNode, wiresToEdges } from './utils';
+import { componentToNode, wiresToEdges, convertWireToEdge } from './utils';
+import { getPinSignalType, getWireColorFromSignal } from '@/utils/wireUtils';
+import { useWireSystem, Wire } from '@/hooks/useWireSystem';
 import './circuit-canvas.css';
 
 // Define the custom node and edge types
@@ -55,12 +58,36 @@ const CircuitCanvas: React.FC<CircuitCanvasProps> = ({
   const [controlPoints, setControlPoints] = useState<Record<string, { x: number, y: number }[]>>({});
   const [isDraggingControlPoint, setIsDraggingControlPoint] = useState(false);
   const [activeControlPoint, setActiveControlPoint] = useState<{edgeId: string, pointIndex: number} | null>(null);
-
+  
+  // Import useWireSystem for managing wires
+  const {
+    wires,
+    setWires,
+    activeWire,
+    cancelActiveWire,
+    handlePinClick
+  } = useWireSystem(components);
+  
   // Convert components to nodes when components change
   React.useEffect(() => {
     const initialNodes = components.map(componentToNode);
     setNodes(initialNodes);
   }, [components, setNodes]);
+  
+  // Convert wires to edges when wires change
+  React.useEffect(() => {
+    // Convert completed wires to edges
+    const completedWires = wires.filter(wire => wire.isComplete && wire.targetComponentId);
+    
+    const wireEdges = wiresToEdges(completedWires, components, editingEdgeId, controlPoints, {
+      onStartEdit: startEdgeEdit,
+      onFinishEdit: finishEdgeEdit,
+      onControlPointDrag: handleControlPointDragStart,
+      onAddControlPoint: addControlPoint
+    });
+    
+    setEdges(wireEdges);
+  }, [wires, components, editingEdgeId, controlPoints]);
   
   // Start wire editing mode
   const startEdgeEdit = useCallback((edgeId: string) => {
@@ -70,20 +97,31 @@ const CircuitCanvas: React.FC<CircuitCanvasProps> = ({
     
     // Initialize control points if not already present
     if (!controlPoints[edgeId]) {
-      // For a simple bezier curve, we can add a control point in the middle
-      const sourceX = edge.sourceX || 0;
-      const sourceY = edge.sourceY || 0;
-      const targetX = edge.targetX || 0;
-      const targetY = edge.targetY || 0;
+      // Find corresponding wire to get all points
+      const wire = wires.find(w => w.id === edgeId);
       
-      // Create a central control point
-      const middleX = (sourceX + targetX) / 2;
-      const middleY = (sourceY + targetY) / 2;
-      
-      setControlPoints(prev => ({
-        ...prev,
-        [edgeId]: [{ x: middleX, y: middleY }]
-      }));
+      if (wire && wire.points.length > 2) {
+        // Use inner points as control points (exclude source and target)
+        setControlPoints(prev => ({
+          ...prev,
+          [edgeId]: wire.points.slice(1, -1).map(p => ({ x: p.x, y: p.y }))
+        }));
+      } else {
+        // For a simple bezier curve, we can add a control point in the middle
+        const sourceX = edge.sourceX || 0;
+        const sourceY = edge.sourceY || 0;
+        const targetX = edge.targetX || 0;
+        const targetY = edge.targetY || 0;
+        
+        // Create a central control point
+        const middleX = (sourceX + targetX) / 2;
+        const middleY = (sourceY + targetY) / 2;
+        
+        setControlPoints(prev => ({
+          ...prev,
+          [edgeId]: [{ x: middleX, y: middleY }]
+        }));
+      }
     }
     
     // Set the edge to edit mode
@@ -103,7 +141,8 @@ const CircuitCanvas: React.FC<CircuitCanvasProps> = ({
                 y: (e.sourceY || 0 + e.targetY || 0) / 2 
               }],
               onControlPointDrag: handleControlPointDragStart,
-              onFinishEdit: finishEdgeEdit
+              onFinishEdit: finishEdgeEdit,
+              onAddControlPoint: addControlPoint
             }
           };
         }
@@ -114,7 +153,7 @@ const CircuitCanvas: React.FC<CircuitCanvasProps> = ({
     toast.info('Editing wire path. Drag control points to adjust the wire.', {
       duration: 3000,
     });
-  }, [edges, controlPoints]);
+  }, [edges, controlPoints, wires]);
   
   // Handle control point drag start
   const handleControlPointDragStart = useCallback((edgeId: string, pointIndex: number, e: React.MouseEvent) => {
@@ -133,7 +172,11 @@ const CircuitCanvas: React.FC<CircuitCanvasProps> = ({
       
       // Update the control point position
       setControlPoints(prev => {
-        const edgePoints = [...(prev[edgeId] || [])];
+        if (!prev[edgeId]) return prev;
+        
+        const edgePoints = [...prev[edgeId]];
+        if (pointIndex >= edgePoints.length) return prev;
+        
         edgePoints[pointIndex] = { x, y };
         return {
           ...prev,
@@ -156,6 +199,30 @@ const CircuitCanvas: React.FC<CircuitCanvasProps> = ({
           return e;
         })
       );
+      
+      // Also update the wire with the new points
+      setWires(prevWires => 
+        prevWires.map(wire => {
+          if (wire.id === edgeId) {
+            // Get current control points
+            const edgeControlPoints = controlPoints[edgeId] || [];
+            // First and last points remain the same (connection points)
+            const sourcePoint = wire.points[0];
+            const targetPoint = wire.points[wire.points.length - 1];
+            
+            // Rebuild points array with updated control points in the middle
+            return {
+              ...wire,
+              points: [
+                sourcePoint,
+                ...edgeControlPoints.map(p => ({ x: p.x, y: p.y })),
+                targetPoint
+              ]
+            };
+          }
+          return wire;
+        })
+      );
     };
     
     const handleMouseUp = () => {
@@ -170,7 +237,7 @@ const CircuitCanvas: React.FC<CircuitCanvasProps> = ({
     // Add event listeners
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
-  }, [reactFlowInstance, screenToFlowPosition, activeControlPoint]);
+  }, [reactFlowInstance, screenToFlowPosition, activeControlPoint, controlPoints, setWires]);
   
   // Add another control point to the wire
   const addControlPoint = useCallback((edgeId: string) => {
@@ -179,30 +246,31 @@ const CircuitCanvas: React.FC<CircuitCanvasProps> = ({
     const edge = edges.find(e => e.id === edgeId);
     if (!edge) return;
     
-    const points = [...controlPoints[edgeId]];
+    const points = [...(controlPoints[edgeId] || [])];
     
-    // Add a new point - for simplicity, place it between the last point and target
+    // Find the corresponding wire
+    const wire = wires.find(w => w.id === edgeId);
+    if (!wire) return;
+    
+    // Add a new point - for simplicity, place it between the last control point and target
     if (points.length > 0) {
       const lastPoint = points[points.length - 1];
-      const targetX = edge.targetX || 0;
-      const targetY = edge.targetY || 0;
+      const targetPoint = wire.points[wire.points.length - 1];
       
       const newPoint = {
-        x: (lastPoint.x + targetX) / 2,
-        y: (lastPoint.y + targetY) / 2
+        x: (lastPoint.x + targetPoint.x) / 2,
+        y: (lastPoint.y + targetPoint.y) / 2
       };
       
       points.push(newPoint);
     } else {
       // If no points yet, add one in the middle
-      const sourceX = edge.sourceX || 0;
-      const sourceY = edge.sourceY || 0;
-      const targetX = edge.targetX || 0;
-      const targetY = edge.targetY || 0;
+      const sourcePoint = wire.points[0];
+      const targetPoint = wire.points[wire.points.length - 1];
       
       points.push({
-        x: (sourceX + targetX) / 2,
-        y: (sourceY + targetY) / 2
+        x: (sourcePoint.x + targetPoint.x) / 2,
+        y: (sourcePoint.y + targetPoint.y) / 2
       });
     }
     
@@ -226,7 +294,32 @@ const CircuitCanvas: React.FC<CircuitCanvasProps> = ({
         return e;
       })
     );
-  }, [edges, controlPoints]);
+    
+    // Also update the wire
+    setWires(prevWires => 
+      prevWires.map(wire => {
+        if (wire.id === edgeId) {
+          // Rebuild points with the new control point
+          const sourcePoint = wire.points[0];
+          const targetPoint = wire.points[wire.points.length - 1];
+          
+          return {
+            ...wire,
+            points: [
+              sourcePoint,
+              ...points.map(p => ({ x: p.x, y: p.y })),
+              targetPoint
+            ]
+          };
+        }
+        return wire;
+      })
+    );
+    
+    toast.info('Control point added. Drag to adjust the wire path.', {
+      duration: 2000,
+    });
+  }, [edges, controlPoints, wires, setWires]);
   
   // Finish wire editing mode
   const finishEdgeEdit = useCallback((edgeId: string) => {
@@ -322,26 +415,78 @@ const CircuitCanvas: React.FC<CircuitCanvasProps> = ({
   // Handle connecting nodes (creating wires)
   const onConnect = useCallback(
     (params: Connection) => {
-      // Create a new edge with a unique ID
-      const newEdge = {
-        ...params,
+      if (!params.source || !params.target || !params.sourceHandle || !params.targetHandle) {
+        console.error("Invalid connection parameters:", params);
+        return;
+      }
+      
+      // Extract pin indices from handle IDs
+      const sourcePinIndex = parseInt(params.sourceHandle.split('-')[1]);
+      const targetPinIndex = parseInt(params.targetHandle.split('-')[1]);
+      
+      // Find source and target component
+      const sourceComponent = components.find(c => c.id === params.source);
+      const targetComponent = components.find(c => c.id === params.target);
+      
+      if (!sourceComponent || !targetComponent) {
+        console.error("Source or target component not found");
+        return;
+      }
+      
+      // Get pin positions
+      const sourcePin = sourceComponent.pins?.[sourcePinIndex];
+      const targetPin = targetComponent.pins?.[targetPinIndex];
+      
+      if (!sourcePin || !targetPin) {
+        console.error("Source or target pin not found");
+        return;
+      }
+      
+      // Calculate absolute positions
+      const sourceX = sourceComponent.left + sourcePin.x;
+      const sourceY = sourceComponent.top + sourcePin.y;
+      const targetX = targetComponent.left + targetPin.x;
+      const targetY = targetComponent.top + targetPin.y;
+      
+      // Get signal type for wire color
+      const signal = getPinSignalType(components, params.source, sourcePinIndex);
+      const color = getWireColorFromSignal(signal || '');
+      
+      // Create new wire
+      const newWire: Wire = {
         id: `wire-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        type: 'wire',
-        data: { 
-          color: '#ff0000',  // Default wire color
-          onStartEdit: startEdgeEdit 
-        }
+        sourceComponentId: params.source,
+        sourcePinIndex: sourcePinIndex,
+        targetComponentId: params.target,
+        targetPinIndex: targetPinIndex,
+        points: [
+          { x: sourceX, y: sourceY },
+          { x: targetX, y: targetY }
+        ],
+        color,
+        isComplete: true
       };
       
-      setEdges((eds) => addEdge(newEdge, eds));
+      // Add to wires state
+      setWires(prev => [...prev, newWire]);
       
       toast.success('Connection created', {
         description: 'Wire added between components',
         duration: 1500,
       });
     },
-    [setEdges, startEdgeEdit]
+    [components, setWires]
   );
+  
+  // Handle XY Flow edge removal
+  useEffect(() => {
+    // Check for edges that were removed and remove corresponding wires
+    const edgeIds = edges.map(edge => edge.id);
+    setWires(prev => prev.filter(wire => 
+      // Keep wires if they're not complete yet (still being drawn)
+      !wire.isComplete || edgeIds.includes(wire.id)
+    ));
+  }, [edges, setWires]);
   
   // Handle deleting nodes
   const onNodesDelete = useCallback(
@@ -352,8 +497,14 @@ const CircuitCanvas: React.FC<CircuitCanvasProps> = ({
         (component) => !deletedIds.includes(component.id)
       );
       onComponentsChange(updatedComponents);
+      
+      // Also remove any wires connected to these components
+      setWires(prev => prev.filter(wire => 
+        !deletedIds.includes(wire.sourceComponentId) && 
+        (!wire.targetComponentId || !deletedIds.includes(wire.targetComponentId))
+      ));
     },
-    [components, onComponentsChange]
+    [components, onComponentsChange, setWires]
   );
   
   // Handle double-clicking an edge to add a control point
@@ -373,6 +524,68 @@ const CircuitCanvas: React.FC<CircuitCanvasProps> = ({
       startEdgeEdit(edge.id);
     }
   }, [editingEdgeId, addControlPoint, startEdgeEdit]);
+  
+  // Handle node movement to update component positions
+  const onNodeDragStop = useCallback((event: React.MouseEvent, node: Node) => {
+    // Update component position in the components state
+    onComponentsChange(
+      components.map(component => {
+        if (component.id === node.id) {
+          return {
+            ...component,
+            left: node.position.x,
+            top: node.position.y
+          };
+        }
+        return component;
+      })
+    );
+    
+    // Update wire points for any connected wires
+    setWires(prev => prev.map(wire => {
+      // Check if this wire involves the moved component
+      const isSourceComponent = wire.sourceComponentId === node.id;
+      const isTargetComponent = wire.targetComponentId === node.id;
+      
+      if (!isSourceComponent && !isTargetComponent) {
+        return wire;
+      }
+      
+      const newPoints = [...wire.points];
+      const component = components.find(c => c.id === node.id);
+      
+      if (!component || !component.pins) {
+        return wire;
+      }
+      
+      // Update source point
+      if (isSourceComponent) {
+        const pin = component.pins[wire.sourcePinIndex];
+        if (pin) {
+          newPoints[0] = {
+            x: node.position.x + pin.x,
+            y: node.position.y + pin.y
+          };
+        }
+      }
+      
+      // Update target point
+      if (isTargetComponent && wire.targetPinIndex !== null) {
+        const pin = component.pins[wire.targetPinIndex];
+        if (pin) {
+          newPoints[newPoints.length - 1] = {
+            x: node.position.x + pin.x,
+            y: node.position.y + pin.y
+          };
+        }
+      }
+      
+      return {
+        ...wire,
+        points: newPoints
+      };
+    }));
+  }, [components, onComponentsChange, setWires]);
   
   // Handle zoom controls
   const handleZoomIn = () => {
@@ -398,6 +611,7 @@ const CircuitCanvas: React.FC<CircuitCanvasProps> = ({
         onClick: () => {
           setNodes([]);
           setEdges([]);
+          setWires([]);
           onComponentsChange([]);
           toast.success('Canvas cleared');
         },
@@ -423,6 +637,63 @@ const CircuitCanvas: React.FC<CircuitCanvasProps> = ({
     );
   }, [startEdgeEdit]);
 
+  // Render the activeWire as a temporary edge if it exists
+  useEffect(() => {
+    if (!activeWire || !reactFlowInstance) return;
+    
+    const tempEdgeId = `temp-${activeWire.id}`;
+    
+    // Remove any existing temporary edges
+    setEdges(prev => 
+      prev.filter(e => !e.id.startsWith('temp-'))
+    );
+    
+    // Only add a temporary edge if we have at least a source
+    if (activeWire.sourceComponentId) {
+      const sourceComponent = components.find(c => c.id === activeWire.sourceComponentId);
+      if (!sourceComponent) return;
+      
+      const sourcePin = sourceComponent.pins?.[activeWire.sourcePinIndex];
+      if (!sourcePin) return;
+      
+      // Get the last point position
+      const lastPoint = activeWire.points[activeWire.points.length - 1];
+      
+      // Create a temporary edge just for visualization
+      const tempEdge: Edge = {
+        id: tempEdgeId,
+        source: activeWire.sourceComponentId,
+        sourceHandle: `pin-${activeWire.sourcePinIndex}`,
+        target: `temp-target-${Date.now()}`, // Dummy target
+        targetHandle: null,
+        type: 'wire',
+        style: { strokeDasharray: '5,5' }, // Dashed line
+        data: {
+          color: activeWire.color,
+          isTemporary: true
+        }
+      };
+      
+      // Add invisible temporary target node at cursor position
+      const tempNode: Node = {
+        id: tempEdge.target,
+        position: { x: lastPoint.x, y: lastPoint.y },
+        data: {},
+        type: 'wokwiComponent',
+        hidden: true, // Hide this node
+      };
+      
+      setNodes(prev => [...prev, tempNode]);
+      setEdges(prev => [...prev, tempEdge]);
+    }
+    
+    // Cleanup temporary elements when active wire changes
+    return () => {
+      setEdges(prev => prev.filter(e => !e.id.startsWith('temp-')));
+      setNodes(prev => prev.filter(n => !n.id.startsWith('temp-target-')));
+    };
+  }, [activeWire, components, reactFlowInstance]);
+
   return (
     <div 
       ref={reactFlowWrapper} 
@@ -435,6 +706,7 @@ const CircuitCanvas: React.FC<CircuitCanvasProps> = ({
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onNodesDelete={onNodesDelete}
+        onNodeDragStop={onNodeDragStop}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         onInit={setReactFlowInstance}
@@ -451,6 +723,8 @@ const CircuitCanvas: React.FC<CircuitCanvasProps> = ({
         maxZoom={4}
         defaultViewport={{ x: 0, y: 0, zoom: 1 }}
         className="circuit-canvas-flow"
+        connectionLineType={ConnectionLineType.Bezier}
+        connectionLineStyle={{ stroke: '#FF0000' }}
       >
         <Background 
           variant={BackgroundVariant.Dots} 

@@ -1,44 +1,125 @@
 
+/* Main circuit canvas styles */
 .circuit-canvas-flow {
   width: 100%;
   height: 100%;
+  background-color: white;
 }
 
-.wire-control-button {
-  width: 20px;
-  height: 20px;
-  background: white;
-  border: 1px solid #e2e8f0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+/* Custom node styling */
+.react-flow__node-wokwiComponent {
+  width: auto;
+  height: auto;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  border: none;
+}
+
+/* Selected node styling */
+.react-flow__node.selected {
+  box-shadow: 0 0 0 2px rgba(76, 114, 244, 0.75);
+}
+
+/* Custom handle styling */
+.react-flow__handle.custom-handle {
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
-  cursor: pointer;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  transition: all 0.2s ease;
-  color: #333;
+  background-color: #4BC0C0;
+  border: 1px solid rgba(0, 0, 0, 0.3);
+  position: absolute;
+  transform: translate(-50%, -50%);
 }
 
+.react-flow__handle.custom-handle:hover {
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+}
+
+/* Control points for wires */
+.wire-control-point {
+  cursor: move;
+  transition: transform 0.1s ease;
+}
+
+.wire-control-point:hover {
+  transform: translate(-50%, -50%) scale(1.2);
+}
+
+/* Control buttons */
+.wire-control-button {
+  cursor: pointer;
+  border-radius: 2px;
+  transition: background-color 0.2s ease;
+}
+
+.wire-control-button:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* Edge styling */
+.react-flow__edge-path {
+  stroke-width: 3;
+}
+
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke-width: 4;
+}
+
+/* Buttons in the wire toolbar */
 .wire-edit-button:hover {
-  background-color: #edf2f7;
-  color: #3182ce;
+  color: #4C72F4;
 }
 
 .wire-delete-button:hover {
-  background-color: #fed7d7;
-  color: #e53e3e;
+  color: #FF6384;
 }
 
 .wire-done-button:hover {
-  background-color: #c6f6d5;
-  color: #38a169;
+  color: #38A169;
 }
 
-.wire-control-point {
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.8), 0 0 0 4px rgba(0, 0, 0, 0.1);
+/* Tooltip for handles */
+.handle-tooltip {
+  position: absolute;
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 3px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  pointer-events: none;
+  z-index: 1000;
+  white-space: nowrap;
+  transform: translate(-50%, -100%);
+  margin-top: -5px;
 }
 
-/* Adding some transition for smoother appearance */
-.wire-controls {
-  transition: opacity 0.2s;
+/* Background styling */
+.react-flow__background {
+  background-size: 25px 25px;
+  background-image: linear-gradient(to right, #f0f0f0 1px, transparent 1px),
+                    linear-gradient(to bottom, #f0f0f0 1px, transparent 1px);
+}
+
+/* Customize ReactFlow controls */
+.react-flow__controls {
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1), 0 4px 11px rgba(0, 0, 0, 0.1);
+  border-radius: 6px;
+}
+
+.react-flow__controls-button {
+  border: none;
+  background: #fff;
+  border-bottom: 1px solid #eee;
+  box-sizing: content-box;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  user-select: none;
+  padding: 5px;
 }

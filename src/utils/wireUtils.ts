@@ -7,18 +7,6 @@ import { WokwiPin } from '@/integrations/wokwi/WokwiIntegration';
 import { WokwiComponent } from '@/integrations/wokwi/WokwiIntegration';
 import { Wire } from '@/hooks/useWireSystem';
 
-// Define a wire type to represent connections between components
-export interface WireUtilsWire {
-  id: string;
-  sourceComponentId: string;
-  sourcePinIndex: number;
-  targetComponentId: string | null;
-  targetPinIndex: number | null;
-  points: { x: number; y: number }[];
-  color: string;
-  isComplete: boolean;
-}
-
 /**
  * Creates a new wire starting from a component pin
  */
@@ -28,7 +16,7 @@ export const createWire = (
   startX: number,
   startY: number,
   pinSignal: string | undefined
-): WireUtilsWire => {
+): Wire => {
   // Determine wire color based on signal type
   const color = getWireColorFromSignal(pinSignal || '');
   
@@ -48,10 +36,10 @@ export const createWire = (
  * Updates a wire with a new point (for when the user is dragging)
  */
 export const updateWireEndPoint = (
-  wire: WireUtilsWire,
+  wire: Wire,
   x: number,
   y: number
-): WireUtilsWire => {
+): Wire => {
   const newPoints = [...wire.points];
   
   // If this is just a move during wire creation, update the last point
@@ -172,97 +160,7 @@ export const getWireColorFromSignal = (signal: string): string => {
 };
 
 /**
- * Find potential pin connections based on proximity
- */
-export const findPotentialPinConnections = (
-  x: number,
-  y: number,
-  components: WokwiComponent[],
-  activeWire: Wire | null,
-  threshold: number = 15
-): { componentId: string; pinIndex: number; distance: number } | null => {
-  // Don't connect to the source pin
-  const sourceComponentId = activeWire?.sourceComponentId;
-  const sourcePinIndex = activeWire?.sourcePinIndex;
-  
-  let closestPin: { componentId: string; pinIndex: number; distance: number } | null = null;
-  let minDistance = threshold;
-  
-  // Check each component
-  for (const component of components) {
-    if (!component.pins) continue;
-    
-    // Skip self-connection to the same pin
-    if (component.id === sourceComponentId) {
-      // Can connect to different pins on the same component
-      for (let i = 0; i < component.pins.length; i++) {
-        if (i === sourcePinIndex) continue; // Skip source pin
-        
-        const pin = component.pins[i];
-        const pinX = component.left + pin.x;
-        const pinY = component.top + pin.y;
-        
-        const dx = x - pinX;
-        const dy = y - pinY;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        
-        if (distance < minDistance) {
-          minDistance = distance;
-          closestPin = {
-            componentId: component.id,
-            pinIndex: i,
-            distance
-          };
-        }
-      }
-    } else {
-      // Check pins on other components
-      for (let i = 0; i < component.pins.length; i++) {
-        const pin = component.pins[i];
-        const pinX = component.left + pin.x;
-        const pinY = component.top + pin.y;
-        
-        const dx = x - pinX;
-        const dy = y - pinY;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        
-        if (distance < minDistance) {
-          minDistance = distance;
-          closestPin = {
-            componentId: component.id,
-            pinIndex: i,
-            distance
-          };
-        }
-      }
-    }
-  }
-  
-  return closestPin;
-};
-
-/**
- * Get absolute position of a pin on the canvas
- */
-export const getPinAbsolutePosition = (
-  components: WokwiComponent[],
-  componentId: string,
-  pinIndex: number
-): { x: number; y: number } | null => {
-  const component = components.find(c => c.id === componentId);
-  if (!component || !component.pins || pinIndex >= component.pins.length) {
-    return null;
-  }
-  
-  const pin = component.pins[pinIndex];
-  return {
-    x: component.left + pin.x,
-    y: component.top + pin.y
-  };
-};
-
-/**
- * Get the signal type of a pin
+ * Get pin signal type
  */
 export const getPinSignalType = (
   components: WokwiComponent[],
