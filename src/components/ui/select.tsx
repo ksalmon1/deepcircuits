@@ -56,7 +56,7 @@ const SelectContent = React.forwardRef<
         style={{ 
           maxHeight: "180px", // Keeping the reduced height from previous update
           overflowY: "auto", // Explicitly setting overflowY in the style as well
-          '-webkit-overflow-scrolling': 'touch' // For better mobile scrolling
+          WebkitOverflowScrolling: 'touch' // Fixed: Proper camelCase format for React style properties
         }}
       >
         {children}
