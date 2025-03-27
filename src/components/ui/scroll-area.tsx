@@ -14,11 +14,9 @@ const ScrollArea = React.forwardRef<
     {...props}
   >
     <ScrollAreaPrimitive.Viewport 
-      className="h-full w-full rounded-[inherit] scrollbar-hidden"
+      className="h-full w-full rounded-[inherit]"
       style={{ 
-        WebkitOverflowScrolling: "touch",
-        msOverflowStyle: "none", // Hide default IE/Edge scrollbar
-        scrollbarWidth: "none" // Firefox
+        WebkitOverflowScrolling: "touch"
       }}
     >
       {children}

@@ -1,4 +1,3 @@
-
 import * as React from "react"
 import * as SelectPrimitive from "@radix-ui/react-select"
 import { Check, ChevronDown } from "lucide-react"
@@ -56,8 +55,7 @@ const SelectContent = React.forwardRef<
         )}
         style={{
           maxHeight: "180px",
-          overflow: "auto",
-          WebkitOverflowScrolling: "touch"
+          overflow: "auto"
         }}
       >
         {children}
