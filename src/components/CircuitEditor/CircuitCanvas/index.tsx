@@ -15,7 +15,8 @@ import {
   Panel,
   useReactFlow,
   useOnSelectionChange,
-  BackgroundVariant
+  BackgroundVariant,
+  ReactFlowProvider
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { toast } from 'sonner';
@@ -48,7 +49,7 @@ const CircuitCanvas: React.FC<CircuitCanvasProps> = ({
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
-  const { project, getZoom, setViewport, screenToFlowPosition } = useReactFlow();
+  const { screenToFlowPosition, getZoom, setViewport } = useReactFlow();
   const [panMode, setPanMode] = useState(false);
 
   // Convert components to nodes when components change
@@ -146,12 +147,12 @@ const CircuitCanvas: React.FC<CircuitCanvasProps> = ({
   // Handle zoom controls
   const handleZoomIn = () => {
     const zoom = getZoom();
-    setViewport({ zoom: Math.min(zoom + 0.1, 3) });
+    setViewport({ zoom: Math.min(zoom + 0.1, 3), x: 0, y: 0 });
   };
   
   const handleZoomOut = () => {
     const zoom = getZoom();
-    setViewport({ zoom: Math.max(zoom - 0.1, 0.5) });
+    setViewport({ zoom: Math.max(zoom - 0.1, 0.5), x: 0, y: 0 });
   };
   
   const togglePanMode = () => {
@@ -251,8 +252,8 @@ const CircuitCanvas: React.FC<CircuitCanvasProps> = ({
 
 export default function CircuitCanvasWithProvider({ components, onComponentsChange }: CircuitCanvasProps) {
   return (
-    <ReactFlow.Provider>
+    <ReactFlowProvider>
       <CircuitCanvas components={components} onComponentsChange={onComponentsChange} />
-    </ReactFlow.Provider>
+    </ReactFlowProvider>
   );
 }
