@@ -20,9 +20,9 @@ const WireEdge: React.FC<EdgeProps> = ({
     sourceX,
     sourceY,
     sourcePosition,
+    targetPosition,
     targetX,
     targetY,
-    targetPosition,
     curvature: 0.2,
   });
   

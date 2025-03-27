@@ -83,15 +83,11 @@ const CircuitCanvas: React.FC<CircuitCanvasProps> = ({
         });
         
         // Create the new component
-        const gridSize = 25;
-        const left = Math.floor(position.x / gridSize) * gridSize;
-        const top = Math.floor(position.y / gridSize) * gridSize;
-        
         const newComponent: WokwiComponent = {
           type: componentInfo.type,
           id: `comp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          top,
-          left,
+          top: position.y,
+          left: position.x,
           attributes: { color: 'red' },
           pins: []  // Pins will be populated by the WokwiComponentNode
         };
@@ -102,7 +98,7 @@ const CircuitCanvas: React.FC<CircuitCanvasProps> = ({
         
         // Show notification
         toast.success(`Added ${componentInfo.name}`, {
-          description: `Component placed at position (${left}, ${top})`,
+          description: `Component placed at position (${Math.round(position.x)}, ${Math.round(position.y)})`,
           duration: 2000,
         });
       } catch (error) {
@@ -199,8 +195,7 @@ const CircuitCanvas: React.FC<CircuitCanvasProps> = ({
         panOnDrag={panMode ? false : [0, 1, 2]}
         selectionOnDrag={!panMode}
         fitView
-        snapToGrid
-        snapGrid={[25, 25]}
+        snapToGrid={false}
         minZoom={0.4}
         maxZoom={4}
         defaultViewport={{ x: 0, y: 0, zoom: 1 }}
