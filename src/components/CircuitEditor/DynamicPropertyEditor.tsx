@@ -1,197 +1,189 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { WokwiComponent } from '@/integrations/wokwi/WokwiIntegration';
+import { Slider } from '@/components/ui/slider';
+import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
-import { toast } from 'sonner';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export interface PropertyEditorProps {
   component: WokwiComponent;
   onUpdateAttributes: (attributes: Record<string, any>) => void;
 }
 
-// Define known property configurations for different component types
-const componentPropertyConfig: Record<string, any> = {
-  'wokwi-led': {
-    color: { type: 'color', label: 'Color', defaultValue: 'red' },
-    label: { type: 'text', label: 'Label', defaultValue: '' },
-    value: { type: 'range', label: 'Brightness', min: 0, max: 1, step: 0.1, defaultValue: 1 }
-  },
-  'wokwi-resistor': {
-    value: { type: 'text', label: 'Resistance', defaultValue: '1000' },
-    bands: { type: 'select', label: 'Bands', options: [4, 5, 6], defaultValue: 4 }
-  },
-  'wokwi-pushbutton': {
-    color: { type: 'color', label: 'Color', defaultValue: 'red' },
-    label: { type: 'text', label: 'Label', defaultValue: '' }
-  },
-  'wokwi-arduino-uno': {
-    // Arduino-specific properties
-  },
-  // Add more component configurations as needed
-};
+const DynamicPropertyEditor: React.FC<PropertyEditorProps> = ({ component, onUpdateAttributes }) => {
+  const [activeTab, setActiveTab] = useState('properties');
+  const { attributes = {}, type } = component;
 
-// Default properties for any component without specific config
-const defaultProperties = {
-  label: { type: 'text', label: 'Label', defaultValue: '' }
-};
+  const handlePropertyChange = (key: string, value: any) => {
+    onUpdateAttributes({ ...attributes, [key]: value });
+  };
 
-const DynamicPropertyEditor: React.FC<PropertyEditorProps> = ({ 
-  component,
-  onUpdateAttributes 
-}) => {
-  const [attributes, setAttributes] = useState<Record<string, any>>(component.attributes || {});
-  
-  // Get appropriate property configuration based on component type
-  const getPropertyConfig = () => {
-    if (componentPropertyConfig[component.type]) {
-      return componentPropertyConfig[component.type];
-    }
-    return defaultProperties;
-  };
-  
-  // Update local attributes state when component changes
-  useEffect(() => {
-    setAttributes(component.attributes || {});
-  }, [component]);
-  
-  const handleChange = (key: string, value: any) => {
-    setAttributes(prev => ({
-      ...prev,
-      [key]: value
-    }));
-  };
-  
-  const handleSave = () => {
-    onUpdateAttributes(attributes);
-    toast.success('Component properties updated');
-  };
-  
-  const renderPropertyEditor = (key: string, config: any) => {
-    const value = attributes[key] !== undefined ? attributes[key] : config.defaultValue;
-    
-    switch (config.type) {
-      case 'text':
+  const renderPropertyEditor = (key: string, value: any) => {
+    const propertyType = typeof value;
+
+    switch (propertyType) {
+      case 'boolean':
         return (
-          <Input
-            id={`prop-${key}`}
-            value={value || ''}
-            onChange={(e) => handleChange(key, e.target.value)}
-          />
+          <div className="flex items-center space-x-2" key={key}>
+            <Switch
+              id={`property-${key}`}
+              checked={value}
+              onCheckedChange={(checked) => handlePropertyChange(key, checked)}
+            />
+            <Label htmlFor={`property-${key}`}>{key}</Label>
+          </div>
         );
-        
+
       case 'number':
         return (
-          <Input
-            id={`prop-${key}`}
-            type="number"
-            value={value || config.defaultValue}
-            min={config.min}
-            max={config.max}
-            step={config.step}
-            onChange={(e) => handleChange(key, parseFloat(e.target.value))}
-          />
+          <div className="space-y-2" key={key}>
+            <div className="flex justify-between">
+              <Label htmlFor={`property-${key}`}>{key}</Label>
+              <span className="text-xs text-gray-500">{value}</span>
+            </div>
+            <div className="flex gap-2">
+              <Slider
+                id={`property-${key}`}
+                defaultValue={[value]}
+                min={0}
+                max={value > 100 ? value * 2 : 100}
+                step={1}
+                onValueChange={([val]) => handlePropertyChange(key, val)}
+              />
+              <Input
+                type="number"
+                value={value}
+                onChange={(e) => handlePropertyChange(key, Number(e.target.value))}
+                className="w-20"
+              />
+            </div>
+          </div>
         );
+
+      case 'string':
+        if (key === 'color' || key.includes('color')) {
+          const presetColors = ['red', 'green', 'blue', 'yellow', 'white', 'orange', 'purple'];
+          
+          return (
+            <div className="space-y-2" key={key}>
+              <Label htmlFor={`property-${key}`}>{key}</Label>
+              <div className="flex flex-wrap gap-2">
+                {presetColors.map((color) => (
+                  <button
+                    key={color}
+                    className={`w-6 h-6 rounded-full border ${
+                      value === color ? 'ring-2 ring-offset-2 ring-blue-500' : ''
+                    }`}
+                    style={{ backgroundColor: color }}
+                    onClick={() => handlePropertyChange(key, color)}
+                    title={color}
+                  />
+                ))}
+                <input
+                  type="color"
+                  value={value.startsWith('#') ? value : '#ff0000'}
+                  onChange={(e) => handlePropertyChange(key, e.target.value)}
+                  className="w-6 h-6"
+                />
+              </div>
+            </div>
+          );
+        }
         
-      case 'range':
         return (
-          <Input
-            id={`prop-${key}`}
-            type="range"
-            value={value || config.defaultValue}
-            min={config.min}
-            max={config.max}
-            step={config.step}
-            onChange={(e) => handleChange(key, parseFloat(e.target.value))}
-          />
-        );
-        
-      case 'color':
-        return (
-          <div className="flex items-center gap-2">
+          <div className="space-y-2" key={key}>
+            <Label htmlFor={`property-${key}`}>{key}</Label>
             <Input
-              id={`prop-${key}`}
-              type="color"
-              className="w-12 h-8"
-              value={value || config.defaultValue}
-              onChange={(e) => handleChange(key, e.target.value)}
-            />
-            <Input
-              value={value || config.defaultValue}
-              onChange={(e) => handleChange(key, e.target.value)}
+              id={`property-${key}`}
+              value={value}
+              onChange={(e) => handlePropertyChange(key, e.target.value)}
             />
           </div>
         );
-        
-      case 'select':
-        return (
-          <Select
-            value={String(value || config.defaultValue)}
-            onValueChange={(val) => handleChange(key, val)}
-          >
-            <SelectTrigger id={`prop-${key}`}>
-              <SelectValue placeholder="Select" />
-            </SelectTrigger>
-            <SelectContent>
-              {config.options.map((option: any) => (
-                <SelectItem key={option} value={String(option)}>
-                  {option}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        );
-        
+
       default:
         return (
-          <Input
-            id={`prop-${key}`}
-            value={value || ''}
-            onChange={(e) => handleChange(key, e.target.value)}
-          />
+          <div className="space-y-2" key={key}>
+            <Label htmlFor={`property-${key}`}>{key}</Label>
+            <Input
+              id={`property-${key}`}
+              value={JSON.stringify(value)}
+              onChange={(e) => {
+                try {
+                  handlePropertyChange(key, JSON.parse(e.target.value));
+                } catch {
+                  handlePropertyChange(key, e.target.value);
+                }
+              }}
+            />
+          </div>
         );
     }
   };
-  
-  const propertyConfig = getPropertyConfig();
-  
+
+  const getComponentProperties = () => {
+    if (!attributes || Object.keys(attributes).length === 0) {
+      // Return default properties based on component type
+      switch (type) {
+        case 'wokwi-led':
+          return { color: 'red', value: 0, label: '' };
+        case 'wokwi-resistor':
+          return { value: '1000', tolerance: '5' };
+        case 'wokwi-pushbutton':
+          return { color: 'green', label: '' };
+        case 'wokwi-lcd1602':
+          return { text: '', background: '#00FF00' };
+        default:
+          return {};
+      }
+    }
+    return attributes;
+  };
+
+  const properties = getComponentProperties();
+
   return (
     <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-medium">Component Properties</h3>
-        <p className="text-sm text-gray-500">{component.type}</p>
+      <div className="p-2 bg-blue-50 border border-blue-100 rounded-md">
+        <h3 className="text-sm font-medium text-blue-800">
+          {type}
+        </h3>
+        <p className="text-xs text-blue-600 mt-1">
+          Component ID: {component.id}
+        </p>
       </div>
-      
-      <Separator />
-      
-      {Object.keys(propertyConfig).length > 0 ? (
-        <div className="space-y-4">
-          {Object.entries(propertyConfig).map(([key, config]: [string, any]) => (
-            <div key={key} className="grid gap-2">
-              <Label htmlFor={`prop-${key}`}>{config.label}</Label>
-              {renderPropertyEditor(key, config)}
+
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="properties">Properties</TabsTrigger>
+          <TabsTrigger value="pins">Pins</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="properties" className="space-y-4 pt-4">
+          {Object.entries(properties).map(([key, value]) => renderPropertyEditor(key, value))}
+        </TabsContent>
+
+        <TabsContent value="pins" className="space-y-4 pt-4">
+          {component.pins?.length ? (
+            <div className="border rounded-md divide-y">
+              {component.pins.map((pin, index) => (
+                <div key={index} className="p-2 hover:bg-gray-50">
+                  <p className="font-medium text-sm">{pin.name}</p>
+                  <div className="flex justify-between text-xs text-gray-500">
+                    <span>Position: ({pin.x}, {pin.y})</span>
+                    <span>Signal: {pin.signals?.join(', ') || 'None'}</span>
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
-          
-          <Button onClick={handleSave} className="w-full">
-            Apply Changes
-          </Button>
-        </div>
-      ) : (
-        <div className="py-4 text-center text-gray-500">
-          No editable properties available for this component.
-        </div>
-      )}
-      
-      <Separator />
-      
-      <div>
-        <h4 className="text-sm font-medium mb-2">Component ID</h4>
-        <code className="text-xs bg-gray-100 p-1 rounded">{component.id}</code>
-      </div>
+          ) : (
+            <p className="text-gray-500 text-sm">No pins defined for this component.</p>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

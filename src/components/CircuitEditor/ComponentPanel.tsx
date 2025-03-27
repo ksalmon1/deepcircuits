@@ -2,7 +2,7 @@
 import React from 'react';
 import { WokwiComponent } from '@/integrations/wokwi/WokwiIntegration';
 
-interface ComponentPanelProps {
+export interface ComponentPanelProps {
   onComponentSelect: (component: WokwiComponent) => void;
 }
 

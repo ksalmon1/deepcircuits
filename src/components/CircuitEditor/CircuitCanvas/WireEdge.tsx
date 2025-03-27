@@ -1,26 +1,9 @@
 
 import React, { useCallback } from 'react';
 import { EdgeProps, BaseEdge, getBezierPath, EdgeLabelRenderer, useReactFlow } from '@xyflow/react';
+import { WireEdgeData } from '@/types/circuit';
 
-// Define control point type
-interface ControlPoint {
-  x: number;
-  y: number;
-}
-
-// Define custom edge data
-interface WireEdgeData {
-  color?: string;
-  isEditing?: boolean;
-  controlPoints?: ControlPoint[];
-  onStartEdit?: (id: string) => void;
-  onFinishEdit?: (id: string) => void;
-  onControlPointDrag?: (id: string, index: number, e: React.MouseEvent) => void;
-  onAddControlPoint?: (id: string) => void;
-}
-
-// Use proper EdgeProps with our custom data
-const WireEdge = ({
+const WireEdge: React.FC<EdgeProps<WireEdgeData>> = ({
   id,
   sourceX,
   sourceY,
@@ -32,7 +15,7 @@ const WireEdge = ({
   markerEnd,
   data,
   selected,
-}: EdgeProps<WireEdgeData>) => {
+}) => {
   const reactFlowInstance = useReactFlow();
   
   // Default wire color and customize based on the data
@@ -273,7 +256,7 @@ const WireEdge = ({
       {isEditMode && data?.controlPoints && Array.isArray(data.controlPoints) && (
         <EdgeLabelRenderer>
           <div className="wire-control-points nodrag nopan">
-            {data.controlPoints.map((point: ControlPoint, index: number) => (
+            {data.controlPoints.map((point, index) => (
               <div
                 key={`control-point-${id}-${index}`}
                 className="wire-control-point"
@@ -284,7 +267,7 @@ const WireEdge = ({
                   width: '10px',
                   height: '10px',
                   borderRadius: '50%',
-                  backgroundColor: wireColor as string,
+                  backgroundColor: wireColor,
                   border: '2px solid white',
                   transform: 'translate(-50%, -50%)',
                   cursor: 'move',

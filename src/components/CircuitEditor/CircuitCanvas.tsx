@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { 
   isWokwiLoaded, 
@@ -40,19 +41,20 @@ import '@xyflow/react/dist/style.css';
 import WokwiComponentNode from './CircuitCanvas/WokwiComponentNode';
 import WireEdge from './CircuitCanvas/WireEdge';
 import { componentToNode, wiresToEdges } from './CircuitCanvas/utils';
+import { WokwiNodeData, WireEdgeData } from '@/types/circuit';
 
 interface CircuitCanvasProps {
   components: WokwiComponent[];
   onComponentsChange: (components: WokwiComponent[]) => void;
 }
 
-// Define the custom node and edge types
-const nodeTypes: NodeTypes = {
-  wokwiComponent: WokwiComponentNode,
+// Define the custom node and edge types with correct type annotations
+const nodeTypes = {
+  wokwiComponent: WokwiComponentNode as React.ComponentType<any>
 };
 
-const edgeTypes: EdgeTypes = {
-  wire: WireEdge,
+const edgeTypes = {
+  wire: WireEdge as React.ComponentType<any>
 };
 
 const pinCache: Record<string, WokwiPin[]> = {};
@@ -89,7 +91,11 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     handleCanvasClick,
     cancelActiveWire,
     potentialTargetRef,
-    deleteWire
+    handleMouseMove,
+    handleStageMouseUp,
+    handleKonvaClick,
+    deleteWire,
+    potentialTarget
   } = useWireSystem(components);
   
   const [nodes, setNodes, onNodesChange] = useNodesState([]);

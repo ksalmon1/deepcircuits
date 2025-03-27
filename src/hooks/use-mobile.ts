@@ -1,32 +1,53 @@
 
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 
 /**
- * Hook to detect if the current viewport matches a specific media query
+ * Hook to check if the device is in mobile viewport
+ */
+export const useIsMobile = (): boolean => {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    // Initial check
+    checkMobile();
+
+    // Add event listener
+    window.addEventListener('resize', checkMobile);
+
+    // Cleanup
+    return () => {
+      window.removeEventListener('resize', checkMobile);
+    };
+  }, []);
+
+  return isMobile;
+};
+
+/**
+ * Media query hook (compatible with previous code)
  */
 export const useMediaQuery = (query: string): boolean => {
   const [matches, setMatches] = useState(false);
 
   useEffect(() => {
-    const mediaQuery = window.matchMedia(query);
-    setMatches(mediaQuery.matches);
-
-    const handler = (event: MediaQueryListEvent) => {
-      setMatches(event.matches);
-    };
-
-    mediaQuery.addEventListener('change', handler);
+    const media = window.matchMedia(query);
+    const updateMatches = () => setMatches(media.matches);
+    
+    // Initial check
+    updateMatches();
+    
+    // Add event listener
+    media.addEventListener('change', updateMatches);
+    
+    // Cleanup
     return () => {
-      mediaQuery.removeEventListener('change', handler);
+      media.removeEventListener('change', updateMatches);
     };
   }, [query]);
 
   return matches;
-};
-
-/**
- * Hook to detect if the current viewport is mobile-sized
- */
-export const useIsMobile = (): boolean => {
-  return useMediaQuery("(max-width: 768px)");
 };

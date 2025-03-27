@@ -1,20 +1,8 @@
 
 import React, { useEffect, memo } from 'react';
 import { Handle, Position, NodeProps } from '@xyflow/react';
-import { WokwiComponent } from '@/integrations/wokwi/WokwiIntegration';
+import { WokwiNodeData } from '@/types/circuit';
 import { toast } from 'sonner';
-
-// Define the type for our node data
-interface WokwiNodeData {
-  type: string;
-  attributes?: Record<string, any>;
-  pins?: Array<{
-    name: string;
-    x: number;
-    y: number;
-    signals?: string[];
-  }>;
-}
 
 const WokwiComponentNode: React.FC<NodeProps<WokwiNodeData>> = ({ 
   id, 
