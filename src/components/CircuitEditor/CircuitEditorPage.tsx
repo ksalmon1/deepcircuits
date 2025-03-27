@@ -185,10 +185,11 @@ const CircuitEditorPage = () => {
             <TabsContent value="properties" className="h-[calc(100%-40px)] overflow-auto p-4">
               {selectedComponent ? (
                 <DynamicPropertyEditor
-                  component={selectedComponent}
-                  onUpdateAttributes={(attributes) =>
+                  properties={selectedComponent.attributes || {}}
+                  onChange={(attributes) =>
                     handleUpdateComponentAttributes(selectedComponent.id, attributes)
                   }
+                  componentType={selectedComponent.type}
                 />
               ) : (
                 <div className="text-center text-gray-500 mt-8">
