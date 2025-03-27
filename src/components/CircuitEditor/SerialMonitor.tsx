@@ -1,122 +1,46 @@
 
-import React, { useState, useEffect, useRef } from 'react';
-import { Button } from "@/components/ui/button";
-import { Trash2, Send } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import React from 'react';
 
-interface SerialMonitorProps {
-  projectId?: string;
+export interface SerialMonitorProps {
+  isSimulationRunning: boolean;
+  serialOutput: string[];
 }
 
-const SerialMonitor = ({ projectId }: SerialMonitorProps) => {
-  const [logs, setLogs] = useState<string[]>([]);
-  const [input, setInput] = useState('');
-  const [baudRate, setBaudRate] = useState(9600);
-  const [isConnected, setIsConnected] = useState(false);
-  const logsEndRef = useRef<HTMLDivElement>(null);
-
-  // Simulate connecting to a serial port
-  useEffect(() => {
-    // In a real app, we would connect to actual hardware or a simulation API
-    const simulateSerialConnection = () => {
-      setIsConnected(true);
-      
-      // Add some initial logs
-      setLogs([
-        `[${new Date().toLocaleTimeString()}] Serial monitor started at ${baudRate} baud`,
-        `[${new Date().toLocaleTimeString()}] Connected to project ${projectId || 'unknown'}`
-      ]);
-      
-      // Simulate incoming data periodically
-      const interval = setInterval(() => {
-        if (Math.random() > 0.7) { // Only send data occasionally
-          const messages = [
-            "LED state: ON",
-            "Temperature: 23.5°C",
-            "Button pressed",
-            "Sensor reading: 512",
-            "System initialized"
-          ];
-          const randomMessage = messages[Math.floor(Math.random() * messages.length)];
-          
-          setLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${randomMessage}`]);
-        }
-      }, 3000);
-      
-      return () => {
-        clearInterval(interval);
-        setIsConnected(false);
-      };
-    };
-    
-    const connection = simulateSerialConnection();
-    return () => connection();
-  }, [projectId, baudRate]);
-
-  // Auto-scroll to bottom when new logs arrive
-  useEffect(() => {
-    logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [logs]);
-
-  const clearLogs = () => {
-    setLogs([`[${new Date().toLocaleTimeString()}] Serial monitor cleared`]);
-  };
-
-  const sendData = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim()) return;
-    
-    setLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] >>> ${input}`]);
-    setInput('');
-  };
-
+const SerialMonitor: React.FC<SerialMonitorProps> = ({ 
+  isSimulationRunning, 
+  serialOutput 
+}) => {
   return (
-    <div className="h-full flex flex-col">
-      <div className="flex items-center justify-between p-2 border-b">
-        <h3 className="text-sm font-medium">Serial Monitor</h3>
-        <div className="flex items-center gap-2">
-          <select 
-            value={baudRate}
-            onChange={(e) => setBaudRate(Number(e.target.value))}
-            className="text-xs border rounded px-2 py-1"
-          >
-            <option value="9600">9600 baud</option>
-            <option value="19200">19200 baud</option>
-            <option value="57600">57600 baud</option>
-            <option value="115200">115200 baud</option>
-          </select>
-          <div className="flex items-center gap-1">
-            <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
-            <span className="text-xs">{isConnected ? 'Connected' : 'Disconnected'}</span>
-          </div>
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={clearLogs}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
+    <div className="flex flex-col h-full">
+      <div className="bg-black text-green-400 font-mono p-4 flex-1 overflow-auto rounded">
+        {isSimulationRunning ? (
+          serialOutput.length > 0 ? (
+            <div>
+              {serialOutput.map((line, index) => (
+                <div key={index}>{line}</div>
+              ))}
+            </div>
+          ) : (
+            <div>Serial monitor is running. Waiting for output...</div>
+          )
+        ) : (
+          <div className="text-gray-500">Start simulation to see serial output.</div>
+        )}
       </div>
-      
-      <div className="flex-grow p-2 bg-black text-green-400 font-mono text-xs overflow-y-auto">
-        {logs.map((log, index) => (
-          <div key={index} className="mb-1">{log}</div>
-        ))}
-        <div ref={logsEndRef} />
-      </div>
-      
-      <form onSubmit={sendData} className="p-2 border-t flex gap-2">
-        <Input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Send data to device..."
-          className="text-sm"
+      <div className="flex mt-2">
+        <input 
+          type="text" 
+          className="flex-1 px-3 py-2 border rounded-l focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Enter data to send..."
+          disabled={!isSimulationRunning}
         />
-        <Button type="submit" size="sm">
-          <Send className="h-4 w-4" />
-        </Button>
-      </form>
+        <button 
+          className="bg-blue-500 text-white px-4 py-2 rounded-r disabled:bg-gray-300"
+          disabled={!isSimulationRunning}
+        >
+          Send
+        </button>
+      </div>
     </div>
   );
 };

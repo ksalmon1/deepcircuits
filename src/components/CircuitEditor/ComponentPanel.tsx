@@ -1,232 +1,75 @@
 
-import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { ORIGINAL_WOKWI_COMPONENTS } from '@/integrations/wokwi/WokwiIntegration';
-import { Input } from '@/components/ui/input';
-import { 
-  Search, 
-  ChevronDown, 
-  ChevronRight, 
-  Cpu, 
-  Lightbulb, 
-  Workflow, 
-  Monitor, 
-  Gauge, 
-  AppWindow,
-  History,
-  SlidersHorizontal,
-  Loader2
-} from 'lucide-react';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { useComponentLibrary } from '@/hooks/useComponentLibrary';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import React from 'react';
+import { WokwiComponent } from '@/integrations/wokwi/WokwiIntegration';
 
-// Interface for component categories
-interface ComponentCategory {
-  id: string;
-  label: string;
-  icon: React.ReactNode;
-  components: ComponentItem[];
+interface ComponentPanelProps {
+  onComponentSelect: (component: WokwiComponent) => void;
 }
 
-// Interface for component items
-interface ComponentItem {
-  id: string;
-  name: string;
-  type: string;
-  description: string;
-}
+const ComponentPanel: React.FC<ComponentPanelProps> = ({ onComponentSelect }) => {
+  const componentCategories = [
+    {
+      name: 'Microcontrollers',
+      components: [
+        { type: 'wokwi-arduino-uno', name: 'Arduino Uno' },
+        { type: 'wokwi-arduino-nano', name: 'Arduino Nano' },
+        { type: 'wokwi-esp32-devkit-v1', name: 'ESP32 DevKit' },
+        { type: 'wokwi-raspberry-pi-pico', name: 'Raspberry Pi Pico' },
+      ]
+    },
+    {
+      name: 'Basic Components',
+      components: [
+        { type: 'wokwi-led', name: 'LED' },
+        { type: 'wokwi-resistor', name: 'Resistor' },
+        { type: 'wokwi-capacitor', name: 'Capacitor' },
+        { type: 'wokwi-pushbutton', name: 'Button' },
+        { type: 'wokwi-switch', name: 'Switch' },
+      ]
+    },
+    {
+      name: 'Displays',
+      components: [
+        { type: 'wokwi-lcd1602', name: 'LCD 16x2' },
+        { type: 'wokwi-7segment', name: '7-Segment Display' },
+      ]
+    },
+    {
+      name: 'Sensors',
+      components: [
+        { type: 'wokwi-dht22', name: 'DHT22 Sensor' },
+        { type: 'wokwi-photoresistor-sensor', name: 'Light Sensor' },
+      ]
+    },
+  ];
 
-const ComponentPanel = () => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({
-    'controllers': true, // Open by default
-    'basic': true       // Open by default
-  });
-  
-  const [categories, setCategories] = useState<ComponentCategory[]>([]);
-  const { components, isLoadingComponents, componentsError } = useComponentLibrary();
-
-  // Process components into categories when loaded
-  useEffect(() => {
-    if (!components || components.length === 0) return;
-
-    // Create a map to organize components by category
-    const categoryMap: Record<string, ComponentItem[]> = {};
-    
-    // Process each component
-    components.forEach(component => {
-      // Skip disabled components
-      if (!component.enabled) return;
-      
-      const category = component.category || 'other';
-      
-      if (!categoryMap[category]) {
-        categoryMap[category] = [];
-      }
-      
-      categoryMap[category].push({
-        id: component.id || `${component.type}-${Date.now()}`,
-        name: component.name,
-        type: component.type,
-        description: component.description || component.name
-      });
-    });
-    
-    // Map to get appropriate icon for each category
-    const getCategoryIcon = (categoryId: string) => {
-      switch(categoryId) {
-        case 'microcontroller':
-          return <Cpu className="h-4 w-4 mr-2" />;
-        case 'input':
-          return <SlidersHorizontal className="h-4 w-4 mr-2" />;
-        case 'output':
-          return <Lightbulb className="h-4 w-4 mr-2" />;
-        case 'display':
-          return <Monitor className="h-4 w-4 mr-2" />;
-        case 'sensor':
-          return <Gauge className="h-4 w-4 mr-2" />;
-        case 'passive':
-          return <Workflow className="h-4 w-4 mr-2" />;
-        case 'basic':
-          return <Workflow className="h-4 w-4 mr-2" />;
-        case 'other':
-        default:
-          return <AppWindow className="h-4 w-4 mr-2" />;
-      }
-    };
-    
-    // Convert the map to array of categories
-    const categoriesArray: ComponentCategory[] = Object.keys(categoryMap).map(categoryId => ({
-      id: categoryId,
-      label: categoryId.charAt(0).toUpperCase() + categoryId.slice(1),
-      icon: getCategoryIcon(categoryId),
-      components: categoryMap[categoryId].sort((a, b) => a.name.localeCompare(b.name))
-    }));
-    
-    // Sort categories alphabetically
-    categoriesArray.sort((a, b) => a.label.localeCompare(b.label));
-    
-    setCategories(categoriesArray);
-  }, [components]);
-
-  const handleDragStart = (e: React.DragEvent, component: ComponentItem) => {
+  const handleDragStart = (e: React.DragEvent, component: any) => {
     e.dataTransfer.setData('component', JSON.stringify(component));
+    e.dataTransfer.effectAllowed = 'copy';
   };
-
-  const toggleCategory = (categoryId: string) => {
-    setOpenCategories(prev => ({
-      ...prev,
-      [categoryId]: !prev[categoryId]
-    }));
-  };
-
-  // Filter components based on search term
-  const filteredCategories = searchTerm 
-    ? categories.map(category => ({
-        ...category,
-        components: category.components.filter(comp => 
-          comp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          comp.description.toLowerCase().includes(searchTerm.toLowerCase())
-        )
-      })).filter(category => category.components.length > 0)
-    : categories;
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="relative mb-3">
-        <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Search components..."
-          className="pl-8 text-sm"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-        {searchTerm && (
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="absolute right-1 top-1 h-6 w-6 p-0" 
-            onClick={() => setSearchTerm('')}
-          >
-            <span className="sr-only">Clear search</span>
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        )}
-      </div>
+    <div className="h-full overflow-auto p-2">
+      <h2 className="text-lg font-semibold mb-4">Components</h2>
       
-      <ScrollArea className="flex-1 pr-3">
-        {isLoadingComponents ? (
-          <div className="flex flex-col items-center justify-center p-4 text-center text-muted-foreground">
-            <Loader2 className="h-6 w-6 animate-spin mb-2 text-primary" />
-            <p>Loading components...</p>
-          </div>
-        ) : componentsError ? (
-          <Alert variant="destructive" className="mb-2">
-            <AlertDescription>
-              Error loading components. Please try refreshing the page.
-            </AlertDescription>
-          </Alert>
-        ) : filteredCategories.length === 0 ? (
-          <div className="p-4 text-center text-muted-foreground">
-            {searchTerm ? "No components found matching your search" : "No components available"}
-          </div>
-        ) : (
-          <div className="space-y-1">
-            {filteredCategories.map(category => (
-              <Collapsible 
-                key={category.id} 
-                open={searchTerm ? true : openCategories[category.id]} 
-                className="mb-1"
+      {componentCategories.map((category) => (
+        <div key={category.name} className="mb-6">
+          <h3 className="text-sm font-medium text-gray-600 mb-2">{category.name}</h3>
+          <div className="grid grid-cols-1 gap-2">
+            {category.components.map((component) => (
+              <div
+                key={component.type}
+                className="bg-white border rounded p-2 cursor-grab hover:bg-blue-50 hover:border-blue-300 transition-colors"
+                draggable
+                onDragStart={(e) => handleDragStart(e, component)}
               >
-                <CollapsibleTrigger asChild onClick={() => toggleCategory(category.id)}>
-                  <div className="flex items-center justify-between py-2 px-1 hover:bg-accent rounded-md cursor-pointer">
-                    <div className="flex items-center text-sm font-medium">
-                      {category.icon}
-                      {category.label}
-                    </div>
-                    {searchTerm ? null : (
-                      openCategories[category.id] ? 
-                        <ChevronDown className="h-4 w-4" /> : 
-                        <ChevronRight className="h-4 w-4" />
-                    )}
-                  </div>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="pl-4 pr-1">
-                  <div className="grid grid-cols-1 gap-1 py-1">
-                    {category.components.map(component => (
-                      <TooltipProvider key={component.id}>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="justify-start h-auto py-1.5 text-sm w-full cursor-grab"
-                              draggable
-                              onDragStart={(e) => handleDragStart(e, component)}
-                            >
-                              <span className="truncate">{component.name}</span>
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent side="right">
-                            <p>{component.description}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    ))}
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
+                <div className="text-sm font-medium">{component.name}</div>
+                <div className="text-xs text-gray-500">{component.type}</div>
+              </div>
             ))}
           </div>
-        )}
-      </ScrollArea>
-      
-      <div className="mt-auto pt-2 text-xs text-muted-foreground border-t">
-        Drag components to the canvas
-      </div>
+        </div>
+      ))}
     </div>
   );
 };

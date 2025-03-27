@@ -46,15 +46,15 @@ const WokwiComponentNode: React.FC<NodeProps<WokwiNodeData>> = ({
           const integration = await import('@/integrations/wokwi/WokwiIntegration');
           const customIntegration = await import('@/integrations/custom/CustomComponents');
           
-          if (customIntegration.isCustomComponent(type)) {
+          if (type && customIntegration.isCustomComponent(type)) {
             await customIntegration.renderCustomComponent(type, elementId, attributes);
-          } else {
+          } else if (type) {
             await integration.renderWokwiElement(type, elementId, attributes);
           }
         }
       } catch (error) {
         console.error(`Error rendering Wokwi component ${type}:`, error);
-        toast.error(`Failed to render component ${type}`);
+        toast.error(`Failed to render component ${type || 'unknown'}`);
       }
     };
     

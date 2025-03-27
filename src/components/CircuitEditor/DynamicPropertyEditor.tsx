@@ -1,215 +1,196 @@
 
-import React, { useState } from 'react';
-import { Trash2, Plus, Save } from 'lucide-react';
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import React, { useState, useEffect } from 'react';
+import { WokwiComponent } from '@/integrations/wokwi/WokwiIntegration';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
+import { toast } from 'sonner';
 
-interface PropertyEditorProps {
-  properties: Record<string, any>;
-  componentType: string;
-  onChange: (properties: Record<string, any>) => void;
+export interface PropertyEditorProps {
+  component: WokwiComponent;
+  onUpdateAttributes: (attributes: Record<string, any>) => void;
 }
 
-// Fixed structure - each component type has properties, each property has type and options
-const COMMON_PROPERTIES: Record<string, Record<string, { type: string, options?: string[] }>> = {
+// Define known property configurations for different component types
+const componentPropertyConfig: Record<string, any> = {
   'wokwi-led': {
-    color: { type: 'select', options: ['red', 'green', 'blue', 'yellow', 'orange', 'white'] },
-    brightness: { type: 'number' },
-    label: { type: 'text' }
+    color: { type: 'color', label: 'Color', defaultValue: 'red' },
+    label: { type: 'text', label: 'Label', defaultValue: '' },
+    value: { type: 'range', label: 'Brightness', min: 0, max: 1, step: 0.1, defaultValue: 1 }
   },
   'wokwi-resistor': {
-    resistance: { type: 'text' },
-    tolerance: { type: 'text' },
-    bands: { type: 'number' }
-  },
-  'wokwi-capacitor': {
-    capacitance: { type: 'text' }
+    value: { type: 'text', label: 'Resistance', defaultValue: '1000' },
+    bands: { type: 'select', label: 'Bands', options: [4, 5, 6], defaultValue: 4 }
   },
   'wokwi-pushbutton': {
-    color: { type: 'select', options: ['red', 'green', 'blue', 'yellow', 'black'] },
-    label: { type: 'text' }
+    color: { type: 'color', label: 'Color', defaultValue: 'red' },
+    label: { type: 'text', label: 'Label', defaultValue: '' }
   },
-  'wokwi-servo': {
-    horn: { type: 'select', options: ['single', 'double', 'cross', 'none'] },
-    angle: { type: 'number' }
-  }
+  'wokwi-arduino-uno': {
+    // Arduino-specific properties
+  },
+  // Add more component configurations as needed
+};
+
+// Default properties for any component without specific config
+const defaultProperties = {
+  label: { type: 'text', label: 'Label', defaultValue: '' }
 };
 
 const DynamicPropertyEditor: React.FC<PropertyEditorProps> = ({ 
-  properties, 
-  componentType, 
-  onChange 
+  component,
+  onUpdateAttributes 
 }) => {
-  const [newPropName, setNewPropName] = useState('');
-  const [newPropValue, setNewPropValue] = useState('');
+  const [attributes, setAttributes] = useState<Record<string, any>>(component.attributes || {});
   
-  const getPropertyType = (key: string): string => {
-    const commonProps = COMMON_PROPERTIES[componentType] || {};
-    return commonProps[key]?.type || 
-           (typeof properties[key] === 'number' ? 'number' : 'text');
-  };
-  
-  const getPropertyOptions = (key: string): string[] | undefined => {
-    const commonProps = COMMON_PROPERTIES[componentType] || {};
-    return commonProps[key]?.options;
-  };
-  
-  const handlePropertyChange = (key: string, value: any) => {
-    const updatedProps = { ...properties };
-    
-    // Convert to number if the field type is number
-    if (getPropertyType(key) === 'number') {
-      updatedProps[key] = isNaN(Number(value)) ? 0 : Number(value);
-    } else {
-      updatedProps[key] = value;
+  // Get appropriate property configuration based on component type
+  const getPropertyConfig = () => {
+    if (componentPropertyConfig[component.type]) {
+      return componentPropertyConfig[component.type];
     }
-    
-    onChange(updatedProps);
+    return defaultProperties;
   };
   
-  const handleRemoveProperty = (key: string) => {
-    const updatedProps = { ...properties };
-    delete updatedProps[key];
-    onChange(updatedProps);
+  // Update local attributes state when component changes
+  useEffect(() => {
+    setAttributes(component.attributes || {});
+  }, [component]);
+  
+  const handleChange = (key: string, value: any) => {
+    setAttributes(prev => ({
+      ...prev,
+      [key]: value
+    }));
   };
   
-  const handleAddProperty = () => {
-    if (!newPropName.trim()) return;
+  const handleSave = () => {
+    onUpdateAttributes(attributes);
+    toast.success('Component properties updated');
+  };
+  
+  const renderPropertyEditor = (key: string, config: any) => {
+    const value = attributes[key] !== undefined ? attributes[key] : config.defaultValue;
     
-    // Avoid duplicate property names
-    if (properties[newPropName]) {
-      return;
+    switch (config.type) {
+      case 'text':
+        return (
+          <Input
+            id={`prop-${key}`}
+            value={value || ''}
+            onChange={(e) => handleChange(key, e.target.value)}
+          />
+        );
+        
+      case 'number':
+        return (
+          <Input
+            id={`prop-${key}`}
+            type="number"
+            value={value || config.defaultValue}
+            min={config.min}
+            max={config.max}
+            step={config.step}
+            onChange={(e) => handleChange(key, parseFloat(e.target.value))}
+          />
+        );
+        
+      case 'range':
+        return (
+          <Input
+            id={`prop-${key}`}
+            type="range"
+            value={value || config.defaultValue}
+            min={config.min}
+            max={config.max}
+            step={config.step}
+            onChange={(e) => handleChange(key, parseFloat(e.target.value))}
+          />
+        );
+        
+      case 'color':
+        return (
+          <div className="flex items-center gap-2">
+            <Input
+              id={`prop-${key}`}
+              type="color"
+              className="w-12 h-8"
+              value={value || config.defaultValue}
+              onChange={(e) => handleChange(key, e.target.value)}
+            />
+            <Input
+              value={value || config.defaultValue}
+              onChange={(e) => handleChange(key, e.target.value)}
+            />
+          </div>
+        );
+        
+      case 'select':
+        return (
+          <Select
+            value={String(value || config.defaultValue)}
+            onValueChange={(val) => handleChange(key, val)}
+          >
+            <SelectTrigger id={`prop-${key}`}>
+              <SelectValue placeholder="Select" />
+            </SelectTrigger>
+            <SelectContent>
+              {config.options.map((option: any) => (
+                <SelectItem key={option} value={String(option)}>
+                  {option}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        );
+        
+      default:
+        return (
+          <Input
+            id={`prop-${key}`}
+            value={value || ''}
+            onChange={(e) => handleChange(key, e.target.value)}
+          />
+        );
     }
-    
-    const updatedProps = { 
-      ...properties,
-      [newPropName]: newPropValue
-    };
-    
-    onChange(updatedProps);
-    setNewPropName('');
-    setNewPropValue('');
   };
   
-  const renderPropertyInput = (key: string, value: any) => {
-    const type = getPropertyType(key);
-    const options = getPropertyOptions(key);
-    
-    if (type === 'select' && options) {
-      return (
-        <Select
-          value={String(value)}
-          onValueChange={(val) => handlePropertyChange(key, val)}
-        >
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Select value" />
-          </SelectTrigger>
-          <SelectContent>
-            {options.map(option => (
-              <SelectItem key={option} value={option}>
-                {option.charAt(0).toUpperCase() + option.slice(1)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      );
-    }
-    
-    return (
-      <Input
-        type={type}
-        value={value}
-        onChange={(e) => handlePropertyChange(key, e.target.value)}
-      />
-    );
-  };
-  
-  // Suggest properties based on component type
-  const suggestedProperties = () => {
-    const commonProps = COMMON_PROPERTIES[componentType] || {};
-    const existingKeys = Object.keys(properties);
-    
-    return Object.keys(commonProps)
-      .filter(key => !existingKeys.includes(key))
-      .map(key => (
-        <Button 
-          key={key}
-          variant="outline"
-          size="sm"
-          className="text-xs"
-          onClick={() => {
-            setNewPropName(key);
-            setNewPropValue('');
-          }}
-        >
-          {key}
-        </Button>
-      ));
-  };
+  const propertyConfig = getPropertyConfig();
   
   return (
-    <div className="space-y-4">
-      <h3 className="text-lg font-medium">Component Properties</h3>
-      
-      <div className="space-y-3">
-        {Object.entries(properties).map(([key, value]) => (
-          <div key={key} className="flex items-center gap-3">
-            <div className="w-1/3">
-              <span className="font-medium text-sm">{key}:</span>
-            </div>
-            <div className="flex-1">
-              {renderPropertyInput(key, value)}
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => handleRemoveProperty(key)}
-              className="text-destructive"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
-        ))}
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-lg font-medium">Component Properties</h3>
+        <p className="text-sm text-gray-500">{component.type}</p>
       </div>
       
-      <div className="border-t pt-3">
-        <div className="text-sm font-medium mb-2">Add New Property</div>
-        <div className="flex items-center gap-2">
-          <Input
-            placeholder="Property name"
-            value={newPropName}
-            onChange={(e) => setNewPropName(e.target.value)}
-            className="flex-1"
-          />
-          <Input
-            placeholder="Default value"
-            value={newPropValue}
-            onChange={(e) => setNewPropValue(e.target.value)}
-            className="flex-1"
-          />
-          <Button
-            onClick={handleAddProperty}
-            disabled={!newPropName.trim()}
-          >
-            <Plus className="h-4 w-4" />
+      <Separator />
+      
+      {Object.keys(propertyConfig).length > 0 ? (
+        <div className="space-y-4">
+          {Object.entries(propertyConfig).map(([key, config]: [string, any]) => (
+            <div key={key} className="grid gap-2">
+              <Label htmlFor={`prop-${key}`}>{config.label}</Label>
+              {renderPropertyEditor(key, config)}
+            </div>
+          ))}
+          
+          <Button onClick={handleSave} className="w-full">
+            Apply Changes
           </Button>
         </div>
-        
-        {suggestedProperties().length > 0 && (
-          <div className="mt-2">
-            <div className="text-xs text-muted-foreground mb-1">Suggested properties:</div>
-            <div className="flex flex-wrap gap-2">
-              {suggestedProperties()}
-            </div>
-          </div>
-        )}
+      ) : (
+        <div className="py-4 text-center text-gray-500">
+          No editable properties available for this component.
+        </div>
+      )}
+      
+      <Separator />
+      
+      <div>
+        <h4 className="text-sm font-medium mb-2">Component ID</h4>
+        <code className="text-xs bg-gray-100 p-1 rounded">{component.id}</code>
       </div>
     </div>
   );

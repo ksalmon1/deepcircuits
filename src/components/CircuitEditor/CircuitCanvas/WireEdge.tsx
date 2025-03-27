@@ -32,7 +32,7 @@ const WireEdge = ({
   markerEnd,
   data,
   selected,
-}: EdgeProps) => {
+}: EdgeProps<WireEdgeData>) => {
   const reactFlowInstance = useReactFlow();
   
   // Default wire color and customize based on the data
@@ -132,6 +132,32 @@ const WireEdge = ({
     }
   };
 
+  const handleStartEditClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (data?.onStartEdit) {
+      data.onStartEdit(id);
+    }
+  };
+
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    reactFlowInstance.deleteElements({ edges: [{ id }] });
+  };
+
+  const handleAddControlPointClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (data?.onAddControlPoint) {
+      data.onAddControlPoint(id);
+    }
+  };
+
+  const handleFinishEditClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (data?.onFinishEdit) {
+      data.onFinishEdit(id);
+    }
+  };
+
   return (
     <>
       <BaseEdge path={edgePath} markerEnd={markerEnd} style={wireStyle} />
@@ -145,7 +171,7 @@ const WireEdge = ({
               transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
               display: 'flex',
               gap: '4px',
-              background: 'white',
+              backgroundColor: 'white',
               padding: '2px',
               borderRadius: '4px',
               border: '1px solid #ddd',
@@ -158,12 +184,7 @@ const WireEdge = ({
                 <button
                   className="wire-control-button wire-edit-button"
                   title="Edit wire path"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    if (data?.onStartEdit) {
-                      data.onStartEdit(id);
-                    }
-                  }}
+                  onClick={handleStartEditClick}
                   style={{
                     background: 'transparent',
                     border: 'none',
@@ -183,11 +204,7 @@ const WireEdge = ({
                 <button
                   className="wire-control-button wire-delete-button"
                   title="Delete wire"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    // Use XY Flow's edge removal
-                    reactFlowInstance.deleteElements({ edges: [{ id }] });
-                  }}
+                  onClick={handleDeleteClick}
                   style={{
                     background: 'transparent',
                     border: 'none',
@@ -210,12 +227,7 @@ const WireEdge = ({
                 <button
                   className="wire-control-button wire-add-button"
                   title="Add control point"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    if (data?.onAddControlPoint) {
-                      data.onAddControlPoint(id);
-                    }
-                  }}
+                  onClick={handleAddControlPointClick}
                   style={{
                     background: 'transparent',
                     border: 'none',
@@ -235,12 +247,7 @@ const WireEdge = ({
                 <button
                   className="wire-control-button wire-done-button"
                   title="Finish editing"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    if (data?.onFinishEdit) {
-                      data.onFinishEdit(id);
-                    }
-                  }}
+                  onClick={handleFinishEditClick}
                   style={{
                     background: 'transparent',
                     border: 'none',
@@ -277,7 +284,7 @@ const WireEdge = ({
                   width: '10px',
                   height: '10px',
                   borderRadius: '50%',
-                  backgroundColor: wireColor,
+                  backgroundColor: wireColor as string,
                   border: '2px solid white',
                   transform: 'translate(-50%, -50%)',
                   cursor: 'move',

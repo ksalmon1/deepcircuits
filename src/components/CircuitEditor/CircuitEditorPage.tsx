@@ -13,7 +13,7 @@ import { PlayCircle, StopCircle, Save, Undo, Download, Upload } from 'lucide-rea
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import DynamicPropertyEditor from './DynamicPropertyEditor';
-import { useMediaQuery } from '@/hooks/use-mobile';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 // Default initial code for Arduino sketch
 const initialCode = `// Arduino sketch
@@ -37,7 +37,7 @@ const CircuitEditorPage = () => {
   const [code, setCode] = useState<string>(initialCode);
   const [isSimulationRunning, setIsSimulationRunning] = useState<boolean>(false);
   const [serialOutput, setSerialOutput] = useState<string[]>([]);
-  const isMobile = useMediaQuery("(max-width: 768px)");
+  const isMobile = useIsMobile();
   
   const handleComponentsChange = useCallback((updatedComponents: WokwiComponent[]) => {
     setComponents(updatedComponents);
