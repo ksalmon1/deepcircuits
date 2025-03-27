@@ -4,11 +4,11 @@ import { Handle, Position, NodeProps } from '@xyflow/react';
 import { WokwiNodeData } from '@/types/circuit';
 import { toast } from 'sonner';
 
-const WokwiComponentNode: React.FC<NodeProps<WokwiNodeData>> = ({ 
+const WokwiComponentNode = ({ 
   id, 
   data,
   selected
-}) => {
+}: NodeProps<WokwiNodeData>) => {
   // Ensure data is not undefined
   const safeData = data || { type: '', attributes: {}, pins: [] };
   const { type, attributes, pins = [] } = safeData;

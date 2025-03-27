@@ -3,7 +3,7 @@ import React, { useCallback } from 'react';
 import { EdgeProps, BaseEdge, getBezierPath, EdgeLabelRenderer, useReactFlow } from '@xyflow/react';
 import { WireEdgeData } from '@/types/circuit';
 
-const WireEdge: React.FC<EdgeProps<WireEdgeData>> = ({
+const WireEdge = ({
   id,
   sourceX,
   sourceY,
@@ -15,7 +15,7 @@ const WireEdge: React.FC<EdgeProps<WireEdgeData>> = ({
   markerEnd,
   data,
   selected,
-}) => {
+}: EdgeProps<WireEdgeData>) => {
   const reactFlowInstance = useReactFlow();
   
   // Default wire color and customize based on the data
@@ -23,7 +23,7 @@ const WireEdge: React.FC<EdgeProps<WireEdgeData>> = ({
   const wireStyle = {
     stroke: wireColor,
     strokeWidth: selected ? 3 : 2,
-    ...style,
+    ...(style || {}),
   };
 
   // Determine if edge is in edit mode

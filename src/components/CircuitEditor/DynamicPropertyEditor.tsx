@@ -1,122 +1,117 @@
 
-import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
+import React, { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Plus, Trash } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { WokwiComponent } from '@/integrations/wokwi/WokwiIntegration';
 
-export interface PropertyEditorProps {
-  properties?: Record<string, any>;
-  componentType?: string;
-  onChange?: (properties: Record<string, any>) => void;
+interface PropertyEditorProps {
+  component: WokwiComponent;
+  onUpdateAttributes: (attributes: Record<string, any>) => void;
 }
 
 const DynamicPropertyEditor: React.FC<PropertyEditorProps> = ({ 
-  properties = {}, 
-  onChange,
-  componentType 
+  component, 
+  onUpdateAttributes 
 }) => {
-  const [editedProperties, setEditedProperties] = useState<Record<string, any>>(properties);
-  const [newPropertyName, setNewPropertyName] = useState<string>('');
-  const [newPropertyValue, setNewPropertyValue] = useState<string>('');
-
-  const handlePropertyChange = (key: string, value: string) => {
-    const updatedProperties = {
-      ...editedProperties,
+  const [localAttributes, setLocalAttributes] = useState<Record<string, any>>({});
+  
+  useEffect(() => {
+    if (component && component.attributes) {
+      setLocalAttributes({ ...component.attributes });
+    } else {
+      setLocalAttributes({});
+    }
+  }, [component]);
+  
+  const handlePropertyChange = (key: string, value: any) => {
+    setLocalAttributes(prev => ({
+      ...prev,
       [key]: value
-    };
-    
-    setEditedProperties(updatedProperties);
-    onChange?.(updatedProperties);
+    }));
   };
-
-  const handleDeleteProperty = (key: string) => {
-    const updatedProperties = { ...editedProperties };
-    delete updatedProperties[key];
-    
-    setEditedProperties(updatedProperties);
-    onChange?.(updatedProperties);
+  
+  const handleApplyChanges = () => {
+    onUpdateAttributes(localAttributes);
   };
-
-  const handleAddProperty = () => {
-    if (!newPropertyName.trim()) return;
+  
+  // Get the appropriate input type based on the attribute type
+  const getInputForProperty = (key: string, value: any) => {
+    // Boolean values use a switch
+    if (typeof value === 'boolean') {
+      return (
+        <div className="flex items-center space-x-2" key={key}>
+          <Switch
+            id={`property-${key}`}
+            checked={localAttributes[key] || false}
+            onCheckedChange={(checked) => handlePropertyChange(key, checked)}
+          />
+          <Label htmlFor={`property-${key}`}>{key}</Label>
+        </div>
+      );
+    }
     
-    const updatedProperties = {
-      ...editedProperties,
-      [newPropertyName]: newPropertyValue
-    };
+    // Number values use a number input
+    if (typeof value === 'number') {
+      return (
+        <div className="space-y-1" key={key}>
+          <Label htmlFor={`property-${key}`}>{key}</Label>
+          <Input
+            id={`property-${key}`}
+            type="number"
+            value={localAttributes[key] || 0}
+            onChange={(e) => handlePropertyChange(key, parseFloat(e.target.value))}
+          />
+        </div>
+      );
+    }
     
-    setEditedProperties(updatedProperties);
-    onChange?.(updatedProperties);
-    setNewPropertyName('');
-    setNewPropertyValue('');
+    // Everything else uses a text input
+    return (
+      <div className="space-y-1" key={key}>
+        <Label htmlFor={`property-${key}`}>{key}</Label>
+        <Input
+          id={`property-${key}`}
+          value={localAttributes[key] || ''}
+          onChange={(e) => handlePropertyChange(key, e.target.value)}
+        />
+      </div>
+    );
   };
-
+  
+  if (!component) {
+    return (
+      <div className="text-center text-gray-500 mt-8">
+        No component selected
+      </div>
+    );
+  }
+  
   return (
     <div className="space-y-4">
-      <h3 className="text-sm font-medium">Component Properties</h3>
-      
-      {componentType && (
-        <div className="text-xs text-gray-500 mb-4">
-          Type: {componentType}
-        </div>
-      )}
-      
-      <div className="space-y-3">
-        {Object.entries(editedProperties).map(([key, value]) => (
-          <div key={key} className="flex items-center gap-2">
-            <div className="flex-1">
-              <Label className="text-xs">{key}</Label>
-              <Input
-                value={value}
-                onChange={(e) => handlePropertyChange(key, e.target.value)}
-                className="h-8 text-sm"
-              />
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => handleDeleteProperty(key)}
-              className="h-8 w-8 mt-4"
-            >
-              <Trash className="h-4 w-4 text-gray-500" />
-            </Button>
-          </div>
-        ))}
+      <div className="p-2 bg-gray-100 rounded">
+        <p className="font-medium">{component.type}</p>
+        <p className="text-xs text-gray-500">ID: {component.id}</p>
       </div>
       
-      <div className="pt-2 border-t">
-        <h4 className="text-xs font-medium mb-2">Add New Property</h4>
-        <div className="flex gap-2 items-end">
-          <div className="flex-1">
-            <Label className="text-xs">Name</Label>
-            <Input
-              value={newPropertyName}
-              onChange={(e) => setNewPropertyName(e.target.value)}
-              placeholder="property"
-              className="h-8 text-sm"
-            />
-          </div>
-          <div className="flex-1">
-            <Label className="text-xs">Value</Label>
-            <Input
-              value={newPropertyValue}
-              onChange={(e) => setNewPropertyValue(e.target.value)}
-              placeholder="value"
-              className="h-8 text-sm"
-            />
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleAddProperty}
-            className="h-8"
-          >
-            <Plus className="h-3 w-3 mr-1" />
-            Add
-          </Button>
-        </div>
+      <div className="space-y-4">
+        <h3 className="text-sm font-medium">Properties</h3>
+        {Object.keys(localAttributes).length === 0 ? (
+          <p className="text-sm text-gray-500">No editable properties</p>
+        ) : (
+          Object.entries(localAttributes).map(([key, value]) => 
+            getInputForProperty(key, value)
+          )
+        )}
       </div>
+      
+      <Button 
+        onClick={handleApplyChanges}
+        disabled={Object.keys(localAttributes).length === 0}
+      >
+        Apply Changes
+      </Button>
     </div>
   );
 };
