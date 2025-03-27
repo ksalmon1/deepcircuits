@@ -120,7 +120,7 @@ const KonvaWireRenderer: React.FC<KonvaWireRendererProps> = ({
           position: 'absolute', 
           top: 0, 
           left: 0, 
-          pointerEvents: wires.length > 0 || activeWire ? 'auto' : 'none', // Only enable interactions when wires exist
+          pointerEvents: activeWire ? 'auto' : 'none', // Only enable full stage interaction when actively drawing a wire
           zIndex: 20 // Higher z-index to ensure wires are visible above other elements but below pin tooltips
         }}
       >
@@ -193,7 +193,7 @@ const KonvaWireRenderer: React.FC<KonvaWireRendererProps> = ({
         </Layer>
       </Stage>
       
-      {/* Render delete buttons for hovered wires */}
+      {/* Render delete buttons for hovered wires using DOM elements instead of Konva */}
       {hoveredWireId && wires.map((wire) => {
         if (wire.id !== hoveredWireId) return null;
         
@@ -210,7 +210,8 @@ const KonvaWireRenderer: React.FC<KonvaWireRendererProps> = ({
               width: '22px',
               height: '22px',
               transform: 'translate(-50%, -50%)',
-              zIndex: 30
+              zIndex: 30,
+              pointerEvents: 'auto' // Ensure delete button is always clickable
             }}
             onClick={(e) => handleDeleteClick(wire.id, e)}
           >
