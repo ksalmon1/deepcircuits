@@ -11,7 +11,6 @@ import { Wire, WireEdgeData, WokwiNodeData, WireEdge } from '@/types/circuit';
  */
 export const useWireSystem = (components: WokwiComponent[]) => {
   const { getEdges, setEdges, getNodes, setNodes, deleteElements, getNode } = useReactFlow();
-  const edgeBeingCreatedRef = useRef<string | null>(null);
   const edgeBeingEditedRef = useRef<string | null>(null);
   
   // Create a new edge when a connection is formed
@@ -27,7 +26,6 @@ export const useWireSystem = (components: WokwiComponent[]) => {
     const targetPinIndex = parseInt(connection.targetHandle.split('-')[1]);
     
     // Determine wire color based on signal type
-    const sourceComponent = components.find(c => c.id === sourceId);
     const signal = getPinSignalType(components, sourceId, sourcePinIndex);
     const wireColor = getWireColorFromSignal(signal || '');
     
@@ -132,31 +130,18 @@ export const useWireSystem = (components: WokwiComponent[]) => {
       
       if (!sourceNode || !targetNode) return edges;
       
-      const sourceHandleId = edge.sourceHandle || '';
-      const targetHandleId = edge.targetHandle || '';
-      
-      const sourcePosition = {
-        x: sourceNode.position.x,
-        y: sourceNode.position.y
-      };
-      
-      const targetPosition = {
-        x: targetNode.position.x,
-        y: targetNode.position.y
-      };
-      
       // Calculate a good position for a new control point
       let newPointX, newPointY;
       
       if (controlPoints.length === 0) {
         // First control point - midway between source and target
-        newPointX = (sourcePosition.x + targetPosition.x) / 2;
-        newPointY = (sourcePosition.y + targetPosition.y) / 2;
+        newPointX = (sourceNode.position.x + targetNode.position.x) / 2;
+        newPointY = (sourceNode.position.y + targetNode.position.y) / 2;
       } else {
         // Additional control point - between the last control point and target
         const lastPoint = controlPoints[controlPoints.length - 1];
-        newPointX = (lastPoint.x + targetPosition.x) / 2;
-        newPointY = (lastPoint.y + targetPosition.y) / 2;
+        newPointX = (lastPoint.x + targetNode.position.x) / 2;
+        newPointY = (lastPoint.y + targetNode.position.y) / 2;
       }
       
       // Add the new control point
@@ -187,7 +172,7 @@ export const useWireSystem = (components: WokwiComponent[]) => {
       return edges.map(edge => {
         if (edge.id === edgeId && edge.data) {
           const edgeData = edge.data as WireEdgeData;
-          const updatedControlPoints = [...(edgeData.controlPoints as Array<{x: number, y: number}> || [])];
+          const updatedControlPoints = [...(edgeData.controlPoints || [])];
           if (pointIndex >= 0 && pointIndex < updatedControlPoints.length) {
             updatedControlPoints[pointIndex] = newPosition;
           }

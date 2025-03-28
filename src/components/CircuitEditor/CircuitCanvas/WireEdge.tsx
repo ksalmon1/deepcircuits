@@ -25,7 +25,7 @@ const WireEdge = ({
   const wireData = data as WireEdgeData | undefined;
   const wireColor = wireData?.color || '#FF0000';
   const wireStyle = {
-    stroke: wireColor as string,
+    stroke: wireColor,
     strokeWidth: selected ? 3 : 2,
     ...style
   } as React.CSSProperties;
@@ -255,7 +255,7 @@ const WireEdge = ({
                   width: '10px',
                   height: '10px',
                   borderRadius: '50%',
-                  backgroundColor: wireColor as string,
+                  backgroundColor: wireColor,
                   border: '2px solid white',
                   transform: 'translate(-50%, -50%)',
                   cursor: 'move',

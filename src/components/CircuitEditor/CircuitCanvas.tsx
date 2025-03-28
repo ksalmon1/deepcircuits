@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { 
   isWokwiLoaded, 
@@ -33,6 +34,7 @@ import '@xyflow/react/dist/style.css';
 // Import the sub-components we created
 import WokwiComponentNode from './CircuitCanvas/WokwiComponentNode';
 import WireEdge from './CircuitCanvas/WireEdge';
+import CustomConnectionLine from './CircuitCanvas/CustomConnectionLine';
 import CanvasControls from './CircuitCanvas/CanvasControls';
 import WireCreationIndicator from './CircuitCanvas/WireCreationIndicator';
 import LoadingOverlay from './CircuitCanvas/LoadingOverlay';
@@ -323,6 +325,12 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
   // Prepare the edges with all necessary handlers and data
   const edgesWithHandlers = prepareEdgesForRender();
 
+  // Custom connection line renderer that changes colors based on signal type
+  const connectionLineComponent = useCallback(
+    (props: any) => <CustomConnectionLine {...props} components={components} />,
+    [components]
+  );
+
   return (
     <div className="h-full w-full bg-white relative flex flex-col">
       <LoadingOverlay 
@@ -357,7 +365,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
           onDragOver={handleDragOver}
           onNodeDragStop={onNodeDragStop}
           connectionMode={ConnectionMode.Loose}
-          connectionLineStyle={connectionLineStyle}
+          connectionLineComponent={connectionLineComponent}
           minZoom={0.5}
           maxZoom={4}
           defaultViewport={{ x: 0, y: 0, zoom: 1 }}
