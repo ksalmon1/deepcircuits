@@ -1,10 +1,10 @@
 
 import { useCallback } from 'react';
-import { Connection, useReactFlow, addEdge } from '@xyflow/react';
+import { Connection, useReactFlow, addEdge, Edge } from '@xyflow/react';
 import { WokwiComponent } from '@/integrations/wokwi/WokwiIntegration';
 import { getWireColorFromSignal, getPinSignalType } from '@/utils/wireUtils';
 import { toast } from 'sonner';
-import { WireData } from '@/types/circuit';
+import { WireData, WireEdge } from '@/types/circuit';
 
 /**
  * Hook for managing the wire connections system using React Flow
@@ -28,7 +28,8 @@ export const useWireSystem = (components: WokwiComponent[]) => {
     const signal = getPinSignalType(components, sourceId, sourcePinIndex);
     const wireColor = getWireColorFromSignal(signal || '');
     
-    const newEdge = {
+    // Create a new edge with the correct type
+    const newEdge: WireEdge = {
       id: `wire-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
       source: sourceId,
       target: targetId,
@@ -39,7 +40,7 @@ export const useWireSystem = (components: WokwiComponent[]) => {
         color: wireColor,
         sourcePinIndex,
         targetPinIndex,
-      } as WireData,
+      },
       animated: false,
       style: {
         stroke: wireColor,
@@ -47,6 +48,7 @@ export const useWireSystem = (components: WokwiComponent[]) => {
       }
     };
     
+    // Use type assertion to ensure compatibility
     setEdges((eds) => addEdge(newEdge, eds));
     
     toast.success('Connection created', {

@@ -23,7 +23,8 @@
 }
 
 /* Custom handle styling */
-.react-flow__handle.custom-handle {
+.react-flow__handle.custom-handle,
+.react-flow__handle.pin-handle {
   width: 8px;
   height: 8px;
   border-radius: 50%;
@@ -35,7 +36,8 @@
   z-index: 10;
 }
 
-.react-flow__handle.custom-handle:hover {
+.react-flow__handle.custom-handle:hover,
+.react-flow__handle.pin-handle:hover {
   box-shadow: 0 0 0 2px rgba(76, 114, 244, 0.75);
   transform: translate(-50%, -50%) scale(1.2);
   cursor: crosshair;
