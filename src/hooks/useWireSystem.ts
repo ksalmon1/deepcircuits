@@ -122,7 +122,8 @@ export const useWireSystem = (components: WokwiComponent[]) => {
       if (!edge || !edge.data) return edges;
       
       const edgeData = edge.data as WireEdgeData;
-      const controlPoints = [...(edgeData.controlPoints || [])];
+      // Ensure controlPoints is an array before spreading
+      const controlPoints = [...(Array.isArray(edgeData.controlPoints) ? edgeData.controlPoints : [])];
       
       // Get source and target positions
       const sourceNode = getNode(edge.source);
@@ -172,7 +173,8 @@ export const useWireSystem = (components: WokwiComponent[]) => {
       return edges.map(edge => {
         if (edge.id === edgeId && edge.data) {
           const edgeData = edge.data as WireEdgeData;
-          const updatedControlPoints = [...(edgeData.controlPoints || [])];
+          // Ensure controlPoints is an array before spreading
+          const updatedControlPoints = [...(Array.isArray(edgeData.controlPoints) ? edgeData.controlPoints : [])];
           if (pointIndex >= 0 && pointIndex < updatedControlPoints.length) {
             updatedControlPoints[pointIndex] = newPosition;
           }

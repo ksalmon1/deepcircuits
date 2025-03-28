@@ -26,7 +26,10 @@ const CustomConnectionLine = ({
   
   if (fromHandle) {
     const sourceId = fromHandle.nodeId;
-    const pinIdParts = fromHandle.handleId?.toString().split('-');
+    // Use toString() to ensure we have a string, and use optional chaining with type assertion
+    const handleIdStr = fromHandle?.id?.toString() || '';
+    const pinIdParts = handleIdStr.split('-');
+    
     if (sourceId && pinIdParts && pinIdParts.length > 1) {
       const pinIndex = parseInt(pinIdParts[1]);
       const signal = getPinSignalType(components, sourceId, pinIndex);
