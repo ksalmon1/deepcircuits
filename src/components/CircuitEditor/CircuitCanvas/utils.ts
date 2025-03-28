@@ -7,8 +7,15 @@ import { WokwiNodeData } from '@/types/circuit';
  * Converts a Wokwi component to an XY Flow node
  */
 export const componentToNode = (component: WokwiComponent): Node<WokwiNodeData> => {
-  // Log the component being converted to a node for debugging
-  console.log(`Converting component to node: id=${component.id}, type=${component.type}, svgPath=${component.svgPath ? 'exists' : 'missing'}, isOriginal=${component.isOriginal}`);
+  // Log the complete component object for debugging (with a depth limit to avoid circular references)
+  console.log('Full component object:', JSON.stringify({
+    id: component.id,
+    type: component.type,
+    svgPath: component.svgPath ? `${component.svgPath.substring(0, 20)}...` : 'missing',
+    isOriginal: component.isOriginal,
+    hasSvgPath: !!component.svgPath,
+    svgPathLength: component.svgPath?.length || 0
+  }));
   
   // Create a complete node with all component data carefully preserved
   const node: Node<WokwiNodeData> = {
@@ -19,15 +26,19 @@ export const componentToNode = (component: WokwiComponent): Node<WokwiNodeData> 
       type: component.type,
       attributes: component.attributes || {},
       pins: component.pins || [],
-      // Fix: Directly assign the svgPath without any null fallback that could
-      // convert a valid empty string to null
+      // Preserve the exact svgPath value from the component
       svgPath: component.svgPath,
       isOriginal: component.isOriginal
     },
   };
   
-  // Add additional debug logging
-  console.log(`Node data created with: svgPath=${node.data.svgPath ? 'present' : 'missing'}, length=${node.data.svgPath?.length || 0}`);
+  // Add additional debug logging for the node data
+  console.log(`Node data created with:`, {
+    nodeId: node.id,
+    type: node.data.type,
+    hasSvgPath: !!node.data.svgPath,
+    svgPathLength: node.data.svgPath?.length || 0
+  });
   
   return node;
 };

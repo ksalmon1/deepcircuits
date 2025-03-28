@@ -1,3 +1,4 @@
+
 import React, { useEffect, memo, useRef } from 'react';
 import { Handle, Position, NodeProps } from '@xyflow/react';
 import { WokwiNodeData } from '@/types/circuit';
@@ -28,12 +29,18 @@ const WokwiComponentNode = ({
         // Clear the container
         containerRef.current.innerHTML = '';
 
-        // Added detailed debug log
-        console.log(`Component ${id}: type=${type}, isOriginal=${isOriginal}, svgPath ${svgPath ? `exists (${svgPath.length} chars)` : 'missing'}`);
+        // Enhanced debug logging with full object data
+        console.log(`Rendering component ${id}:`, {
+          type,
+          isOriginal,
+          hasSvgPath: !!svgPath,
+          svgPathLength: svgPath?.length || 0,
+          svgPathPreview: svgPath ? svgPath.substring(0, 30) + '...' : 'none'
+        });
         
         // Check if this is a custom SVG component by directly checking for SVG content
-        if (svgPath) {
-          console.log(`Rendering custom SVG component: ${type}`);
+        if (svgPath && svgPath.trim().startsWith('<svg')) {
+          console.log(`Rendering SVG for component ${id}`);
           
           // Set the SVG content directly
           containerRef.current.innerHTML = svgPath;

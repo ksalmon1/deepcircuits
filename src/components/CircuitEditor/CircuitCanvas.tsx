@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { 
   isWokwiLoaded, 
@@ -114,14 +113,21 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
 
   // Convert components to nodes
   useEffect(() => {
-    const initialNodes = components.map(comp => componentToNode({
-      id: comp.id,
-      type: comp.type,
-      left: comp.left,
-      top: comp.top,
-      attributes: comp.attributes,
-      pins: comp.pins || []
-    }));
+    if (!components || components.length === 0) return;
+    
+    console.log(`Converting ${components.length} components to nodes`);
+    const initialNodes = components.map(comp => {
+      // Log each component before conversion for debugging
+      console.log(`Component before conversion:`, {
+        id: comp.id,
+        type: comp.type,
+        hasSvgPath: !!comp.svgPath,
+        svgPathLength: comp.svgPath?.length || 0,
+      });
+      
+      return componentToNode(comp);
+    });
+    
     setReactFlowNodes(initialNodes);
   }, [components, setReactFlowNodes]);
   
