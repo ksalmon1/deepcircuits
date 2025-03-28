@@ -63,6 +63,7 @@ export interface WokwiComponent {
   attributes: WokwiElementProps;
   pins?: WokwiPin[];
   isOriginal?: boolean; // Flag to indicate if this is an original Wokwi component
+  svgPath?: string | null; // Added SVG path for custom components
 }
 
 // Function to render a wokwi element with given properties

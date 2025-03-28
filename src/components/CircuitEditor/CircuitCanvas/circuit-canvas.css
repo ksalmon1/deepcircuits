@@ -30,8 +30,6 @@
   border-radius: 50%;
   background-color: #4BC0C0;
   border: 1px solid rgba(0, 0, 0, 0.3);
-  position: absolute;
-  transform: translate(-50%, -50%);
   transition: all 0.2s ease;
   z-index: 10;
 }

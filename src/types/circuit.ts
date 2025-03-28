@@ -11,6 +11,8 @@ export interface WokwiNodeData {
     y: number;
     signals?: string[];
   }>;
+  svgPath?: string | null;
+  isOriginal?: boolean;
   [key: string]: unknown; // Add index signature to satisfy Record<string, unknown>
 }
 

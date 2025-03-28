@@ -14,7 +14,9 @@ export const componentToNode = (component: WokwiComponent): Node<WokwiNodeData> 
     data: {
       type: component.type,
       attributes: component.attributes,
-      pins: component.pins || []
+      pins: component.pins || [],
+      svgPath: component.svgPath || null,
+      isOriginal: component.isOriginal
     },
   };
 };

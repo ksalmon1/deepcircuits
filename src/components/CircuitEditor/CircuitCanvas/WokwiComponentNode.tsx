@@ -1,5 +1,5 @@
 
-import React, { useEffect, memo } from 'react';
+import React, { useEffect, memo, useRef } from 'react';
 import { Handle, Position, NodeProps } from '@xyflow/react';
 import { WokwiNodeData } from '@/types/circuit';
 import { toast } from 'sonner';
@@ -14,30 +14,55 @@ const WokwiComponentNode = ({
   data,
   selected
 }: WokwiComponentNodeProps) => {
+  // Create a ref for the component container
+  const containerRef = useRef<HTMLDivElement>(null);
+  
   // Ensure data is not undefined and has the correct type
   const safeData: WokwiNodeData = data || { type: '', attributes: {}, pins: [] };
-  const { type, attributes, pins = [] } = safeData;
+  const { type, attributes, pins = [], svgPath, isOriginal } = safeData;
   
   useEffect(() => {
-    const elementId = `wokwi-element-${id}`;
-    
-    const renderWokwiElement = async () => {
+    const renderComponent = async () => {
       try {
-        let elementContainer = document.getElementById(elementId);
+        if (!containerRef.current) return;
         
-        if (!elementContainer) {
-          elementContainer = document.createElement('div');
-          elementContainer.id = elementId;
+        // Clear the container
+        containerRef.current.innerHTML = '';
+        
+        // Check if this is a custom SVG component
+        const isCustomSvgComponent = svgPath && (!isOriginal || type.startsWith('custom-'));
+        
+        if (isCustomSvgComponent && svgPath) {
+          console.log(`Rendering custom SVG component: ${type}`);
           
-          const nodeElement = document.getElementById(`node-${id}`);
-          if (nodeElement) {
-            nodeElement.appendChild(elementContainer);
+          // Set the SVG content directly (ensure SVG content is trusted)
+          containerRef.current.innerHTML = svgPath;
+          
+          // Get the SVG element and ensure it has appropriate attributes
+          const svgElement = containerRef.current.querySelector('svg');
+          if (svgElement) {
+            if (!svgElement.hasAttribute('width')) {
+              svgElement.setAttribute('width', '100%');
+            }
+            if (!svgElement.hasAttribute('height')) {
+              svgElement.setAttribute('height', '100%');
+            }
+            svgElement.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+          } else {
+            console.warn(`SVG element not found in svgPath for component ${id}`);
           }
-        }
-        
-        if (elementContainer) {
-          elementContainer.innerHTML = '';
+        } else {
+          console.log(`Rendering Wokwi element: ${type}`);
           
+          // Create an element ID for the Wokwi component
+          const elementId = `wokwi-element-${id}`;
+          
+          // Create a container for the Wokwi element
+          const elementContainer = document.createElement('div');
+          elementContainer.id = elementId;
+          containerRef.current.appendChild(elementContainer);
+          
+          // Render the Wokwi element
           const integration = await import('@/integrations/wokwi/WokwiIntegration');
           const customIntegration = await import('@/integrations/custom/CustomComponents');
           
@@ -48,20 +73,20 @@ const WokwiComponentNode = ({
           }
         }
       } catch (error) {
-        console.error(`Error rendering Wokwi component ${type}:`, error);
+        console.error(`Error rendering component ${type}:`, error);
         toast.error(`Failed to render component ${type || 'unknown'}`);
       }
     };
     
-    renderWokwiElement();
+    renderComponent();
     
     return () => {
-      const elementContainer = document.getElementById(elementId);
-      if (elementContainer) {
-        elementContainer.innerHTML = '';
+      // Clean up when the component unmounts
+      if (containerRef.current) {
+        containerRef.current.innerHTML = '';
       }
     };
-  }, [id, type, attributes]);
+  }, [id, type, attributes, svgPath, isOriginal]);
   
   useEffect(() => {
     const nodeElement = document.getElementById(`node-${id}`);
@@ -122,17 +147,21 @@ const WokwiComponentNode = ({
   
   return (
     <div id={`node-${id}`} style={nodeStyle}>
-      <div id={`wokwi-element-${id}`} />
+      <div ref={containerRef} id={`component-container-${id}`} style={{ width: '100%', height: '100%' }} />
       
       {pins && pins.map((pin, index) => {
         const pinColor = getSignalColor(pin.signals);
-        const style = {
-          top: pin.y,
-          left: pin.x,
+        
+        // Use absolute positioning for the handles based on pin coordinates
+        const handleStyle: React.CSSProperties = {
+          top: `${pin.y}px`,
+          left: `${pin.x}px`, 
           background: pinColor,
           width: '8px',
           height: '8px',
-          zIndex: 10
+          zIndex: 10,
+          position: 'absolute',
+          transform: 'translate(-50%, -50%)',
         };
         
         // Each pin can act as both source and target for connections
@@ -141,9 +170,9 @@ const WokwiComponentNode = ({
             key={`pin-${index}`}
             id={`pin-${index}`}
             type="source"
-            position={Position.Right}
-            style={style}
-            className="custom-handle"
+            position={Position.Left} // Default position for React Flow's internal use
+            style={handleStyle}
+            className="custom-handle nodrag"
             isConnectable={true}
             title={pin.name}
           />
