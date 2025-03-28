@@ -18,6 +18,7 @@ export const componentToNode = (component: WokwiComponent): Node<WokwiNodeData> 
       type: component.type,
       attributes: component.attributes,
       pins: component.pins || [],
+      // Ensure svgPath is correctly passed to the node data
       svgPath: component.svgPath || null,
       isOriginal: component.isOriginal
     },

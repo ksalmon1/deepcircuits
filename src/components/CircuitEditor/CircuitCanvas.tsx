@@ -166,6 +166,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
       if (!componentData) return;
       
       const componentInfo = JSON.parse(componentData);
+      console.log('Dropped component data:', componentInfo);
       
       const rect = canvasRef.current?.getBoundingClientRect();
       if (!rect) return;
@@ -207,19 +208,25 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
         pins = getComponentPinInfo(componentInfo.type);
       }
       
+      // Create the new component with svgPath and isOriginal values from the drag data
       const newComponent: WokwiComponent = {
         type: componentInfo.type,
         id: `comp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         top,
         left,
         attributes: { color: 'red' },
-        pins
+        pins,
+        // Ensure svgPath and isOriginal are properly passed from the drag data
+        svgPath: componentInfo.svgPath,
+        isOriginal: componentInfo.isOriginal
       };
+      
+      console.log('Created new component:', newComponent);
       
       const updatedComponents = [...components, newComponent];
       onComponentsChange(updatedComponents);
       
-      toast.success(`Added ${componentInfo.name}`, {
+      toast.success(`Added ${componentInfo.name || componentInfo.type}`, {
         description: `Component placed at position (${left}, ${top})`,
         duration: 2000,
       });
