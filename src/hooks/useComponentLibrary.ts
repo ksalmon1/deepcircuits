@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   getAllComponents, 
@@ -45,6 +44,11 @@ export const useComponentLibrary = () => {
               if (details) {
                 console.log(`Got details for ${component.name} (${component.type}):`, details);
                 detailsMap[component.id] = details;
+                
+                // Log SVG path for debugging
+                if (details.svgPath) {
+                  console.log(`Component ${component.name} has SVG path`);
+                }
                 
                 // If the details contain pins, log them for debugging
                 if (details.pins && details.pins.length > 0) {

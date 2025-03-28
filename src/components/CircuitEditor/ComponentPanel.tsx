@@ -9,7 +9,7 @@ export interface ComponentPanelProps {
 }
 
 const ComponentPanel: React.FC<ComponentPanelProps> = ({ onComponentSelect }) => {
-  const { components, isLoadingComponents } = useComponentLibrary();
+  const { components, isLoadingComponents, componentsDetailsMap } = useComponentLibrary();
   const [categorizedComponents, setCategorizedComponents] = useState<Record<string, any[]>>({});
   
   useEffect(() => {
@@ -39,8 +39,14 @@ const ComponentPanel: React.FC<ComponentPanelProps> = ({ onComponentSelect }) =>
       attributes: {},
       top: 0,
       left: 0,
-      pins: []
+      pins: [],
+      // Include the SVG path from the component
+      svgPath: component.svgPath,
+      isOriginal: component.isOriginal
     };
+    
+    console.log(`Drag start for component: ${component.name} (${component.type})`);
+    console.log(`SVG path included: ${component.svgPath ? 'Yes' : 'No'}`);
     
     e.dataTransfer.setData('component', JSON.stringify(wokwiComponent));
     e.dataTransfer.effectAllowed = 'copy';
