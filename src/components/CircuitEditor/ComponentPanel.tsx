@@ -36,7 +36,6 @@ const ComponentPanel: React.FC<ComponentPanelProps> = ({ onComponentSelect }) =>
     const wokwiComponent: WokwiComponent = {
       id: crypto.randomUUID(),
       type: component.type,
-      name: component.name,
       attributes: {},
       position: { x: 0, y: 0 },
       pins: []
