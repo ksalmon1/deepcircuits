@@ -18,6 +18,8 @@ export interface WokwiNodeData {
 export interface WireEdgeData {
   color?: string;
   isEditing?: boolean;
+  sourcePinIndex?: number;
+  targetPinIndex?: number;
   controlPoints?: Array<{ x: number; y: number }>;
   onStartEdit?: (id: string) => void;
   onFinishEdit?: (id: string) => void;

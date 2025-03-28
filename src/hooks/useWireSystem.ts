@@ -1,167 +1,226 @@
 
-import { useState, useCallback, useRef } from 'react';
+import { useCallback, useRef } from 'react';
+import { Edge, Connection, useReactFlow, Node, addEdge, MarkerType, ConnectionLineType } from '@xyflow/react';
 import { WokwiComponent } from '@/integrations/wokwi/WokwiIntegration';
-import { getWireColorFromSignal, getPinSignalType, createAutoRoutedPoints } from '@/utils/wireUtils';
+import { getWireColorFromSignal, getPinSignalType } from '@/utils/wireUtils';
+import { toast } from 'sonner';
+import { WireEdgeData, WokwiNodeData } from '@/types/circuit';
 
-export interface WirePoint {
-  x: number;
-  y: number;
-}
-
-export interface Wire {
-  id: string;
-  sourceComponentId: string;
-  sourcePinIndex: number;
-  targetComponentId: string | null;
-  targetPinIndex: number | null;
-  points: WirePoint[];
-  color: string;
-  isComplete: boolean;
-}
-
+/**
+ * Hook for managing the wire connections system using React Flow
+ */
 export const useWireSystem = (components: WokwiComponent[]) => {
-  const [wires, setWires] = useState<Wire[]>([]);
-  const [activeWire, setActiveWire] = useState<Wire | null>(null);
-  const potentialTargetRef = useRef<{componentId: string, pinIndex: number} | null>(null);
+  const { getEdges, setEdges, getNodes, setNodes, deleteElements, getNode } = useReactFlow<WokwiNodeData, WireEdgeData>();
+  const edgeBeingCreatedRef = useRef<string | null>(null);
+  const edgeBeingEditedRef = useRef<string | null>(null);
   
-  const startWire = useCallback((componentId: string, pinIndex: number, x: number, y: number) => {
-    console.log(`Starting wire from component ${componentId}, pin ${pinIndex} at (${x}, ${y})`);
-    
-    const signal = getPinSignalType(components, componentId, pinIndex);
-    const color = getWireColorFromSignal(signal || '');
-    
-    const newWire: Wire = {
-      id: `wire-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-      sourceComponentId: componentId,
-      sourcePinIndex: pinIndex,
-      targetComponentId: null,
-      targetPinIndex: null,
-      points: [{ x, y }],
-      color,
-      isComplete: false
-    };
-    
-    setActiveWire(newWire);
-    return newWire;
-  }, [components]);
-  
-  const updateWireEndPoint = useCallback((wire: Wire, x: number, y: number): Wire => {
-    if (!wire) return wire;
-    
-    const newPoints = [...wire.points];
-    
-    if (newPoints.length === 1) {
-      newPoints.push({ x, y });
-    } else if (!wire.isComplete) {
-      newPoints[newPoints.length - 1] = { x, y };
-    } else {
-      newPoints.push({ x, y });
+  // Create a new edge when a connection is formed
+  const onConnect = useCallback((connection: Connection) => {
+    if (!connection.source || !connection.target || !connection.sourceHandle || !connection.targetHandle) {
+      return;
     }
     
-    return {
-      ...wire,
-      points: newPoints
-    };
-  }, []);
-  
-  const handlePinClick = useCallback((componentId: string, pinIndex: number, x: number, y: number) => {
-    console.log(`Pin clicked: component ${componentId}, pin ${pinIndex} at (${x}, ${y})`);
+    // Extract component IDs and pin indices from the connection
+    const sourceId = connection.source;
+    const targetId = connection.target;
+    const sourcePinIndex = parseInt(connection.sourceHandle.split('-')[1]);
+    const targetPinIndex = parseInt(connection.targetHandle.split('-')[1]);
     
-    if (activeWire) {
-      if (activeWire.sourceComponentId === componentId && activeWire.sourcePinIndex === pinIndex) {
-        console.log('Clicked on source pin, ignoring');
-        return;
+    // Determine wire color based on signal type
+    const sourceComponent = components.find(c => c.id === sourceId);
+    const signal = getPinSignalType(components, sourceId, sourcePinIndex);
+    const wireColor = getWireColorFromSignal(signal || '');
+    
+    const newEdge: Edge<WireEdgeData> = {
+      id: `wire-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+      source: sourceId,
+      target: targetId,
+      sourceHandle: connection.sourceHandle,
+      targetHandle: connection.targetHandle,
+      type: 'wire',
+      data: {
+        color: wireColor,
+        sourcePinIndex,
+        targetPinIndex,
+        controlPoints: [],
+        isEditing: false,
+      },
+      animated: false,
+      markerEnd: {
+        type: MarkerType.Arrow,
+        width: 15,
+        height: 15,
+        color: wireColor,
+      },
+    };
+    
+    setEdges((eds) => addEdge(newEdge, eds));
+    
+    toast.success('Connection created', {
+      description: 'Wire connected successfully',
+      duration: 1500,
+    });
+    
+    return newEdge;
+  }, [components, setEdges]);
+  
+  // Delete a wire by its ID
+  const deleteWire = useCallback((wireId: string) => {
+    setEdges((edges) => edges.filter(e => e.id !== wireId));
+    
+    toast.info('Wire removed', {
+      duration: 1500,
+    });
+  }, [setEdges]);
+  
+  // Start editing a wire's path
+  const startWireEdit = useCallback((edgeId: string) => {
+    edgeBeingEditedRef.current = edgeId;
+    
+    setEdges(edges => edges.map(edge => {
+      if (edge.id === edgeId) {
+        return {
+          ...edge,
+          data: {
+            ...edge.data,
+            isEditing: true,
+          }
+        };
       }
+      return edge;
+    }));
+    
+    toast.info('Editing wire path. Drag control points to adjust the wire.', {
+      duration: 3000,
+    });
+  }, [setEdges]);
+  
+  // Finish editing a wire's path
+  const finishWireEdit = useCallback((edgeId: string) => {
+    edgeBeingEditedRef.current = null;
+    
+    setEdges(edges => edges.map(edge => {
+      if (edge.id === edgeId) {
+        return {
+          ...edge,
+          data: {
+            ...edge.data,
+            isEditing: false,
+          }
+        };
+      }
+      return edge;
+    }));
+    
+    toast.success('Wire path updated', {
+      duration: 2000,
+    });
+  }, [setEdges]);
+  
+  // Add a control point to a wire
+  const addControlPoint = useCallback((edgeId: string) => {
+    setEdges(edges => {
+      const edge = edges.find(e => e.id === edgeId);
+      if (!edge || !edge.data) return edges;
       
-      // Complete the active wire
-      const sourcePoint = activeWire.points[0];
+      const controlPoints = [...(edge.data.controlPoints || [])];
       
-      // Create a smooth path between source and target
-      const autoRoutedPoints = createAutoRoutedPoints(sourcePoint.x, sourcePoint.y, x, y);
+      // Get source and target positions
+      const sourceNode = getNode(edge.source);
+      const targetNode = getNode(edge.target);
       
-      const completedWire: Wire = {
-        ...activeWire,
-        targetComponentId: componentId,
-        targetPinIndex: pinIndex,
-        points: autoRoutedPoints,
-        isComplete: true
+      if (!sourceNode || !targetNode) return edges;
+      
+      const sourceHandleId = edge.sourceHandle;
+      const targetHandleId = edge.targetHandle;
+      
+      if (!sourceHandleId || !targetHandleId) return edges;
+      
+      const sourcePosition = {
+        x: sourceNode.position.x,
+        y: sourceNode.position.y
       };
       
-      console.log('Wire completed:', completedWire);
-      setWires(prev => [...prev, completedWire]);
-      setActiveWire(null);
-    } else {
-      console.log('Starting new wire');
-      startWire(componentId, pinIndex, x, y);
-    }
-  }, [activeWire, startWire]);
-  
-  const cancelActiveWire = useCallback(() => {
-    console.log('Cancelling active wire');
-    setActiveWire(null);
-    potentialTargetRef.current = null;
-  }, []);
-  
-  const addIntermediatePoint = useCallback((x: number, y: number) => {
-    if (!activeWire) return;
-    
-    const updatedWire = {
-      ...activeWire,
-      points: [...activeWire.points, { x, y }]
-    };
-    
-    console.log(`Added intermediate point at (${x}, ${y})`);
-    setActiveWire(updatedWire);
-  }, [activeWire]);
-  
-  const handleCanvasClick = useCallback((x: number, y: number) => {
-    if (activeWire) {
-      // Add a point to the active wire
-      addIntermediatePoint(x, y);
-    }
-  }, [activeWire, addIntermediatePoint]);
-  
-  const deleteWire = useCallback((wireId: string) => {
-    console.log(`Deleting wire ${wireId}`);
-    setWires(prev => prev.filter(wire => wire.id !== wireId));
-  }, []);
-  
-  const handleMouseMove = useCallback((x: number, y: number) => {
-    if (activeWire) {
-      // Update the active wire endpoint
-      const updatedWire = updateWireEndPoint(activeWire, x, y);
-      setActiveWire(updatedWire);
-    }
-  }, [activeWire, updateWireEndPoint]);
-  
-  const handleStageMouseUp = useCallback(() => {
-    // Alias for canceling the active wire on canvas mouse up when clicking empty space
-    if (activeWire) {
-      // Only cancel if no potential target is set
-      if (!potentialTargetRef.current) {
-        cancelActiveWire();
+      const targetPosition = {
+        x: targetNode.position.x,
+        y: targetNode.position.y
+      };
+      
+      // Calculate a good position for a new control point
+      let newPointX, newPointY;
+      
+      if (controlPoints.length === 0) {
+        // First control point - midway between source and target
+        newPointX = (sourcePosition.x + targetPosition.x) / 2;
+        newPointY = (sourcePosition.y + targetPosition.y) / 2;
+      } else {
+        // Additional control point - between the last control point and target
+        const lastPoint = controlPoints[controlPoints.length - 1];
+        newPointX = (lastPoint.x + targetPosition.x) / 2;
+        newPointY = (lastPoint.y + targetPosition.y) / 2;
       }
-    }
-  }, [activeWire, cancelActiveWire]);
+      
+      // Add the new control point
+      controlPoints.push({ x: newPointX, y: newPointY });
+      
+      return edges.map(e => {
+        if (e.id === edgeId) {
+          return {
+            ...e,
+            data: {
+              ...e.data,
+              controlPoints
+            }
+          };
+        }
+        return e;
+      });
+    });
+    
+    toast.info('Control point added. Drag to adjust the wire path.', {
+      duration: 2000,
+    });
+  }, [getNode, setEdges]);
   
-  const handleKonvaClick = useCallback((x: number, y: number) => {
-    // Alias for handleCanvasClick
-    handleCanvasClick(x, y);
-  }, [handleCanvasClick]);
+  // Update a control point's position
+  const updateControlPoint = useCallback((edgeId: string, pointIndex: number, newPosition: { x: number, y: number }) => {
+    setEdges(edges => {
+      return edges.map(edge => {
+        if (edge.id === edgeId && edge.data && edge.data.controlPoints) {
+          const updatedControlPoints = [...edge.data.controlPoints];
+          if (pointIndex >= 0 && pointIndex < updatedControlPoints.length) {
+            updatedControlPoints[pointIndex] = newPosition;
+          }
+          
+          return {
+            ...edge,
+            data: {
+              ...edge.data,
+              controlPoints: updatedControlPoints
+            }
+          };
+        }
+        return edge;
+      });
+    });
+  }, [setEdges]);
+  
+  // Get connection line options for React Flow
+  const connectionLineOptions = {
+    type: ConnectionLineType.Bezier,
+    style: { stroke: '#4C72F4', strokeWidth: 2 }
+  };
 
   return {
-    wires,
-    setWires,
-    activeWire,
-    setActiveWire,
-    handlePinClick,
-    handleCanvasClick,
-    cancelActiveWire,
-    potentialTargetRef,
-    handleMouseMove,
-    handleStageMouseUp,
-    handleKonvaClick,
+    onConnect,
     deleteWire,
-    potentialTarget: potentialTargetRef.current
+    startWireEdit,
+    finishWireEdit,
+    addControlPoint,
+    updateControlPoint,
+    connectionLineOptions,
+    edgeBeingEditedId: edgeBeingEditedRef.current
   };
 };
+
+export default useWireSystem;

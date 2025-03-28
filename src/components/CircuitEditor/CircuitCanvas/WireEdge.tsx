@@ -1,13 +1,12 @@
 
-import React, { useCallback } from 'react';
+import React, { useCallback, memo } from 'react';
 import { EdgeProps, BaseEdge, getBezierPath, EdgeLabelRenderer, useReactFlow } from '@xyflow/react';
 import { WireEdgeData } from '@/types/circuit';
+import { getWireColorFromSignal } from '@/utils/wireUtils';
 
-// Define properly typed props interface
-interface WireEdgeProps extends EdgeProps {
-  data?: WireEdgeData;
-}
-
+/**
+ * Custom React Flow edge component for circuit wires
+ */
 const WireEdge = ({
   id,
   sourceX,
@@ -20,10 +19,10 @@ const WireEdge = ({
   markerEnd,
   data,
   selected,
-}: WireEdgeProps) => {
+}: EdgeProps<WireEdgeData>) => {
   const reactFlowInstance = useReactFlow();
   
-  // Default wire color and customize based on the data
+  // Wire style based on data or defaults
   const wireColor = data?.color || '#FF0000';
   const wireStyle = {
     stroke: wireColor,
@@ -31,12 +30,13 @@ const WireEdge = ({
     ...style,
   };
 
-  // Determine if edge is in edit mode
+  // Check if edge is in edit mode
   const isEditMode = data?.isEditing === true;
 
-  // Generate custom path if control points are provided
+  // Calculate path based on control points
   const getCustomPath = useCallback(() => {
     if (!data?.controlPoints || !Array.isArray(data.controlPoints) || data.controlPoints.length === 0) {
+      // Generate default bezier path when no control points are available
       return getBezierPath({
         sourceX,
         sourceY,
@@ -44,82 +44,63 @@ const WireEdge = ({
         targetPosition,
         targetX,
         targetY,
-        curvature: 0.2,
+        curvature: 0.25,
       });
     }
 
-    // Create a custom path with the control points
-    let pathSegments = '';
+    // Create a custom path with control points
     const points = data.controlPoints;
     
-    // Start point (source)
-    pathSegments = `M ${sourceX},${sourceY} `;
-    
-    // Add segments through all control points
     if (points.length === 1) {
-      // With just one control point, use a quadratic bezier
-      pathSegments += `Q ${points[0].x},${points[0].y} ${targetX},${targetY}`;
+      // With one control point, create a quadratic bezier
+      const [edgePath] = getBezierPath({
+        sourceX,
+        sourceY,
+        targetX,
+        targetY,
+        sourcePosition,
+        targetPosition,
+        curvature: 0.25,
+        controlX: points[0].x,
+        controlY: points[0].y,
+      });
+      return [edgePath, points[0].x, points[0].y];
     } else {
-      // With multiple control points, use a series of cubic beziers
+      // With multiple control points, use a custom path
+      let pathSegments = `M ${sourceX},${sourceY} `;
+      
+      // Add segments through all control points
       for (let i = 0; i < points.length; i++) {
         const currentPoint = points[i];
         
         if (i === 0) {
-          // First segment: source to first control point
-          const nextPoint = points[i + 1] || { x: targetX, y: targetY };
-          const controlX = currentPoint.x + (nextPoint.x - currentPoint.x) / 2;
-          const controlY = currentPoint.y + (nextPoint.y - currentPoint.y) / 2;
-          
-          pathSegments += `C ${currentPoint.x},${currentPoint.y} ${currentPoint.x},${currentPoint.y} ${controlX},${controlY} `;
+          // First segment
+          pathSegments += `C ${sourceX + 50},${sourceY} ${currentPoint.x - 50},${currentPoint.y} ${currentPoint.x},${currentPoint.y} `;
         } else if (i === points.length - 1) {
-          // Last segment: last control point to target
-          const prevPoint = points[i - 1];
-          const controlX = prevPoint.x + (currentPoint.x - prevPoint.x) / 2;
-          const controlY = prevPoint.y + (currentPoint.y - prevPoint.y) / 2;
-          
-          pathSegments += `C ${controlX},${controlY} ${currentPoint.x},${currentPoint.y} ${targetX},${targetY}`;
+          // Last segment to target
+          pathSegments += `S ${currentPoint.x},${currentPoint.y} ${targetX - 50},${targetY} `;
+          pathSegments += `S ${targetX},${targetY} ${targetX},${targetY}`;
         } else {
-          // Middle segments: between control points
+          // Middle segments between control points
           const prevPoint = points[i - 1];
-          const nextPoint = points[i + 1];
-          
-          const inControlX = prevPoint.x + (currentPoint.x - prevPoint.x) / 2;
-          const inControlY = prevPoint.y + (currentPoint.y - prevPoint.y) / 2;
-          
-          const outControlX = currentPoint.x + (nextPoint.x - currentPoint.x) / 2;
-          const outControlY = currentPoint.y + (nextPoint.y - currentPoint.y) / 2;
-          
-          pathSegments += `S ${currentPoint.x},${currentPoint.y} ${outControlX},${outControlY} `;
+          pathSegments += `S ${currentPoint.x},${currentPoint.y} ${(currentPoint.x + prevPoint.x) / 2},${(currentPoint.y + prevPoint.y) / 2} `;
         }
       }
+      
+      // Calculate approximate midpoint for label placement
+      const midIndex = Math.floor(points.length / 2);
+      const midPoint = points[midIndex] || { 
+        x: (sourceX + targetX) / 2, 
+        y: (sourceY + targetY) / 2 
+      };
+      
+      return [pathSegments, midPoint.x, midPoint.y];
     }
-
-    // Calculate center for label position (approximate)
-    let labelX, labelY;
-    
-    if (points.length > 0) {
-      const middlePoint = points[Math.floor(points.length / 2)];
-      labelX = middlePoint.x;
-      labelY = middlePoint.y;
-    } else {
-      labelX = (sourceX + targetX) / 2;
-      labelY = (sourceY + targetY) / 2;
-    }
-
-    return [pathSegments, labelX, labelY];
   }, [sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, data?.controlPoints]);
 
   const [edgePath, labelX, labelY] = getCustomPath();
   
-  // Handle drag of control points
-  const onControlPointMouseDown = (pointIndex: number, e: React.MouseEvent) => {
-    e.stopPropagation();
-    
-    if (data?.onControlPointDrag) {
-      data.onControlPointDrag(id, pointIndex, e);
-    }
-  };
-
+  // Event handlers
   const handleStartEditClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (data?.onStartEdit) {
@@ -146,15 +127,23 @@ const WireEdge = ({
     }
   };
 
+  const onControlPointMouseDown = (pointIndex: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    if (data?.onControlPointDrag) {
+      data.onControlPointDrag(id, pointIndex, e);
+    }
+  };
+
   return (
     <>
       <BaseEdge path={edgePath} markerEnd={markerEnd} style={wireStyle} />
       
-      {/* Show control buttons when wire is selected */}
+      {/* Control buttons shown when wire is selected */}
       {selected && (
         <EdgeLabelRenderer>
           <div
-            className="wire-controls nodrag nopan"
+            className="nodrag nopan"
             style={{
               transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
               display: 'flex',
@@ -170,7 +159,6 @@ const WireEdge = ({
             {!isEditMode ? (
               <>
                 <button
-                  className="wire-control-button wire-edit-button"
                   title="Edit wire path"
                   onClick={handleStartEditClick}
                   style={{
@@ -190,7 +178,6 @@ const WireEdge = ({
                   </svg>
                 </button>
                 <button
-                  className="wire-control-button wire-delete-button"
                   title="Delete wire"
                   onClick={handleDeleteClick}
                   style={{
@@ -213,7 +200,6 @@ const WireEdge = ({
             ) : (
               <>
                 <button
-                  className="wire-control-button wire-add-button"
                   title="Add control point"
                   onClick={handleAddControlPointClick}
                   style={{
@@ -233,7 +219,6 @@ const WireEdge = ({
                   </svg>
                 </button>
                 <button
-                  className="wire-control-button wire-done-button"
                   title="Finish editing"
                   onClick={handleFinishEditClick}
                   style={{
@@ -257,14 +242,13 @@ const WireEdge = ({
         </EdgeLabelRenderer>
       )}
       
-      {/* Show edit points when in edit mode */}
+      {/* Control points shown when in edit mode */}
       {isEditMode && data?.controlPoints && Array.isArray(data.controlPoints) && (
         <EdgeLabelRenderer>
-          <div className="wire-control-points nodrag nopan">
+          <div className="nodrag nopan">
             {data.controlPoints.map((point, index) => (
               <div
-                key={`control-point-${id}-${index}`}
-                className="wire-control-point"
+                key={`cp-${id}-${index}`}
                 style={{
                   position: 'absolute',
                   left: `${point.x}px`,
@@ -289,4 +273,4 @@ const WireEdge = ({
   );
 };
 
-export default WireEdge;
+export default memo(WireEdge);
