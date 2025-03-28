@@ -27,8 +27,8 @@ const WireEdge = ({
   const wireStyle = {
     stroke: wireColor as string,
     strokeWidth: selected ? 3 : 2,
-    ...(style as object)
-  };
+    ...style
+  } as React.CSSProperties;
 
   // Check if edge is in edit mode
   const isEditMode = wireData?.isEditing === true;
@@ -136,7 +136,7 @@ const WireEdge = ({
 
   return (
     <>
-      <BaseEdge path={edgePath} markerEnd={markerEnd} style={wireStyle as React.CSSProperties} />
+      <BaseEdge path={edgePath} markerEnd={markerEnd} style={wireStyle} />
       
       {/* Control buttons shown when wire is selected */}
       {selected && (
