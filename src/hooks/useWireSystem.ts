@@ -1,4 +1,3 @@
-
 import { useCallback, useRef } from 'react';
 import { Edge, Connection, useReactFlow, Node, addEdge, MarkerType } from '@xyflow/react';
 import { WokwiComponent } from '@/integrations/wokwi/WokwiIntegration';

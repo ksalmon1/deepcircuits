@@ -1,9 +1,9 @@
 
 /**
- * Utility functions for wire creation, rendering, and management
+ * Utility functions for wire color determination
+ * (Retained for future wire system implementation)
  */
 
-import { Position, GetBezierPathParams } from '@xyflow/react';
 import { WokwiComponent } from '@/integrations/wokwi/WokwiIntegration';
 
 /**
@@ -56,74 +56,4 @@ export const getPinSignalType = (
   
   const pin = component.pins[pinIndex];
   return pin.signals && pin.signals.length > 0 ? pin.signals[0] : undefined;
-};
-
-/**
- * Creates smart auto-routed wire points between two positions
- * This creates a neater, more professional looking connection
- */
-export const createAutoRoutedPoints = (
-  startX: number, 
-  startY: number, 
-  endX: number, 
-  endY: number,
-  gridSize: number = 25
-): { x: number; y: number }[] => {
-  const points = [{ x: startX, y: startY }];
-  
-  // Minimum distance to create intermediate points
-  const MIN_DISTANCE = gridSize * 2;
-  
-  // Calculate distance between points
-  const dx = endX - startX;
-  const dy = endY - startY;
-  const distance = Math.sqrt(dx * dx + dy * dy);
-  
-  if (distance > MIN_DISTANCE) {
-    // Determine if we should route horizontally first or vertically first
-    // based on which distance is greater
-    const routeHorizontallyFirst = Math.abs(dx) > Math.abs(dy);
-    
-    if (routeHorizontallyFirst) {
-      // Add midpoint horizontally aligned with start, vertically aligned with end
-      const midX = startX + dx * 0.5;
-      points.push({ x: midX, y: startY });
-      points.push({ x: midX, y: endY });
-    } else {
-      // Add midpoint vertically aligned with start, horizontally aligned with end
-      const midY = startY + dy * 0.5;
-      points.push({ x: startX, y: midY });
-      points.push({ x: endX, y: midY });
-    }
-  }
-  
-  // Add the endpoint
-  points.push({ x: endX, y: endY });
-  
-  return points;
-};
-
-/**
- * Gets bezier path parameters with optional control point
- */
-export const getBezierParams = (
-  sourceX: number,
-  sourceY: number,
-  targetX: number,
-  targetY: number,
-  sourcePosition: Position,
-  targetPosition: Position,
-  controlPoint?: { x: number, y: number }
-): GetBezierPathParams => {
-  const params: GetBezierPathParams = {
-    sourceX,
-    sourceY,
-    sourcePosition,
-    targetX,
-    targetY,
-    targetPosition,
-    curvature: 0.25
-  };
-  
-  return params;
 };

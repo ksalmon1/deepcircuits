@@ -33,12 +33,8 @@ import '@xyflow/react/dist/style.css';
 
 // Import the sub-components we created
 import WokwiComponentNode from './CircuitCanvas/WokwiComponentNode';
-import WireEdge from './CircuitCanvas/WireEdge';
-import CustomConnectionLine from './CircuitCanvas/CustomConnectionLine';
 import CanvasControls from './CircuitCanvas/CanvasControls';
-import WireCreationIndicator from './CircuitCanvas/WireCreationIndicator';
 import LoadingOverlay from './CircuitCanvas/LoadingOverlay';
-import WireEditingPanel from './CircuitCanvas/WireEditingPanel';
 import { useCircuitCanvasState } from '@/hooks/useCircuitCanvasState';
 
 interface CircuitCanvasProps {
@@ -46,13 +42,9 @@ interface CircuitCanvasProps {
   onComponentsChange: (components: WokwiComponent[]) => void;
 }
 
-// Define the custom node and edge types
+// Define the custom node types
 const nodeTypes = {
   wokwiComponent: WokwiComponentNode as React.ComponentType<any>
-};
-
-const edgeTypes = {
-  wire: WireEdge as React.ComponentType<any>
 };
 
 const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) => {
@@ -74,14 +66,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     setEdges,
     reactFlowInstance,
     setReactFlowInstance,
-    editingEdgeId,
-    setEditingEdgeId,
-    controlPoints,
-    setControlPoints,
-    isDraggingControlPoint,
-    setIsDraggingControlPoint,
-    activeControlPoint,
-    setActiveControlPoint,
     hoveredComponent,
     setHoveredComponent,
     visiblePins,
@@ -94,22 +78,11 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     setDraggingComponent,
     dragOffset,
     setDragOffset,
-    startEdgeEdit,
-    finishEdgeEdit,
     handleRetry: retryLoading
   } = useCircuitCanvasState(components);
   
-  // Initialize wire system
-  const {
-    onConnect,
-    deleteWire,
-    startWireEdit,
-    finishWireEdit,
-    addControlPoint,
-    updateControlPoint,
-    connectionLineStyle,
-    edgeBeingEditedId
-  } = useWireSystem(components);
+  // Initialize wire system (simplified)
+  const { onConnect, connectionLineStyle } = useWireSystem(components);
   
   // React Flow state
   const [reactFlowNodes, setReactFlowNodes, onNodesChange] = useNodesState([]);
@@ -182,45 +155,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     
     onComponentsChange(updatedComponents);
   }, [components, onComponentsChange]);
-
-  // Handle control point drag
-  const handleControlPointDrag = useCallback((edgeId: string, pointIndex: number, e: React.MouseEvent) => {
-    setIsDraggingControlPoint(true);
-    setActiveControlPoint({ edgeId, pointIndex });
-    
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      if (!reactFlowInstance) return;
-      
-      // Convert screen coordinates to flow coordinates
-      const flowPosition = reactFlowInstance.screenToFlowPosition({
-        x: moveEvent.clientX,
-        y: moveEvent.clientY
-      });
-      
-      // Update control point position
-      updateControlPoint(edgeId, pointIndex, flowPosition);
-      
-      // Update local state
-      setControlPoints(prev => {
-        const edgePoints = [...(prev[edgeId] || [])];
-        if (pointIndex >= 0 && pointIndex < edgePoints.length) {
-          edgePoints[pointIndex] = flowPosition;
-        }
-        return { ...prev, [edgeId]: edgePoints };
-      });
-    };
-    
-    const handleMouseUp = () => {
-      setIsDraggingControlPoint(false);
-      setActiveControlPoint(null);
-      
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-    
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-  }, [reactFlowInstance, setIsDraggingControlPoint, setActiveControlPoint, updateControlPoint, setControlPoints]);
 
   // Handle drop to create new component
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
@@ -304,33 +238,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     onConnect(params);
   }, [onConnect]);
 
-  // Setup edge events and data
-  const prepareEdgesForRender = useCallback(() => {
-    return reactFlowEdges.map(edge => {
-      // Add wire-specific handlers and data
-      return {
-        ...edge,
-        data: {
-          ...edge.data,
-          onStartEdit: startWireEdit, 
-          onFinishEdit: finishWireEdit,
-          onControlPointDrag: handleControlPointDrag,
-          onAddControlPoint: addControlPoint,
-          isEditing: edge.id === edgeBeingEditedId
-        }
-      };
-    });
-  }, [reactFlowEdges, startWireEdit, finishWireEdit, handleControlPointDrag, addControlPoint, edgeBeingEditedId]);
-
-  // Prepare the edges with all necessary handlers and data
-  const edgesWithHandlers = prepareEdgesForRender();
-
-  // Custom connection line renderer that changes colors based on signal type
-  const connectionLineComponent = useCallback(
-    (props: any) => <CustomConnectionLine {...props} components={components} />,
-    [components]
-  );
-
   return (
     <div className="h-full w-full bg-white relative flex flex-col">
       <LoadingOverlay 
@@ -354,18 +261,17 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
         <ReactFlow
           ref={canvasRef}
           nodes={reactFlowNodes}
-          edges={edgesWithHandlers}
+          edges={reactFlowEdges}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={handleConnect}
           nodeTypes={nodeTypes}
-          edgeTypes={edgeTypes}
           onInit={setReactFlowInstance}
           onDrop={handleDrop}
           onDragOver={handleDragOver}
           onNodeDragStop={onNodeDragStop}
           connectionMode={ConnectionMode.Loose}
-          connectionLineComponent={connectionLineComponent}
+          connectionLineStyle={connectionLineStyle}
           minZoom={0.5}
           maxZoom={4}
           defaultViewport={{ x: 0, y: 0, zoom: 1 }}
@@ -381,8 +287,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
             color="#e2e8f0" 
           />
           <Controls position="bottom-right" showInteractive={false} />
-          
-          <WireEditingPanel editingEdgeId={edgeBeingEditedId} />
         </ReactFlow>
       </div>
     </div>
