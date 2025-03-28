@@ -35,7 +35,7 @@ export const useWireSystem = (components: WokwiComponent[]) => {
       target: targetId,
       sourceHandle: connection.sourceHandle,
       targetHandle: connection.targetHandle,
-      type: 'smoothstep',
+      type: 'straight',
       data: {
         color: wireColor,
         sourcePinIndex,
