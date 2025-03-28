@@ -2,7 +2,6 @@
 import React, { useCallback, memo } from 'react';
 import { EdgeProps, BaseEdge, getBezierPath, EdgeLabelRenderer, useReactFlow } from '@xyflow/react';
 import { WireEdgeData } from '@/types/circuit';
-import { getWireColorFromSignal, getBezierParams } from '@/utils/wireUtils';
 
 /**
  * Custom React Flow edge component for circuit wires
@@ -27,7 +26,7 @@ const WireEdge = ({
   const wireStyle = {
     stroke: wireColor,
     strokeWidth: selected ? 3 : 2,
-    ...style,
+    ...(style || {})
   };
 
   // Check if edge is in edit mode
@@ -53,14 +52,15 @@ const WireEdge = ({
     
     if (points.length === 1) {
       // With one control point, create a quadratic bezier
-      const params = getBezierParams(
+      const params = {
         sourceX,
         sourceY,
+        sourcePosition,
+        targetPosition,
         targetX,
         targetY,
-        sourcePosition,
-        targetPosition
-      );
+        curvature: 0.25,
+      };
       const [edgePath] = getBezierPath(params);
       return [edgePath, points[0].x, points[0].y];
     } else {

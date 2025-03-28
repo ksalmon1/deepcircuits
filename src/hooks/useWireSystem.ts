@@ -4,7 +4,7 @@ import { Edge, Connection, useReactFlow, Node, addEdge, MarkerType } from '@xyfl
 import { WokwiComponent } from '@/integrations/wokwi/WokwiIntegration';
 import { getWireColorFromSignal, getPinSignalType } from '@/utils/wireUtils';
 import { toast } from 'sonner';
-import { Wire, WireEdgeData, WokwiNodeData } from '@/types/circuit';
+import { Wire, WireEdgeData, WokwiNodeData, WireEdge } from '@/types/circuit';
 
 /**
  * Hook for managing the wire connections system using React Flow
@@ -131,10 +131,8 @@ export const useWireSystem = (components: WokwiComponent[]) => {
       
       if (!sourceNode || !targetNode) return edges;
       
-      const sourceHandleId = edge.sourceHandle;
-      const targetHandleId = edge.targetHandle;
-      
-      if (!sourceHandleId || !targetHandleId) return edges;
+      const sourceHandleId = edge.sourceHandle || '';
+      const targetHandleId = edge.targetHandle || '';
       
       const sourcePosition = {
         x: sourceNode.position.x,
@@ -187,7 +185,7 @@ export const useWireSystem = (components: WokwiComponent[]) => {
     setEdges(edges => {
       return edges.map(edge => {
         if (edge.id === edgeId && edge.data && edge.data.controlPoints) {
-          const updatedControlPoints = [...edge.data.controlPoints];
+          const updatedControlPoints = [...(edge.data.controlPoints as Array<{x: number, y: number}>)];
           if (pointIndex >= 0 && pointIndex < updatedControlPoints.length) {
             updatedControlPoints[pointIndex] = newPosition;
           }

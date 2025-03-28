@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { 
   isWokwiLoaded, 
@@ -24,7 +23,7 @@ import {
   BackgroundVariant,
   ReactFlowProvider,
   ReactFlowInstance,
-  ConnectionLineType,
+  ConnectionMode,
   OnNodesChange,
   OnEdgesChange,
   OnConnect
@@ -357,7 +356,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
           onDrop={handleDrop}
           onDragOver={handleDragOver}
           onNodeDragStop={onNodeDragStop}
-          connectionLineType={ConnectionLineType.Bezier}
+          connectionMode={ConnectionMode.Loose}
           connectionLineStyle={connectionLineStyle}
           minZoom={0.5}
           maxZoom={4}

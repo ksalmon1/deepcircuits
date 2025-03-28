@@ -3,8 +3,8 @@
  * Utility functions for wire creation, rendering, and management
  */
 
+import { Position, GetBezierPathParams } from '@xyflow/react';
 import { WokwiComponent } from '@/integrations/wokwi/WokwiIntegration';
-import { GetBezierPathParams } from '@xyflow/react';
 
 /**
  * Determine wire color based on signal type
