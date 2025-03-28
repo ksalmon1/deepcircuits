@@ -16,8 +16,8 @@ export function useCircuitCanvasState(components: WokwiComponent[]) {
   const [loadingAttempts, setLoadingAttempts] = useState(0);
   
   // React Flow state
-  const [nodes, setNodes, onNodesChange] = useState<Node<WokwiNodeData>[]>([]);
-  const [edges, setEdges, onEdgesChange] = useState<Edge<WireEdgeData>[]>([]);
+  const [nodes, setNodes] = useState<Node<WokwiNodeData>[]>([]);
+  const [edges, setEdges] = useState<Edge<WireEdgeData>[]>([]);
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
   
   // Wire editing state
@@ -75,10 +75,8 @@ export function useCircuitCanvasState(components: WokwiComponent[]) {
     // React Flow state
     nodes,
     setNodes,
-    onNodesChange,
     edges,
     setEdges,
-    onEdgesChange,
     reactFlowInstance,
     setReactFlowInstance,
     
