@@ -30,7 +30,7 @@ const WokwiComponentNode = ({
         containerRef.current.innerHTML = '';
         
         // Check if this is a custom SVG component
-        const isCustomSvgComponent = svgPath && (!isOriginal || type.startsWith('custom-'));
+        const isCustomSvgComponent = svgPath && (!isOriginal || type.startsWith('custom'));
         
         if (isCustomSvgComponent && svgPath) {
           console.log(`Rendering custom SVG component: ${type}`);
