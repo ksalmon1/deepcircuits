@@ -2,7 +2,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { WokwiComponent } from '@/integrations/wokwi/WokwiIntegration';
 import { Node, Edge, ReactFlowInstance } from '@xyflow/react';
-import { WokwiNodeData, WireEdgeData } from '@/types/circuit';
+import { WokwiNodeData } from '@/types/circuit';
 import { toast } from 'sonner';
 
 /**
@@ -17,14 +17,8 @@ export function useCircuitCanvasState(components: WokwiComponent[]) {
   
   // React Flow state
   const [nodes, setNodes] = useState<Node<WokwiNodeData>[]>([]);
-  const [edges, setEdges] = useState<Edge<WireEdgeData>[]>([]);
+  const [edges, setEdges] = useState<Edge[]>([]);
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
-  
-  // Wire editing state
-  const [editingEdgeId, setEditingEdgeId] = useState<string | null>(null);
-  const [controlPoints, setControlPoints] = useState<Record<string, { x: number, y: number }[]>>({});
-  const [isDraggingControlPoint, setIsDraggingControlPoint] = useState(false);
-  const [activeControlPoint, setActiveControlPoint] = useState<{edgeId: string, pointIndex: number} | null>(null);
   
   // Component interaction state
   const [hoveredComponent, setHoveredComponent] = useState<string | null>(null);
@@ -36,24 +30,6 @@ export function useCircuitCanvasState(components: WokwiComponent[]) {
   // Drag state
   const [draggingComponent, setDraggingComponent] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-  
-  // Start wire editing mode
-  const startEdgeEdit = useCallback((edgeId: string) => {
-    setEditingEdgeId(edgeId);
-    
-    toast.info('Editing wire path. Drag control points to adjust the wire.', {
-      duration: 3000,
-    });
-  }, []);
-  
-  // Finish wire editing mode
-  const finishEdgeEdit = useCallback((edgeId: string) => {
-    setEditingEdgeId(null);
-    
-    toast.success('Wire path updated', {
-      duration: 2000,
-    });
-  }, []);
   
   // Handle retry when loading fails
   const handleRetry = useCallback(() => {
@@ -80,16 +56,6 @@ export function useCircuitCanvasState(components: WokwiComponent[]) {
     reactFlowInstance,
     setReactFlowInstance,
     
-    // Wire editing state
-    editingEdgeId,
-    setEditingEdgeId,
-    controlPoints,
-    setControlPoints,
-    isDraggingControlPoint,
-    setIsDraggingControlPoint,
-    activeControlPoint,
-    setActiveControlPoint,
-    
     // Component interaction state
     hoveredComponent,
     setHoveredComponent,
@@ -109,8 +75,6 @@ export function useCircuitCanvasState(components: WokwiComponent[]) {
     setDragOffset,
     
     // Functions
-    startEdgeEdit,
-    finishEdgeEdit,
     handleRetry
   };
 }
