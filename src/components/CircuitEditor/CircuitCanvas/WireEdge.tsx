@@ -22,19 +22,20 @@ const WireEdge = ({
   const reactFlowInstance = useReactFlow();
   
   // Wire style based on data or defaults
-  const wireColor = data?.color || '#FF0000';
+  const wireData = data as WireEdgeData | undefined;
+  const wireColor = wireData?.color || '#FF0000';
   const wireStyle = {
-    stroke: wireColor,
+    stroke: wireColor as string,
     strokeWidth: selected ? 3 : 2,
     ...(style as object)
   };
 
   // Check if edge is in edit mode
-  const isEditMode = data?.isEditing === true;
+  const isEditMode = wireData?.isEditing === true;
 
   // Calculate path based on control points
   const getCustomPath = useCallback(() => {
-    if (!data?.controlPoints || !Array.isArray(data.controlPoints) || data.controlPoints.length === 0) {
+    if (!wireData?.controlPoints || !Array.isArray(wireData.controlPoints) || wireData.controlPoints.length === 0) {
       // Generate default bezier path when no control points are available
       return getBezierPath({
         sourceX,
@@ -48,7 +49,7 @@ const WireEdge = ({
     }
 
     // Create a custom path with control points
-    const points = data.controlPoints;
+    const points = wireData.controlPoints;
     
     if (points.length === 1) {
       // With one control point, create a quadratic bezier
@@ -94,15 +95,15 @@ const WireEdge = ({
       
       return [pathSegments, midPoint.x, midPoint.y];
     }
-  }, [sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, data?.controlPoints]);
+  }, [sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, wireData?.controlPoints]);
 
   const [edgePath, labelX, labelY] = getCustomPath();
   
   // Event handlers
   const handleStartEditClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (data?.onStartEdit) {
-      data.onStartEdit(id);
+    if (wireData?.onStartEdit && typeof wireData.onStartEdit === 'function') {
+      wireData.onStartEdit(id);
     }
   };
 
@@ -113,29 +114,29 @@ const WireEdge = ({
 
   const handleAddControlPointClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (data?.onAddControlPoint) {
-      data.onAddControlPoint(id);
+    if (wireData?.onAddControlPoint && typeof wireData.onAddControlPoint === 'function') {
+      wireData.onAddControlPoint(id);
     }
   };
 
   const handleFinishEditClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (data?.onFinishEdit) {
-      data.onFinishEdit(id);
+    if (wireData?.onFinishEdit && typeof wireData.onFinishEdit === 'function') {
+      wireData.onFinishEdit(id);
     }
   };
 
   const onControlPointMouseDown = (pointIndex: number, e: React.MouseEvent) => {
     e.stopPropagation();
     
-    if (data?.onControlPointDrag) {
-      data.onControlPointDrag(id, pointIndex, e);
+    if (wireData?.onControlPointDrag && typeof wireData.onControlPointDrag === 'function') {
+      wireData.onControlPointDrag(id, pointIndex, e);
     }
   };
 
   return (
     <>
-      <BaseEdge path={edgePath} markerEnd={markerEnd} style={wireStyle} />
+      <BaseEdge path={edgePath} markerEnd={markerEnd} style={wireStyle as React.CSSProperties} />
       
       {/* Control buttons shown when wire is selected */}
       {selected && (
@@ -241,10 +242,10 @@ const WireEdge = ({
       )}
       
       {/* Control points shown when in edit mode */}
-      {isEditMode && data?.controlPoints && Array.isArray(data.controlPoints) && (
+      {isEditMode && wireData?.controlPoints && Array.isArray(wireData.controlPoints) && (
         <EdgeLabelRenderer>
           <div className="nodrag nopan">
-            {data.controlPoints.map((point, index) => (
+            {wireData.controlPoints.map((point, index) => (
               <div
                 key={`cp-${id}-${index}`}
                 style={{
@@ -254,7 +255,7 @@ const WireEdge = ({
                   width: '10px',
                   height: '10px',
                   borderRadius: '50%',
-                  backgroundColor: wireColor,
+                  backgroundColor: wireColor as string,
                   border: '2px solid white',
                   transform: 'translate(-50%, -50%)',
                   cursor: 'move',

@@ -123,7 +123,8 @@ export const useWireSystem = (components: WokwiComponent[]) => {
       const edge = edges.find(e => e.id === edgeId);
       if (!edge || !edge.data) return edges;
       
-      const controlPoints = [...(edge.data.controlPoints || [])];
+      const edgeData = edge.data as WireEdgeData;
+      const controlPoints = [...(edgeData.controlPoints || [])];
       
       // Get source and target positions
       const sourceNode = getNode(edge.source);
@@ -184,8 +185,9 @@ export const useWireSystem = (components: WokwiComponent[]) => {
   const updateControlPoint = useCallback((edgeId: string, pointIndex: number, newPosition: { x: number, y: number }) => {
     setEdges(edges => {
       return edges.map(edge => {
-        if (edge.id === edgeId && edge.data && edge.data.controlPoints) {
-          const updatedControlPoints = [...(edge.data.controlPoints as Array<{x: number, y: number}>)];
+        if (edge.id === edgeId && edge.data) {
+          const edgeData = edge.data as WireEdgeData;
+          const updatedControlPoints = [...(edgeData.controlPoints as Array<{x: number, y: number}> || [])];
           if (pointIndex >= 0 && pointIndex < updatedControlPoints.length) {
             updatedControlPoints[pointIndex] = newPosition;
           }
