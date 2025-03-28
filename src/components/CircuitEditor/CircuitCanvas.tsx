@@ -1,22 +1,17 @@
-
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { 
   isWokwiLoaded, 
   forceLoadWokwiElements, 
-  WokwiComponent, 
-  renderWokwiElement,
-  getComponentPinInfo,
-  WokwiPin
+  WokwiComponent,
+  getComponentPinInfo 
 } from '@/integrations/wokwi/WokwiIntegration';
-import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
-import { ZoomIn, ZoomOut, Move } from 'lucide-react';
 import { useComponentLibrary } from '@/hooks/useComponentLibrary';
-import { isInteractingWithPin } from '@/utils/wireUtils';
 import { useCanvasNavigation } from '@/hooks/useCanvasNavigation';
 import { useWireSystem } from '@/hooks/useWireSystem';
-import { isCustomComponent, renderCustomComponent } from '@/integrations/custom/CustomComponents';
-import { fetchComponentPins } from '@/utils/componentUtils';
+import { componentToNode, wiresToEdges } from './CircuitCanvas/utils';
+import { useWokwiLoader } from '@/hooks/useWokwiLoader';
+import { useComponentPinCache } from '@/hooks/useComponentPinCache';
 import {
   ReactFlow,
   Controls,
@@ -25,30 +20,29 @@ import {
   useEdgesState,
   addEdge,
   Connection,
-  Edge,
-  Node,
-  NodeTypes,
-  EdgeTypes,
   Panel,
   useReactFlow,
   BackgroundVariant,
   ReactFlowProvider,
   ReactFlowInstance,
-  useOnSelectionChange,
   ConnectionLineType
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+
+// Import the sub-components we created
 import WokwiComponentNode from './CircuitCanvas/WokwiComponentNode';
 import WireEdge from './CircuitCanvas/WireEdge';
-import { componentToNode, wiresToEdges } from './CircuitCanvas/utils';
-import { WokwiNodeData, WireEdgeData } from '@/types/circuit';
+import CanvasControls from './CircuitCanvas/CanvasControls';
+import WireCreationIndicator from './CircuitCanvas/WireCreationIndicator';
+import LoadingOverlay from './CircuitCanvas/LoadingOverlay';
+import WireEditingPanel from './CircuitCanvas/WireEditingPanel';
 
 interface CircuitCanvasProps {
   components: WokwiComponent[];
   onComponentsChange: (components: WokwiComponent[]) => void;
 }
 
-// Define the custom node and edge types with correct type annotations
+// Define the custom node and edge types
 const nodeTypes = {
   wokwiComponent: WokwiComponentNode as React.ComponentType<any>
 };
@@ -57,15 +51,24 @@ const edgeTypes = {
   wire: WireEdge as React.ComponentType<any>
 };
 
-const pinCache: Record<string, WokwiPin[]> = {};
-
 const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) => {
+  // Refs
   const canvasRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  
+  // Basic state
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
-  const [isReady, setIsReady] = useState(false);
-  const [loadingError, setLoadingError] = useState<string | null>(null);
-  const [loadingAttempts, setLoadingAttempts] = useState(0);
+  const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
+  
+  // Wire editing state
+  const [editingEdgeId, setEditingEdgeId] = useState<string | null>(null);
+  const [controlPoints, setControlPoints] = useState<Record<string, { x: number, y: number }[]>>({});
+  const [isDraggingControlPoint, setIsDraggingControlPoint] = useState(false);
+  const [activeControlPoint, setActiveControlPoint] = useState<{edgeId: string, pointIndex: number} | null>(null);
+  
+  // Custom hooks
+  const { isReady, loadingError, handleRetry } = useWokwiLoader();
+  const { pinCache } = useComponentPinCache();
   
   const {
     zoom,
@@ -100,20 +103,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
   
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
-  const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
-  const [editingEdgeId, setEditingEdgeId] = useState<string | null>(null);
-  const [controlPoints, setControlPoints] = useState<Record<string, { x: number, y: number }[]>>({});
-  const [isDraggingControlPoint, setIsDraggingControlPoint] = useState(false);
-  const [activeControlPoint, setActiveControlPoint] = useState<{edgeId: string, pointIndex: number} | null>(null);
-  
-  const [hoveredComponent, setHoveredComponent] = useState<string | null>(null);
-  const [hoveredPins, setHoveredPins] = useState<WokwiPin[]>([]);
-  const [visiblePins, setVisiblePins] = useState<{[componentId: string]: boolean}>({});
-  const [hoveredPin, setHoveredPin] = useState<{componentId: string, pinIndex: number} | null>(null);
-  const [renderedComponents, setRenderedComponents] = useState<Record<string, boolean>>({});
-  
-  const [draggingComponent, setDraggingComponent] = useState<string | null>(null);
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   
   const { 
     components: libraryComponents, 
@@ -122,8 +111,8 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     isLoadingDetails 
   } = useComponentLibrary();
 
-  // Convert components to nodes when components change
-  React.useEffect(() => {
+  // Convert components to nodes
+  useEffect(() => {
     const initialNodes = components.map(comp => componentToNode({
       id: comp.id,
       type: comp.type,
@@ -135,8 +124,8 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     setNodes(initialNodes);
   }, [components, setNodes]);
   
-  // Convert wires to edges when wires change
-  React.useEffect(() => {
+  // Convert wires to edges
+  useEffect(() => {
     // Convert completed wires to edges
     const completedWires = wires.filter(wire => wire.isComplete && wire.targetComponentId);
     
@@ -150,6 +139,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     setEdges(wireEdges);
   }, [wires, components, editingEdgeId, controlPoints]);
 
+  // Update canvas dimensions when window size changes
   useEffect(() => {
     const updateSize = () => {
       if (containerRef.current) {
@@ -163,49 +153,20 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     window.addEventListener('resize', updateSize);
     return () => window.removeEventListener('resize', updateSize);
   }, [updateCanvasDimensions]);
-  
-  useEffect(() => {
-    populatePinCache();
-  }, [libraryComponents, componentsDetailsMap]);
 
-  const populatePinCache = useCallback(() => {
-    if (libraryComponents && componentsDetailsMap && Object.keys(componentsDetailsMap).length > 0) {
-      console.log('Loading pin data from componentsDetailsMap:', Object.keys(componentsDetailsMap).length);
-      
-      libraryComponents.forEach(component => {
-        if (component.id && componentsDetailsMap[component.id]) {
-          const details = componentsDetailsMap[component.id];
-          if (details && details.pins && details.pins.length > 0) {
-            console.log(`Found pins for ${component.name} (${component.type}) from details:`, details.pins);
-            pinCache[component.type] = details.pins.map((pin: any) => ({
-              name: pin.name,
-              x: Number(pin.x),
-              y: Number(pin.y),
-              signals: pin.signals || []
-            }));
-          }
-        }
-      });
-      
-      console.log('Pin cache after loading from details:', pinCache);
-    } else if (libraryComponents && libraryComponents.length > 0) {
-      console.log('Loading pin data from library components:', libraryComponents.length);
-      
-      libraryComponents.forEach(component => {
-        if (component.pins && component.pins.length > 0) {
-          console.log(`Found pins for ${component.name} (${component.type}):`, component.pins);
-          pinCache[component.type] = component.pins.map(pin => ({
-            name: pin.name,
-            x: Number(pin.x), 
-            y: Number(pin.y),
-            signals: pin.signals || []
-          }));
-        }
-      });
-      
-      console.log('Pin cache after loading:', pinCache);
-    }
-  }, [libraryComponents, componentsDetailsMap]);
+  // Handle key events (Escape to cancel active wire)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && activeWire) {
+        cancelActiveWire();
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [activeWire, cancelActiveWire]);
 
   // Start wire editing mode
   const startEdgeEdit = useCallback((edgeId: string) => {
@@ -466,86 +427,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     });
   }, [controlPoints, setEdges]);
 
-  const checkWokwiLoaded = useCallback(async () => {
-    console.log('Checking if Wokwi is loaded, attempt:', loadingAttempts + 1);
-    
-    if (isWokwiLoaded()) {
-      console.log('Wokwi components loaded successfully');
-      setIsReady(true);
-      return true;
-    }
-    
-    if (loadingAttempts >= 2) {
-      console.log('Attempting to manually load Wokwi components...');
-      
-      try {
-        const success = await forceLoadWokwiElements();
-        if (success) {
-          console.log('Manual loading of Wokwi components succeeded');
-          setIsReady(true);
-          return true;
-        } else {
-          console.log('Manual loading of Wokwi components failed');
-        }
-      } catch (err) {
-        console.error('Error during manual loading:', err);
-      }
-    }
-    
-    if (loadingAttempts > 5) {
-      console.error('Failed to load Wokwi components after multiple attempts');
-      setLoadingError('Failed to load circuit components. Please refresh the page or check your internet connection.');
-      toast.error('Circuit components failed to load', {
-        description: 'Please refresh the page or check your internet connection.',
-        duration: 5000,
-      });
-      return false;
-    }
-    
-    setLoadingAttempts(prev => prev + 1);
-    return false;
-  }, [loadingAttempts]);
-
-  useEffect(() => {
-    const attemptLoading = async () => {
-      const success = await checkWokwiLoaded();
-      
-      if (!success) {
-        const timer = setTimeout(attemptLoading, 1000);
-        return () => clearTimeout(timer);
-      }
-    };
-    
-    attemptLoading();
-  }, [checkWokwiLoaded]);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (!isReady && !loadingError) {
-        console.log('Fallback: Forcing canvas to load after timeout');
-        toast.warning('Loading components in fallback mode', {
-          description: 'Some features may be limited.',
-        });
-        setIsReady(true);
-      }
-    }, 6000);
-
-    return () => clearTimeout(timer);
-  }, [isReady, loadingError]);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && activeWire) {
-        cancelActiveWire();
-      }
-    };
-    
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [activeWire, cancelActiveWire]);
-
   // Handle connecting nodes (creating wires)
   const onConnect = useCallback(
     (params: Connection) => {
@@ -673,68 +554,23 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     e.dataTransfer.dropEffect = 'copy';
   };
 
-  const handleRetry = async () => {
-    setLoadingError(null);
-    setLoadingAttempts(0);
-    await checkWokwiLoaded();
-  };
-
   return (
     <div className="h-full w-full bg-white relative flex flex-col">
-      {!isReady && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-50 bg-opacity-80 z-10">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary mx-auto mb-2"></div>
-            <p className="text-gray-600">Loading circuit components...</p>
-            {loadingError && (
-              <div className="mt-4 text-red-500 max-w-md">
-                {loadingError}
-                <button 
-                  onClick={handleRetry}
-                  className="ml-2 text-blue-500 underline"
-                >
-                  Retry
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      <LoadingOverlay 
+        isReady={isReady} 
+        loadingError={loadingError} 
+        onRetry={handleRetry} 
+      />
 
-      <div className="absolute top-2 right-2 bg-white rounded-md shadow-md p-1 z-20 flex gap-1">
-        <button
-          onClick={handleZoomIn}
-          className="p-1 hover:bg-gray-100 rounded"
-          title="Zoom In (or use Ctrl+Scroll)"
-        >
-          <ZoomIn size={18} />
-        </button>
-        <button
-          onClick={handleZoomOut}
-          className="p-1 hover:bg-gray-100 rounded"
-          title="Zoom Out (or use Ctrl+Scroll)"
-        >
-          <ZoomOut size={18} />
-        </button>
-        <button
-          onClick={togglePanMode}
-          className={`p-1 hover:bg-gray-100 rounded ${panMode ? 'bg-gray-200' : ''}`}
-          title="Pan Mode (or use middle mouse button)"
-        >
-          <Move size={18} />
-        </button>
-        <div className="px-2 flex items-center text-xs text-gray-600">
-          {Math.round(zoom * 100)}%
-        </div>
-      </div>
+      <CanvasControls 
+        zoom={zoom}
+        onZoomIn={handleZoomIn}
+        onZoomOut={handleZoomOut}
+        panMode={panMode}
+        togglePanMode={togglePanMode}
+      />
       
-      {activeWire && (
-        <div className="absolute top-12 right-2 bg-yellow-100 text-sm p-2 rounded-md shadow-md z-20">
-          {activeWire.points.length > 1 ? 
-            "Creating wire: Click canvas to add points, click a pin to complete, or press Esc to cancel." :
-            "Creating wire: Click another pin to complete the connection, or press Esc to cancel."}
-        </div>
-      )}
+      <WireCreationIndicator activeWire={activeWire} />
       
       <div 
         ref={containerRef}
@@ -767,14 +603,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
           />
           <Controls position="bottom-right" showInteractive={false} />
           
-          {/* Show editing mode indicator */}
-          {editingEdgeId && (
-            <Panel position="top-left" className="bg-amber-100 border border-amber-300 rounded-md shadow-sm p-2 flex items-center gap-2">
-              <span className="text-sm text-amber-800">
-                Editing wire path. Double-click to add points, drag to adjust.
-              </span>
-            </Panel>
-          )}
+          <WireEditingPanel editingEdgeId={editingEdgeId} />
         </ReactFlow>
       </div>
     </div>
