@@ -43,7 +43,7 @@ const WokwiComponentNode = ({
           console.log(`Rendering SVG for component ${id}`);
           
           // Set the SVG content directly
-          containerRef.current.innerHTML = svgPath;
+          containerRef.current.innerHTML = svgPath.trim();
           
           // Get the SVG element and ensure it has appropriate attributes
           const svgElement = containerRef.current.querySelector('svg');
@@ -179,7 +179,7 @@ const WokwiComponentNode = ({
             type="source"
             position={Position.Left} // Default position for React Flow's internal use
             style={handleStyle}
-            className="custom-handle nodrag"
+            className="custom-handle nodrag nopan"
             isConnectable={true}
             title={pin.name}
           />
