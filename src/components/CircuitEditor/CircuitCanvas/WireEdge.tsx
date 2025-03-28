@@ -26,7 +26,7 @@ const WireEdge = ({
   const wireStyle = {
     stroke: wireColor,
     strokeWidth: selected ? 3 : 2,
-    ...(style || {})
+    ...style
   };
 
   // Check if edge is in edit mode
