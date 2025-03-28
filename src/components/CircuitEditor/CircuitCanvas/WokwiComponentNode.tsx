@@ -28,6 +28,8 @@ const WokwiComponentNode = ({
         
         // Clear the container
         containerRef.current.innerHTML = '';
+
+        console.log(`svgPath: ${svgPath}`);
         
         // Check if this is a custom SVG component
         const isCustomSvgComponent = svgPath && (!isOriginal || type.startsWith('custom'));
