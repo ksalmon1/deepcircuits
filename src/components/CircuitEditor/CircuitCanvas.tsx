@@ -30,6 +30,7 @@ import {
   OnConnect
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import './CircuitCanvas/circuit-canvas.css';
 
 // Import the sub-components we created
 import WokwiComponentNode from './CircuitCanvas/WokwiComponentNode';
@@ -81,7 +82,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     handleRetry: retryLoading
   } = useCircuitCanvasState(components);
   
-  // Initialize wire system (simplified)
+  // Initialize wire system
   const { onConnect, connectionLineStyle } = useWireSystem(components);
   
   // React Flow state
@@ -233,7 +234,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     e.dataTransfer.dropEffect = 'copy';
   };
 
-  // Customize connection behavior
+  // Handle connect - create a wire
   const handleConnect: OnConnect = useCallback((params) => {
     onConnect(params);
   }, [onConnect]);

@@ -1,13 +1,13 @@
 
 import { useCallback } from 'react';
-import { Connection, useReactFlow } from '@xyflow/react';
+import { Connection, useReactFlow, addEdge } from '@xyflow/react';
 import { WokwiComponent } from '@/integrations/wokwi/WokwiIntegration';
 import { getWireColorFromSignal, getPinSignalType } from '@/utils/wireUtils';
 import { toast } from 'sonner';
+import { WireData } from '@/types/circuit';
 
 /**
  * Hook for managing the wire connections system using React Flow
- * (Simplified version without wire editing capabilities)
  */
 export const useWireSystem = (components: WokwiComponent[]) => {
   const { setEdges } = useReactFlow();
@@ -34,19 +34,20 @@ export const useWireSystem = (components: WokwiComponent[]) => {
       target: targetId,
       sourceHandle: connection.sourceHandle,
       targetHandle: connection.targetHandle,
-      type: 'default',
+      type: 'smoothstep',
       data: {
         color: wireColor,
         sourcePinIndex,
         targetPinIndex,
-      },
+      } as WireData,
       animated: false,
       style: {
-        stroke: wireColor
+        stroke: wireColor,
+        strokeWidth: 2
       }
     };
     
-    setEdges((eds) => [...eds, newEdge]);
+    setEdges((eds) => addEdge(newEdge, eds));
     
     toast.success('Connection created', {
       description: 'Wire connected successfully',
@@ -68,7 +69,7 @@ export const useWireSystem = (components: WokwiComponent[]) => {
   return {
     onConnect,
     deleteWire,
-    connectionLineStyle: { stroke: '#4C72F4', strokeWidth: 2 },
+    connectionLineStyle: { stroke: '#9b87f5', strokeWidth: 2 },
   };
 };
 

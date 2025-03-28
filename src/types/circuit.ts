@@ -1,5 +1,5 @@
 
-import { Node } from '@xyflow/react';
+import { Node, Edge } from '@xyflow/react';
 
 // Node data type for Wokwi component nodes
 export interface WokwiNodeData {
@@ -16,3 +16,13 @@ export interface WokwiNodeData {
 
 // Types for custom nodes in XY Flow
 export type WokwiNode = Node<WokwiNodeData>;
+
+// Custom edge data type for wires
+export interface WireData {
+  color: string;
+  sourcePinIndex: number;
+  targetPinIndex: number;
+}
+
+// Custom edge type for wires
+export type WireEdge = Edge<WireData>;

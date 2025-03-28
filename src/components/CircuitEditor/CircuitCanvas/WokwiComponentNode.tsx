@@ -125,23 +125,23 @@ const WokwiComponentNode = ({
       <div id={`wokwi-element-${id}`} />
       
       {pins && pins.map((pin, index) => {
+        const pinColor = getSignalColor(pin.signals);
         const style = {
           top: pin.y,
           left: pin.x,
-          background: getSignalColor(pin.signals),
+          background: pinColor,
           width: '8px',
           height: '8px',
           zIndex: 10
         };
         
-        let position = Position.Right;
-        
+        // Each pin can act as both source and target for connections
         return (
           <Handle
             key={`pin-${index}`}
             id={`pin-${index}`}
             type="source"
-            position={position}
+            position={Position.Right}
             style={style}
             className="custom-handle"
             isConnectable={true}

@@ -1,9 +1,8 @@
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { WokwiComponent } from '@/integrations/wokwi/WokwiIntegration';
 import { Node, Edge, ReactFlowInstance } from '@xyflow/react';
 import { WokwiNodeData } from '@/types/circuit';
-import { toast } from 'sonner';
 
 /**
  * Custom hook to manage the state of the circuit canvas
