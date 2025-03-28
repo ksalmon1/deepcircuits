@@ -4,6 +4,7 @@
  */
 
 import { WokwiComponent } from '@/integrations/wokwi/WokwiIntegration';
+import { GetBezierPathParams } from '@xyflow/react';
 
 /**
  * Determine wire color based on signal type
@@ -100,4 +101,29 @@ export const createAutoRoutedPoints = (
   points.push({ x: endX, y: endY });
   
   return points;
+};
+
+/**
+ * Gets bezier path parameters with optional control point
+ */
+export const getBezierParams = (
+  sourceX: number,
+  sourceY: number,
+  targetX: number,
+  targetY: number,
+  sourcePosition: Position,
+  targetPosition: Position,
+  controlPoint?: { x: number, y: number }
+): GetBezierPathParams => {
+  const params: GetBezierPathParams = {
+    sourceX,
+    sourceY,
+    sourcePosition,
+    targetX,
+    targetY,
+    targetPosition,
+    curvature: 0.25
+  };
+  
+  return params;
 };

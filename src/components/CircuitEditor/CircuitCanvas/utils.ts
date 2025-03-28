@@ -1,8 +1,7 @@
 
 import { Node, Edge } from '@xyflow/react';
 import { WokwiComponent } from '@/integrations/wokwi/WokwiIntegration';
-import { Wire } from '@/hooks/useWireSystem';
-import { WokwiNodeData, WireEdgeData } from '@/types/circuit';
+import { Wire, WokwiNodeData, WireEdgeData } from '@/types/circuit';
 
 /**
  * Converts a Wokwi component to an XY Flow node

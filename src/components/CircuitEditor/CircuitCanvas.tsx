@@ -106,7 +106,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     finishWireEdit,
     addControlPoint,
     updateControlPoint,
-    connectionLineOptions,
+    connectionLineStyle,
     edgeBeingEditedId
   } = useWireSystem(components);
   
@@ -357,8 +357,8 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
           onDrop={handleDrop}
           onDragOver={handleDragOver}
           onNodeDragStop={onNodeDragStop}
-          connectionLineComponent={connectionLineOptions.type}
-          connectionLineStyle={connectionLineOptions.style}
+          connectionLineType={ConnectionLineType.Bezier}
+          connectionLineStyle={connectionLineStyle}
           minZoom={0.5}
           maxZoom={4}
           defaultViewport={{ x: 0, y: 0, zoom: 1 }}

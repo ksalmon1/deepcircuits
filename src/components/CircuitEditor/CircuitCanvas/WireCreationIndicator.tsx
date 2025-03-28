@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Wire } from '@/hooks/useWireSystem';
+import { Wire } from '@/types/circuit';
 
 interface WireCreationIndicatorProps {
   activeWire: Wire | null;

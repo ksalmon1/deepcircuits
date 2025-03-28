@@ -1,16 +1,16 @@
 
 import { useCallback, useRef } from 'react';
-import { Edge, Connection, useReactFlow, Node, addEdge, MarkerType, ConnectionLineType } from '@xyflow/react';
+import { Edge, Connection, useReactFlow, Node, addEdge, MarkerType } from '@xyflow/react';
 import { WokwiComponent } from '@/integrations/wokwi/WokwiIntegration';
 import { getWireColorFromSignal, getPinSignalType } from '@/utils/wireUtils';
 import { toast } from 'sonner';
-import { WireEdgeData, WokwiNodeData } from '@/types/circuit';
+import { Wire, WireEdgeData, WokwiNodeData } from '@/types/circuit';
 
 /**
  * Hook for managing the wire connections system using React Flow
  */
 export const useWireSystem = (components: WokwiComponent[]) => {
-  const { getEdges, setEdges, getNodes, setNodes, deleteElements, getNode } = useReactFlow<WokwiNodeData, WireEdgeData>();
+  const { getEdges, setEdges, getNodes, setNodes, deleteElements, getNode } = useReactFlow();
   const edgeBeingCreatedRef = useRef<string | null>(null);
   const edgeBeingEditedRef = useRef<string | null>(null);
   
@@ -100,7 +100,7 @@ export const useWireSystem = (components: WokwiComponent[]) => {
     edgeBeingEditedRef.current = null;
     
     setEdges(edges => edges.map(edge => {
-      if (edge.id === edgeId) {
+      if (edge.id === edgeId && edge.data) {
         return {
           ...edge,
           data: {
@@ -164,7 +164,7 @@ export const useWireSystem = (components: WokwiComponent[]) => {
       controlPoints.push({ x: newPointX, y: newPointY });
       
       return edges.map(e => {
-        if (e.id === edgeId) {
+        if (e.id === edgeId && e.data) {
           return {
             ...e,
             data: {
@@ -205,12 +205,6 @@ export const useWireSystem = (components: WokwiComponent[]) => {
     });
   }, [setEdges]);
   
-  // Get connection line options for React Flow
-  const connectionLineOptions = {
-    type: ConnectionLineType.Bezier,
-    style: { stroke: '#4C72F4', strokeWidth: 2 }
-  };
-
   return {
     onConnect,
     deleteWire,
@@ -218,7 +212,7 @@ export const useWireSystem = (components: WokwiComponent[]) => {
     finishWireEdit,
     addControlPoint,
     updateControlPoint,
-    connectionLineOptions,
+    connectionLineStyle: { stroke: '#4C72F4', strokeWidth: 2 },
     edgeBeingEditedId: edgeBeingEditedRef.current
   };
 };
