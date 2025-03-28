@@ -18,7 +18,7 @@ const WireEdge = ({
   markerEnd,
   data,
   selected,
-}: EdgeProps<WireEdgeData>) => {
+}: EdgeProps) => {
   const reactFlowInstance = useReactFlow();
   
   // Wire style based on data or defaults
@@ -26,7 +26,7 @@ const WireEdge = ({
   const wireStyle = {
     stroke: wireColor,
     strokeWidth: selected ? 3 : 2,
-    ...style
+    ...(style as object)
   };
 
   // Check if edge is in edit mode
