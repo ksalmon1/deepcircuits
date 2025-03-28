@@ -22,6 +22,7 @@ export interface WireData {
   color: string;
   sourcePinIndex: number;
   targetPinIndex: number;
+  [key: string]: unknown; // Add index signature to satisfy Record<string, unknown>
 }
 
 // Custom edge type for wires
