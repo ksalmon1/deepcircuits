@@ -29,12 +29,12 @@ const WokwiComponentNode = ({
         // Clear the container
         containerRef.current.innerHTML = '';
 
-        console.log(`svgPath: ${svgPath}`);
+        console.log(`Component ${id}: type=${type}, isOriginal=${isOriginal}, svgPath exists=${!!svgPath}`);
         
-        // Check if this is a custom SVG component
-        const isCustomSvgComponent = svgPath && (!isOriginal || type.startsWith('custom'));
+        // Check if this is a custom SVG component - improved condition
+        const isCustomSvgComponent = !!svgPath && (type.startsWith('custom') || isOriginal === false);
         
-        if (isCustomSvgComponent && svgPath) {
+        if (isCustomSvgComponent) {
           console.log(`Rendering custom SVG component: ${type}`);
           
           // Set the SVG content directly (ensure SVG content is trusted)

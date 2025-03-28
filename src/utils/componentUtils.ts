@@ -7,11 +7,13 @@ export const fetchComponentPins = (type: string, pinCache: Record<string, WokwiP
   try {
     // First check if pins are in the cache
     if (pinCache[type]) {
+      console.log(`Using cached pins for ${type}:`, pinCache[type]);
       return pinCache[type];
     }
     
     // Check if it's a custom component
-    if (type.startsWith('custom-')) {
+    if (type.startsWith('custom')) {
+      console.log(`Fetching pins for custom component: ${type}`);
       const customComponent = getCustomComponent(type);
       if (customComponent && customComponent.pins) {
         pinCache[type] = customComponent.pins;
@@ -20,6 +22,7 @@ export const fetchComponentPins = (type: string, pinCache: Record<string, WokwiP
     }
     
     // Otherwise fallback to default Wokwi pin information
+    console.log(`Fetching default pins for ${type}`);
     const defaultPins = getComponentPinInfo(type);
     pinCache[type] = defaultPins;
     return defaultPins;
