@@ -26,33 +26,25 @@ import {
   ConnectionMode,
   OnNodesChange,
   OnEdgesChange,
-  OnConnect,
-  Connection,
-  Edge,
-  Node,
-  OnConnectStart,
-  OnConnectEnd,
-  NodeTypes
+  OnConnect
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import './CircuitCanvas/circuit-canvas.css';
 
-// Import sub-components
+// Import the sub-components we created
 import WokwiComponentNode from './CircuitCanvas/WokwiComponentNode';
-import RoutingPointNode from './CircuitCanvas/RoutingPointNode';
 import CanvasControls from './CircuitCanvas/CanvasControls';
 import LoadingOverlay from './CircuitCanvas/LoadingOverlay';
 import { useCircuitCanvasState } from '@/hooks/useCircuitCanvasState';
-import { getPinSignalType, getWireColorFromSignal } from '@/utils/wireUtils';
 
 interface CircuitCanvasProps {
   components: WokwiComponent[];
   onComponentsChange: (components: WokwiComponent[]) => void;
 }
 
-// Define the custom node types with proper type definitions
-const nodeTypes: NodeTypes = {
-  wokwiComponent: WokwiComponentNode,
-  routingPoint: RoutingPointNode
+// Define the custom node types
+const nodeTypes = {
+  wokwiComponent: WokwiComponentNode as React.ComponentType<any>
 };
 
 const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) => {
@@ -90,29 +82,11 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
   } = useCircuitCanvasState(components);
   
   // Initialize wire system
-  const { 
-    wiringState, 
-    onConnect, 
-    startWiring, 
-    addRoutingPoint, 
-    cancelWiring, 
-    deleteWire, 
-    connectionLineStyle 
-  } = useWireSystem(components);
+  const { onConnect, connectionLineStyle } = useWireSystem(components);
   
   // React Flow state
   const [reactFlowNodes, setReactFlowNodes, onNodesChange] = useNodesState([]);
   const [reactFlowEdges, setReactFlowEdges, onEdgesChange] = useEdgesState([]);
-  
-  // React Flow instance methods
-  const { 
-    screenToFlowPosition, 
-    addNodes, 
-    addEdges, 
-    deleteElements,
-    getNode,
-    getEdge
-  } = useReactFlow();
   
   const {
     zoom,
@@ -273,52 +247,10 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     e.dataTransfer.dropEffect = 'copy';
   };
 
-  // Handle pin clicking to start wiring mode
-  const onHandleClick = useCallback((event: React.MouseEvent, nodeId: string, handleId: string) => {
-    event.stopPropagation();
-    
-    // If already in wiring mode, don't do anything (let onConnect handle it)
-    if (wiringState?.isActive) {
-      return;
-    }
-    
-    // Start wiring mode
-    startWiring(nodeId, handleId);
-  }, [wiringState, startWiring]);
-
-  // Handle clicks on the canvas pane
-  const onPaneClick = useCallback((event: React.MouseEvent) => {
-    // Only handle clicks when in wiring mode
-    if (!wiringState?.isActive) return;
-    
-    // Get the click position in flow coordinates
-    const position = screenToFlowPosition({ x: event.clientX, y: event.clientY });
-    
-    // Add a routing point at this position
-    addRoutingPoint(position);
-  }, [wiringState, screenToFlowPosition, addRoutingPoint]);
-
-  // Handle keyboard escape to cancel wiring
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && wiringState?.isActive) {
-        cancelWiring();
-      }
-    };
-    
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [wiringState, cancelWiring]);
-
-  // Handle deleting nodes (especially routing points)
-  const onNodesDelete = useCallback((nodes: Node[]) => {
-    // Check if any routing points were deleted
-    const deletedRoutingPoints = nodes.filter(node => node.type === 'routingPoint');
-    if (deletedRoutingPoints.length > 0) {
-      console.log(`Deleted ${deletedRoutingPoints.length} routing points`);
-      // Any additional cleanup if needed
-    }
-  }, []);
+  // Handle connect - create a wire
+  const handleConnect: OnConnect = useCallback((params) => {
+    onConnect(params);
+  }, [onConnect]);
 
   return (
     <div className="h-full w-full bg-white relative flex flex-col">
@@ -327,12 +259,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
         loadingError={loadingError} 
         onRetry={handleRetry} 
       />
-      
-      {wiringState?.isActive && (
-        <div className="absolute top-0 left-0 z-50 bg-blue-500 text-white px-3 py-1 rounded-br-md text-sm">
-          Wiring Mode: Click to add points, click pin to complete, ESC to cancel
-        </div>
-      )}
 
       <CanvasControls 
         zoom={zoom}
@@ -352,9 +278,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
           edges={reactFlowEdges}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          onPaneClick={onPaneClick}
-          onNodesDelete={onNodesDelete}
+          onConnect={handleConnect}
           nodeTypes={nodeTypes}
           onInit={setReactFlowInstance}
           onDrop={handleDrop}

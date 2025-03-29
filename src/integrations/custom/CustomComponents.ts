@@ -1,76 +1,65 @@
 
-// This is just a skeleton implementation as the original file isn't accessible
-// We're only defining types and function signatures that would make the code work
-
 import { WokwiPin } from '@/integrations/wokwi/WokwiIntegration';
 
-// Interface for custom components
-export interface CustomComponent {
+// Interface for our custom component properties
+export interface CustomComponentConfig {
   type: string;
   name: string;
+  description: string;
+  category: string;
   svgPath: string;
   pins: WokwiPin[];
-  isOriginal: boolean;
+  properties?: Record<string, any>;
 }
 
-// Map of custom components
-const customComponents: Record<string, CustomComponent> = {};
+// Registry of custom components - now empty as all components are loaded from the database
+export const CUSTOM_COMPONENTS: Record<string, CustomComponentConfig> = {};
 
-// Check if a component type is a custom component
+// Function to check if a component is a custom component
 export const isCustomComponent = (type: string): boolean => {
-  return !!customComponents[type] || type.startsWith('custom-');
+  return type.startsWith('custom-');
 };
 
-// Get a custom component by type
-export const getCustomComponent = (type: string): CustomComponent | null => {
-  return customComponents[type] || null;
+// Function to get custom component config - now relies on database lookup done elsewhere
+export const getCustomComponent = (type: string): CustomComponentConfig | null => {
+  return CUSTOM_COMPONENTS[type] || null;
 };
 
-// Render a custom component to a container
-export const renderCustomComponent = async (
+// Function to render a custom component
+export const renderCustomComponent = (
   type: string,
-  container: string | HTMLElement,
+  elementId: string,
   props: Record<string, any> = {}
-): Promise<void> => {
-  // Get container element regardless of whether we were passed a string ID or an element
-  const containerElement = typeof container === 'string'
-    ? document.getElementById(container)
-    : container;
-    
-  if (!containerElement) {
-    console.error(`Container not found for custom component ${type}`);
+): void => {
+  const element = document.getElementById(elementId);
+  if (!element) {
+    console.error(`Element with id ${elementId} not found`);
     return;
   }
-  
+
   // Clear existing content
-  containerElement.innerHTML = '';
+  element.innerHTML = '';
   
-  // Get custom component details
-  const component = getCustomComponent(type);
+  // The SVG will now be loaded from the database and passed to this function
+  // through the component library hooks
+  const svgPath = element.getAttribute('data-svg-path');
   
-  if (component && component.svgPath) {
-    // If we have an SVG path, insert it directly
-    containerElement.innerHTML = component.svgPath;
+  if (svgPath) {
+    // Create an SVG element from the SVG path
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = svgPath.trim();
+    const svg = tempDiv.firstChild as SVGElement;
     
-    // Set SVG attributes for proper scaling
-    const svgElement = containerElement.querySelector('svg');
-    if (svgElement) {
-      svgElement.setAttribute('width', '100%');
-      svgElement.setAttribute('height', '100%');
-      svgElement.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+    // Apply properties if needed
+    if (props.voltage && svg) {
+      const textElement = svg.querySelector('text[text-anchor="middle"]');
+      if (textElement) {
+        textElement.textContent = `${props.voltage}V`;
+      }
     }
-  } else {
-    // If no SVG path, just indicate it's a custom component
-    const placeholder = document.createElement('div');
-    placeholder.textContent = `Custom: ${type}`;
-    placeholder.style.width = '100%';
-    placeholder.style.height = '100%';
-    placeholder.style.display = 'flex';
-    placeholder.style.alignItems = 'center';
-    placeholder.style.justifyContent = 'center';
-    placeholder.style.border = '1px dashed #aaa';
-    placeholder.style.borderRadius = '4px';
     
-    containerElement.appendChild(placeholder);
+    element.appendChild(svg);
+  } else {
+    console.error(`No SVG data found for component ${type}`);
   }
 };

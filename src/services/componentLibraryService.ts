@@ -1,6 +1,7 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { WokwiPin } from '@/integrations/wokwi/WokwiIntegration';
-import { CustomComponent } from '@/integrations/custom/CustomComponents';
+import { CUSTOM_COMPONENTS } from '@/integrations/custom/CustomComponents';
 import { ComponentLibraryItem } from './componentLibrary/types';
 
 // Get all components from the library
