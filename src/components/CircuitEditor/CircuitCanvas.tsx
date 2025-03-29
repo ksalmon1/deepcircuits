@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { 
   isWokwiLoaded, 
@@ -269,13 +268,16 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
   const onPaneClick = useCallback((event: React.MouseEvent) => {
     if (wireConnectionState.isConnecting) {
       // Get flow position from mouse event
-      const position = reactFlowInstance?.screenToFlowPosition({
-        x: event.clientX,
-        y: event.clientY
-      });
-      
-      if (position) {
-        handleCanvasClick(event, position);
+      const reactFlowBounds = canvasRef.current?.getBoundingClientRect();
+      if (reactFlowBounds) {
+        const position = reactFlowInstance?.screenToFlowPosition({
+          x: event.clientX,
+          y: event.clientY
+        });
+        
+        if (position) {
+          handleCanvasClick(event, position);
+        }
       }
     }
   }, [wireConnectionState, reactFlowInstance, handleCanvasClick]);

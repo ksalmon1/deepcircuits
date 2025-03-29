@@ -1,13 +1,13 @@
 
 import { useCallback, useState, useEffect } from 'react';
-import { Connection, useReactFlow, Edge, addEdge, Position, XYPosition } from '@xyflow/react';
+import { Connection, useReactFlow, Edge, Position, XYPosition } from '@xyflow/react';
 import { WireData, WireConnectionState, WireEdge } from '@/types/circuit';
 import { getWireColorFromSignal, getPinSignalType } from '@/utils/wireUtils';
 import { WokwiComponent } from '@/integrations/wokwi/WokwiIntegration';
 import { toast } from 'sonner';
 
 export const useWireRouting = (components: WokwiComponent[]) => {
-  const { setEdges, getNodes, getEdges } = useReactFlow();
+  const { setEdges, getNodes, getEdges, getViewport } = useReactFlow();
   const [wireConnectionState, setWireConnectionState] = useState<WireConnectionState>({
     isConnecting: false,
     routingPoints: [],
@@ -23,10 +23,15 @@ export const useWireRouting = (components: WokwiComponent[]) => {
       // Get the mouse position relative to the flow container
       const reactFlowBounds = document.querySelector('.react-flow')?.getBoundingClientRect();
       if (reactFlowBounds) {
+        // Get the viewport transformation to account for zoom and pan
+        const { x: offsetX, y: offsetY, zoom } = getViewport();
+        
+        // Calculate mouse position in flow coordinates
         const mousePos = {
-          x: event.clientX - reactFlowBounds.left,
-          y: event.clientY - reactFlowBounds.top
+          x: (event.clientX - reactFlowBounds.left - offsetX) / zoom,
+          y: (event.clientY - reactFlowBounds.top - offsetY) / zoom
         };
+        
         setMousePosition(mousePos);
         
         // Update the temporary edge to follow the mouse pointer
@@ -39,7 +44,7 @@ export const useWireRouting = (components: WokwiComponent[]) => {
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
     };
-  }, [wireConnectionState.isConnecting]);
+  }, [wireConnectionState.isConnecting, getViewport]);
   
   // Function to update the temporary edge with the current mouse position
   const updateTemporaryEdge = useCallback((mousePos: XYPosition) => {
@@ -47,10 +52,6 @@ export const useWireRouting = (components: WokwiComponent[]) => {
     
     setEdges(edges => edges.map(edge => {
       if (edge.id === wireConnectionState.temporaryEdgeId) {
-        // Replace the last routing point with the current mouse position
-        // or add the mouse position if there are no routing points
-        const currentPoints = [...wireConnectionState.routingPoints];
-        
         return {
           ...edge,
           // Set the target to follow mouse position
