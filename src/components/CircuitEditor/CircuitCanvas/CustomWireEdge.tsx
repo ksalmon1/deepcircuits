@@ -1,4 +1,3 @@
-
 import React, { memo, useState, useCallback } from 'react';
 import { CustomWireEdgeProps, WireData } from '@/types/circuit';
 import { useReactFlow } from '@xyflow/react';
@@ -109,7 +108,7 @@ function CustomWireEdge({
     if (draggingPointIndex !== null) {
       // Properly type the global event handlers
       const handleGlobalMouseMove = (e: MouseEvent) => {
-        // Convert the MouseEvent to React.MouseEvent equivalent with type assertion
+        // Create a React.MouseEvent compatible object
         const reactEvent = {
           clientX: e.clientX,
           clientY: e.clientY,
@@ -158,17 +157,16 @@ function CustomWireEdge({
         style={{ pointerEvents }}
       />
       
-      {/* Only show routing points for permanent wires */}
-      {!isTemporary && routingPoints.map((point, index) => (
+      {/* Only show routing points when the wire is selected and it's not a temporary wire */}
+      {selected && !isTemporary && routingPoints.map((point, index) => (
         <circle
           key={`${id}-point-${index}`}
           cx={point.x}
           cy={point.y}
-          r={selected ? 5 : 3}
-          fill={selected ? edgeColor : 'white'}
-          stroke={edgeColor}
+          r={5}
+          fill={edgeColor}
+          stroke="white"
           strokeWidth={1.5}
-          opacity={selected ? 1 : 0.5}
           className="routing-point"
           onMouseDown={(e) => handlePointMouseDown(e, index)}
           cursor="move"
