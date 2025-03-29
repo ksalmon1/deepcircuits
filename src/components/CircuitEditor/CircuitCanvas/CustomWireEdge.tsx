@@ -87,7 +87,7 @@ function CustomWireEdge({
           strokeWidth={1}
           opacity={selected ? 0.8 : 0.5}
           className="routing-point"
-          pointerEvents="none"
+          pointerEvents="none" // Make routing points non-interactive
         />
       ))}
       
