@@ -31,10 +31,12 @@ import {
   Connection,
   addEdge,
   Edge,
-  Node
+  Node,
+  OnConnectStart,
+  OnConnectEnd,
+  NodeTypes
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import './CircuitCanvas/circuit-canvas.css';
 
 // Import sub-components
 import WokwiComponentNode from './CircuitCanvas/WokwiComponentNode';
@@ -62,9 +64,9 @@ interface CircuitCanvasProps {
 }
 
 // Define the custom node types
-const nodeTypes = {
-  wokwiComponent: WokwiComponentNode as React.ComponentType<any>,
-  routingPoint: RoutingPointNode as React.ComponentType<any>
+const nodeTypes: NodeTypes = {
+  wokwiComponent: WokwiComponentNode,
+  routingPoint: RoutingPointNode
 };
 
 const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) => {
@@ -113,7 +115,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
   
   // React Flow instance methods
   const { 
-    project, 
+    screenToFlowPosition, 
     addNodes, 
     addEdges, 
     deleteElements,
@@ -281,7 +283,8 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
   };
 
   // Wire routing handlers
-  const onConnectStart = useCallback((event: React.MouseEvent, { nodeId, handleId }: { nodeId: string, handleId: string }) => {
+  const onConnectStart: OnConnectStart = useCallback((event, params) => {
+    const { nodeId, handleId } = params;
     if (!nodeId || !handleId) return;
     
     // Only start wiring from component nodes (not routing points)
@@ -316,7 +319,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     if (!wiringState) return;
     
     // Get the click position in flow coordinates
-    const position = project({ x: event.clientX, y: event.clientY });
+    const position = screenToFlowPosition({ x: event.clientX, y: event.clientY });
     
     // Create a new routing point node
     const routingNodeId = `routing-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -365,7 +368,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     });
     
     console.log(`Added routing point at (${position.x}, ${position.y})`);
-  }, [wiringState, addNodes, addEdges, project]);
+  }, [wiringState, addNodes, addEdges, screenToFlowPosition]);
 
   const onConnect = useCallback((connection: Connection) => {
     if (!connection.source || !connection.target || !connection.sourceHandle || !connection.targetHandle) {
@@ -414,7 +417,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     }
   }, [wiringState, addEdges, baseOnConnect]);
 
-  const onConnectEnd = useCallback((event: MouseEvent) => {
+  const onConnectEnd: OnConnectEnd = useCallback((event) => {
     // Check if the connection was canceled (released on the pane)
     if (wiringState && event.target instanceof Element) {
       const targetElement = event.target as Element;
