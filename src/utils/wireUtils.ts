@@ -10,35 +10,50 @@ import { WokwiComponent } from '@/integrations/wokwi/WokwiIntegration';
  * Determine wire color based on signal type
  */
 export const getWireColorFromSignal = (signal: string): string => {
+  if (!signal) return '#9b87f5'; // Default purple for undefined signals
+  
   const normalizedSignal = signal.toLowerCase().trim();
   
-  // Define colors for different signal types
-  const signalColors: Record<string, string> = {
-    'power': '#FF6384',    // Red
-    '+5v': '#FF6384',      // Red (common power)
-    '+3.3v': '#FF6384',    // Red (common power)
-    'vcc': '#FF6384',      // Red (common power)
-    'ground': '#36A2EB',   // Blue
-    'gnd': '#36A2EB',      // Blue (common ground)
-    'digital': '#9b87f5',  // Primary Purple
-    'analog': '#F97316',   // Bright Orange
-    'passive': '#7E69AB',  // Secondary Purple
-    'i2c': '#6E59A5',      // Tertiary Purple
-    'spi': '#C9CBCF',      // Gray
-    'uart': '#0EA5E9',     // Ocean Blue
-    'rx': '#FF00FF',       // Magenta 
-    'tx': '#00FFFF',       // Cyan
-  };
+  // Define colors for different signal types with more precise coloration
+  if (normalizedSignal.includes('power') || 
+      normalizedSignal.includes('+5v') || 
+      normalizedSignal.includes('+3.3v') || 
+      normalizedSignal.includes('vcc')) {
+    return '#FF6384'; // Red for power signals
+  }
   
-  // Check for specific signals first
-  for (const [key, color] of Object.entries(signalColors)) {
-    if (normalizedSignal.includes(key)) {
-      return color;
-    }
+  if (normalizedSignal.includes('ground') || normalizedSignal.includes('gnd')) {
+    return '#36A2EB'; // Blue for ground signals
+  }
+  
+  if (normalizedSignal.includes('analog')) {
+    return '#FFCE56'; // Yellow for analog signals
+  }
+  
+  if (normalizedSignal.includes('i2c')) {
+    return '#9966FF'; // Purple for I2C signals
+  }
+  
+  if (normalizedSignal.includes('spi')) {
+    return '#4BC0C0'; // Teal for SPI signals
+  }
+  
+  if (normalizedSignal.includes('uart') || 
+      normalizedSignal.includes('rx') || 
+      normalizedSignal.includes('tx')) {
+    return '#7CFC00'; // Bright green for UART/serial signals
+  }
+  
+  if (normalizedSignal.includes('digital')) {
+    return '#FF9F40'; // Orange for digital signals
+  }
+  
+  if (normalizedSignal.includes('pwm')) {
+    return '#FF73B3'; // Pink for PWM signals
   }
   
   // Default color for unknown signal types
-  return '#9b87f5'; // Primary Purple
+  return '#9b87f5'; // Default purple
 };
 
 /**

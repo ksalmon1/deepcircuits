@@ -81,10 +81,11 @@ function CustomWireEdge({
           key={`${id}-point-${index}`}
           cx={point.x}
           cy={point.y}
-          r={4}
-          fill={edgeColor}
-          stroke="#ffffff"
+          r={3}
+          fill={selected ? edgeColor : 'white'}
+          stroke={edgeColor}
           strokeWidth={1}
+          opacity={selected ? 0.8 : 0.5}
           className="routing-point"
           pointerEvents="none"
         />
