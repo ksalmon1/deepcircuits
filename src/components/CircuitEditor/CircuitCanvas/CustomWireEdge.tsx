@@ -86,7 +86,7 @@ function CustomWireEdge({
           const newRoutingPoints = [...(edge.data?.routingPoints || [])];
           newRoutingPoints[draggingPointIndex] = { x: mouseX, y: mouseY };
           
-          // Keep the edge selected while dragging by setting or maintaining the selected flag
+          // Keep the edge selected while dragging by setting the selected flag
           return {
             ...edge,
             selected: true,
