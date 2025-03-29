@@ -110,13 +110,12 @@ const WokwiComponentNode = ({
     }
   }, [id, type]);
   
-  // Calculate the additional padding needed for selection indicator
-  const selectionPadding = selected ? 8 : 0;
-  
+  // Style for the component node - no padding when selected, just outline
   const nodeStyle: React.CSSProperties = {
     background: 'transparent',
-    border: selected ? '1px dashed #4C72F4' : 'none',
-    padding: selected ? '8px' : '0',
+    border: selected ? '2px solid #4C72F4' : 'none',
+    boxShadow: selected ? '0 0 0 2px rgba(76, 114, 244, 0.3)' : 'none',
+    padding: '0',
     borderRadius: '4px',
     position: 'relative',
     width: 'auto',
@@ -125,15 +124,14 @@ const WokwiComponentNode = ({
     minHeight: '30px',
   };
   
-  // Create a separate container for pins to maintain their absolute positioning
-  // regardless of parent padding changes
+  // Container for pins with absolute positioning
   const pinContainerStyle: React.CSSProperties = {
     position: 'absolute',
     top: 0,
     left: 0,
     width: '100%',
     height: '100%',
-    pointerEvents: 'none', // Let events pass through to the actual handles
+    pointerEvents: 'none',
     zIndex: 20,
   };
   
@@ -193,13 +191,12 @@ const WokwiComponentNode = ({
     <div id={`node-${id}`} style={nodeStyle}>
       <div ref={containerRef} id={`component-container-${id}`} style={{ width: '100%', height: '100%', position: 'relative' }} />
       
-      {/* Pin container that's positioned independently of parent padding */}
+      {/* Pin container with absolute positioning */}
       <div style={pinContainerStyle}>
         {pins && pins.map((pin, index) => {
           const pinColor = getSignalColor(pin.signals);
-          console.log(`Rendering pin ${index} at (${pin.x}, ${pin.y}) for component ${id}`);
           
-          // Calculate position accounting for the selection padding
+          // Handle style with absolute positioning based on pin coordinates
           const handleStyle: React.CSSProperties = {
             top: `${pin.y}px`,
             left: `${pin.x}px`, 
@@ -213,7 +210,7 @@ const WokwiComponentNode = ({
             pointerEvents: 'auto', // Make sure the handle receives events
           };
           
-          // Each pin can act as both source and target for connections
+          // Each pin acts as both source and target for connections
           return (
             <Handle
               key={`pin-${index}`}
