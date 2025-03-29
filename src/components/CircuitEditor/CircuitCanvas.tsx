@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { 
   isWokwiLoaded, 
@@ -38,7 +39,6 @@ import './CircuitCanvas/circuit-canvas.css';
 // Import the sub-components we created
 import WokwiComponentNode from './CircuitCanvas/WokwiComponentNode';
 import CustomWireEdge from './CircuitCanvas/CustomWireEdge';
-import CanvasControls from './CircuitCanvas/CanvasControls';
 import LoadingOverlay from './CircuitCanvas/LoadingOverlay';
 import { useCircuitCanvasState } from '@/hooks/useCircuitCanvasState';
 
@@ -317,14 +317,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
         isReady={isReady} 
         loadingError={loadingError} 
         onRetry={handleRetry} 
-      />
-
-      <CanvasControls 
-        zoom={zoom}
-        onZoomIn={handleZoomIn}
-        onZoomOut={handleZoomOut}
-        panMode={panMode}
-        togglePanMode={togglePanMode}
       />
       
       <div 
