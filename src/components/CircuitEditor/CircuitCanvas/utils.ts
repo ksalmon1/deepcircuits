@@ -8,14 +8,18 @@ import { WokwiNodeData } from '@/types/circuit';
  */
 export const componentToNode = (component: WokwiComponent): Node<WokwiNodeData> => {
   // Log the complete component object for debugging (with a depth limit to avoid circular references)
-  console.log('Full component object:', JSON.stringify({
+  console.log('[componentToNode] Processing component:', JSON.stringify({
     id: component.id,
     type: component.type,
     svgPath: component.svgPath ? `${component.svgPath.substring(0, 20)}...` : 'missing',
+    pins: component.pins ? `${component.pins.length} pins` : 'no pins',
     isOriginal: component.isOriginal,
     hasSvgPath: !!component.svgPath,
     svgPathLength: component.svgPath?.length || 0
   }));
+  
+  // Log the pins specifically
+  console.log('[componentToNode] Component pins:', component.pins);
   
   // Create a complete node with all component data carefully preserved
   const node: Node<WokwiNodeData> = {
@@ -33,11 +37,12 @@ export const componentToNode = (component: WokwiComponent): Node<WokwiNodeData> 
   };
   
   // Add additional debug logging for the node data
-  console.log(`Node data created with:`, {
+  console.log(`[componentToNode] Node data created:`, {
     nodeId: node.id,
     type: node.data.type,
-    hasSvgPath: !!node.data.svgPath,
-    svgPathLength: node.data.svgPath?.length || 0
+    hasPins: !!node.data.pins,
+    pinCount: node.data.pins?.length || 0,
+    pinDetails: node.data.pins
   });
   
   return node;
