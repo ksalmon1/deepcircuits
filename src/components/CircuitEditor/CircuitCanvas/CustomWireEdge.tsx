@@ -1,6 +1,7 @@
 
-import React, { memo } from 'react';
+import React, { memo, useState, useCallback } from 'react';
 import { CustomWireEdgeProps, WireData } from '@/types/circuit';
+import { useReactFlow } from '@xyflow/react';
 
 const generatePath = (
   sourceX: number,
@@ -44,6 +45,9 @@ function CustomWireEdge({
   selected,
   onDelete
 }: CustomWireEdgeProps) {
+  const [draggingPointIndex, setDraggingPointIndex] = useState<number | null>(null);
+  const { setEdges } = useReactFlow();
+  
   const routingPoints = data?.routingPoints || [];
   const edgeColor = data?.color || '#9b87f5';
   const cursorPosition = data?.cursorPosition;
@@ -55,6 +59,71 @@ function CustomWireEdge({
       onDelete(id);
     }
   };
+  
+  const handlePointMouseDown = useCallback((event: React.MouseEvent, index: number) => {
+    event.stopPropagation();
+    setDraggingPointIndex(index);
+  }, []);
+  
+  const handlePointDrag = useCallback((event: React.MouseEvent) => {
+    if (draggingPointIndex === null) return;
+    
+    const reactFlowBounds = document.querySelector('.react-flow')?.getBoundingClientRect();
+    if (!reactFlowBounds) return;
+    
+    const reactFlow = document.querySelector('.react-flow__renderer');
+    if (!reactFlow) return;
+    
+    const reactFlowRect = reactFlow.getBoundingClientRect();
+    
+    // Get the mouse position relative to the flow container
+    const { left, top } = reactFlowRect;
+    const mouseX = event.clientX - left;
+    const mouseY = event.clientY - top;
+    
+    setEdges(edges => {
+      return edges.map(edge => {
+        if (edge.id === id) {
+          const newRoutingPoints = [...(edge.data?.routingPoints || [])];
+          newRoutingPoints[draggingPointIndex] = { x: mouseX, y: mouseY };
+          
+          return {
+            ...edge,
+            data: {
+              ...edge.data,
+              routingPoints: newRoutingPoints
+            }
+          };
+        }
+        return edge;
+      });
+    });
+  }, [draggingPointIndex, id, setEdges]);
+  
+  const handlePointMouseUp = useCallback(() => {
+    setDraggingPointIndex(null);
+  }, []);
+  
+  // Add global mouse move and mouse up event listeners when dragging a point
+  React.useEffect(() => {
+    if (draggingPointIndex !== null) {
+      const handleGlobalMouseMove = (e: MouseEvent) => {
+        handlePointDrag(e as unknown as React.MouseEvent);
+      };
+      
+      const handleGlobalMouseUp = () => {
+        handlePointMouseUp();
+      };
+      
+      window.addEventListener('mousemove', handleGlobalMouseMove);
+      window.addEventListener('mouseup', handleGlobalMouseUp);
+      
+      return () => {
+        window.removeEventListener('mousemove', handleGlobalMouseMove);
+        window.removeEventListener('mouseup', handleGlobalMouseUp);
+      };
+    }
+  }, [draggingPointIndex, handlePointDrag, handlePointMouseUp]);
   
   // Use cursor position if available (for temporary edges)
   // If sourceX/Y and targetX/Y are the same (temporary edge), we use the cursor position
@@ -86,13 +155,15 @@ function CustomWireEdge({
           key={`${id}-point-${index}`}
           cx={point.x}
           cy={point.y}
-          r={3}
+          r={selected ? 5 : 3}
           fill={selected ? edgeColor : 'white'}
           stroke={edgeColor}
-          strokeWidth={1}
-          opacity={selected ? 0.8 : 0.5}
+          strokeWidth={1.5}
+          opacity={selected ? 1 : 0.5}
           className="routing-point"
-          pointerEvents="none" // Make routing points non-interactive
+          onMouseDown={(e) => handlePointMouseDown(e, index)}
+          cursor="move"
+          style={{ pointerEvents: 'all' }}
         />
       ))}
       
