@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { 
   isWokwiLoaded, 
@@ -26,16 +27,34 @@ import {
   ConnectionMode,
   OnNodesChange,
   OnEdgesChange,
-  OnConnect
+  OnConnect,
+  Connection,
+  addEdge,
+  Edge,
+  Node
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import './CircuitCanvas/circuit-canvas.css';
 
-// Import the sub-components we created
+// Import sub-components
 import WokwiComponentNode from './CircuitCanvas/WokwiComponentNode';
+import RoutingPointNode from './CircuitCanvas/RoutingPointNode';
 import CanvasControls from './CircuitCanvas/CanvasControls';
 import LoadingOverlay from './CircuitCanvas/LoadingOverlay';
 import { useCircuitCanvasState } from '@/hooks/useCircuitCanvasState';
+import { getPinSignalType, getWireColorFromSignal } from '@/utils/wireUtils';
+
+// Define wiring state interface for multi-segment wires
+interface WiringState {
+  startNodeId: string;
+  startHandleId: string;
+  lastNodeId: string; 
+  lastHandleId: string | null; 
+  intermediateNodes: string[];
+  intermediateEdges: string[];
+  currentColor: string;
+  currentSignalType: string;
+}
 
 interface CircuitCanvasProps {
   components: WokwiComponent[];
@@ -44,7 +63,8 @@ interface CircuitCanvasProps {
 
 // Define the custom node types
 const nodeTypes = {
-  wokwiComponent: WokwiComponentNode as React.ComponentType<any>
+  wokwiComponent: WokwiComponentNode as React.ComponentType<any>,
+  routingPoint: RoutingPointNode as React.ComponentType<any>
 };
 
 const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) => {
@@ -55,6 +75,9 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
   // Custom hooks
   const { isReady, loadingError, handleRetry } = useWokwiLoader();
   const { pinCache } = useComponentPinCache();
+  
+  // Wire routing state
+  const [wiringState, setWiringState] = useState<WiringState | null>(null);
   
   // Initialize circuit canvas state
   const {
@@ -82,11 +105,21 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
   } = useCircuitCanvasState(components);
   
   // Initialize wire system
-  const { onConnect, connectionLineStyle } = useWireSystem(components);
+  const { onConnect: baseOnConnect, connectionLineStyle: baseConnectionLineStyle } = useWireSystem(components);
   
   // React Flow state
   const [reactFlowNodes, setReactFlowNodes, onNodesChange] = useNodesState([]);
   const [reactFlowEdges, setReactFlowEdges, onEdgesChange] = useEdgesState([]);
+  
+  // React Flow instance methods
+  const { 
+    project, 
+    addNodes, 
+    addEdges, 
+    deleteElements,
+    getNode,
+    getEdge
+  } = useReactFlow();
   
   const {
     zoom,
@@ -247,10 +280,180 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     e.dataTransfer.dropEffect = 'copy';
   };
 
-  // Handle connect - create a wire
-  const handleConnect: OnConnect = useCallback((params) => {
-    onConnect(params);
-  }, [onConnect]);
+  // Wire routing handlers
+  const onConnectStart = useCallback((event: React.MouseEvent, { nodeId, handleId }: { nodeId: string, handleId: string }) => {
+    if (!nodeId || !handleId) return;
+    
+    // Only start wiring from component nodes (not routing points)
+    const sourceNode = getNode(nodeId);
+    if (sourceNode?.type !== 'wokwiComponent') return;
+    
+    // Get the pin index from the handle ID
+    const pinIndex = parseInt(handleId.split('-')[1]);
+    if (isNaN(pinIndex)) return;
+    
+    // Determine signal type and color from the source pin
+    const signalType = getPinSignalType(components, nodeId, pinIndex) || 'digital';
+    const wireColor = getWireColorFromSignal(signalType);
+    
+    console.log(`Starting wire from ${nodeId}:${handleId} with color ${wireColor}`);
+    
+    // Initialize wiring state
+    setWiringState({
+      startNodeId: nodeId,
+      startHandleId: handleId,
+      lastNodeId: nodeId,
+      lastHandleId: handleId,
+      intermediateNodes: [],
+      intermediateEdges: [],
+      currentColor: wireColor,
+      currentSignalType: signalType
+    });
+  }, [components, getNode]);
+
+  const onPaneClick = useCallback((event: React.MouseEvent) => {
+    // Only handle clicks during active wiring
+    if (!wiringState) return;
+    
+    // Get the click position in flow coordinates
+    const position = project({ x: event.clientX, y: event.clientY });
+    
+    // Create a new routing point node
+    const routingNodeId = `routing-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const newRoutingNode: Node = {
+      id: routingNodeId,
+      type: 'routingPoint',
+      position,
+      data: {},
+      draggable: true
+    };
+    
+    // Create an edge from the last node to this routing point
+    const edgeId = `edge-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const newEdge: Edge = {
+      id: edgeId,
+      source: wiringState.lastNodeId,
+      sourceHandle: wiringState.lastHandleId || undefined,
+      target: routingNodeId,
+      targetHandle: `${routingNodeId}-target`,
+      type: 'default',
+      style: { 
+        stroke: wiringState.currentColor, 
+        strokeWidth: 2 
+      },
+      data: { 
+        color: wiringState.currentColor,
+        signalType: wiringState.currentSignalType,
+        isRoutingSegment: true
+      }
+    };
+    
+    // Add the new node and edge to the flow
+    addNodes(newRoutingNode);
+    addEdges(newEdge);
+    
+    // Update wiring state
+    setWiringState(prev => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        lastNodeId: routingNodeId,
+        lastHandleId: `${routingNodeId}-source`,
+        intermediateNodes: [...prev.intermediateNodes, routingNodeId],
+        intermediateEdges: [...prev.intermediateEdges, edgeId]
+      };
+    });
+    
+    console.log(`Added routing point at (${position.x}, ${position.y})`);
+  }, [wiringState, addNodes, addEdges, project]);
+
+  const onConnect = useCallback((connection: Connection) => {
+    if (!connection.source || !connection.target || !connection.sourceHandle || !connection.targetHandle) {
+      return;
+    }
+    
+    if (wiringState) {
+      // We're completing a multi-segment wire
+      console.log('Completing multi-segment wire');
+      
+      // Create the final edge segment
+      const finalEdgeId = `edge-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const finalEdge: Edge = {
+        id: finalEdgeId,
+        source: wiringState.lastNodeId,
+        sourceHandle: wiringState.lastHandleId || undefined,
+        target: connection.target,
+        targetHandle: connection.targetHandle,
+        type: 'default',
+        style: { 
+          stroke: wiringState.currentColor, 
+          strokeWidth: 2 
+        },
+        data: { 
+          color: wiringState.currentColor,
+          signalType: wiringState.currentSignalType,
+          sourcePinIndex: parseInt(wiringState.startHandleId.split('-')[1]),
+          targetPinIndex: parseInt(connection.targetHandle.split('-')[1]),
+          isRoutingSegment: false
+        }
+      };
+      
+      // Add the final edge
+      addEdges(finalEdge);
+      
+      toast.success('Multi-segment wire connected', {
+        description: 'Wire with routing points connected successfully',
+        duration: 1500,
+      });
+      
+      // Reset wiring state
+      setWiringState(null);
+    } else {
+      // Standard direct connection
+      baseOnConnect(connection);
+    }
+  }, [wiringState, addEdges, baseOnConnect]);
+
+  const onConnectEnd = useCallback((event: MouseEvent) => {
+    // Check if the connection was canceled (released on the pane)
+    if (wiringState && event.target instanceof Element) {
+      const targetElement = event.target as Element;
+      
+      // If released on the pane (not on a node), cancel the wiring
+      if (targetElement.classList.contains('react-flow__pane')) {
+        console.log('Wire connection canceled');
+        
+        // Delete all intermediate nodes and edges
+        if (wiringState.intermediateNodes.length > 0 || wiringState.intermediateEdges.length > 0) {
+          deleteElements({
+            nodes: wiringState.intermediateNodes.map(id => ({ id })),
+            edges: wiringState.intermediateEdges.map(id => ({ id }))
+          });
+          
+          toast.info('Wire connection canceled', {
+            duration: 1500,
+          });
+        }
+        
+        // Reset wiring state
+        setWiringState(null);
+      }
+    }
+  }, [wiringState, deleteElements]);
+
+  const onNodesDelete = useCallback((nodes: Node[]) => {
+    // Check if any routing points were deleted
+    const deletedRoutingPoints = nodes.filter(node => node.type === 'routingPoint');
+    if (deletedRoutingPoints.length > 0) {
+      console.log(`Deleted ${deletedRoutingPoints.length} routing points`);
+      // Any additional cleanup if needed
+    }
+  }, []);
+
+  // Update connection line style based on current wiring
+  const connectionLineStyle = wiringState 
+    ? { ...baseConnectionLineStyle, stroke: wiringState.currentColor }
+    : baseConnectionLineStyle;
 
   return (
     <div className="h-full w-full bg-white relative flex flex-col">
@@ -278,7 +481,11 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
           edges={reactFlowEdges}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
-          onConnect={handleConnect}
+          onConnect={onConnect}
+          onConnectStart={onConnectStart}
+          onConnectEnd={onConnectEnd}
+          onPaneClick={onPaneClick}
+          onNodesDelete={onNodesDelete}
           nodeTypes={nodeTypes}
           onInit={setReactFlowInstance}
           onDrop={handleDrop}
