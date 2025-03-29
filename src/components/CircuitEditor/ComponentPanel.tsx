@@ -89,7 +89,6 @@ const ComponentPanel: React.FC<ComponentPanelProps> = ({ onComponentSelect }) =>
                   onDragStart={(e) => handleDragStart(e, component)}
                 >
                   <div className="text-sm font-medium">{component.name}</div>
-                  <div className="text-xs text-gray-500">{component.type}</div>
                 </div>
               ))}
             </div>
