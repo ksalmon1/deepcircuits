@@ -1,4 +1,4 @@
-import React, { memo, useState, useCallback } from 'react';
+import React, { memo, useState, useCallback, useEffect } from 'react';
 import { CustomWireEdgeProps, WireData } from '@/types/circuit';
 import { useReactFlow } from '@xyflow/react';
 
@@ -86,8 +86,10 @@ function CustomWireEdge({
           const newRoutingPoints = [...(edge.data?.routingPoints || [])];
           newRoutingPoints[draggingPointIndex] = { x: mouseX, y: mouseY };
           
+          // Keep the edge selected while dragging by setting or maintaining the selected flag
           return {
             ...edge,
+            selected: true,
             data: {
               ...edge.data,
               routingPoints: newRoutingPoints
@@ -104,7 +106,7 @@ function CustomWireEdge({
   }, []);
   
   // Add global mouse move and mouse up event listeners when dragging a point
-  React.useEffect(() => {
+  useEffect(() => {
     if (draggingPointIndex !== null) {
       // Properly type the global event handlers
       const handleGlobalMouseMove = (e: MouseEvent) => {
@@ -144,6 +146,9 @@ function CustomWireEdge({
   const isTemporary = id.startsWith('temp-wire-');
   const pointerEvents = isTemporary ? 'none' : 'auto';
   
+  // Wire is considered actively being edited if either selected or being dragged
+  const isActiveOrSelected = selected || draggingPointIndex !== null;
+  
   return (
     <>
       <path
@@ -151,14 +156,14 @@ function CustomWireEdge({
         className="react-flow__edge-path custom-wire-path"
         d={path}
         stroke={edgeColor}
-        strokeWidth={selected ? 3 : 2}
+        strokeWidth={isActiveOrSelected ? 3 : 2}
         fill="none"
         onClick={handleEdgeClick}
         style={{ pointerEvents }}
       />
       
       {/* Only show routing points when the wire is selected and it's not a temporary wire */}
-      {selected && !isTemporary && routingPoints.map((point, index) => (
+      {isActiveOrSelected && !isTemporary && routingPoints.map((point, index) => (
         <circle
           key={`${id}-point-${index}`}
           cx={point.x}
