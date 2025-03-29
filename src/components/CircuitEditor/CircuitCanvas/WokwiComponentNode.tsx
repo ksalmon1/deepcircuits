@@ -16,8 +16,15 @@ function WokwiComponentNode({ id, data, selected }: NodeProps<WokwiNodeData>) {
   const { getNodes } = useReactFlow();
   const { wiringState, startWiring } = useWireSystem([]);
   
+  // Debug: Log the data prop to verify pins
+  console.log(`WokwiComponentNode ${id} data:`, data);
+  console.log(`WokwiComponentNode ${id} pins:`, data?.pins);
+  
   // Calculate handle positions based on pins
-  const handlePositions = data.pins?.map((pin, index) => {
+  const handlePositions = data?.pins?.map((pin, index) => {
+    // Debug: Log each pin being processed
+    console.log(`Processing pin for ${id}:`, pin);
+    
     // Handle calculation is relative to the component's top-left corner
     const x = Number(pin.x);
     const y = Number(pin.y);
@@ -45,6 +52,9 @@ function WokwiComponentNode({ id, data, selected }: NodeProps<WokwiNodeData>) {
     };
   }) || [];
   
+  // Debug: Log all calculated handle positions
+  console.log(`WokwiComponentNode ${id} handlePositions:`, handlePositions);
+  
   // Render the component when the node is added
   useEffect(() => {
     // Create a function to handle component rendering
@@ -54,7 +64,7 @@ function WokwiComponentNode({ id, data, selected }: NodeProps<WokwiNodeData>) {
       containerRef.current.innerHTML = '';
       
       // Try to render directly from SVG path if available
-      if (data.svgPath && typeof data.svgPath === 'string' && data.svgPath.trim().startsWith('<svg')) {
+      if (data?.svgPath && typeof data.svgPath === 'string' && data.svgPath.trim().startsWith('<svg')) {
         // Insert the SVG directly
         containerRef.current.innerHTML = data.svgPath.trim();
         
@@ -80,29 +90,31 @@ function WokwiComponentNode({ id, data, selected }: NodeProps<WokwiNodeData>) {
       
       try {
         // Choose the rendering method based on component type
-        if (data.type && ((isCustomComponent && isCustomComponent(data.type)) || data.isOriginal === false)) {
+        if (data?.type && ((isCustomComponent && isCustomComponent(data.type)) || data.isOriginal === false)) {
+          // Debug: Log custom component rendering
+          console.log(`Rendering custom component ${data.type} for ${id}`);
           // Pass the container element (not the ID) to the custom component renderer
           await renderCustomComponent(data.type, innerContainer, data.attributes || {});
-        } else if (data.type) {
+        } else if (data?.type) {
           // Ensure Wokwi elements are loaded
           if (!isWokwiLoaded()) {
             console.log('Loading Wokwi elements...');
             await new Promise(resolve => setTimeout(resolve, 500));
           }
           
-          console.log(`Rendering Wokwi element ${data.type}`);
+          console.log(`Rendering Wokwi element ${data.type} for ${id}`);
           // Pass the container ID (not the element) to the Wokwi renderer
           await renderWokwiElement(data.type, containerId, data.attributes || {});
         }
         
         setRendered(true);
       } catch (error) {
-        console.error(`Error rendering component ${data.type}:`, error);
+        console.error(`Error rendering component ${data?.type}:`, error);
       }
     };
     
     renderComponent();
-  }, [data.type, data.svgPath, data.isOriginal, data.attributes, id]);
+  }, [data?.type, data?.svgPath, data?.isOriginal, data?.attributes, id]);
   
   const handleClickEvent = useCallback(
     (event: React.MouseEvent, handleId: string) => {
@@ -129,29 +141,51 @@ function WokwiComponentNode({ id, data, selected }: NodeProps<WokwiNodeData>) {
         borderRadius: '2px',
       }}
     >
-      {/* Render pins/handles for the component */}
-      {handlePositions.map((handle) => (
-        <Handle
-          key={handle.id}
-          id={handle.id}
-          type="source"
-          position={handle.position}
+      {/* Debug: Add a visual indicator to show the component boundaries */}
+      {process.env.NODE_ENV === 'development' && (
+        <div 
           style={{
-            width: '8px',
-            height: '8px',
-            background: '#9b87f5',
-            border: '1px solid #7E69AB',
-            opacity: 0.8,
-            left: `${handle.x}px`,
-            top: `${handle.y}px`,
-            transform: 'translate(-50%, -50%)',
-            zIndex: 10,
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            border: '1px dashed rgba(255, 0, 0, 0.3)',
+            pointerEvents: 'none',
+            zIndex: 1
           }}
-          className="pin-handle nodrag"
-          onClick={(event) => handleClickEvent(event, handle.id)}
-          title={`${handle.name}${handle.signals.length ? ' (' + handle.signals.join(', ') + ')' : ''}`}
         />
-      ))}
+      )}
+      
+      {/* Render pins/handles for the component */}
+      {handlePositions.map((handle) => {
+        // Debug: Log each handle being rendered
+        console.log(`Rendering handle for ${id}:`, handle);
+        
+        return (
+          <Handle
+            key={handle.id}
+            id={handle.id}
+            type="source"
+            position={handle.position}
+            style={{
+              // Debug: Temporarily use a more visible style
+              width: '12px',
+              height: '12px',
+              background: 'red', // Temporary debug color
+              border: '2px solid black',
+              opacity: 0.8,
+              left: `${handle.x}px`,
+              top: `${handle.y}px`,
+              transform: 'translate(-50%, -50%)',
+              zIndex: 999, // Ensure high z-index
+            }}
+            className="pin-handle nodrag"
+            onClick={(event) => handleClickEvent(event, handle.id)}
+            title={`${handle.name}${handle.signals.length ? ' (' + handle.signals.join(', ') + ')' : ''}`}
+          />
+        );
+      })}
     </div>
   );
 }

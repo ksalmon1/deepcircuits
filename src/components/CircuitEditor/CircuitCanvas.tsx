@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { 
   isWokwiLoaded, 
@@ -51,7 +52,7 @@ interface CircuitCanvasProps {
 
 // Define the custom node types with proper type definitions
 const nodeTypes: NodeTypes = {
-  wokwiComponent: WokwiComponentNode,
+  wokwiComponent: WokwiComponentNode as any, // Use type assertion as a temporary fix
   routingPoint: RoutingPointNode
 };
 
