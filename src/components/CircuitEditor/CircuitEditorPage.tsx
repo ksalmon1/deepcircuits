@@ -12,7 +12,7 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/componen
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { ChevronLeft, ChevronRight, PanelLeft } from 'lucide-react';
+import { ChevronLeft, ChevronRight, PanelLeft, PanelRight } from 'lucide-react';
 
 const CircuitEditorPage = () => {
   const {
@@ -62,12 +62,17 @@ const CircuitEditorPage = () => {
             )}
             
             <Button
-              variant="ghost"
-              size="icon"
-              className="absolute left-0 top-1/2 transform -translate-y-1/2 z-10 bg-white/80 shadow-md rounded-r-md border border-l-0"
+              variant="outline"
+              size="sm"
+              className="absolute left-0 top-1/2 transform -translate-y-1/2 z-10 bg-white shadow-md rounded-r-md border border-l-0 h-12 hover:bg-gray-50"
               onClick={toggleComponentPanel}
+              aria-label={isComponentPanelVisible ? "Hide components panel" : "Show components panel"}
+              title={isComponentPanelVisible ? "Hide components panel" : "Show components panel"}
             >
-              {isComponentPanelVisible ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
+              {isComponentPanelVisible ? 
+                <PanelLeft className="h-5 w-5" /> : 
+                <PanelRight className="h-5 w-5" />
+              }
             </Button>
             
             {isComponentPanelVisible && <ResizableHandle />}
@@ -132,4 +137,3 @@ const CircuitEditorPage = () => {
 };
 
 export default CircuitEditorPage;
-
