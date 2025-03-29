@@ -1,3 +1,4 @@
+
 import { useCallback, useState, useEffect } from 'react';
 import { Connection, useReactFlow, Edge, Position, XYPosition } from '@xyflow/react';
 import { WireData, WireConnectionState, WireEdge } from '@/types/circuit';
@@ -13,6 +14,26 @@ export const useWireRouting = (components: WokwiComponent[]) => {
   });
   const [temporaryEdge, setTemporaryEdge] = useState<Edge<WireData> | null>(null);
   const [mousePosition, setMousePosition] = useState<XYPosition>({ x: 0, y: 0 });
+
+  // Define cancelWireConnection first since it's used in other functions
+  const cancelWireConnection = useCallback(() => {
+    if (!wireConnectionState.isConnecting) return;
+    
+    console.log('Cancelling wire connection');
+    
+    if (wireConnectionState.temporaryEdgeId) {
+      setEdges(edges => edges.filter(edge => edge.id !== wireConnectionState.temporaryEdgeId));
+    }
+    
+    setWireConnectionState({
+      isConnecting: false,
+      routingPoints: []
+    });
+    
+    setTemporaryEdge(null);
+    
+    return true;
+  }, [wireConnectionState, setEdges]);
 
   useEffect(() => {
     if (!wireConnectionState.isConnecting) return;
@@ -174,25 +195,6 @@ export const useWireRouting = (components: WokwiComponent[]) => {
     
     return true;
   }, [wireConnectionState, components, setEdges, cancelWireConnection]);
-  
-  const cancelWireConnection = useCallback(() => {
-    if (!wireConnectionState.isConnecting) return;
-    
-    console.log('Cancelling wire connection');
-    
-    if (wireConnectionState.temporaryEdgeId) {
-      setEdges(edges => edges.filter(edge => edge.id !== wireConnectionState.temporaryEdgeId));
-    }
-    
-    setWireConnectionState({
-      isConnecting: false,
-      routingPoints: []
-    });
-    
-    setTemporaryEdge(null);
-    
-    return true;
-  }, [wireConnectionState, setEdges]);
   
   const handleCanvasClick = useCallback((event: React.MouseEvent, position: XYPosition) => {
     if (wireConnectionState.isConnecting) {
