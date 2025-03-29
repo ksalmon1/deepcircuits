@@ -65,7 +65,7 @@ function CustomWireEdge({
     setDraggingPointIndex(index);
   }, []);
   
-  const handlePointDrag = useCallback((event: React.MouseEvent) => {
+  const handlePointDrag = useCallback((event: React.MouseEvent<Element, MouseEvent>) => {
     if (draggingPointIndex === null) return;
     
     const reactFlowBounds = document.querySelector('.react-flow')?.getBoundingClientRect();
@@ -115,7 +115,7 @@ function CustomWireEdge({
           clientY: e.clientY,
           stopPropagation: () => {},
           preventDefault: () => {}
-        } as React.MouseEvent;
+        } as React.MouseEvent<Element, MouseEvent>;
         
         handlePointDrag(reactEvent);
       };
