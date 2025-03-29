@@ -3,6 +3,13 @@ import React, { useEffect, useState } from 'react';
 import { WokwiComponent } from '@/integrations/wokwi/WokwiIntegration';
 import { useComponentLibrary } from '@/hooks/useComponentLibrary';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ChevronDown, ChevronRight, Folder } from 'lucide-react';
+import { 
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger 
+} from '@/components/ui/collapsible';
+import { Card } from '@/components/ui/card';
 
 export interface ComponentPanelProps {
   onComponentSelect: (component: WokwiComponent) => void;
@@ -11,6 +18,7 @@ export interface ComponentPanelProps {
 const ComponentPanel: React.FC<ComponentPanelProps> = ({ onComponentSelect }) => {
   const { components, isLoadingComponents, componentsDetailsMap } = useComponentLibrary();
   const [categorizedComponents, setCategorizedComponents] = useState<Record<string, any[]>>({});
+  const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({});
   
   useEffect(() => {
     if (components && components.length > 0) {
@@ -28,6 +36,14 @@ const ComponentPanel: React.FC<ComponentPanelProps> = ({ onComponentSelect }) =>
       }, {} as Record<string, any[]>);
 
       setCategorizedComponents(grouped);
+      
+      // Initialize open states for all categories (default open)
+      const initialOpenState = Object.keys(grouped).reduce((acc, category) => {
+        acc[category] = true; // Default all categories to open
+        return acc;
+      }, {} as Record<string, boolean>);
+      
+      setOpenCategories(initialOpenState);
     }
   }, [components]);
 
@@ -52,6 +68,13 @@ const ComponentPanel: React.FC<ComponentPanelProps> = ({ onComponentSelect }) =>
     e.dataTransfer.effectAllowed = 'copy';
   };
 
+  const toggleCategory = (category: string) => {
+    setOpenCategories(prev => ({
+      ...prev,
+      [category]: !prev[category]
+    }));
+  };
+
   if (isLoadingComponents) {
     return (
       <div className="h-full flex flex-col p-4">
@@ -74,25 +97,46 @@ const ComponentPanel: React.FC<ComponentPanelProps> = ({ onComponentSelect }) =>
 
   return (
     <div className="h-full flex flex-col">
-      <h2 className="text-lg font-semibold p-4 pb-2">Components</h2>
+      <h2 className="text-lg font-semibold p-4 pb-2 border-b">Components</h2>
       
-      <div className="flex-1 overflow-auto p-4 pt-2">
+      <div className="flex-1 overflow-auto p-2">
         {Object.entries(categorizedComponents).map(([category, categoryComponents]) => (
-          <div key={category} className="mb-6">
-            <h3 className="text-sm font-medium text-gray-600 mb-2">{category}</h3>
-            <div className="grid grid-cols-1 gap-2">
-              {categoryComponents.map((component) => (
-                <div
-                  key={component.id}
-                  className="bg-white border rounded p-2 cursor-grab hover:bg-blue-50 hover:border-blue-300 transition-colors"
-                  draggable
-                  onDragStart={(e) => handleDragStart(e, component)}
-                >
-                  <div className="text-sm font-medium">{component.name}</div>
+          <Collapsible 
+            key={category} 
+            open={openCategories[category]} 
+            onOpenChange={() => toggleCategory(category)}
+            className="mb-2"
+          >
+            <Card className="border-0 shadow-none">
+              <CollapsibleTrigger className="w-full flex items-center p-2 hover:bg-gray-100 rounded-md cursor-pointer transition-colors">
+                {openCategories[category] ? (
+                  <ChevronDown className="h-4 w-4 mr-2 text-muted-foreground" />
+                ) : (
+                  <ChevronRight className="h-4 w-4 mr-2 text-muted-foreground" />
+                )}
+                <Folder className="h-4 w-4 mr-2 text-primary" />
+                <span className="text-sm font-medium">{category}</span>
+                <span className="ml-auto text-xs text-muted-foreground">
+                  ({categoryComponents.length})
+                </span>
+              </CollapsibleTrigger>
+              
+              <CollapsibleContent>
+                <div className="pl-8 pr-2 pt-1 space-y-1">
+                  {categoryComponents.map((component) => (
+                    <div
+                      key={component.id}
+                      className="bg-white hover:bg-blue-50 border border-gray-100 rounded-md p-2 cursor-grab hover:border-blue-200 transition-colors"
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, component)}
+                    >
+                      <div className="text-sm">{component.name}</div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </div>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
         ))}
         
         {Object.keys(categorizedComponents).length === 0 && !isLoadingComponents && (
