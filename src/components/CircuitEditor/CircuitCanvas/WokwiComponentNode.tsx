@@ -5,10 +5,11 @@ import {
   isWokwiLoaded, 
   renderWokwiElement
 } from '@/integrations/wokwi/WokwiIntegration';
-import { isCustomComponent, renderCustomComponent } from '@/integrations/custom/CustomComponents';
 import { WokwiNodeData } from '@/types/circuit';
 import { useWireSystem } from '@/hooks/useWireSystem';
+import { isCustomComponent, renderCustomComponent } from '@/integrations/custom/CustomComponents';
 
+// Define the component with proper typing
 function WokwiComponentNode({ id, data, selected }: NodeProps<WokwiNodeData>) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [rendered, setRendered] = useState(false);
@@ -77,7 +78,7 @@ function WokwiComponentNode({ id, data, selected }: NodeProps<WokwiNodeData>) {
       
       try {
         // Choose the rendering method based on component type
-        if (data?.type && (isCustomComponent(data.type) || data.isOriginal === false)) {
+        if (data?.type && ((isCustomComponent && isCustomComponent(data.type)) || data.isOriginal === false)) {
           await renderCustomComponent(data.type, innerContainer, data.attributes || {});
         } else if (data?.type) {
           // Ensure Wokwi elements are loaded

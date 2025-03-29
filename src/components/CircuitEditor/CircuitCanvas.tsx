@@ -50,7 +50,7 @@ interface CircuitCanvasProps {
   onComponentsChange: (components: WokwiComponent[]) => void;
 }
 
-// Define the custom node types
+// Define the custom node types - using type assertion to resolve type conflicts
 const nodeTypes: NodeTypes = {
   wokwiComponent: WokwiComponentNode as any,
   routingPoint: RoutingPointNode

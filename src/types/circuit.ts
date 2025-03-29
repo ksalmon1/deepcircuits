@@ -1,7 +1,7 @@
 
 import { Node, Edge } from '@xyflow/react';
 
-// Node data type for Wokwi component nodes
+// This interface extends the basic Node properties required by React Flow
 export interface WokwiNodeData {
   type: string;
   attributes?: Record<string, any>;
