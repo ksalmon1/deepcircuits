@@ -54,7 +54,7 @@ const ComponentPanel: React.FC<ComponentPanelProps> = ({ onComponentSelect }) =>
 
   if (isLoadingComponents) {
     return (
-      <div className="h-full flex flex-col overflow-auto p-4 space-y-6">
+      <div className="h-full flex flex-col p-4">
         <h2 className="text-lg font-semibold mb-4">Components</h2>
         <div className="flex-1 overflow-auto">
           {Array.from({ length: 4 }).map((_, i) => (
@@ -73,10 +73,10 @@ const ComponentPanel: React.FC<ComponentPanelProps> = ({ onComponentSelect }) =>
   }
 
   return (
-    <div className="h-full flex flex-col p-2">
-      <h2 className="text-lg font-semibold mb-4">Components</h2>
+    <div className="h-full flex flex-col">
+      <h2 className="text-lg font-semibold p-4 pb-2">Components</h2>
       
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto p-4 pt-2">
         {Object.entries(categorizedComponents).map(([category, categoryComponents]) => (
           <div key={category} className="mb-6">
             <h3 className="text-sm font-medium text-gray-600 mb-2">{category}</h3>
