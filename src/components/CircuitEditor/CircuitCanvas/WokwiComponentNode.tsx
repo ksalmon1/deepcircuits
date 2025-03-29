@@ -101,7 +101,9 @@ function WokwiComponentNode({ id, data, selected }: NodeProps<WokwiNodeData>) {
           // Debug: Log custom component rendering
           console.log(`[WokwiComponentNode] Rendering custom component: ${data.type}`);
           // Pass the container element (not the ID) to the custom component renderer
-          await renderCustomComponent(data.type, innerContainer, data.attributes || {});
+          if (innerContainer) {
+            await renderCustomComponent(data.type, innerContainer, data.attributes || {});
+          }
         } else if (data.type) {
           // Ensure Wokwi elements are loaded
           if (!isWokwiLoaded()) {
