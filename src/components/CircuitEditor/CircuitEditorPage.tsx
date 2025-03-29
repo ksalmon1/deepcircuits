@@ -34,7 +34,7 @@ const CircuitEditorPage = () => {
   const isMobile = useIsMobile();
   
   return (
-    <div className="h-screen flex flex-col overflow-hidden">
+    <div className="flex flex-col h-screen w-full overflow-hidden">
       <Toolbar 
         isSimulationRunning={isSimulationRunning}
         toggleSimulation={toggleSimulation}

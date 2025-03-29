@@ -54,24 +54,26 @@ const ComponentPanel: React.FC<ComponentPanelProps> = ({ onComponentSelect }) =>
 
   if (isLoadingComponents) {
     return (
-      <div className="h-full overflow-auto p-4 space-y-6">
+      <div className="h-full flex flex-col overflow-auto p-4 space-y-6">
         <h2 className="text-lg font-semibold mb-4">Components</h2>
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="space-y-2">
-            <Skeleton className="h-4 w-24" />
-            <div className="grid grid-cols-1 gap-2">
-              {Array.from({ length: 3 }).map((_, j) => (
-                <Skeleton key={j} className="h-16 w-full" />
-              ))}
+        <div className="flex-1 overflow-auto">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="space-y-2 mb-6">
+              <Skeleton className="h-4 w-24" />
+              <div className="grid grid-cols-1 gap-2">
+                {Array.from({ length: 3 }).map((_, j) => (
+                  <Skeleton key={j} className="h-16 w-full" />
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="h-full flex flex-col overflow-auto p-2">
+    <div className="h-full flex flex-col p-2">
       <h2 className="text-lg font-semibold mb-4">Components</h2>
       
       <div className="flex-1 overflow-auto">
