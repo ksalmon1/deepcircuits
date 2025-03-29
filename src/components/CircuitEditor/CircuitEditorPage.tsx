@@ -47,7 +47,7 @@ const CircuitEditorPage = () => {
       <ResizablePanelGroup direction={isMobile ? "vertical" : "horizontal"} className="flex-1 overflow-hidden">
         {!isMobile ? (
           <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>
-            <div className="h-full overflow-auto p-2">
+            <div className="h-full flex flex-col overflow-hidden">
               <ComponentPanel onComponentSelect={handleComponentSelect} />
             </div>
           </ResizablePanel>

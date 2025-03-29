@@ -71,33 +71,35 @@ const ComponentPanel: React.FC<ComponentPanelProps> = ({ onComponentSelect }) =>
   }
 
   return (
-    <div className="h-full overflow-auto p-2">
+    <div className="h-full flex flex-col overflow-auto p-2">
       <h2 className="text-lg font-semibold mb-4">Components</h2>
       
-      {Object.entries(categorizedComponents).map(([category, categoryComponents]) => (
-        <div key={category} className="mb-6">
-          <h3 className="text-sm font-medium text-gray-600 mb-2">{category}</h3>
-          <div className="grid grid-cols-1 gap-2">
-            {categoryComponents.map((component) => (
-              <div
-                key={component.id}
-                className="bg-white border rounded p-2 cursor-grab hover:bg-blue-50 hover:border-blue-300 transition-colors"
-                draggable
-                onDragStart={(e) => handleDragStart(e, component)}
-              >
-                <div className="text-sm font-medium">{component.name}</div>
-                <div className="text-xs text-gray-500">{component.type}</div>
-              </div>
-            ))}
+      <div className="flex-1 overflow-auto">
+        {Object.entries(categorizedComponents).map(([category, categoryComponents]) => (
+          <div key={category} className="mb-6">
+            <h3 className="text-sm font-medium text-gray-600 mb-2">{category}</h3>
+            <div className="grid grid-cols-1 gap-2">
+              {categoryComponents.map((component) => (
+                <div
+                  key={component.id}
+                  className="bg-white border rounded p-2 cursor-grab hover:bg-blue-50 hover:border-blue-300 transition-colors"
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, component)}
+                >
+                  <div className="text-sm font-medium">{component.name}</div>
+                  <div className="text-xs text-gray-500">{component.type}</div>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      ))}
-
-      {Object.keys(categorizedComponents).length === 0 && !isLoadingComponents && (
-        <div className="text-center text-gray-500 mt-8">
-          No components available. Please contact an administrator.
-        </div>
-      )}
+        ))}
+        
+        {Object.keys(categorizedComponents).length === 0 && !isLoadingComponents && (
+          <div className="text-center text-gray-500 mt-8">
+            No components available. Please contact an administrator.
+          </div>
+        )}
+      </div>
     </div>
   );
 };
