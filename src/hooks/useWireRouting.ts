@@ -227,12 +227,16 @@ export const useWireRouting = (components: WokwiComponent[]) => {
   // Handle click on the canvas
   const handleCanvasClick = useCallback((event: React.MouseEvent, position: XYPosition) => {
     if (wireConnectionState.isConnecting) {
-      // Add a routing point to the wire
+      // Prevent event propagation to avoid ReactFlow's internal handlers
+      event.stopPropagation();
+      
+      // Add a routing point to the wire at the exact position
+      console.log('Canvas click detected at:', position);
       addRoutingPoint(position);
       return true;
     }
     return false;
-  }, [wireConnectionState, addRoutingPoint]);
+  }, [wireConnectionState.isConnecting, addRoutingPoint]);
   
   // Handle click on a node handle
   const handleHandleClick = useCallback((nodeId: string, handleId: string) => {

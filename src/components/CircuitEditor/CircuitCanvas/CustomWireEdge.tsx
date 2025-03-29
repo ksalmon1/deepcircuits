@@ -1,3 +1,4 @@
+
 import React, { memo } from 'react';
 import { CustomWireEdgeProps, WireData } from '@/types/circuit';
 
@@ -48,12 +49,18 @@ function CustomWireEdge({
   const cursorPosition = data?.cursorPosition;
   
   const handleEdgeClick = (event: React.MouseEvent) => {
-    if (event.detail === 2 && onDelete) { // Double click to delete
+    // Only handle double-clicks for deletion
+    if (event.detail === 2 && onDelete) {
+      event.stopPropagation(); // Stop propagation to prevent canvas click
       onDelete(id);
     }
   };
   
   const path = generatePath(sourceX, sourceY, targetX, targetY, routingPoints, cursorPosition);
+  
+  // Use pointer-events: none for the temporary edge to prevent it from capturing clicks
+  const isTemporary = id.startsWith('temp-wire-');
+  const pointerEvents = isTemporary ? 'none' : 'auto';
   
   return (
     <>
@@ -65,10 +72,11 @@ function CustomWireEdge({
         strokeWidth={selected ? 3 : 2}
         fill="none"
         onClick={handleEdgeClick}
+        style={{ pointerEvents }}
       />
       
-      {/* Render routing points as circles */}
-      {routingPoints.map((point, index) => (
+      {/* Only show routing points for permanent wires */}
+      {!isTemporary && routingPoints.map((point, index) => (
         <circle
           key={`${id}-point-${index}`}
           cx={point.x}
@@ -78,6 +86,7 @@ function CustomWireEdge({
           stroke="#ffffff"
           strokeWidth={1}
           className="routing-point"
+          pointerEvents="none"
         />
       ))}
       
@@ -91,7 +100,7 @@ function CustomWireEdge({
           stroke="#ffffff"
           strokeWidth={1.5}
           className="cursor-point"
-          style={{ opacity: 0.7 }}
+          style={{ opacity: 0.7, pointerEvents: 'none' }}
         />
       )}
     </>

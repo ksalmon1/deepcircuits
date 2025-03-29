@@ -266,21 +266,29 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
 
   // Custom click handler for the pane
   const onPaneClick = useCallback((event: React.MouseEvent) => {
+    // Check if we're in connecting mode
     if (wireConnectionState.isConnecting) {
-      // Get flow position from mouse event
+      event.preventDefault();
+      event.stopPropagation();
+      
+      // Get the mouse position relative to the flow container
       const reactFlowBounds = canvasRef.current?.getBoundingClientRect();
-      if (reactFlowBounds) {
-        const position = reactFlowInstance?.screenToFlowPosition({
+      if (reactFlowBounds && reactFlowInstance) {
+        // Get the position directly from ReactFlow's screenToFlowPosition
+        const position = reactFlowInstance.screenToFlowPosition({
           x: event.clientX,
           y: event.clientY
         });
         
-        if (position) {
-          handleCanvasClick(event, position);
-        }
+        console.log('Pane clicked at screen coordinates:', event.clientX, event.clientY);
+        console.log('Converted to flow coordinates:', position);
+        
+        // Pass the position to the handleCanvasClick function
+        handleCanvasClick(event, position);
+        return;
       }
     }
-  }, [wireConnectionState, reactFlowInstance, handleCanvasClick]);
+  }, [wireConnectionState.isConnecting, reactFlowInstance, handleCanvasClick]);
   
   // Handle pin click through custom event
   useEffect(() => {
@@ -338,6 +346,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
           snapToGrid={true}
           snapGrid={[25, 25]}
           deleteKeyCode={['Backspace', 'Delete']}
+          elementsSelectable={!wireConnectionState.isConnecting} // Disable selection when wiring
         >
           <Background 
             variant={BackgroundVariant.Dots} 
