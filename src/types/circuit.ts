@@ -40,3 +40,20 @@ export interface WireConnectionState {
   sourcePinIndex?: number;
   temporaryEdgeId?: string;
 }
+
+// Define props for the CustomWireEdge component
+export interface CustomWireEdgeProps {
+  id: string;
+  source: string;
+  target: string;
+  sourceX: number;
+  sourceY: number;
+  targetX: number;
+  targetY: number;
+  sourcePosition?: Position;
+  targetPosition?: Position;
+  style?: React.CSSProperties;
+  data?: WireData;
+  selected?: boolean;
+  onDelete?: (id: string) => void;
+}

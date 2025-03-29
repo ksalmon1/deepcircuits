@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { 
   isWokwiLoaded, 
@@ -29,7 +28,9 @@ import {
   OnEdgesChange,
   OnConnect,
   Node,
-  XYPosition
+  XYPosition,
+  EdgeTypes,
+  NodeTypes
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import './CircuitCanvas/circuit-canvas.css';
@@ -47,12 +48,12 @@ interface CircuitCanvasProps {
 }
 
 // Define the custom node types
-const nodeTypes = {
+const nodeTypes: NodeTypes = {
   wokwiComponent: WokwiComponentNode
 };
 
 // Define the custom edge types
-const edgeTypes = {
+const edgeTypes: EdgeTypes = {
   customWire: CustomWireEdge
 };
 

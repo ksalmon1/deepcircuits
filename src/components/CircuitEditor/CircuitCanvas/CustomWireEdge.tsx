@@ -1,11 +1,7 @@
 
 import React, { memo } from 'react';
-import { EdgeProps, getStraightPath, getSmoothStepPath, getBezierPath } from '@xyflow/react';
-import { WireData } from '@/types/circuit';
-
-interface CustomWireEdgeProps extends EdgeProps<WireData> {
-  onDelete?: (id: string) => void;
-}
+import { Edge, EdgeProps, getStraightPath, getSmoothStepPath, getBezierPath } from '@xyflow/react';
+import { WireData, CustomWireEdgeProps } from '@/types/circuit';
 
 const generatePath = (
   sourceX: number,
@@ -83,4 +79,5 @@ function CustomWireEdge({
   );
 }
 
+// Use React.memo and ensure it's exported as a React component
 export default memo(CustomWireEdge);

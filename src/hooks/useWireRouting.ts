@@ -7,7 +7,7 @@ import { WokwiComponent } from '@/integrations/wokwi/WokwiIntegration';
 import { toast } from 'sonner';
 
 export const useWireRouting = (components: WokwiComponent[]) => {
-  const { setEdges, getNodes, getEdges, addEdges } = useReactFlow();
+  const { setEdges, getNodes, getEdges } = useReactFlow();
   const [wireConnectionState, setWireConnectionState] = useState<WireConnectionState>({
     isConnecting: false,
     routingPoints: [],
@@ -43,17 +43,13 @@ export const useWireRouting = (components: WokwiComponent[]) => {
       source: nodeId,
       target: nodeId, // Temporary self-connection
       sourceHandle: handleId,
-      targetHandle: null,
+      targetHandle: null as any, // Will be updated later
       type: 'customWire',
       data: {
         color: wireColor,
         sourcePinIndex: pinIndex,
         targetPinIndex: -1, // Temporary value
         routingPoints: [],
-      },
-      style: {
-        stroke: wireColor,
-        strokeWidth: 2
       }
     };
     
@@ -127,10 +123,6 @@ export const useWireRouting = (components: WokwiComponent[]) => {
         sourcePinIndex: wireConnectionState.sourcePinIndex || 0,
         targetPinIndex: targetPinIndex,
         routingPoints: wireConnectionState.routingPoints,
-      },
-      style: {
-        stroke: wireColor,
-        strokeWidth: 2
       }
     };
     
