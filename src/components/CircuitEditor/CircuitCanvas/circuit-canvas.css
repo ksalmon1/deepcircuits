@@ -32,8 +32,6 @@
   border: 1px solid rgba(0, 0, 0, 0.3);
   transition: all 0.2s ease;
   z-index: 10;
-  position: absolute; /* Ensure absolute positioning */
-  transform: translate(-50%, -50%); /* Center the handle */
 }
 
 .react-flow__handle.custom-handle:hover,
@@ -78,16 +76,4 @@
   cursor: pointer;
   user-select: none;
   padding: 5px;
-}
-
-/* Debug styles to make pins more visible during development */
-.wokwi-component {
-  position: relative !important; /* Ensure relative positioning */
-}
-
-.pin-handle {
-  /* Additional styles to ensure handles are visible */
-  pointer-events: all !important;
-  min-width: 8px !important;
-  min-height: 8px !important;
 }

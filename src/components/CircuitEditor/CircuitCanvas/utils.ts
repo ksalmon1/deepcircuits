@@ -14,8 +14,7 @@ export const componentToNode = (component: WokwiComponent): Node<WokwiNodeData> 
     svgPath: component.svgPath ? `${component.svgPath.substring(0, 20)}...` : 'missing',
     isOriginal: component.isOriginal,
     hasSvgPath: !!component.svgPath,
-    svgPathLength: component.svgPath?.length || 0,
-    pins: component.pins?.length || 0
+    svgPathLength: component.svgPath?.length || 0
   }));
   
   // Create a complete node with all component data carefully preserved
@@ -38,9 +37,7 @@ export const componentToNode = (component: WokwiComponent): Node<WokwiNodeData> 
     nodeId: node.id,
     type: node.data.type,
     hasSvgPath: !!node.data.svgPath,
-    svgPathLength: node.data.svgPath?.length || 0,
-    pins: node.data.pins?.length || 0,
-    pinDetails: node.data.pins?.map(pin => ({ name: pin.name, x: pin.x, y: pin.y }))
+    svgPathLength: node.data.svgPath?.length || 0
   });
   
   return node;
