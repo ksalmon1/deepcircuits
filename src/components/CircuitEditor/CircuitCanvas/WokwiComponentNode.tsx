@@ -78,7 +78,7 @@ function WokwiComponentNode({ id, data, selected }: NodeProps<WokwiNodeData>) {
       try {
         // Choose the rendering method based on component type
         if (data?.type && (isCustomComponent(data.type) || data.isOriginal === false)) {
-          await renderCustomComponent(data.type, innerContainer);
+          await renderCustomComponent(data.type, innerContainer, data.attributes || {});
         } else if (data?.type) {
           // Ensure Wokwi elements are loaded
           if (!isWokwiLoaded()) {
