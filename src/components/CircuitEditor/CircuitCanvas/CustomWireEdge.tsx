@@ -107,8 +107,17 @@ function CustomWireEdge({
   // Add global mouse move and mouse up event listeners when dragging a point
   React.useEffect(() => {
     if (draggingPointIndex !== null) {
+      // Properly type the global event handlers
       const handleGlobalMouseMove = (e: MouseEvent) => {
-        handlePointDrag(e as unknown as React.MouseEvent);
+        // Convert the MouseEvent to React.MouseEvent equivalent with type assertion
+        const reactEvent = {
+          clientX: e.clientX,
+          clientY: e.clientY,
+          stopPropagation: () => {},
+          preventDefault: () => {}
+        } as React.MouseEvent;
+        
+        handlePointDrag(reactEvent);
       };
       
       const handleGlobalMouseUp = () => {
