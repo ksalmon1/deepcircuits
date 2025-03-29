@@ -25,6 +25,7 @@ export interface WireData {
   sourcePinIndex: number;
   targetPinIndex: number;
   routingPoints?: Array<{ x: number, y: number }>;
+  cursorPosition?: { x: number, y: number }; // Add cursor position for wire following
   [key: string]: unknown; // Add index signature to satisfy Record<string, unknown>
 }
 

@@ -1,4 +1,3 @@
-
 import React, { memo } from 'react';
 import { CustomWireEdgeProps, WireData } from '@/types/circuit';
 
@@ -7,7 +6,8 @@ const generatePath = (
   sourceY: number,
   targetX: number,
   targetY: number,
-  routingPoints: Array<{ x: number, y: number }> = []
+  routingPoints: Array<{ x: number, y: number }> = [],
+  cursorPosition?: { x: number, y: number }
 ): string => {
   // Start path at source
   let path = `M ${sourceX},${sourceY}`;
@@ -17,8 +17,13 @@ const generatePath = (
     path += ` L ${point.x},${point.y}`;
   });
   
-  // End path at target
-  path += ` L ${targetX},${targetY}`;
+  // If we're in connecting mode and have a cursor position, use that as the final point
+  // Otherwise use the target coordinates
+  if (cursorPosition) {
+    path += ` L ${cursorPosition.x},${cursorPosition.y}`;
+  } else {
+    path += ` L ${targetX},${targetY}`;
+  }
   
   return path;
 };
@@ -40,6 +45,7 @@ function CustomWireEdge({
 }: CustomWireEdgeProps) {
   const routingPoints = data?.routingPoints || [];
   const edgeColor = data?.color || '#9b87f5';
+  const cursorPosition = data?.cursorPosition;
   
   const handleEdgeClick = (event: React.MouseEvent) => {
     if (event.detail === 2 && onDelete) { // Double click to delete
@@ -47,7 +53,7 @@ function CustomWireEdge({
     }
   };
   
-  const path = generatePath(sourceX, sourceY, targetX, targetY, routingPoints);
+  const path = generatePath(sourceX, sourceY, targetX, targetY, routingPoints, cursorPosition);
   
   return (
     <>
@@ -74,6 +80,20 @@ function CustomWireEdge({
           className="routing-point"
         />
       ))}
+      
+      {/* Render cursor point if in connecting mode */}
+      {cursorPosition && (
+        <circle
+          cx={cursorPosition.x}
+          cy={cursorPosition.y}
+          r={5}
+          fill={edgeColor}
+          stroke="#ffffff"
+          strokeWidth={1.5}
+          className="cursor-point"
+          style={{ opacity: 0.7 }}
+        />
+      )}
     </>
   );
 }

@@ -1,5 +1,5 @@
 
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { Connection, useReactFlow, Edge, addEdge, Position, XYPosition } from '@xyflow/react';
 import { WireData, WireConnectionState, WireEdge } from '@/types/circuit';
 import { getWireColorFromSignal, getPinSignalType } from '@/utils/wireUtils';
@@ -13,6 +13,57 @@ export const useWireRouting = (components: WokwiComponent[]) => {
     routingPoints: [],
   });
   const [temporaryEdge, setTemporaryEdge] = useState<Edge<WireData> | null>(null);
+  const [mousePosition, setMousePosition] = useState<XYPosition>({ x: 0, y: 0 });
+
+  // Track mouse position when in connecting mode
+  useEffect(() => {
+    if (!wireConnectionState.isConnecting) return;
+    
+    const handleMouseMove = (event: MouseEvent) => {
+      // Get the mouse position relative to the flow container
+      const reactFlowBounds = document.querySelector('.react-flow')?.getBoundingClientRect();
+      if (reactFlowBounds) {
+        const mousePos = {
+          x: event.clientX - reactFlowBounds.left,
+          y: event.clientY - reactFlowBounds.top
+        };
+        setMousePosition(mousePos);
+        
+        // Update the temporary edge to follow the mouse pointer
+        updateTemporaryEdge(mousePos);
+      }
+    };
+    
+    window.addEventListener('mousemove', handleMouseMove);
+    
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+    };
+  }, [wireConnectionState.isConnecting]);
+  
+  // Function to update the temporary edge with the current mouse position
+  const updateTemporaryEdge = useCallback((mousePos: XYPosition) => {
+    if (!wireConnectionState.isConnecting || !wireConnectionState.temporaryEdgeId) return;
+    
+    setEdges(edges => edges.map(edge => {
+      if (edge.id === wireConnectionState.temporaryEdgeId) {
+        // Replace the last routing point with the current mouse position
+        // or add the mouse position if there are no routing points
+        const currentPoints = [...wireConnectionState.routingPoints];
+        
+        return {
+          ...edge,
+          // Set the target to follow mouse position
+          targetPosition: Position.Left,
+          data: {
+            ...edge.data,
+            cursorPosition: mousePos
+          }
+        };
+      }
+      return edge;
+    }));
+  }, [wireConnectionState, setEdges]);
 
   // Start a new wire connection
   const startWireConnection = useCallback((nodeId: string, handleId: string) => {
@@ -50,6 +101,8 @@ export const useWireRouting = (components: WokwiComponent[]) => {
         sourcePinIndex: pinIndex,
         targetPinIndex: -1, // Temporary value
         routingPoints: [],
+        // Add property for cursor position
+        cursorPosition: { x: 0, y: 0 }
       }
     };
     
@@ -193,6 +246,20 @@ export const useWireRouting = (components: WokwiComponent[]) => {
     }
   }, [wireConnectionState, startWireConnection, completeWireConnection]);
   
+  // Listen for Escape key to cancel wire connection
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && wireConnectionState.isConnecting) {
+        cancelWireConnection();
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [wireConnectionState.isConnecting, cancelWireConnection]);
+  
   // Delete a wire by its ID
   const deleteWire = useCallback((wireId: string) => {
     setEdges((edges) => edges.filter(e => e.id !== wireId));
@@ -205,6 +272,7 @@ export const useWireRouting = (components: WokwiComponent[]) => {
   return {
     wireConnectionState,
     temporaryEdge,
+    mousePosition,
     startWireConnection,
     addRoutingPoint,
     completeWireConnection,
