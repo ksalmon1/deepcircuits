@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { 
   isWokwiLoaded, 
@@ -29,7 +28,6 @@ import {
   OnEdgesChange,
   OnConnect,
   Connection,
-  addEdge,
   Edge,
   Node,
   OnConnectStart,

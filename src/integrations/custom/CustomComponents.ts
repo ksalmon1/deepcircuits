@@ -26,23 +26,26 @@ export const getCustomComponent = (type: string): CustomComponentConfig | null =
 };
 
 // Function to render a custom component
-export const renderCustomComponent = (
+export const renderCustomComponent = async (
   type: string,
-  elementId: string,
+  element: HTMLElement | string,
   props: Record<string, any> = {}
-): void => {
-  const element = document.getElementById(elementId);
-  if (!element) {
-    console.error(`Element with id ${elementId} not found`);
+): Promise<void> => {
+  const elementNode = typeof element === 'string' 
+    ? document.getElementById(element) 
+    : element;
+    
+  if (!elementNode) {
+    console.error(`Element not found for custom component: ${type}`);
     return;
   }
 
   // Clear existing content
-  element.innerHTML = '';
+  elementNode.innerHTML = '';
   
   // The SVG will now be loaded from the database and passed to this function
   // through the component library hooks
-  const svgPath = element.getAttribute('data-svg-path');
+  const svgPath = elementNode.getAttribute('data-svg-path');
   
   if (svgPath) {
     // Create an SVG element from the SVG path
@@ -58,7 +61,7 @@ export const renderCustomComponent = (
       }
     }
     
-    element.appendChild(svg);
+    elementNode.appendChild(svg);
   } else {
     console.error(`No SVG data found for component ${type}`);
   }

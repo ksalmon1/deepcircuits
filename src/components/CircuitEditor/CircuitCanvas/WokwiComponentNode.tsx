@@ -3,10 +3,9 @@ import React, { useCallback, useEffect, useRef, useState, memo } from 'react';
 import { NodeProps, Handle, Position, useReactFlow } from '@xyflow/react';
 import { 
   isWokwiLoaded, 
-  isCustomComponent, 
-  renderCustomComponent,
   renderWokwiElement
 } from '@/integrations/wokwi/WokwiIntegration';
+import { isCustomComponent, renderCustomComponent } from '@/integrations/custom/CustomComponents';
 import { WokwiNodeData } from '@/types/circuit';
 import { useWireSystem } from '@/hooks/useWireSystem';
 
@@ -17,7 +16,7 @@ function WokwiComponentNode({ id, data, selected }: NodeProps<WokwiNodeData>) {
   const { wiringState, startWiring } = useWireSystem([]);
   
   // Calculate handle positions based on pins
-  const handlePositions = data.pins?.map((pin, index) => {
+  const handlePositions = data?.pins?.map((pin, index) => {
     // Handle calculation is relative to the component's top-left corner
     const x = Number(pin.x);
     const y = Number(pin.y);
@@ -54,7 +53,7 @@ function WokwiComponentNode({ id, data, selected }: NodeProps<WokwiNodeData>) {
       containerRef.current.innerHTML = '';
       
       // Try to render directly from SVG path if available
-      if (typeof data.svgPath === 'string' && data.svgPath.trim().startsWith('<svg')) {
+      if (data?.svgPath && typeof data.svgPath === 'string' && data.svgPath.trim().startsWith('<svg')) {
         // Insert the SVG directly
         containerRef.current.innerHTML = data.svgPath.trim();
         
@@ -78,9 +77,9 @@ function WokwiComponentNode({ id, data, selected }: NodeProps<WokwiNodeData>) {
       
       try {
         // Choose the rendering method based on component type
-        if (isCustomComponent(data.type) || data.isOriginal === false) {
+        if (data?.type && (isCustomComponent(data.type) || data.isOriginal === false)) {
           await renderCustomComponent(data.type, innerContainer);
-        } else {
+        } else if (data?.type) {
           // Ensure Wokwi elements are loaded
           if (!isWokwiLoaded()) {
             console.log('Loading Wokwi elements...');
@@ -93,12 +92,12 @@ function WokwiComponentNode({ id, data, selected }: NodeProps<WokwiNodeData>) {
         
         setRendered(true);
       } catch (error) {
-        console.error(`Error rendering component ${data.type}:`, error);
+        console.error(`Error rendering component ${data?.type}:`, error);
       }
     };
     
     renderComponent();
-  }, [data.type, data.svgPath, data.isOriginal, data.attributes]);
+  }, [data?.type, data?.svgPath, data?.isOriginal, data?.attributes]);
   
   const handleClickEvent = useCallback(
     (event: React.MouseEvent, handleId: string) => {
