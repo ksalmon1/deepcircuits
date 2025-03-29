@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { 
   isWokwiLoaded, 
@@ -279,9 +280,18 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     }
   }, [wireConnectionState, reactFlowInstance, handleCanvasClick]);
   
-  // Custom handle click handler
-  const onHandleClick = useCallback((nodeId: string, handleId: string) => {
-    handleHandleClick(nodeId, handleId);
+  // Handle pin click through custom event
+  useEffect(() => {
+    const handlePinClick = (event: CustomEvent) => {
+      const { nodeId, handleId } = event.detail;
+      handleHandleClick(nodeId, handleId);
+    };
+    
+    document.addEventListener('handle-click', handlePinClick as EventListener);
+    
+    return () => {
+      document.removeEventListener('handle-click', handlePinClick as EventListener);
+    };
   }, [handleHandleClick]);
 
   return (

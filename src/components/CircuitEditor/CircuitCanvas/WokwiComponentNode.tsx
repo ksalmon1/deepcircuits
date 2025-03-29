@@ -163,14 +163,12 @@ const WokwiComponentNode = ({
   const handlePinClick = (event: React.MouseEvent<Element, MouseEvent>, pinIndex: number) => {
     console.log(`Pin ${pinIndex} clicked on component ${id}`);
     
-    // Let parent components know about this click through React Flow
-    if (reactFlow.getNodes) {
-      const handleId = `pin-${pinIndex}`;
-      const customEvent = new CustomEvent('handle-click', { 
-        detail: { nodeId: id, handleId } 
-      });
-      document.dispatchEvent(customEvent);
-    }
+    // Dispatch a custom event to notify parent components about this click
+    const handleId = `pin-${pinIndex}`;
+    const customEvent = new CustomEvent('handle-click', { 
+      detail: { nodeId: id, handleId } 
+    });
+    document.dispatchEvent(customEvent);
     
     // Stop propagation to prevent canvas click from being triggered
     event.stopPropagation();
