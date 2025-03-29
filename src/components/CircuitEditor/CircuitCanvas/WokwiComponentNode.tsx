@@ -1,192 +1,155 @@
 
-import React, { useEffect, memo, useRef } from 'react';
-import { Handle, Position, NodeProps } from '@xyflow/react';
+import React, { useCallback, useEffect, useRef, useState, memo } from 'react';
+import { NodeProps, Handle, Position, useReactFlow } from '@xyflow/react';
+import { 
+  isWokwiLoaded, 
+  isCustomComponent, 
+  renderCustomComponent,
+  renderWokwiElement
+} from '@/integrations/wokwi/WokwiIntegration';
 import { WokwiNodeData } from '@/types/circuit';
-import { toast } from 'sonner';
+import { useWireSystem } from '@/hooks/useWireSystem';
 
-// Define the component props correctly
-interface WokwiComponentNodeProps extends NodeProps {
-  data: WokwiNodeData;
-}
-
-const WokwiComponentNode = ({ 
-  id, 
-  data,
-  selected
-}: WokwiComponentNodeProps) => {
-  // Create a ref for the component container
+function WokwiComponentNode({ id, data, selected }: NodeProps<WokwiNodeData>) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [rendered, setRendered] = useState(false);
+  const { getNodes } = useReactFlow();
+  const { wiringState, startWiring } = useWireSystem([]);
   
-  // Ensure data is not undefined and has the correct type
-  const safeData: WokwiNodeData = data || { type: '', attributes: {}, pins: [] };
-  const { type, attributes, pins = [], svgPath, isOriginal } = safeData;
+  // Calculate handle positions based on pins
+  const handlePositions = data.pins?.map((pin, index) => {
+    // Handle calculation is relative to the component's top-left corner
+    const x = Number(pin.x);
+    const y = Number(pin.y);
+    
+    // Determine which side the pin is closest to
+    const isTop = y < 10;
+    const isBottom = y > 40;
+    const isLeft = x < 10;
+    const isRight = x > 40;
+    
+    let position = Position.Bottom;
+    
+    if (isTop) position = Position.Top;
+    else if (isBottom) position = Position.Bottom;
+    else if (isLeft) position = Position.Left;
+    else if (isRight) position = Position.Right;
+    
+    return {
+      id: `${id}-${index}`,
+      x,
+      y,
+      position,
+      name: pin.name,
+      signals: pin.signals || []
+    };
+  }) || [];
   
+  // Render the component when the node is added
   useEffect(() => {
+    // Create a function to handle component rendering
     const renderComponent = async () => {
-      try {
-        if (!containerRef.current) return;
+      if (!containerRef.current) return;
+      
+      containerRef.current.innerHTML = '';
+      
+      // Try to render directly from SVG path if available
+      if (typeof data.svgPath === 'string' && data.svgPath.trim().startsWith('<svg')) {
+        // Insert the SVG directly
+        containerRef.current.innerHTML = data.svgPath.trim();
         
-        // Clear the container
-        containerRef.current.innerHTML = '';
-
-        // Enhanced debug logging with full object data
-        console.log(`Rendering component ${id}:`, {
-          type,
-          isOriginal,
-          hasSvgPath: !!svgPath,
-          svgPathLength: svgPath?.length || 0,
-          svgPathPreview: svgPath ? svgPath.substring(0, 30) + '...' : 'none'
-        });
-        
-        // Check if this is a custom SVG component by directly checking for SVG content
-        if (svgPath && svgPath.trim().startsWith('<svg')) {
-          console.log(`Rendering SVG for component ${id}`);
-          
-          // Set the SVG content directly
-          containerRef.current.innerHTML = svgPath.trim();
-          
-          // Get the SVG element and ensure it has appropriate attributes
-          const svgElement = containerRef.current.querySelector('svg');
-          if (svgElement) {
-            if (!svgElement.hasAttribute('width')) {
-              svgElement.setAttribute('width', '100%');
-            }
-            if (!svgElement.hasAttribute('height')) {
-              svgElement.setAttribute('height', '100%');
-            }
-            svgElement.setAttribute('preserveAspectRatio', 'xMidYMid meet');
-          } else {
-            console.warn(`SVG element not found in svgPath for component ${id}`);
-          }
-        } else {
-          console.log(`Rendering Wokwi element: ${type}`);
-          
-          // Create an element ID for the Wokwi component
-          const elementId = `wokwi-element-${id}`;
-          
-          // Create a container for the Wokwi element
-          const elementContainer = document.createElement('div');
-          elementContainer.id = elementId;
-          containerRef.current.appendChild(elementContainer);
-          
-          // Render the Wokwi element
-          const integration = await import('@/integrations/wokwi/WokwiIntegration');
-          const customIntegration = await import('@/integrations/custom/CustomComponents');
-          
-          if (type && customIntegration.isCustomComponent(type)) {
-            await customIntegration.renderCustomComponent(type, elementId, attributes);
-          } else if (type) {
-            await integration.renderWokwiElement(type, elementId, attributes);
-          }
+        // Find the SVG element and set its attributes for proper scaling
+        const svgElement = containerRef.current.querySelector('svg');
+        if (svgElement) {
+          svgElement.setAttribute('width', '100%');
+          svgElement.setAttribute('height', '100%');
+          svgElement.setAttribute('preserveAspectRatio', 'xMidYMid meet');
         }
+        
+        setRendered(true);
+        return;
+      }
+      
+      // Create an inner container for the component
+      const innerContainer = document.createElement('div');
+      innerContainer.style.width = '100%';
+      innerContainer.style.height = '100%';
+      containerRef.current.appendChild(innerContainer);
+      
+      try {
+        // Choose the rendering method based on component type
+        if (isCustomComponent(data.type) || data.isOriginal === false) {
+          await renderCustomComponent(data.type, innerContainer);
+        } else {
+          // Ensure Wokwi elements are loaded
+          if (!isWokwiLoaded()) {
+            console.log('Loading Wokwi elements...');
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+          
+          console.log(`Rendering Wokwi element ${data.type}`);
+          await renderWokwiElement(data.type, innerContainer, data.attributes || {});
+        }
+        
+        setRendered(true);
       } catch (error) {
-        console.error(`Error rendering component ${type}:`, error);
-        toast.error(`Failed to render component ${type || 'unknown'}`);
+        console.error(`Error rendering component ${data.type}:`, error);
       }
     };
     
     renderComponent();
-    
-    return () => {
-      // Clean up when the component unmounts
-      if (containerRef.current) {
-        containerRef.current.innerHTML = '';
-      }
-    };
-  }, [id, type, attributes, svgPath, isOriginal]);
+  }, [data.type, data.svgPath, data.isOriginal, data.attributes]);
   
-  useEffect(() => {
-    const nodeElement = document.getElementById(`node-${id}`);
-    if (nodeElement) {
-      nodeElement.setAttribute('data-component-id', id);
-      nodeElement.setAttribute('data-component-type', type || '');
-    }
-  }, [id, type]);
-  
-  const nodeStyle: React.CSSProperties = {
-    background: 'transparent',
-    border: selected ? '1px dashed #4C72F4' : 'none',
-    padding: selected ? '8px' : '0',
-    borderRadius: '4px',
-    position: 'relative',
-    width: 'auto',
-    height: 'auto',
-    minWidth: '30px',
-    minHeight: '30px',
-  };
-  
-  useEffect(() => {
-    const nodeElement = document.getElementById(`node-${id}`);
-    if (nodeElement) {
-      nodeElement.ondragstart = (e) => {
-        e.preventDefault();
-        return false;
-      };
-    }
-  }, [id]);
-  
-  const getSignalColor = (signals: string[] = []) => {
-    if (!signals || signals.length === 0) return '#4BC0C0';
-    
-    const signal = signals[0].toLowerCase();
-    
-    if (signal.includes('power') || signal.includes('+5v') || signal.includes('+3.3v') || signal.includes('vcc')) {
-      return '#FF6384';
-    }
-    if (signal.includes('ground') || signal.includes('gnd')) {
-      return '#36A2EB';
-    }
-    if (signal.includes('analog')) {
-      return '#FFCE56';
-    }
-    if (signal.includes('i2c')) {
-      return '#FF9F40';
-    }
-    if (signal.includes('spi')) {
-      return '#C9CBCF';
-    }
-    if (signal.includes('uart') || signal.includes('rx') || signal.includes('tx')) {
-      return '#7CFC00';
-    }
-    
-    return '#4BC0C0';
-  };
-  
-  return (
-    <div id={`node-${id}`} style={nodeStyle}>
-      <div ref={containerRef} id={`component-container-${id}`} style={{ width: '100%', height: '100%' }} />
+  const handleClickEvent = useCallback(
+    (event: React.MouseEvent, handleId: string) => {
+      event.stopPropagation();
       
-      {pins && pins.map((pin, index) => {
-        const pinColor = getSignalColor(pin.signals);
-        
-        // Use absolute positioning for the handles based on pin coordinates
-        const handleStyle: React.CSSProperties = {
-          top: `${pin.y}px`,
-          left: `${pin.x}px`, 
-          background: pinColor,
-          width: '8px',
-          height: '8px',
-          zIndex: 10,
-          position: 'absolute',
-          transform: 'translate(-50%, -50%)',
-        };
-        
-        // Each pin can act as both source and target for connections
-        return (
-          <Handle
-            key={`pin-${index}`}
-            id={`pin-${index}`}
-            type="source"
-            position={Position.Left} // Default position for React Flow's internal use
-            style={handleStyle}
-            className="custom-handle nodrag nopan"
-            isConnectable={true}
-            title={pin.name}
-          />
-        );
-      })}
+      // If we're already in wiring mode, this will be handled by onConnect
+      if (wiringState?.isActive) return;
+      
+      // Start wiring from this pin
+      startWiring(id, handleId);
+    },
+    [id, wiringState, startWiring]
+  );
+
+  return (
+    <div
+      ref={containerRef}
+      className={`wokwi-component ${selected ? 'selected' : ''}`}
+      style={{
+        position: 'relative',
+        minWidth: '50px',
+        minHeight: '50px',
+        border: selected ? '2px solid #4C72F4' : 'none',
+        borderRadius: '2px',
+      }}
+    >
+      {/* Render pins/handles for the component */}
+      {handlePositions.map((handle) => (
+        <Handle
+          key={handle.id}
+          id={handle.id}
+          type="source"
+          position={handle.position}
+          style={{
+            width: '8px',
+            height: '8px',
+            background: '#9b87f5',
+            border: '1px solid #7E69AB',
+            opacity: 0.8,
+            left: `${handle.x}px`,
+            top: `${handle.y}px`,
+            transform: 'translate(-50%, -50%)',
+            zIndex: 10,
+          }}
+          className="pin-handle nodrag"
+          onClick={(event) => handleClickEvent(event, handle.id)}
+          title={`${handle.name}${handle.signals.length ? ' (' + handle.signals.join(', ') + ')' : ''}`}
+        />
+      ))}
     </div>
   );
-};
+}
 
 export default memo(WokwiComponentNode);

@@ -40,3 +40,16 @@ export interface RoutingPointData {
 
 // Custom node type for routing points
 export type RoutingPointNode = Node<RoutingPointData>;
+
+// Interface for the wiring state
+export interface WiringState {
+  isActive: boolean;
+  sourceNodeId: string;
+  sourceHandleId: string;
+  lastNodeId: string; 
+  lastHandleId: string | null;
+  intermediateNodes: string[];
+  intermediateEdges: string[];
+  wireColor: string;
+  signalType: string;
+}

@@ -4,11 +4,11 @@ import { Handle, Position, NodeProps } from '@xyflow/react';
 
 const RoutingPointNode = ({ id, selected }: NodeProps) => {
   const nodeStyle: React.CSSProperties = {
-    width: '12px',
-    height: '12px',
+    width: '10px',
+    height: '10px',
     background: 'white',
     border: selected ? '2px solid #4C72F4' : '2px solid #9b87f5',
-    borderRadius: '3px',
+    borderRadius: '50%',
     position: 'relative',
     cursor: 'move',
   };
