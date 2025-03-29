@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import CircuitCanvas from './CircuitCanvas';
 import CodeEditor from './CodeEditor';
 import SerialMonitor from './SerialMonitor';
@@ -12,6 +12,7 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/componen
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { ChevronLeft, ChevronRight, PanelLeft } from 'lucide-react';
 
 const CircuitEditorPage = () => {
   const {
@@ -32,6 +33,11 @@ const CircuitEditorPage = () => {
   } = useCircuitEditor();
   
   const isMobile = useIsMobile();
+  const [isComponentPanelVisible, setIsComponentPanelVisible] = useState(true);
+  
+  const toggleComponentPanel = () => {
+    setIsComponentPanelVisible(!isComponentPanelVisible);
+  };
   
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden">
@@ -46,15 +52,31 @@ const CircuitEditorPage = () => {
       
       <ResizablePanelGroup direction={isMobile ? "vertical" : "horizontal"} className="flex-1 overflow-hidden">
         {!isMobile ? (
-          <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>
-            <div className="h-full flex flex-col overflow-hidden">
-              <ComponentPanel onComponentSelect={handleComponentSelect} />
-            </div>
-          </ResizablePanel>
+          <>
+            {isComponentPanelVisible && (
+              <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>
+                <div className="h-full flex flex-col overflow-hidden">
+                  <ComponentPanel onComponentSelect={handleComponentSelect} />
+                </div>
+              </ResizablePanel>
+            )}
+            
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute left-0 top-1/2 transform -translate-y-1/2 z-10 bg-white/80 shadow-md rounded-r-md border border-l-0"
+              onClick={toggleComponentPanel}
+            >
+              {isComponentPanelVisible ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
+            </Button>
+            
+            {isComponentPanelVisible && <ResizableHandle />}
+          </>
         ) : (
           <Sheet>
             <SheetTrigger asChild>
               <Button variant="outline" size="sm" className="m-2">
+                <PanelLeft className="h-4 w-4 mr-2" />
                 Components
               </Button>
             </SheetTrigger>
@@ -64,9 +86,7 @@ const CircuitEditorPage = () => {
           </Sheet>
         )}
         
-        {!isMobile && <ResizableHandle />}
-        
-        <ResizablePanel defaultSize={60}>
+        <ResizablePanel defaultSize={isComponentPanelVisible ? 60 : 80}>
           <div className="h-full flex flex-col">
             <div className="flex-1 relative">
               <CircuitCanvas 
@@ -112,3 +132,4 @@ const CircuitEditorPage = () => {
 };
 
 export default CircuitEditorPage;
+
