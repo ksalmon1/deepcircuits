@@ -17,7 +17,7 @@ function WokwiComponentNode({ id, data, selected }: NodeProps<WokwiNodeData>) {
   const { wiringState, startWiring } = useWireSystem([]);
   
   // Calculate handle positions based on pins
-  const handlePositions = data?.pins?.map((pin, index) => {
+  const handlePositions = data.pins?.map((pin, index) => {
     // Handle calculation is relative to the component's top-left corner
     const x = Number(pin.x);
     const y = Number(pin.y);
@@ -54,7 +54,7 @@ function WokwiComponentNode({ id, data, selected }: NodeProps<WokwiNodeData>) {
       containerRef.current.innerHTML = '';
       
       // Try to render directly from SVG path if available
-      if (data?.svgPath && typeof data.svgPath === 'string' && data.svgPath.trim().startsWith('<svg')) {
+      if (data.svgPath && typeof data.svgPath === 'string' && data.svgPath.trim().startsWith('<svg')) {
         // Insert the SVG directly
         containerRef.current.innerHTML = data.svgPath.trim();
         
@@ -72,15 +72,18 @@ function WokwiComponentNode({ id, data, selected }: NodeProps<WokwiNodeData>) {
       
       // Create an inner container for the component
       const innerContainer = document.createElement('div');
+      const containerId = `wokwi-element-${id}-${Date.now()}`;
+      innerContainer.id = containerId;
       innerContainer.style.width = '100%';
       innerContainer.style.height = '100%';
       containerRef.current.appendChild(innerContainer);
       
       try {
         // Choose the rendering method based on component type
-        if (data?.type && ((isCustomComponent && isCustomComponent(data.type)) || data.isOriginal === false)) {
+        if (data.type && ((isCustomComponent && isCustomComponent(data.type)) || data.isOriginal === false)) {
+          // Pass the container element (not the ID) to the custom component renderer
           await renderCustomComponent(data.type, innerContainer, data.attributes || {});
-        } else if (data?.type) {
+        } else if (data.type) {
           // Ensure Wokwi elements are loaded
           if (!isWokwiLoaded()) {
             console.log('Loading Wokwi elements...');
@@ -88,17 +91,18 @@ function WokwiComponentNode({ id, data, selected }: NodeProps<WokwiNodeData>) {
           }
           
           console.log(`Rendering Wokwi element ${data.type}`);
-          await renderWokwiElement(data.type, innerContainer, data.attributes || {});
+          // Pass the container ID (not the element) to the Wokwi renderer
+          await renderWokwiElement(data.type, containerId, data.attributes || {});
         }
         
         setRendered(true);
       } catch (error) {
-        console.error(`Error rendering component ${data?.type}:`, error);
+        console.error(`Error rendering component ${data.type}:`, error);
       }
     };
     
     renderComponent();
-  }, [data?.type, data?.svgPath, data?.isOriginal, data?.attributes]);
+  }, [data.type, data.svgPath, data.isOriginal, data.attributes, id]);
   
   const handleClickEvent = useCallback(
     (event: React.MouseEvent, handleId: string) => {

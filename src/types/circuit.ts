@@ -1,7 +1,7 @@
 
 import { Node, Edge } from '@xyflow/react';
 
-// This interface extends the basic Node properties required by React Flow
+// This interface defines the data specific to Wokwi component nodes
 export interface WokwiNodeData {
   type: string;
   attributes?: Record<string, any>;
@@ -13,7 +13,7 @@ export interface WokwiNodeData {
   }>;
   svgPath?: string | null;
   isOriginal?: boolean;
-  [key: string]: unknown; // Add index signature to satisfy Record<string, unknown>
+  [key: string]: unknown; // Add index signature to allow additional properties
 }
 
 // Types for custom nodes in XY Flow
@@ -26,7 +26,7 @@ export interface WireData {
   targetPinIndex?: number;
   signalType?: string;
   isRoutingSegment?: boolean;
-  [key: string]: unknown; // Add index signature to satisfy Record<string, unknown>
+  [key: string]: unknown; // Add index signature
 }
 
 // Custom edge type for wires
