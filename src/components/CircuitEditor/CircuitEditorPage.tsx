@@ -34,7 +34,7 @@ const CircuitEditorPage = () => {
   const isMobile = useIsMobile();
   
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-screen flex flex-col overflow-hidden">
       <Toolbar 
         isSimulationRunning={isSimulationRunning}
         toggleSimulation={toggleSimulation}
@@ -44,7 +44,7 @@ const CircuitEditorPage = () => {
         importProject={importProject}
       />
       
-      <ResizablePanelGroup direction={isMobile ? "vertical" : "horizontal"} className="flex-1">
+      <ResizablePanelGroup direction={isMobile ? "vertical" : "horizontal"} className="flex-1 overflow-hidden">
         {!isMobile ? (
           <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>
             <div className="h-full overflow-auto p-2">
@@ -80,25 +80,25 @@ const CircuitEditorPage = () => {
         {!isMobile && <ResizableHandle />}
         
         <ResizablePanel defaultSize={20} minSize={15} maxSize={40}>
-          <Tabs defaultValue="code">
+          <Tabs defaultValue="code" className="h-full flex flex-col">
             <TabsList className="w-full">
               <TabsTrigger value="code" className="flex-1">Code</TabsTrigger>
               <TabsTrigger value="properties" className="flex-1">Properties</TabsTrigger>
               <TabsTrigger value="serial" className="flex-1">Serial</TabsTrigger>
             </TabsList>
             
-            <TabsContent value="code" className="h-[calc(100%-40px)]">
+            <TabsContent value="code" className="flex-1 overflow-hidden">
               <CodeEditor code={code} onChange={setCode} />
             </TabsContent>
             
-            <TabsContent value="properties" className="h-[calc(100%-40px)] overflow-auto p-4">
+            <TabsContent value="properties" className="flex-1 overflow-auto p-4">
               <PropertiesPanel 
                 selectedComponent={selectedComponent}
                 handleUpdateComponentAttributes={handleUpdateComponentAttributes}
               />
             </TabsContent>
             
-            <TabsContent value="serial" className="h-[calc(100%-40px)]">
+            <TabsContent value="serial" className="flex-1 overflow-hidden">
               <SerialMonitor 
                 isSimulationRunning={isSimulationRunning} 
                 serialOutput={serialOutput} 

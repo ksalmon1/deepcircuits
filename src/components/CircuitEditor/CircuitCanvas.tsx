@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { 
   isWokwiLoaded, 
@@ -160,7 +161,14 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     
     updateSize();
     window.addEventListener('resize', updateSize);
-    return () => window.removeEventListener('resize', updateSize);
+    
+    // Call updateSize after a short delay to make sure all elements are properly rendered
+    const resizeTimer = setTimeout(updateSize, 100);
+    
+    return () => {
+      window.removeEventListener('resize', updateSize);
+      clearTimeout(resizeTimer);
+    };
   }, [updateCanvasDimensions, setCanvasSize]);
 
   // Handle node drag end - update component positions
@@ -305,7 +313,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
   }, [handleHandleClick]);
 
   return (
-    <div className="h-full w-full bg-white relative flex flex-col">
+    <div className="h-full w-full bg-white relative flex flex-col overflow-hidden">
       <LoadingOverlay 
         isReady={isReady} 
         loadingError={loadingError} 
@@ -323,6 +331,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
       <div 
         ref={containerRef}
         className="h-full w-full overflow-hidden"
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
       >
         <ReactFlow
           ref={canvasRef}
@@ -347,6 +356,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
           snapGrid={[25, 25]}
           deleteKeyCode={['Backspace', 'Delete']}
           elementsSelectable={!wireConnectionState.isConnecting} // Disable selection when wiring
+          style={{ width: '100%', height: '100%' }}
         >
           <Background 
             variant={BackgroundVariant.Dots} 
