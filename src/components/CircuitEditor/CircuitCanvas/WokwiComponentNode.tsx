@@ -1,4 +1,3 @@
-
 import React, { useEffect, memo, useRef, useContext } from 'react';
 import { Handle, Position, NodeProps, useReactFlow } from '@xyflow/react';
 import { WokwiNodeData } from '@/types/circuit';
@@ -99,7 +98,7 @@ const WokwiComponentNode = ({
   const nodeStyle: React.CSSProperties = {
     background: 'transparent',
     border: selected ? '2px solid #4C72F4' : 'none',
-    boxShadow: selected ? '0 0 8px rgba(76, 114, 244, 0.4)' : 'none',
+    boxShadow: selected ? '0 0 0 2px rgba(76, 114, 244, 0.3)' : 'none',
     padding: '0',
     borderRadius: '4px',
     position: 'relative',
