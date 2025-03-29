@@ -56,7 +56,12 @@ function CustomWireEdge({
     }
   };
   
-  const path = generatePath(sourceX, sourceY, targetX, targetY, routingPoints, cursorPosition);
+  // Use cursor position if available (for temporary edges)
+  // If sourceX/Y and targetX/Y are the same (temporary edge), we use the cursor position
+  const finalTargetX = cursorPosition && (sourceX === targetX) ? cursorPosition.x : targetX;
+  const finalTargetY = cursorPosition && (sourceY === targetY) ? cursorPosition.y : targetY;
+  
+  const path = generatePath(sourceX, sourceY, finalTargetX, finalTargetY, routingPoints, cursorPosition);
   
   // Use pointer-events: none for the temporary edge to prevent it from capturing clicks
   const isTemporary = id.startsWith('temp-wire-');

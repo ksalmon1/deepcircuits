@@ -1,4 +1,3 @@
-
 import { useCallback, useState, useEffect } from 'react';
 import { Connection, useReactFlow, Edge, Position, XYPosition } from '@xyflow/react';
 import { WireData, WireConnectionState, WireEdge } from '@/types/circuit';
@@ -79,6 +78,16 @@ export const useWireRouting = (components: WokwiComponent[]) => {
   const startWireConnection = useCallback((nodeId: string, handleId: string) => {
     console.log('Starting wire connection from:', nodeId, handleId);
     
+    const reactFlowBounds = document.querySelector('.react-flow')?.getBoundingClientRect();
+    if (!reactFlowBounds) return false;
+    
+    const { x: offsetX, y: offsetY, zoom } = getViewport();
+    
+    const initialMousePos = {
+      x: (window.event ? (window.event as MouseEvent).clientX : 0 - reactFlowBounds.left - offsetX) / zoom,
+      y: (window.event ? (window.event as MouseEvent).clientY : 0 - reactFlowBounds.top - offsetY) / zoom
+    };
+    
     const pinIndex = parseInt(handleId.split('-')[1]);
     const tempEdgeId = `temp-wire-${Date.now()}`;
     
@@ -106,15 +115,16 @@ export const useWireRouting = (components: WokwiComponent[]) => {
         sourcePinIndex: pinIndex,
         targetPinIndex: -1,
         routingPoints: [],
-        cursorPosition: { x: 0, y: 0 }
+        cursorPosition: initialMousePos
       }
     };
     
     setTemporaryEdge(newTempEdge);
     setEdges((eds) => [...eds, newTempEdge]);
+    setMousePosition(initialMousePos);
     
     return true;
-  }, [components, setEdges]);
+  }, [components, setEdges, getViewport]);
   
   const addRoutingPoint = useCallback((point: XYPosition) => {
     if (!wireConnectionState.isConnecting || !wireConnectionState.temporaryEdgeId) return false;
