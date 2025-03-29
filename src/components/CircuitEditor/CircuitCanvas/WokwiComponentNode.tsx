@@ -110,6 +110,9 @@ const WokwiComponentNode = ({
     }
   }, [id, type]);
   
+  // Calculate the additional padding needed for selection indicator
+  const selectionPadding = selected ? 8 : 0;
+  
   const nodeStyle: React.CSSProperties = {
     background: 'transparent',
     border: selected ? '1px dashed #4C72F4' : 'none',
@@ -120,6 +123,18 @@ const WokwiComponentNode = ({
     height: 'auto',
     minWidth: '30px',
     minHeight: '30px',
+  };
+  
+  // Create a separate container for pins to maintain their absolute positioning
+  // regardless of parent padding changes
+  const pinContainerStyle: React.CSSProperties = {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+    pointerEvents: 'none', // Let events pass through to the actual handles
+    zIndex: 20,
   };
   
   useEffect(() => {
@@ -178,38 +193,42 @@ const WokwiComponentNode = ({
     <div id={`node-${id}`} style={nodeStyle}>
       <div ref={containerRef} id={`component-container-${id}`} style={{ width: '100%', height: '100%', position: 'relative' }} />
       
-      {pins && pins.map((pin, index) => {
-        const pinColor = getSignalColor(pin.signals);
-        console.log(`Rendering pin ${index} at (${pin.x}, ${pin.y}) for component ${id}`);
-        
-        // Use absolute positioning for the handles based on pin coordinates
-        const handleStyle: React.CSSProperties = {
-          top: `${pin.y}px`,
-          left: `${pin.x}px`, 
-          background: pinColor,
-          width: '8px',
-          height: '8px',
-          zIndex: 10,
-          position: 'absolute',
-          transform: 'translate(-50%, -50%)',
-          cursor: 'pointer',
-        };
-        
-        // Each pin can act as both source and target for connections
-        return (
-          <Handle
-            key={`pin-${index}`}
-            id={`pin-${index}`}
-            type="source"
-            position={Position.Left} // Default position for React Flow's internal use
-            style={handleStyle}
-            className="custom-handle nodrag nopan"
-            isConnectable={true}
-            title={pin.name}
-            onClick={(event) => handlePinClick(event, index)}
-          />
-        );
-      })}
+      {/* Pin container that's positioned independently of parent padding */}
+      <div style={pinContainerStyle}>
+        {pins && pins.map((pin, index) => {
+          const pinColor = getSignalColor(pin.signals);
+          console.log(`Rendering pin ${index} at (${pin.x}, ${pin.y}) for component ${id}`);
+          
+          // Calculate position accounting for the selection padding
+          const handleStyle: React.CSSProperties = {
+            top: `${pin.y}px`,
+            left: `${pin.x}px`, 
+            background: pinColor,
+            width: '8px',
+            height: '8px',
+            zIndex: 10,
+            position: 'absolute',
+            transform: 'translate(-50%, -50%)',
+            cursor: 'pointer',
+            pointerEvents: 'auto', // Make sure the handle receives events
+          };
+          
+          // Each pin can act as both source and target for connections
+          return (
+            <Handle
+              key={`pin-${index}`}
+              id={`pin-${index}`}
+              type="source"
+              position={Position.Left} // Default position for React Flow's internal use
+              style={handleStyle}
+              className="custom-handle nodrag nopan"
+              isConnectable={true}
+              title={pin.name}
+              onClick={(event) => handlePinClick(event, index)}
+            />
+          );
+        })}
+      </div>
     </div>
   );
 };
