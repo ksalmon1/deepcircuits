@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { 
   isWokwiLoaded, 
@@ -8,7 +9,7 @@ import {
 import { toast } from 'sonner';
 import { useComponentLibrary } from '@/hooks/useComponentLibrary';
 import { useCanvasNavigation } from '@/hooks/useCanvasNavigation';
-import { useWireSystem } from '@/hooks/useWireSystem';
+import { useWireRouting } from '@/hooks/useWireRouting';
 import { componentToNode } from './CircuitCanvas/utils';
 import { useWokwiLoader } from '@/hooks/useWokwiLoader';
 import { useComponentPinCache } from '@/hooks/useComponentPinCache';
@@ -26,13 +27,16 @@ import {
   ConnectionMode,
   OnNodesChange,
   OnEdgesChange,
-  OnConnect
+  OnConnect,
+  Node,
+  XYPosition
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import './CircuitCanvas/circuit-canvas.css';
 
 // Import the sub-components we created
 import WokwiComponentNode from './CircuitCanvas/WokwiComponentNode';
+import CustomWireEdge from './CircuitCanvas/CustomWireEdge';
 import CanvasControls from './CircuitCanvas/CanvasControls';
 import LoadingOverlay from './CircuitCanvas/LoadingOverlay';
 import { useCircuitCanvasState } from '@/hooks/useCircuitCanvasState';
@@ -44,7 +48,12 @@ interface CircuitCanvasProps {
 
 // Define the custom node types
 const nodeTypes = {
-  wokwiComponent: WokwiComponentNode as React.ComponentType<any>
+  wokwiComponent: WokwiComponentNode
+};
+
+// Define the custom edge types
+const edgeTypes = {
+  customWire: CustomWireEdge
 };
 
 const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) => {
@@ -81,8 +90,15 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     handleRetry: retryLoading
   } = useCircuitCanvasState(components);
   
-  // Initialize wire system
-  const { onConnect, connectionLineStyle } = useWireSystem(components);
+  // Initialize wire routing system
+  const { 
+    wireConnectionState,
+    temporaryEdge,
+    handleCanvasClick,
+    handleHandleClick,
+    deleteWire,
+    connectionLineStyle,
+  } = useWireRouting(components);
   
   // React Flow state
   const [reactFlowNodes, setReactFlowNodes, onNodesChange] = useNodesState([]);
@@ -247,10 +263,25 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     e.dataTransfer.dropEffect = 'copy';
   };
 
-  // Handle connect - create a wire
-  const handleConnect: OnConnect = useCallback((params) => {
-    onConnect(params);
-  }, [onConnect]);
+  // Custom click handler for the pane
+  const onPaneClick = useCallback((event: React.MouseEvent) => {
+    if (wireConnectionState.isConnecting) {
+      // Get flow position from mouse event
+      const position = reactFlowInstance?.screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY
+      });
+      
+      if (position) {
+        handleCanvasClick(event, position);
+      }
+    }
+  }, [wireConnectionState, reactFlowInstance, handleCanvasClick]);
+  
+  // Custom handle click handler
+  const onHandleClick = useCallback((nodeId: string, handleId: string) => {
+    handleHandleClick(nodeId, handleId);
+  }, [handleHandleClick]);
 
   return (
     <div className="h-full w-full bg-white relative flex flex-col">
@@ -278,14 +309,15 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
           edges={reactFlowEdges}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
-          onConnect={handleConnect}
           nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
           onInit={setReactFlowInstance}
           onDrop={handleDrop}
           onDragOver={handleDragOver}
           onNodeDragStop={onNodeDragStop}
           connectionMode={ConnectionMode.Loose}
           connectionLineStyle={connectionLineStyle}
+          onPaneClick={onPaneClick}
           minZoom={0.5}
           maxZoom={4}
           defaultViewport={{ x: 0, y: 0, zoom: 1 }}

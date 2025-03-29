@@ -1,6 +1,6 @@
 
-import React, { useEffect, memo, useRef } from 'react';
-import { Handle, Position, NodeProps } from '@xyflow/react';
+import React, { useEffect, memo, useRef, useContext } from 'react';
+import { Handle, Position, NodeProps, useReactFlow } from '@xyflow/react';
 import { WokwiNodeData } from '@/types/circuit';
 import { toast } from 'sonner';
 
@@ -17,9 +17,15 @@ const WokwiComponentNode = ({
   // Create a ref for the component container
   const containerRef = useRef<HTMLDivElement>(null);
   
+  // Access the React Flow instance
+  const reactFlow = useReactFlow();
+  
   // Ensure data is not undefined and has the correct type
-  const safeData: WokwiNodeData = data || { type: '', attributes: {}, pins: [] };
-  const { type, attributes, pins = [], svgPath, isOriginal } = safeData;
+  const type = data?.type || '';
+  const attributes = data?.attributes || {};
+  const pins = data?.pins || [];
+  const svgPath = data?.svgPath;
+  const isOriginal = data?.isOriginal;
   
   useEffect(() => {
     const renderComponent = async () => {
@@ -35,7 +41,8 @@ const WokwiComponentNode = ({
           isOriginal,
           hasSvgPath: !!svgPath,
           svgPathLength: svgPath?.length || 0,
-          svgPathPreview: svgPath ? svgPath.substring(0, 30) + '...' : 'none'
+          svgPathPreview: svgPath ? svgPath.substring(0, 30) + '...' : 'none',
+          pins: pins.length
         });
         
         // Check if this is a custom SVG component by directly checking for SVG content
@@ -152,12 +159,30 @@ const WokwiComponentNode = ({
     return '#4BC0C0';
   };
   
+  // Handle click on a pin
+  const handlePinClick = (event: React.MouseEvent<Element, MouseEvent>, pinIndex: number) => {
+    console.log(`Pin ${pinIndex} clicked on component ${id}`);
+    
+    // Let parent components know about this click through React Flow
+    if (reactFlow.getNodes) {
+      const handleId = `pin-${pinIndex}`;
+      const customEvent = new CustomEvent('handle-click', { 
+        detail: { nodeId: id, handleId } 
+      });
+      document.dispatchEvent(customEvent);
+    }
+    
+    // Stop propagation to prevent canvas click from being triggered
+    event.stopPropagation();
+  };
+  
   return (
     <div id={`node-${id}`} style={nodeStyle}>
-      <div ref={containerRef} id={`component-container-${id}`} style={{ width: '100%', height: '100%' }} />
+      <div ref={containerRef} id={`component-container-${id}`} style={{ width: '100%', height: '100%', position: 'relative' }} />
       
       {pins && pins.map((pin, index) => {
         const pinColor = getSignalColor(pin.signals);
+        console.log(`Rendering pin ${index} at (${pin.x}, ${pin.y}) for component ${id}`);
         
         // Use absolute positioning for the handles based on pin coordinates
         const handleStyle: React.CSSProperties = {
@@ -169,6 +194,7 @@ const WokwiComponentNode = ({
           zIndex: 10,
           position: 'absolute',
           transform: 'translate(-50%, -50%)',
+          cursor: 'pointer',
         };
         
         // Each pin can act as both source and target for connections
@@ -182,6 +208,7 @@ const WokwiComponentNode = ({
             className="custom-handle nodrag nopan"
             isConnectable={true}
             title={pin.name}
+            onClick={(event) => handlePinClick(event, index)}
           />
         );
       })}

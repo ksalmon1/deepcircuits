@@ -1,5 +1,5 @@
 
-import { Node, Edge } from '@xyflow/react';
+import { Node, Edge, Position } from '@xyflow/react';
 
 // Node data type for Wokwi component nodes
 export interface WokwiNodeData {
@@ -19,13 +19,24 @@ export interface WokwiNodeData {
 // Types for custom nodes in XY Flow
 export type WokwiNode = Node<WokwiNodeData>;
 
-// Custom edge data type for wires
+// Custom edge data type for wires with routing points
 export interface WireData {
   color: string;
   sourcePinIndex: number;
   targetPinIndex: number;
+  routingPoints?: Array<{ x: number, y: number }>;
   [key: string]: unknown; // Add index signature to satisfy Record<string, unknown>
 }
 
 // Custom edge type for wires
 export type WireEdge = Edge<WireData>;
+
+// Define state for wire connection process
+export interface WireConnectionState {
+  isConnecting: boolean;
+  sourceNodeId?: string;
+  sourceHandleId?: string;
+  routingPoints: Array<{ x: number, y: number }>;
+  sourcePinIndex?: number;
+  temporaryEdgeId?: string;
+}
