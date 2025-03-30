@@ -83,8 +83,15 @@ function CustomWireEdge({
     setEdges(edges => {
       return edges.map(edge => {
         if (edge.id === id) {
-          const newRoutingPoints = [...(edge.data?.routingPoints || [])];
-          newRoutingPoints[draggingPointIndex] = { x: mouseX, y: mouseY };
+          // Fix TypeScript error by ensuring routingPoints is an array
+          const currentRoutingPoints = Array.isArray(edge.data?.routingPoints) ? 
+            edge.data.routingPoints : [];
+            
+          const newRoutingPoints = [...currentRoutingPoints];
+          
+          if (draggingPointIndex < newRoutingPoints.length) {
+            newRoutingPoints[draggingPointIndex] = { x: mouseX, y: mouseY };
+          }
           
           // Keep the edge selected while dragging by setting the selected flag
           return {
