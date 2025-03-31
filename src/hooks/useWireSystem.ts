@@ -1,7 +1,14 @@
+
 import { useCallback } from 'react';
 import { Connection, useReactFlow, addEdge, Edge } from '@xyflow/react';
 import { WokwiComponent } from '@/integrations/wokwi/WokwiIntegration';
-import { getWireColorFromSignal, getPinSignalType } from '@/utils/wireUtils';
+import { 
+  getWireColorFromSignal, 
+  getPinSignalType, 
+  createWireEdge, 
+  isValidConnection, 
+  calculateWireRoutingPoints 
+} from '@/utils/wireUtils';
 import { toast } from 'sonner';
 import { WireData, WireEdge } from '@/types/circuit';
 import { PinConnection } from '@/types/pin';
@@ -12,7 +19,7 @@ import { useCircuitEditor } from '@/context/CircuitEditorContext';
  * Enhanced hook for managing wire connections between components
  */
 export function useWireSystem(components: WokwiComponent[]) {
-  const { setEdges } = useReactFlow();
+  const { setEdges, getNodes } = useReactFlow();
   const { addConnection } = useCircuitEditor();
   
   // Connect pins with validation and error handling
@@ -20,7 +27,8 @@ export function useWireSystem(components: WokwiComponent[]) {
     sourceId: string, 
     sourcePinIndex: number, 
     targetId: string, 
-    targetPinIndex: number
+    targetPinIndex: number,
+    routingPoints?: Array<{ x: number; y: number }>
   ): boolean => {
     try {
       // Validate inputs
@@ -38,7 +46,46 @@ export function useWireSystem(components: WokwiComponent[]) {
         return false;
       }
       
-      // Create the connection
+      // Check if connection is valid
+      if (!isValidConnection(components, sourceId, sourcePinIndex, targetId, targetPinIndex)) {
+        toast.error('These pins cannot be connected together');
+        return false;
+      }
+      
+      // Get node positions for routing
+      const nodes = getNodes();
+      const sourceNode = nodes.find(node => node.id === sourceId);
+      const targetNode = nodes.find(node => node.id === targetId);
+      
+      // If we have node positions, calculate routing points
+      let calculatedRoutingPoints = routingPoints || [];
+      if (sourceNode && targetNode) {
+        // Get source and target positions (assuming center point for simplicity)
+        const sourceX = sourceNode.position.x + (sourceNode.width || 0) / 2;
+        const sourceY = sourceNode.position.y + (sourceNode.height || 0) / 2;
+        const targetX = targetNode.position.x + (targetNode.width || 0) / 2;
+        const targetY = targetNode.position.y + (targetNode.height || 0) / 2;
+        
+        // Calculate routing if not provided
+        if (!routingPoints) {
+          calculatedRoutingPoints = calculateWireRoutingPoints(sourceX, sourceY, targetX, targetY);
+        }
+      }
+      
+      // Create the wire edge
+      const newEdge = createWireEdge(
+        components, 
+        sourceId, 
+        sourcePinIndex, 
+        targetId, 
+        targetPinIndex, 
+        calculatedRoutingPoints
+      );
+      
+      // Add to React Flow
+      setEdges((eds) => addEdge(newEdge, eds) as Edge[]);
+      
+      // Create the connection object
       const newConnection: PinConnection = {
         sourceId,
         sourcePinIndex,
@@ -49,13 +96,18 @@ export function useWireSystem(components: WokwiComponent[]) {
       // Add to context
       addConnection(newConnection);
       
+      toast.success('Connection created', {
+        description: 'Wire connected successfully',
+        duration: 1500,
+      });
+      
       return true;
     } catch (error) {
       console.error('Failed to connect pins:', error);
       toast.error('Failed to create connection');
       return false;
     }
-  }, [addConnection]);
+  }, [components, getNodes, setEdges, addConnection]);
   
   // Create a new edge when a connection is formed from React Flow
   const onConnect = useCallback((connection: Connection) => {
@@ -75,43 +127,14 @@ export function useWireSystem(components: WokwiComponent[]) {
         throw new ComponentError('Invalid pin format', 'INVALID_PIN_FORMAT');
       }
       
-      // Determine wire color based on signal type
-      const signal = getPinSignalType(components, sourceId, sourcePinIndex);
-      const wireColor = getWireColorFromSignal(signal || '');
-      
-      // Create a new edge with the correct type
-      const newEdge: Edge<WireData> = {
-        id: `wire-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-        source: sourceId,
-        target: targetId,
-        sourceHandle: connection.sourceHandle,
-        targetHandle: connection.targetHandle,
-        type: 'straight',
-        data: {
-          color: wireColor,
-          sourcePinIndex,
-          targetPinIndex,
-        },
-        animated: false,
-        style: {
-          stroke: wireColor,
-          strokeWidth: 2
-        }
-      };
-      
-      // Use type casting to ensure compatibility
-      setEdges((eds) => addEdge(newEdge, eds) as Edge[]);
-      
-      // Also add to our internal connections system
-      connectPins(sourceId, sourcePinIndex, targetId, targetPinIndex);
-      
-      return newEdge;
+      // Connect pins using our utility function
+      return connectPins(sourceId, sourcePinIndex, targetId, targetPinIndex);
     } catch (error) {
       console.error('Failed to create connection:', error);
       toast.error('Failed to create connection');
       return null;
     }
-  }, [components, setEdges, connectPins]);
+  }, [components, connectPins]);
   
   // Delete a wire by its ID
   const deleteWire = useCallback((wireId: string) => {
@@ -120,7 +143,21 @@ export function useWireSystem(components: WokwiComponent[]) {
         throw new ComponentError('Invalid wire ID', 'INVALID_WIRE_ID');
       }
       
-      setEdges((edges) => edges.filter(e => e.id !== wireId));
+      setEdges((edges) => {
+        const removedEdge = edges.find(edge => edge.id === wireId);
+        
+        if (removedEdge && removedEdge.data) {
+          // Log information about the deleted connection
+          console.log('Deleted wire connection:', {
+            source: removedEdge.source,
+            sourcePinIndex: removedEdge.data.sourcePinIndex,
+            target: removedEdge.target,
+            targetPinIndex: removedEdge.data.targetPinIndex
+          });
+        }
+        
+        return edges.filter(e => e.id !== wireId);
+      });
       
       toast.info('Wire removed', {
         duration: 1500,
@@ -134,10 +171,32 @@ export function useWireSystem(components: WokwiComponent[]) {
     }
   }, [setEdges]);
 
+  // Highlight all wires connected to a component
+  const highlightConnectedWires = useCallback((componentId: string, highlight: boolean) => {
+    if (!componentId) return;
+    
+    setEdges(edges => edges.map(edge => {
+      if (edge.source === componentId || edge.target === componentId) {
+        return {
+          ...edge,
+          selected: highlight,
+          animated: highlight || (edge.data?.signal === 'clock' || edge.data?.signal === 'data'),
+          style: {
+            ...edge.style,
+            strokeWidth: highlight ? 3 : 2,
+            filter: highlight ? 'drop-shadow(0 0 5px rgba(155, 135, 245, 0.8))' : undefined
+          }
+        };
+      }
+      return edge;
+    }));
+  }, [setEdges]);
+
   return {
     connectPins,
     onConnect,
     deleteWire,
+    highlightConnectedWires,
     connectionLineStyle: { stroke: '#9b87f5', strokeWidth: 2 },
   };
 }

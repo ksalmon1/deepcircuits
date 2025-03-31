@@ -1,3 +1,4 @@
+
 import { Edge } from '@xyflow/react';
 import { CircuitComponent } from '@/types/component';
 import { WireData, WireEdge } from '@/types/circuit';
@@ -169,4 +170,86 @@ export function areSameConnection(edge1: Edge, edge2: Edge): boolean {
                        edge1.targetHandle === edge2.sourceHandle;
   
   return directMatch || reverseMatch;
+}
+
+/**
+ * Calculate optimal routing points for a wire
+ * Uses a simplified version of the A* algorithm to find routing points
+ */
+export function calculateWireRoutingPoints(
+  sourceX: number,
+  sourceY: number,
+  targetX: number,
+  targetY: number,
+  gridSize: number = 20,
+  obstacles: Array<{ x: number, y: number, width: number, height: number }> = []
+): Array<{ x: number; y: number }> {
+  // Simple routing with just corner points for now
+  // For a direct path, we create a right-angle route with one midpoint
+  const midX = sourceX + (targetX - sourceX) / 2;
+  
+  return [
+    { x: midX, y: sourceY },
+    { x: midX, y: targetY }
+  ];
+}
+
+/**
+ * Calculate signal strength for a wire (for visualization)
+ * Returns a value between 0 and 1
+ */
+export function calculateSignalStrength(
+  wireType: string,
+  wireLengthPx: number
+): number {
+  // Simple model: signal degrades with distance
+  const maxLength = 1000; // pixels
+  const minStrength = 0.3;
+  
+  // Different signal types degrade at different rates
+  const degradationRates: Record<string, number> = {
+    'power': 0.1,
+    'ground': 0.1,
+    'analog': 0.3,
+    'digital': 0.2,
+    'clock': 0.4,
+    'data': 0.25,
+    'default': 0.2
+  };
+  
+  const rate = degradationRates[wireType.toLowerCase()] || degradationRates.default;
+  const strength = 1 - (wireLengthPx / maxLength) * rate;
+  
+  return Math.max(minStrength, Math.min(1, strength));
+}
+
+/**
+ * Calculate wire length in pixels
+ */
+export function calculateWireLength(
+  sourceX: number,
+  sourceY: number,
+  targetX: number,
+  targetY: number,
+  routingPoints: Array<{ x: number; y: number }> = []
+): number {
+  let totalLength = 0;
+  let lastX = sourceX;
+  let lastY = sourceY;
+  
+  // Add distance for each routing point
+  for (const point of routingPoints) {
+    totalLength += Math.sqrt(
+      Math.pow(point.x - lastX, 2) + Math.pow(point.y - lastY, 2)
+    );
+    lastX = point.x;
+    lastY = point.y;
+  }
+  
+  // Add distance to the target
+  totalLength += Math.sqrt(
+    Math.pow(targetX - lastX, 2) + Math.pow(targetY - lastY, 2)
+  );
+  
+  return totalLength;
 }

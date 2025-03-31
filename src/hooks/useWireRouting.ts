@@ -1,8 +1,8 @@
+
 import { useCallback, useState, useEffect } from 'react';
 import { Connection, useReactFlow, Edge, Position, XYPosition } from '@xyflow/react';
 import { WireData, WireEdge, WireConnectionState } from '@/types/circuit';
-import { getPinSignalType, getWireColorFromSignal } from '@/utils/pinManagement';
-import { isValidConnection, createWireId } from '@/utils/wireUtils';
+import { getPinSignalType, getWireColorFromSignal, isValidConnection, createWireId } from '@/utils/wireUtils';
 import { CircuitComponent } from '@/types/component';
 import { toast } from 'sonner';
 
@@ -106,7 +106,7 @@ export const useWireRouting = (components: CircuitComponent[]) => {
     const newTempEdge: Edge<WireData> = {
       id: tempEdgeId,
       source: nodeId,
-      target: nodeId,
+      target: nodeId, // Temporary target is the same as source
       sourceHandle: handleId,
       targetHandle: null as any,
       type: 'customWire',

@@ -1,50 +1,42 @@
 
-import { Edge, Node, XYPosition } from '@xyflow/react';
-import { CircuitComponent } from './component';
+import { NodeProps, EdgeProps, Node } from '@xyflow/react';
+import { ComponentPin } from './pin';
 
 /**
- * Wire data interface for custom wire edges
+ * Data for wire edges
  */
 export interface WireData {
   color: string;
   sourcePinIndex: number;
   targetPinIndex: number;
   routingPoints?: Array<{ x: number; y: number }>;
-  cursorPosition?: XYPosition;
-  [key: string]: unknown; // Add index signature to satisfy Record<string, unknown>
+  cursorPosition?: { x: number; y: number };
+  signal?: string;
 }
 
 /**
- * Extended Edge type for wires
+ * Interface for a wire edge that includes WireData
  */
-export interface WireEdge extends Edge<WireData> {
-  // Edge already has the data property, so we just need to extend with WireData
-}
-
-/**
- * Node data for circuit components
- */
-export interface WokwiNodeData {
+export interface WireEdge {
+  id: string;
+  source: string;
+  target: string;
+  sourceHandle: string;
+  targetHandle: string;
   type: string;
-  pins?: Array<{ name: string; x: number; y: number; signals: string[] }>;
-  attributes?: Record<string, any>;
-  svgPath?: string | null;
-  isOriginal?: boolean;
-  [key: string]: unknown; // Add index signature to satisfy Record<string, unknown>
+  data: WireData;
 }
 
 /**
- * Circuit editor state interface
+ * Props for the custom wire edge component
  */
-export interface CircuitEditorState {
-  components: CircuitComponent[];
-  selectedComponentId: string | null;
-  isSimulationRunning: boolean;
-  error: Error | null;
+export interface CustomWireEdgeProps extends EdgeProps {
+  data?: WireData;
+  onDelete?: (id: string) => void;
 }
 
 /**
- * Wire connection state for the wire routing system
+ * State for wire connection in progress
  */
 export interface WireConnectionState {
   isConnecting: boolean;
@@ -56,26 +48,26 @@ export interface WireConnectionState {
 }
 
 /**
- * Props for CustomWireEdge component
+ * Data for wokwi component nodes
  */
-export interface CustomWireEdgeProps {
-  id: string;
-  source: string;
-  target: string;
-  sourceX: number;
-  sourceY: number;
-  targetX: number;
-  targetY: number;
-  sourcePosition?: any;
-  targetPosition?: any;
-  style?: React.CSSProperties;
-  data?: WireData;
-  selected?: boolean;
-  onDelete?: (id: string) => void;
+export interface WokwiNodeData {
+  type: string;
+  label: string;
+  pins?: ComponentPin[];
+  svgPath?: string | null;
+  isOriginal?: boolean;
+  isLoading?: boolean;
+  showWires?: boolean;
+  attributes?: Record<string, any>;
 }
 
 /**
- * Error state interface for circuit editor
+ * Props for the Wokwi component node
+ */
+export interface WokwiNodeProps extends NodeProps<WokwiNodeData> {}
+
+/**
+ * Error state for the circuit editor
  */
 export interface CircuitEditorErrorState {
   hasError: boolean;
@@ -84,26 +76,4 @@ export interface CircuitEditorErrorState {
   errorCode: string;
   errorContext: string;
   errorTimestamp: number;
-}
-
-/**
- * Circuit simulation configuration
- */
-export interface CircuitSimulationConfig {
-  timeStep: number;
-  maxIterations: number;
-  tolerance: number;
-  outputSampling: number;
-}
-
-/**
- * Circuit simulation results
- */
-export interface CircuitSimulationResults {
-  nodeVoltages: Record<string, number>;
-  branchCurrents: Record<string, number>;
-  simulationTime: number;
-  iterations: number;
-  converged: boolean;
-  error?: string;
 }
