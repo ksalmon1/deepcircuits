@@ -33,7 +33,7 @@ import AdminLinks from "@/components/profile/AdminLinks";
 
 const ProfileSection = () => {
   const { user, signOut } = useAuth();
-  const { profile, updateProfile, isAdmin } = useProfile();
+  const { profile, isAdmin, setProfileData } = useProfile();
   
   return (
     <div className="space-y-6">
@@ -50,7 +50,7 @@ const ProfileSection = () => {
               <ProfileForm 
                 user={user} 
                 profile={profile} 
-                updateProfile={updateProfile} 
+                updateProfile={setProfileData} 
               />
             </div>
 

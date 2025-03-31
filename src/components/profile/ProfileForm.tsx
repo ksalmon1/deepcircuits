@@ -17,6 +17,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { updateProfile } from "@/services/userService";
+import { useToast } from "@/hooks/use-toast";
 
 const profileFormSchema = z.object({
   display_name: z
@@ -35,14 +37,12 @@ type ProfileFormValues = z.infer<typeof profileFormSchema>;
 interface ProfileFormProps {
   user: User | null;
   profile: Profile | null;
-  updateProfile: (updates: Partial<Profile>) => Promise<{
-    success: boolean;
-    error?: any;
-  }>;
+  updateProfile: (profile: Profile) => void; // Function to update profile in parent component
 }
 
-const ProfileForm: React.FC<ProfileFormProps> = ({ user, profile, updateProfile }) => {
+const ProfileForm: React.FC<ProfileFormProps> = ({ user, profile, updateProfile: setProfileData }) => {
   const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -74,23 +74,38 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ user, profile, updateProfile 
     // Make sure we have a valid user before attempting the update
     if (!user) {
       console.error("Cannot update profile: No user logged in");
+      toast({
+        title: "Error",
+        description: "You must be logged in to update your profile",
+        variant: "destructive",
+      });
       setIsLoading(false);
       return;
     }
 
-    const result = await updateProfile({
+    const result = await updateProfile(user.id, {
       display_name: data.display_name,
       avatar_url: data.avatar_url,
     });
 
     setIsLoading(false);
     
-    if (result.success) {
+    if (result.success && result.data) {
       console.log("Profile update completed successfully");
-      // We don't need to show success toast here as it's already shown in updateProfile
+      toast({
+        title: "Profile updated",
+        description: "Your profile has been updated successfully.",
+      });
+      
+      // Update the profile in the parent component
+      setProfileData(result.data);
     } else {
       console.error("Error updating profile:", result.error);
-      // Error toast is already shown in updateProfile
+      toast({
+        title: "Update failed",
+        description: "There was a problem updating your profile.",
+        variant: "destructive",
+      });
     }
   }
 

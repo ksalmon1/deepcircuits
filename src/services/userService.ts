@@ -167,6 +167,47 @@ export const getUserById = async (userId: string): Promise<UserWithProfile | nul
   }
 };
 
+/**
+ * Update the user's profile
+ * @param userId The user ID to update
+ * @param updates The profile updates to apply
+ * @returns Object indicating success and containing error or updated profile data
+ */
+export const updateProfile = async (
+  userId: string,
+  updates: Partial<Profile>
+): Promise<{ success: boolean; error?: any; data?: Profile | null }> => {
+  if (!userId) {
+    console.error("User ID is required to update profile");
+    return { 
+      success: false, 
+      error: new Error("User ID is required to update profile") 
+    };
+  }
+
+  try {
+    const { data: updatedProfile, error } = await supabase
+      .from('profiles')
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', userId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error updating profile:", error);
+      return { success: false, error };
+    }
+
+    return { success: true, data: updatedProfile as Profile };
+  } catch (error) {
+    console.error("Error in updateProfile:", error);
+    return { success: false, error };
+  }
+};
+
 // Update user profile
 export const updateUserProfile = async (
   userId: string, 

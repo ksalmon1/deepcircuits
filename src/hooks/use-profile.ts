@@ -1,3 +1,4 @@
+
 import { useAuth } from "@/context/AuthContext";
 import { Profile } from "@/types/database";
 import { getUserProfileAndRoles } from "@/services/userService";
@@ -56,38 +57,10 @@ export const useProfile = () => {
   };
 
   /**
-   * Update the user's profile
+   * Update the profile state with new data
    */
-  const updateProfile = async (updates: Partial<Profile>) => {
-    if (!user) {
-      return { 
-        success: false, 
-        error: new Error("User must be logged in to update profile") 
-      };
-    }
-
-    try {
-      const { data: updatedProfile, error } = await supabase
-        .from('profiles')
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', user.id)
-        .select()
-        .single();
-
-      if (error) {
-        console.error("Error updating profile:", error);
-        return { success: false, error };
-      }
-
-      setProfile(updatedProfile as Profile);
-      return { success: true };
-    } catch (error) {
-      console.error("Error in updateProfile:", error);
-      return { success: false, error };
-    }
+  const setProfileData = (newProfile: Profile) => {
+    setProfile(newProfile);
   };
 
   return {
@@ -97,6 +70,6 @@ export const useProfile = () => {
     error,
     hasRole,
     isAdmin,
-    updateProfile,
+    setProfileData,
   };
 };
