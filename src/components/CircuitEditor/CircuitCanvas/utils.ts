@@ -44,9 +44,9 @@ export const componentToNode = (component: WokwiComponent): Node<WokwiNodeData> 
     position: { x: component.left, y: component.top },
     data: {
       type: component.type,
+      label: component.type, // Add label property
       attributes: component.attributes || {},
       pins: component.pins || [],
-      // Preserve the exact svgPath value from the component
       svgPath: component.svgPath,
       isOriginal: component.isOriginal
     },

@@ -56,6 +56,7 @@ export const componentToNode = (component: CircuitComponent): Node<WokwiNodeData
     position: { x: component.left, y: component.top },
     data: {
       type: component.type,
+      label: component.name || component.type, // Add label property
       attributes: component.attributes || {},
       pins: component.pins ? component.pins.map(pin => ({
         name: pin.name,

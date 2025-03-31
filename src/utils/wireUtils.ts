@@ -1,4 +1,3 @@
-
 import { Edge } from '@xyflow/react';
 import { CircuitComponent } from '@/types/component';
 import { WireData, WireEdge } from '@/types/circuit';
@@ -106,7 +105,7 @@ export function createWireEdge(
       sourcePinIndex,
       targetPinIndex,
       routingPoints,
-    },
+    } as WireData,
     animated: signal === 'clock' || signal === 'data',
     style: {
       stroke: wireColor,

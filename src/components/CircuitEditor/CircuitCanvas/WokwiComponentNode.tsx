@@ -1,13 +1,10 @@
-
 import React, { useEffect, memo, useRef } from 'react';
 import { Handle, Position, NodeProps, useReactFlow } from '@xyflow/react';
 import { WokwiNodeData } from '@/types/circuit';
 import { toast } from 'sonner';
 import { getWireColorFromSignal } from '@/utils/pinManagement';
 
-interface WokwiComponentNodeProps extends NodeProps {
-  data: WokwiNodeData;
-}
+interface WokwiComponentNodeProps extends NodeProps<WokwiNodeData> {}
 
 const WokwiComponentNode = ({ 
   id, 

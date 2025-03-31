@@ -1,4 +1,3 @@
-
 import { useCallback, useState, useEffect } from 'react';
 import { Connection, useReactFlow, Edge, Position, XYPosition } from '@xyflow/react';
 import { WireData, WireEdge, WireConnectionState } from '@/types/circuit';
@@ -116,7 +115,7 @@ export const useWireRouting = (components: CircuitComponent[]) => {
         targetPinIndex: -1,
         routingPoints: [],
         cursorPosition: initialMousePos
-      }
+      } as WireData
     };
     
     setTemporaryEdge(newTempEdge);
@@ -197,7 +196,7 @@ export const useWireRouting = (components: CircuitComponent[]) => {
         sourcePinIndex: wireConnectionState.sourcePinIndex || 0,
         targetPinIndex: targetPinIndex,
         routingPoints: wireConnectionState.routingPoints,
-      }
+      } as WireData
     };
     
     setEdges(edges => {

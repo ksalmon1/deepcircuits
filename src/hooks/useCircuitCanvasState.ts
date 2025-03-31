@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 import { WokwiComponent } from '@/integrations/wokwi/WokwiIntegration';
 import { Node, Edge, ReactFlowInstance } from '@xyflow/react';

@@ -5,7 +5,7 @@ import { ComponentPin } from './pin';
 /**
  * Data for wire edges
  */
-export interface WireData {
+export interface WireData extends Record<string, unknown> {
   color: string;
   sourcePinIndex: number;
   targetPinIndex: number;
@@ -50,7 +50,7 @@ export interface WireConnectionState {
 /**
  * Data for wokwi component nodes
  */
-export interface WokwiNodeData {
+export interface WokwiNodeData extends Record<string, unknown> {
   type: string;
   label: string;
   pins?: ComponentPin[];
