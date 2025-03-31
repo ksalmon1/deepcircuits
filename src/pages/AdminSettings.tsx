@@ -1,6 +1,6 @@
 
 import React from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useProfile } from "@/hooks/use-profile";
 import PageLayout from "@/components/layout/PageLayout";
