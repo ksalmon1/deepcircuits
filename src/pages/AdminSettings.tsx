@@ -74,7 +74,7 @@ const AdminSettings = () => {
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {adminModules.map((module, index) => (
-            <Link key={index} to={module.link} className="no-underline">
+            <Link key={index} to={module.link}>
               <Card className="h-full hover:shadow-md transition-shadow cursor-pointer">
                 <CardHeader className={`${module.color} text-white rounded-t-lg`}>
                   <div className="flex justify-between items-center">
