@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { WokwiPin } from '@/integrations/wokwi/WokwiIntegration';
 import { CUSTOM_COMPONENTS } from '@/integrations/custom/CustomComponents';
@@ -114,8 +113,15 @@ export const createComponent = async (component: ComponentLibraryItem): Promise<
 
 // Update an existing component
 export const updateComponent = async (component: ComponentLibraryItem): Promise<ComponentLibraryItem | null> => {
+  if (!component.id) {
+    throw new Error('Component ID is required for update');
+  }
+
   try {
-    const { data, error } = await supabase
+    console.log('Updating component:', component);
+    
+    // Update component basic info
+    const { error: componentError } = await supabase
       .from('component_library')
       .update({
         name: component.name,
@@ -126,30 +132,32 @@ export const updateComponent = async (component: ComponentLibraryItem): Promise<
         enabled: component.enabled,
         is_original: component.isOriginal
       })
-      .eq('id', component.id)
-      .select()
-      .single();
+      .eq('id', component.id);
 
-    if (error) {
-      console.error('Error updating component:', error);
-      throw error;
+    if (componentError) {
+      console.error('Error updating component:', componentError);
+      throw componentError;
     }
 
-    return {
-      id: data.id,
-      name: data.name,
-      type: data.type,
-      category: data.category,
-      description: data.description,
-      svgPath: data.svg_path,
-      enabled: data.enabled,
-      isOriginal: data.is_original,
-      createdAt: data.created_at,
-      updatedAt: data.updated_at
-    };
+    console.log('Component basic info updated successfully');
+
+    // Update pins if provided
+    if (component.pins) {
+      await updatePins(component.id, component.pins);
+      console.log('Component pins updated successfully');
+    }
+
+    // Update properties if provided
+    if (component.properties) {
+      await updateProperties(component.id, component.properties);
+      console.log('Component properties updated successfully');
+    }
+    
+    // Return the updated component
+    return component;
   } catch (error) {
     console.error('Error in updateComponent:', error);
-    return null;
+    throw error;
   }
 };
 
@@ -228,6 +236,68 @@ export const getComponentWithDetails = async (id: string): Promise<ComponentLibr
   } catch (error) {
     console.error('Error in getComponentWithDetails:', error);
     return null;
+  }
+};
+
+// Helper functions for managing pins and properties
+const insertPins = async (componentId: string, pins: any[]): Promise<void> => {
+  try {
+    await supabase
+      .from('component_pins')
+      .insert(pins.map(pin => ({
+        component_id: componentId,
+        name: pin.name,
+        type: pin.type,
+        position: pin.position,
+        orientation: pin.orientation,
+        value: pin.value,
+        enabled: pin.enabled
+      })));
+  } catch (error) {
+    console.error('Error inserting pins:', error);
+  }
+};
+
+const updatePins = async (componentId: string, pins: any[]): Promise<void> => {
+  try {
+    await supabase
+      .from('component_pins')
+      .update(pins.map(pin => ({
+        name: pin.name,
+        type: pin.type,
+        position: pin.position,
+        orientation: pin.orientation,
+        value: pin.value,
+        enabled: pin.enabled
+      }))
+      .eq('component_id', componentId);
+  } catch (error) {
+    console.error('Error updating pins:', error);
+  }
+};
+
+const insertProperties = async (componentId: string, properties: Record<string, any>): Promise<void> => {
+  try {
+    await supabase
+      .from('component_properties')
+      .insert(Object.entries(properties).map(([key, value]) => ({
+        component_id: componentId,
+        property_key: key,
+        property_value: value
+      })));
+  } catch (error) {
+    console.error('Error inserting properties:', error);
+  }
+};
+
+const updateProperties = async (componentId: string, properties: Record<string, any>): Promise<void> => {
+  try {
+    await supabase
+      .from('component_properties')
+      .update(properties)
+      .eq('component_id', componentId);
+  } catch (error) {
+    console.error('Error updating properties:', error);
   }
 };
 

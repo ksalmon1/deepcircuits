@@ -25,6 +25,7 @@ import { ComponentLibraryItem } from "@/services/componentLibrary/types";
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import EnhancedComponentPreview from "@/components/CircuitEditor/EnhancedComponentPreview";
+import { isOriginalWokwiComponent } from '@/integrations/wokwi/WokwiIntegration';
 
 interface EditComponentDialogProps {
   component: ComponentLibraryItem | null;
@@ -78,6 +79,16 @@ const EditComponentDialog = ({ component, open, onClose, onSaved }: EditComponen
     }
   }, [updateComponentError]);
 
+  // Update isOriginal when type changes
+  const handleTypeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newType = e.target.value;
+    setType(newType);
+    // Automatically determine if it's an original Wokwi component
+    if (newType) {
+      setIsOriginal(isOriginalWokwiComponent(newType));
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -104,7 +115,7 @@ const EditComponentDialog = ({ component, open, onClose, onSaved }: EditComponen
         const updatedComponent: ComponentLibraryItem = {
           id: component.id,
           name,
-          type, // Allowing type to be changed now
+          type,
           category,
           description,
           svgPath,
@@ -166,7 +177,7 @@ const EditComponentDialog = ({ component, open, onClose, onSaved }: EditComponen
                 <Input
                   id="type"
                   value={type}
-                  onChange={(e) => setType(e.target.value)}
+                  onChange={handleTypeChange}
                   placeholder="Component type (e.g., wokwi-led)"
                 />
                 <p className="text-xs text-muted-foreground">Changing type may affect component behavior.</p>
