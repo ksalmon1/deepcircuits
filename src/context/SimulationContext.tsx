@@ -1,7 +1,6 @@
-
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import { toast } from 'sonner';
-import { ComponentError } from '@/utils/errorHandling';
+import { ComponentError, withErrorHandling } from '@/utils/errorHandling';
 import { useError } from './ErrorContext';
 import { useProject } from './ProjectContext';
 
@@ -35,54 +34,52 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
   const { setError } = useError();
   const { components } = useProject();
   
-  // Add output to serial monitor
+  // Add output to serial monitor - this is simple enough not to need error handling wrapper
   const addSerialOutput = useCallback((message: string) => {
     setSerialOutput(prev => [...prev, message]);
   }, []);
   
-  // Clear serial monitor output
+  // Clear serial monitor output - this is simple enough not to need error handling wrapper
   const clearSerialOutput = useCallback(() => {
     setSerialOutput([]);
   }, []);
   
-  // Toggle simulation
-  const toggleSimulation = useCallback(() => {
-    try {
-      setIsSimulationRunning(prev => !prev);
+  // Core toggle simulation function without try/catch
+  const coreToggleSimulation = () => {
+    setIsSimulationRunning(prev => !prev);
+    
+    if (!isSimulationRunning) {
+      // Starting simulation
+      setSerialOutput(prev => [
+        ...prev, 
+        '--- Simulation started ---',
+        'Compiling code...',
+        'Uploading to virtual microcontroller...'
+      ]);
       
-      if (!isSimulationRunning) {
-        // Starting simulation
+      // Simulate some output after a delay
+      setTimeout(() => {
         setSerialOutput(prev => [
-          ...prev, 
-          '--- Simulation started ---',
-          'Compiling code...',
-          'Uploading to virtual microcontroller...'
+          ...prev,
+          'Program running...',
+          'LED ON'
         ]);
-        
-        // Simulate some output after a delay
-        setTimeout(() => {
-          setSerialOutput(prev => [
-            ...prev,
-            'Program running...',
-            'LED ON'
-          ]);
-        }, 1500);
-      } else {
-        // Stopping simulation
-        setSerialOutput(prev => [
-          ...prev, 
-          '--- Simulation stopped ---'
-        ]);
-      }
-    } catch (error) {
-      setError(
-        error instanceof Error 
-          ? error 
-          : new ComponentError('Failed to toggle simulation', 'SIMULATION_TOGGLE_ERROR'),
-        'toggleSimulation'
-      );
+      }, 1500);
+    } else {
+      // Stopping simulation
+      setSerialOutput(prev => [
+        ...prev, 
+        '--- Simulation stopped ---'
+      ]);
     }
-  }, [isSimulationRunning, setError]);
+  };
+  
+  // Wrap core function with error handling
+  const toggleSimulation = withErrorHandling(
+    coreToggleSimulation,
+    'toggleSimulation',
+    setError
+  );
   
   const value = {
     isSimulationRunning,

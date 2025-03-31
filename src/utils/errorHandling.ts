@@ -94,3 +94,61 @@ export const logError = (
     console.error(errorMessage, additionalInfo || '');
   }
 };
+
+/**
+ * Higher-order function to wrap operations with try/catch error handling
+ * @param operation The function to execute
+ * @param context A string identifier for the operation context (for error reporting)
+ * @param setErrorFn The function to call when an error occurs
+ * @returns A wrapped function that handles errors
+ */
+export function withErrorHandling<Args extends any[], Result>(
+  operation: (...args: Args) => Result,
+  context: string,
+  setErrorFn: (error: Error, context: string, code?: string) => void
+): (...args: Args) => Result | undefined {
+  return (...args: Args) => {
+    try {
+      return operation(...args);
+    } catch (error) {
+      const errorObj = error instanceof Error 
+        ? error 
+        : new AppError(String(error), 'UNKNOWN_ERROR');
+      
+      logError(errorObj, context);
+      setErrorFn(errorObj, context);
+      
+      // Return undefined to indicate error
+      return undefined;
+    }
+  };
+}
+
+/**
+ * Higher-order function to wrap async operations with try/catch error handling
+ * @param asyncOperation The async function to execute
+ * @param context A string identifier for the operation context (for error reporting)
+ * @param setErrorFn The function to call when an error occurs
+ * @returns A wrapped async function that handles errors
+ */
+export function withAsyncErrorHandling<Args extends any[], Result>(
+  asyncOperation: (...args: Args) => Promise<Result>,
+  context: string,
+  setErrorFn: (error: Error, context: string, code?: string) => void
+): (...args: Args) => Promise<Result | undefined> {
+  return async (...args: Args) => {
+    try {
+      return await asyncOperation(...args);
+    } catch (error) {
+      const errorObj = error instanceof Error 
+        ? error 
+        : new AppError(String(error), 'UNKNOWN_ERROR');
+      
+      logError(errorObj, context);
+      setErrorFn(errorObj, context);
+      
+      // Return undefined to indicate error
+      return undefined;
+    }
+  };
+}
