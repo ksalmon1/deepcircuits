@@ -1,5 +1,6 @@
 
 import { ComponentRenderer } from './registry';
+import { ComponentPin } from '@/types/pin';
 
 /**
  * SVG component renderer implementation for custom components
@@ -53,7 +54,7 @@ export const svgRenderer: ComponentRenderer = {
       
       // Add pins visually if provided
       if (options && options.pins && Array.isArray(options.pins)) {
-        const pinElements = this.renderPins(options.pins);
+        const pinElements = this._renderPins(options.pins);
         
         // Add the pin elements to the main element
         pinElements.forEach(pinEl => {
@@ -66,7 +67,7 @@ export const svgRenderer: ComponentRenderer = {
     }
   },
   
-  getComponentPinInfo(componentType: string): Array<{ name: string; x: number; y: number; signals?: string[] }> {
+  getComponentPinInfo(componentType: string): Array<{ name: string; x: number; y: number; signals: string[] }> {
     // Return empty array for unknown components
     return [];
   },
@@ -76,7 +77,7 @@ export const svgRenderer: ComponentRenderer = {
   },
   
   // Helper method to render pins
-  private renderPins(pins: Array<{ name: string; x: number; y: number; signals?: string[] }>): HTMLElement[] {
+  _renderPins(pins: Array<{ name: string; x: number; y: number; signals?: string[] }>): HTMLElement[] {
     return pins.map(pin => {
       const pinEl = document.createElement('div');
       pinEl.className = 'component-pin';

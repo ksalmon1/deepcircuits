@@ -2,6 +2,7 @@
 import { ComponentLibraryItem, CircuitComponent } from "@/types/component";
 import { Node } from "@xyflow/react";
 import { WokwiNodeData } from "@/types/circuit";
+import { ComponentPin } from "@/types/pin";
 
 /**
  * Maps a database component record to our application model
@@ -33,7 +34,7 @@ export const convertLibraryItemToCircuitComponent = (item: ComponentLibraryItem)
     top: 0,
     left: 0,
     attributes: {},
-    pins: item.pins || [],
+    pins: item.pins || [], 
     svgPath: item.svgPath,
     isOriginal: item.isOriginal
   };
@@ -68,7 +69,12 @@ export const nodeToCircuitComponent = (node: Node<WokwiNodeData>): CircuitCompon
     top: node.position.y,
     left: node.position.x,
     attributes: node.data.attributes || {},
-    pins: node.data.pins || [],
+    pins: (node.data.pins || []).map(pin => ({
+      name: pin.name,
+      x: pin.x,
+      y: pin.y,
+      signals: pin.signals || []
+    })),
     svgPath: node.data.svgPath,
     isOriginal: node.data.isOriginal
   };

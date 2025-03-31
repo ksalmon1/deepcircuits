@@ -1,14 +1,13 @@
-
 import { ComponentLibraryItem } from '@/types/component';
 import { mapComponentFromDb } from './converters';
-import { supabaseClient } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client';
 
 /**
  * Fetch all components from the library
  */
 export async function getAllComponents(): Promise<ComponentLibraryItem[]> {
   try {
-    const { data, error } = await supabaseClient
+    const { data, error } = await supabase
       .from('components')
       .select('*')
       .order('name');
@@ -30,7 +29,7 @@ export async function getAllComponents(): Promise<ComponentLibraryItem[]> {
  */
 export async function getComponentById(id: string): Promise<ComponentLibraryItem | null> {
   try {
-    const { data, error } = await supabaseClient
+    const { data, error } = await supabase
       .from('components')
       .select('*')
       .eq('id', id)
@@ -66,7 +65,7 @@ export async function getComponentWithDetails(id: string): Promise<ComponentLibr
     }
     
     // Fetch component pins
-    const { data: pinsData, error: pinsError } = await supabaseClient
+    const { data: pinsData, error: pinsError } = await supabase
       .from('component_pins')
       .select('*')
       .eq('component_id', id)
@@ -78,7 +77,7 @@ export async function getComponentWithDetails(id: string): Promise<ComponentLibr
     }
     
     // Fetch component properties
-    const { data: propsData, error: propsError } = await supabaseClient
+    const { data: propsData, error: propsError } = await supabase
       .from('component_properties')
       .select('*')
       .eq('component_id', id);

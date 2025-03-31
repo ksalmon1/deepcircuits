@@ -3,20 +3,36 @@ import React from 'react';
 import CircuitCanvas from './CircuitCanvas';
 import ErrorBoundary from './ErrorBoundary';
 import { useCircuitEditor } from '@/context/CircuitEditorContext';
+import { CircuitComponent } from '@/types/component';
+
+/**
+ * Props for CircuitCanvasWrapper when used directly
+ */
+export interface CircuitCanvasWrapperProps {
+  components?: CircuitComponent[];
+  onComponentsChange?: (updatedComponents: CircuitComponent[]) => void;
+}
 
 /**
  * Context-aware CircuitCanvas wrapper
  * This version directly uses the CircuitEditorContext
  */
-const CircuitCanvasWrapper: React.FC = () => {
-  const { components, handleComponentsChange } = useCircuitEditor();
+const CircuitCanvasWrapper: React.FC<CircuitCanvasWrapperProps> = ({ 
+  components: propComponents, 
+  onComponentsChange: propOnComponentsChange 
+}) => {
+  const { components: contextComponents, handleComponentsChange } = useCircuitEditor();
+  
+  // Use props if provided, otherwise use context
+  const components = propComponents || contextComponents;
+  const onComponentsChange = propOnComponentsChange || handleComponentsChange;
   
   return (
     <div className="h-full w-full">
       <ErrorBoundary>
         <CircuitCanvas 
           components={components} 
-          onComponentsChange={handleComponentsChange} 
+          onComponentsChange={onComponentsChange} 
         />
       </ErrorBoundary>
     </div>

@@ -1,13 +1,12 @@
-
 import { ComponentLibraryItem } from '@/types/component';
-import { supabaseClient } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client';
 
 /**
  * Create a new component in the library
  */
 export async function createComponent(component: ComponentLibraryItem): Promise<string> {
   try {
-    const { data, error } = await supabaseClient
+    const { data, error } = await supabase
       .from('components')
       .insert({
         name: component.name,
@@ -35,11 +34,11 @@ export async function createComponent(component: ComponentLibraryItem): Promise<
         name: pin.name,
         x: pin.x,
         y: pin.y,
-        signals: pin.signals || [],
+        signals: pin.signals,
         index
       }));
       
-      const { error: pinsError } = await supabaseClient
+      const { error: pinsError } = await supabase
         .from('component_pins')
         .insert(pinsToInsert);
         
@@ -57,7 +56,7 @@ export async function createComponent(component: ComponentLibraryItem): Promise<
         value
       }));
       
-      const { error: propsError } = await supabaseClient
+      const { error: propsError } = await supabase
         .from('component_properties')
         .insert(propsToInsert);
         
@@ -84,7 +83,7 @@ export async function updateComponent(component: ComponentLibraryItem): Promise<
   
   try {
     // Update basic component info
-    const { error } = await supabaseClient
+    const { error } = await supabase
       .from('components')
       .update({
         name: component.name,
@@ -105,7 +104,7 @@ export async function updateComponent(component: ComponentLibraryItem): Promise<
     // Handle pins update if provided
     if (component.pins) {
       // Delete existing pins
-      const { error: deleteError } = await supabaseClient
+      const { error: deleteError } = await supabase
         .from('component_pins')
         .delete()
         .eq('component_id', component.id);
@@ -122,11 +121,11 @@ export async function updateComponent(component: ComponentLibraryItem): Promise<
           name: pin.name,
           x: pin.x,
           y: pin.y,
-          signals: pin.signals || [],
+          signals: pin.signals,
           index
         }));
         
-        const { error: pinsError } = await supabaseClient
+        const { error: pinsError } = await supabase
           .from('component_pins')
           .insert(pinsToInsert);
           
@@ -140,7 +139,7 @@ export async function updateComponent(component: ComponentLibraryItem): Promise<
     // Handle properties update if provided
     if (component.properties) {
       // Delete existing properties
-      const { error: deletePropsError } = await supabaseClient
+      const { error: deletePropsError } = await supabase
         .from('component_properties')
         .delete()
         .eq('component_id', component.id);
@@ -158,7 +157,7 @@ export async function updateComponent(component: ComponentLibraryItem): Promise<
           value
         }));
         
-        const { error: propsError } = await supabaseClient
+        const { error: propsError } = await supabase
           .from('component_properties')
           .insert(propsToInsert);
           
@@ -180,7 +179,7 @@ export async function updateComponent(component: ComponentLibraryItem): Promise<
 export async function deleteComponent(id: string): Promise<void> {
   try {
     // Cascade delete will handle pins and properties
-    const { error } = await supabaseClient
+    const { error } = await supabase
       .from('components')
       .delete()
       .eq('id', id);
