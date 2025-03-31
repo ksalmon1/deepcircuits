@@ -119,12 +119,21 @@ const WokwiComponentNode = ({
     console.log(`Pin ${pinIndex} clicked on component ${id}`);
     
     const handleId = `pin-${pinIndex}`;
+    
+    // Create and dispatch a custom event that can be caught by the CircuitCanvas
     const customEvent = new CustomEvent('handle-click', { 
-      detail: { nodeId: id, handleId } 
+      detail: { 
+        nodeId: id, 
+        handleId,
+        pinIndex 
+      }
     });
+    
     document.dispatchEvent(customEvent);
     
+    // Stop propagation to prevent other handlers from being triggered
     event.stopPropagation();
+    event.preventDefault();
   };
 
   return (

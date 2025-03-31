@@ -29,6 +29,7 @@ export const useWireRouting = () => {
     sourceHandleId: string,
     sourcePinIndex: number
   ) => {
+    console.log('Starting wire connection:', { sourceNodeId, sourceHandleId, sourcePinIndex });
     setWireConnectionState({
       isConnecting: true,
       sourceNodeId,
@@ -75,26 +76,20 @@ export const useWireRouting = () => {
   const finalizeWireConnection = useCallback((
     targetNodeId: string,
     targetHandleId: string,
-    targetPinIndex: number,
-    connectPinsFunc: (
-      sourceId: string,
-      sourcePinIndex: number,
-      targetId: string,
-      targetPinIndex: number,
-      routingPoints?: Array<{ x: number; y: number }>
-    ) => boolean
+    targetPinIndex: number
   ) => {
+    console.log('Finalizing wire connection:', { targetNodeId, targetHandleId, targetPinIndex });
+    
     setWireConnectionState(prevState => {
       if (!prevState.isConnecting || !prevState.sourceNodeId || prevState.sourcePinIndex === undefined) {
-        return prevState;
+        return { isConnecting: false, routingPoints: [] };
       }
 
-      const success = connectPinsFunc(
+      const success = connectPins(
         prevState.sourceNodeId,
         prevState.sourcePinIndex,
         targetNodeId,
-        targetPinIndex,
-        prevState.routingPoints
+        targetPinIndex
       );
 
       return {
@@ -102,12 +97,13 @@ export const useWireRouting = () => {
         routingPoints: [],
       };
     });
-  }, [setWireConnectionState]);
+  }, [connectPins]);
 
   /**
    * Cancel the current wire connection.
    */
   const cancelWireConnection = useCallback(() => {
+    console.log('Canceling wire connection');
     setWireConnectionState({
       isConnecting: false,
       routingPoints: [],
@@ -124,30 +120,32 @@ export const useWireRouting = () => {
 
     const sourceNode = getNodes().find(node => node.id === wireConnectionState.sourceNodeId);
 
-    if (!sourceNode) {
+    if (!sourceNode || !sourceNode.data) {
       return null;
     }
 
-    const sourceHandle = sourceNode.data && sourceNode.data.pins && Array.isArray(sourceNode.data.pins) ? 
-      sourceNode.data.pins.find((pin: any, index: number) => index === wireConnectionState.sourcePinIndex) : 
-      undefined;
-
-    if (!sourceHandle) {
+    // Find the source pin data
+    const sourcePins = Array.isArray(sourceNode.data.pins) ? sourceNode.data.pins : [];
+    const sourcePin = sourcePins[wireConnectionState.sourcePinIndex as number];
+    
+    if (!sourcePin) {
       return null;
     }
 
-    const sourceX = sourceNode.position.x + sourceHandle.x;
-    const sourceY = sourceNode.position.y + sourceHandle.y;
+    // Calculate source position based on pin position
+    const sourceX = sourceNode.position.x + sourcePin.x;
+    const sourceY = sourceNode.position.y + sourcePin.y;
 
     if (wireConnectionState.routingPoints.length === 0) {
       return null;
     }
 
-    const targetX = wireConnectionState.routingPoints[wireConnectionState.routingPoints.length - 1].x;
-    const targetY = wireConnectionState.routingPoints[wireConnectionState.routingPoints.length - 1].y;
+    // Get the last routing point for the target position
+    const lastPoint = wireConnectionState.routingPoints[wireConnectionState.routingPoints.length - 1];
+    const targetX = lastPoint.x;
+    const targetY = lastPoint.y;
 
-    const edgeParams = getEdgeParams(sourceX, sourceY, targetX, targetY);
-
+    // Create the temporary edge
     const edge: Edge<WireData> = {
       id: wireConnectionState.temporaryEdgeId,
       source: wireConnectionState.sourceNodeId,
@@ -161,10 +159,11 @@ export const useWireRouting = () => {
         targetPinIndex: -1,
         routingPoints: wireConnectionState.routingPoints,
       },
-      animated: false,
+      animated: true,
       style: {
         stroke: '#9b87f5',
         strokeWidth: 2,
+        strokeDasharray: '5, 5',
       },
     };
 
@@ -175,7 +174,8 @@ export const useWireRouting = () => {
    * Handle canvas click when wire connection is in progress
    */
   const handleCanvasClick = useCallback((event: React.MouseEvent, position: { x: number; y: number }) => {
-    // Cancel the current wire connection
+    // Cancel the current wire connection when clicking on empty canvas
+    console.log('Canvas click detected, canceling wire connection');
     cancelWireConnection();
   }, [cancelWireConnection]);
 
@@ -183,25 +183,34 @@ export const useWireRouting = () => {
    * Handle clicking on a node handle
    */
   const handleHandleClick = useCallback((nodeId: string, handleId: string) => {
+    console.log('Handle click:', { nodeId, handleId });
+    
     const handleParts = handleId.split('-');
-    if (handleParts.length !== 2) return;
+    if (handleParts.length !== 2) {
+      console.warn('Invalid handle ID format:', handleId);
+      return;
+    }
     
     const pinIndex = parseInt(handleParts[1], 10);
-    if (isNaN(pinIndex)) return;
+    if (isNaN(pinIndex)) {
+      console.warn('Invalid pin index in handle ID:', handleId);
+      return;
+    }
     
     if (!wireConnectionState.isConnecting) {
       // Start a new connection
+      console.log('Starting new wire connection from:', { nodeId, handleId, pinIndex });
       startWireConnection(nodeId, handleId, pinIndex);
     } else if (wireConnectionState.sourceNodeId && wireConnectionState.sourcePinIndex !== undefined) {
       // Finish an existing connection
+      console.log('Finalizing wire connection to:', { nodeId, handleId, pinIndex });
       finalizeWireConnection(
         nodeId, 
         handleId, 
-        pinIndex, 
-        connectPins
+        pinIndex
       );
     }
-  }, [wireConnectionState, startWireConnection, finalizeWireConnection, connectPins]);
+  }, [wireConnectionState, startWireConnection, finalizeWireConnection]);
 
   /**
    * Delete a wire
