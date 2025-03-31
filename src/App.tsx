@@ -12,6 +12,7 @@ import AdminSettings from "@/pages/AdminSettings";
 import UserManagement from "@/pages/admin/UserManagement";
 import SystemSettings from "@/pages/admin/SystemSettings";
 import ComponentAdmin from "@/pages/admin/ComponentAdmin";
+import DatabaseBackup from "@/pages/admin/DatabaseBackup";
 import About from "@/pages/About";
 import Features from "@/pages/Features";
 import Pricing from "@/pages/Pricing";
@@ -72,6 +73,7 @@ function App() {
           <Route path="/admin/users" element={<AdminRoute><UserManagement /></AdminRoute>} />
           <Route path="/admin/system" element={<AdminRoute><SystemSettings /></AdminRoute>} />
           <Route path="/admin/components" element={<AdminRoute><ComponentAdmin /></AdminRoute>} />
+          <Route path="/admin/database" element={<AdminRoute><DatabaseBackup /></AdminRoute>} />
           
           <Route
             path="/circuit-editor/:id"
