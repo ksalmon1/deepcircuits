@@ -46,26 +46,21 @@ interface CircuitCanvasProps {
   onComponentsChange: (components: WokwiComponent[]) => void;
 }
 
-// Define the custom node types
 const nodeTypes = {
   wokwiComponent: WokwiComponentNode
 };
 
-// Define the custom edge types
 const edgeTypes: EdgeTypes = {
   customWire: CustomWireEdge
 };
 
 const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) => {
-  // Refs
   const canvasRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   
-  // Custom hooks
   const { isReady, loadingError, handleRetry } = useWokwiLoader();
   const { pinCache } = useComponentPinCache();
   
-  // Directly use the useCircuitCanvasState hook
   const {
     canvasSize,
     setCanvasSize,
@@ -90,7 +85,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     handleRetry: retryLoading
   } = useCircuitCanvasState(components);
   
-  // Initialize wire routing system
   const { 
     wireConnectionState,
     temporaryEdge,
@@ -104,7 +98,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     mousePosition
   } = useWireRouting(components);
   
-  // React Flow state
   const [reactFlowNodes, setReactFlowNodes, onNodesChange] = useNodesState([]);
   const [reactFlowEdges, setReactFlowEdges, onEdgesChange] = useEdgesState([]);
   
@@ -131,7 +124,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     isLoadingDetails 
   } = useComponentLibrary();
 
-  // Convert components to nodes
   useEffect(() => {
     if (!components || components.length === 0) return;
     
@@ -150,7 +142,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     setReactFlowNodes(initialNodes);
   }, [components, setReactFlowNodes]);
   
-  // Update canvas dimensions when window size changes
   useEffect(() => {
     const updateSize = () => {
       if (containerRef.current) {
@@ -171,7 +162,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     };
   }, [updateCanvasDimensions, setCanvasSize]);
 
-  // Handle node drag end - update component positions
   const onNodeDragStop = useCallback((event: React.MouseEvent, node: any) => {
     const updatedComponents = components.map(comp => {
       if (comp.id === node.id) {
@@ -187,7 +177,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     onComponentsChange(updatedComponents);
   }, [components, onComponentsChange]);
 
-  // Listen for handle-click events from WokwiComponentNode
   useEffect(() => {
     const handlePinClick = (event: CustomEvent) => {
       const { nodeId, handleId } = event.detail;
@@ -201,7 +190,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     };
   }, [handleHandleClick]);
 
-  // Handle drop to create new component
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     
@@ -209,7 +197,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
       const componentData = e.dataTransfer.getData('component');
       if (!componentData) return;
       
-      // Parse the component data
       const componentInfo = JSON.parse(componentData);
       console.log('Dropped component data:', componentInfo);
       
@@ -351,7 +338,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
           />
           <Controls position="bottom-right" showInteractive={false} />
           
-          {/* Alignment Guides */}
           {wireConnectionState.isConnecting && (
             <svg
               style={{
@@ -365,13 +351,23 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
               }}
             >
               {showHorizontalGuide && reactFlowInstance && (() => {
-                // Convert flow coordinates to screen coordinates
                 const viewport = reactFlowInstance.getViewport();
                 
-                // Calculate screen coordinates for horizontal guide
                 const mouseScreenX = mousePosition.x * viewport.zoom + viewport.x;
                 const mouseScreenY = mousePosition.y * viewport.zoom + viewport.y;
                 const lastFixedScreenX = lastFixedPointPosition.x * viewport.zoom + viewport.x;
+                
+                console.log('Rendering Horizontal Guide:', { 
+                  lastFixedScreenX, 
+                  mouseScreenY, 
+                  mouseScreenX,
+                  viewport,
+                  flowCoords: {
+                    mouseX: mousePosition.x,
+                    mouseY: mousePosition.y,
+                    lastFixedX: lastFixedPointPosition.x
+                  }
+                });
                 
                 return (
                   <line
@@ -380,7 +376,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
                     x2={mouseScreenX}
                     y2={mouseScreenY}
                     stroke="#3b82f6"
-                    strokeWidth={1}
+                    strokeWidth={2}
                     strokeDasharray="5,5"
                     pointerEvents="none"
                   />
@@ -388,13 +384,23 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
               })()}
               
               {showVerticalGuide && reactFlowInstance && (() => {
-                // Convert flow coordinates to screen coordinates
                 const viewport = reactFlowInstance.getViewport();
                 
-                // Calculate screen coordinates for vertical guide
                 const mouseScreenX = mousePosition.x * viewport.zoom + viewport.x;
                 const mouseScreenY = mousePosition.y * viewport.zoom + viewport.y;
                 const lastFixedScreenY = lastFixedPointPosition.y * viewport.zoom + viewport.y;
+                
+                console.log('Rendering Vertical Guide:', { 
+                  mouseScreenX, 
+                  lastFixedScreenY, 
+                  mouseScreenY,
+                  viewport,
+                  flowCoords: {
+                    mouseX: mousePosition.x,
+                    mouseY: mousePosition.y,
+                    lastFixedY: lastFixedPointPosition.y
+                  }
+                });
                 
                 return (
                   <line
@@ -403,7 +409,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
                     x2={mouseScreenX}
                     y2={mouseScreenY}
                     stroke="#3b82f6"
-                    strokeWidth={1}
+                    strokeWidth={2}
                     strokeDasharray="5,5"
                     pointerEvents="none"
                   />
