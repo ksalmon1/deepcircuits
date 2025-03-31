@@ -1,162 +1,128 @@
 
 import React from "react";
-import { ComponentLibraryItem } from "@/services/componentLibraryService";
+import { ComponentLibraryItem } from "@/types/component";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { AlertCircle, Cpu } from "lucide-react";
+import EnhancedComponentPreview from "@/components/CircuitEditor/EnhancedComponentPreview";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface ViewComponentDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  selectedComponent: ComponentLibraryItem | null;
-  isLoadingComponentDetails: boolean;
-  componentDetailsError: Error | null;
-  onEditClick: () => void;
+  component: ComponentLibraryItem;
 }
 
 const ViewComponentDialog = ({
   isOpen,
   onOpenChange,
-  selectedComponent,
-  isLoadingComponentDetails,
-  componentDetailsError,
-  onEditClick
+  component
 }: ViewComponentDialogProps) => {
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[700px]">
+      <DialogContent className="sm:max-w-[700px] max-h-[90vh]">
         <DialogHeader>
-          <DialogTitle>Component Details</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            {component.name}
+            {component.isOriginal && (
+              <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200">
+                Original
+              </Badge>
+            )}
+          </DialogTitle>
+          <DialogDescription>
+            Component details and preview
+          </DialogDescription>
         </DialogHeader>
         
-        {isLoadingComponentDetails ? (
-          <div className="py-8 text-center">
-            <Cpu className="h-8 w-8 mx-auto mb-2 animate-spin text-primary" />
-            <p>Loading component details...</p>
-          </div>
-        ) : componentDetailsError ? (
-          <div className="py-8 text-center text-destructive">
-            <AlertCircle className="h-8 w-8 mx-auto mb-2" />
-            <p>Error loading component details</p>
-            <p className="text-sm mt-2">{componentDetailsError.message}</p>
-          </div>
-        ) : selectedComponent && (
-          <div className="py-4">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+        <ScrollArea className="h-full max-h-[60vh] pr-4">
+          <div className="space-y-6 py-4">
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <h4 className="text-sm font-medium mb-1">Component Name</h4>
-                <p>{selectedComponent.name}</p>
+                <h3 className="text-lg font-medium mb-2">Details</h3>
+                <div className="space-y-2">
+                  <div>
+                    <span className="font-medium">Type:</span> {component.type}
+                  </div>
+                  <div>
+                    <span className="font-medium">Category:</span> 
+                    <Badge className="ml-2">{component.category}</Badge>
+                  </div>
+                  <div>
+                    <span className="font-medium">Status:</span> 
+                    <Badge 
+                      variant={component.enabled ? "default" : "outline"}
+                      className={`ml-2 ${component.enabled ? "bg-green-500" : "text-red-500"}`}
+                    >
+                      {component.enabled ? "Enabled" : "Disabled"}
+                    </Badge>
+                  </div>
+                </div>
               </div>
+              
               <div>
-                <h4 className="text-sm font-medium mb-1">Type</h4>
-                <p>{selectedComponent.type}</p>
-              </div>
-              <div>
-                <h4 className="text-sm font-medium mb-1">Category</h4>
-                <Badge 
-                  variant={
-                    selectedComponent.category === "microcontroller" ? "default" : 
-                    selectedComponent.category === "input" ? "secondary" : 
-                    "outline"
-                  }
-                >
-                  {selectedComponent.category}
-                </Badge>
+                <h3 className="text-lg font-medium mb-2">Description</h3>
+                <p className="text-sm text-gray-700">
+                  {component.description || "No description available"}
+                </p>
               </div>
             </div>
             
-            <div className="mb-4">
-              <h4 className="text-sm font-medium mb-1">Description</h4>
-              <p className="text-sm text-muted-foreground">
-                {selectedComponent.description || "No description provided."}
-              </p>
-            </div>
+            {component.type && (
+              <div>
+                <h3 className="text-lg font-medium mb-4">Preview</h3>
+                <div className="border rounded-md p-4 bg-gray-50 flex justify-center items-center" style={{ minHeight: "200px" }}>
+                  {component.type ? (
+                    <EnhancedComponentPreview
+                      componentType={component.type}
+                      properties={component.properties || {}}
+                      previewId={`view-${component.id}`}
+                    />
+                  ) : (
+                    <p className="text-muted-foreground">No preview available</p>
+                  )}
+                </div>
+              </div>
+            )}
             
-            <div className="mb-4">
-              <h4 className="text-sm font-medium mb-1">Status</h4>
-              <Badge 
-                variant={selectedComponent.enabled ? "default" : "outline"}
-                className={selectedComponent.enabled ? "bg-green-500" : "text-red-500"}
-              >
-                {selectedComponent.enabled ? "Enabled" : "Disabled"}
-              </Badge>
-            </div>
+            {component.pins && component.pins.length > 0 && (
+              <div>
+                <h3 className="text-lg font-medium mb-2">Pins</h3>
+                <div className="border rounded-md p-4 bg-gray-50">
+                  <div className="grid grid-cols-3 gap-2">
+                    {component.pins.map((pin, index) => (
+                      <div key={index} className="border p-2 rounded bg-white text-sm">
+                        <div><span className="font-medium">Name:</span> {pin.name}</div>
+                        <div><span className="font-medium">Position:</span> x:{pin.x}, y:{pin.y}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
             
-            <div className="mb-4">
-              <h4 className="text-sm font-medium mb-1">Properties</h4>
-              {selectedComponent.properties && Object.keys(selectedComponent.properties).length > 0 ? (
-                <div className="bg-gray-100 p-3 rounded-md">
+            {component.properties && Object.keys(component.properties).length > 0 && (
+              <div>
+                <h3 className="text-lg font-medium mb-2">Properties</h3>
+                <div className="border rounded-md p-4 bg-gray-50">
                   <pre className="text-xs overflow-auto max-h-40">
-                    {JSON.stringify(selectedComponent.properties, null, 2)}
+                    {JSON.stringify(component.properties, null, 2)}
                   </pre>
                 </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">No properties defined.</p>
-              )}
-            </div>
-            
-            <div>
-              <h4 className="text-sm font-medium mb-2">Pin Configuration</h4>
-              {selectedComponent.pins && selectedComponent.pins.length > 0 ? (
-                <div>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Position X</TableHead>
-                        <TableHead>Position Y</TableHead>
-                        <TableHead>Signals</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {selectedComponent.pins.map((pin, index) => (
-                        <TableRow key={index}>
-                          <TableCell>{pin.name}</TableCell>
-                          <TableCell>{pin.x}</TableCell>
-                          <TableCell>{pin.y}</TableCell>
-                          <TableCell>
-                            {pin.signals && pin.signals.length > 0 ? (
-                              <div className="flex flex-wrap gap-1">
-                                {pin.signals.map((signal, idx) => (
-                                  <Badge key={idx} variant="outline">{signal}</Badge>
-                                ))}
-                              </div>
-                            ) : (
-                              "None"
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">No pin configuration defined.</p>
-              )}
-            </div>
+              </div>
+            )}
           </div>
-        )}
+        </ScrollArea>
         
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
-          <Button onClick={onEditClick}>
-            Edit Component
-          </Button>
+          <Button onClick={() => onOpenChange(false)}>Close</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

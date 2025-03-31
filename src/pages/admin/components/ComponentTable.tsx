@@ -1,16 +1,9 @@
 
 import React from "react";
-import { ComponentLibraryItem } from "@/services/componentLibraryService";
+import { ComponentLibraryItem } from "@/types/component";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "@/components/ui/table";
+import { TableCell, TableRow } from "@/components/ui/table";
 import { Eye, Edit, Trash } from "lucide-react";
 
 interface ComponentTableProps {

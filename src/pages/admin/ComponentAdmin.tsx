@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -7,6 +6,8 @@ import PageLayout from "@/components/layout/PageLayout";
 import ComponentTable from "./components/ComponentTable";
 import ComponentSearch from "./components/ComponentSearch";
 import AddComponentDialog from "./components/AddComponentDialog";
+import EditComponentDialog from "./components/EditComponentDialog";
+import ViewComponentDialog from "./components/ViewComponentDialog";
 import { Button } from "@/components/ui/button";
 import { Plus, RefreshCw } from "lucide-react";
 import { 
@@ -17,32 +18,50 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
-import { ComponentLibraryItem } from "@/services/componentLibraryService";
+import { ComponentLibraryItem } from '@/types/component';
 import { toast } from "sonner";
-import { getAllComponents } from "@/services/componentLibrary/api";
+import { getAllComponents, getComponentWithDetails } from "@/services/componentLibrary/api";
+import { useComponentLibrary } from "@/hooks/useComponentLibrary";
 
 const ComponentAdmin = () => {
   const { user } = useAuth();
-  const { isAdmin, isLoading: isProfileLoading } = useProfile(); // Renamed to avoid conflict
+  const { isAdmin, isLoading: isProfileLoading } = useProfile();
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [components, setComponents] = useState<ComponentLibraryItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true); // Changed to true initially
+  const [isLoading, setIsLoading] = useState(true);
   const [uniqueCategories, setUniqueCategories] = useState<string[]>([]);
   const [uniqueTypes, setUniqueTypes] = useState<string[]>([]);
-  const [newComponent, setNewComponent] = useState<Partial<ComponentLibraryItem>>({
-    name: "",
-    type: "",
-    category: "",
-    description: "",
-    enabled: true,
-    isOriginal: false
-  });
-  const [isCreatingComponent, setIsCreatingComponent] = useState(false);
+  
+  // Add state for view and edit dialogs
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [selectedComponent, setSelectedComponent] = useState<ComponentLibraryItem | null>(null);
+  const [editedComponent, setEditedComponent] = useState<ComponentLibraryItem | null>(null);
+  const [isLoadingComponentDetails, setIsLoadingComponentDetails] = useState(false);
+  const [componentDetailsError, setComponentDetailsError] = useState<Error | null>(null);
+  const [wokwiReady, setWokwiReady] = useState(false);
+  const [activeTab, setActiveTab] = useState("details");
+  
+  // Getting useful hooks and mutations from useComponentLibrary
+  const { 
+    updateComponent,
+    isUpdatingComponent,
+    updateComponentError
+  } = useComponentLibrary();
 
   console.log("ComponentAdmin: Rendering", { isAdmin: isAdmin ? isAdmin() : false, isLoading: isProfileLoading });
+
+  useEffect(() => {
+    // Set wokwiReady after a short delay to simulate loading
+    const timer = setTimeout(() => {
+      setWokwiReady(true);
+    }, 1000);
+    
+    return () => clearTimeout(timer);
+  }, []);
 
   // Fetch components on component mount
   useEffect(() => {
@@ -114,14 +133,30 @@ const ComponentAdmin = () => {
     fetchComponents(); // Refresh the components list
   };
 
-  const handleViewComponent = (component: ComponentLibraryItem) => {
-    // View component implementation
+  const handleViewComponent = async (component: ComponentLibraryItem) => {
     console.log("Viewing component:", component);
+    setSelectedComponent(component);
+    setIsViewDialogOpen(true);
   };
 
-  const handleEditComponent = (component: ComponentLibraryItem) => {
-    // Edit component implementation
+  const handleEditComponent = async (component: ComponentLibraryItem) => {
     console.log("Editing component:", component);
+    setIsLoadingComponentDetails(true);
+    setComponentDetailsError(null);
+    setSelectedComponent(component);
+    setActiveTab("details");
+    
+    try {
+      const componentDetails = await getComponentWithDetails(component.id as string);
+      setEditedComponent(componentDetails);
+      setIsEditDialogOpen(true);
+    } catch (error) {
+      console.error("Error loading component details:", error);
+      setComponentDetailsError(error instanceof Error ? error : new Error('Failed to load component details'));
+      toast.error("Failed to load component details");
+    } finally {
+      setIsLoadingComponentDetails(false);
+    }
   };
 
   const handleDeleteComponent = (component: ComponentLibraryItem) => {
@@ -132,6 +167,61 @@ const ComponentAdmin = () => {
   const handleRefresh = () => {
     fetchComponents();
     toast.success("Components refreshed");
+  };
+
+  const updateComponentProperty = (property: string, value: any) => {
+    if (!editedComponent) return;
+    
+    setEditedComponent(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        [property]: value
+      };
+    });
+  };
+
+  const updateComponentProperties = (properties: Record<string, any>) => {
+    if (!editedComponent) return;
+    
+    setEditedComponent(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        properties: {
+          ...(prev.properties || {}),
+          ...properties
+        }
+      };
+    });
+  };
+
+  const updatePinConfiguration = (pinConfig: any[]) => {
+    if (!editedComponent) return;
+    
+    setEditedComponent(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        pins: pinConfig
+      };
+    });
+  };
+
+  const handleSaveComponent = async () => {
+    if (!editedComponent) return;
+    
+    try {
+      await updateComponent(editedComponent);
+      toast.success("Component updated successfully");
+      setIsEditDialogOpen(false);
+      fetchComponents(); // Refresh the list
+    } catch (error) {
+      console.error("Error updating component:", error);
+      toast.error("Failed to update component", {
+        description: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
   };
 
   return (
@@ -198,11 +288,47 @@ const ComponentAdmin = () => {
         <AddComponentDialog 
           isOpen={isAddDialogOpen} 
           onOpenChange={setIsAddDialogOpen}
-          newComponent={newComponent}
+          newComponent={{
+            name: "",
+            type: "",
+            category: "",
+            description: "",
+            enabled: true,
+            isOriginal: false
+          }}
           onNewComponentChange={handleNewComponentChange}
           onAddComponent={handleAddComponent}
-          isCreatingComponent={isCreatingComponent}
+          isCreatingComponent={false}
         />
+
+        {/* Add View Dialog */}
+        {selectedComponent && (
+          <ViewComponentDialog
+            isOpen={isViewDialogOpen}
+            onOpenChange={setIsViewDialogOpen}
+            component={selectedComponent}
+          />
+        )}
+
+        {/* Add Edit Dialog */}
+        {selectedComponent && (
+          <EditComponentDialog
+            isOpen={isEditDialogOpen}
+            onOpenChange={setIsEditDialogOpen}
+            selectedComponent={selectedComponent}
+            editedComponent={editedComponent}
+            isLoadingComponentDetails={isLoadingComponentDetails}
+            componentDetailsError={componentDetailsError}
+            wokwiReady={wokwiReady}
+            activeTab={activeTab}
+            onActiveTabChange={setActiveTab}
+            onSaveComponent={handleSaveComponent}
+            isUpdatingComponent={isUpdatingComponent}
+            updateComponentProperty={updateComponentProperty}
+            updateComponentProperties={updateComponentProperties}
+            updatePinConfiguration={updatePinConfiguration}
+          />
+        )}
       </div>
     </PageLayout>
   );
