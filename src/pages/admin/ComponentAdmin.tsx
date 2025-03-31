@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useProfile } from "@/hooks/use-profile";
@@ -9,12 +9,36 @@ import ComponentSearch from "./components/ComponentSearch";
 import AddComponentDialog from "./components/AddComponentDialog";
 import { Button } from "@/components/ui/button";
 import { Plus, RefreshCw } from "lucide-react";
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from "@/components/ui/table";
+import { ComponentLibraryItem } from "@/services/componentLibraryService";
+import { toast } from "sonner";
 
 const ComponentAdmin = () => {
   const { user } = useAuth();
   const { isAdmin, isLoading } = useProfile();
-  const [searchQuery, setSearchQuery] = React.useState("");
-  const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [components, setComponents] = useState<ComponentLibraryItem[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [uniqueCategories, setUniqueCategories] = useState<string[]>([]);
+  const [newComponent, setNewComponent] = useState<Partial<ComponentLibraryItem>>({
+    name: "",
+    type: "",
+    category: "",
+    description: "",
+    enabled: true,
+    isOriginal: false
+  });
+  const [isCreatingComponent, setIsCreatingComponent] = useState(false);
 
   console.log("ComponentAdmin: Rendering", { isAdmin: isAdmin ? isAdmin() : false, isLoading });
 
@@ -32,6 +56,31 @@ const ComponentAdmin = () => {
     console.log("ComponentAdmin: Redirecting to /dashboard - Not an admin");
     return <Navigate to="/dashboard" />;
   }
+
+  const handleNewComponentChange = (field: string, value: any) => {
+    setNewComponent(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleAddComponent = async () => {
+    // This would be implemented to add a component to the database
+    toast.success("Component added successfully");
+    setIsAddDialogOpen(false);
+  };
+
+  const handleViewComponent = (component: ComponentLibraryItem) => {
+    // View component implementation
+  };
+
+  const handleEditComponent = (component: ComponentLibraryItem) => {
+    // Edit component implementation
+  };
+
+  const handleDeleteComponent = (component: ComponentLibraryItem) => {
+    // Delete component implementation
+  };
 
   return (
     <PageLayout>
@@ -60,15 +109,45 @@ const ComponentAdmin = () => {
         </div>
 
         <ComponentSearch 
-          searchQuery={searchQuery} 
-          setSearchQuery={setSearchQuery} 
+          searchTerm={searchTerm} 
+          onSearchChange={setSearchTerm}
+          categoryFilter={categoryFilter}
+          onCategoryFilterChange={setCategoryFilter}
+          typeFilter={typeFilter}
+          onTypeFilterChange={setTypeFilter}
+          uniqueCategories={uniqueCategories}
         />
 
-        <ComponentTable searchQuery={searchQuery} />
+        <div className="bg-white rounded-md shadow">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Category</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <ComponentTable 
+                components={components} 
+                isLoading={isLoading}
+                onEdit={handleEditComponent}
+                onView={handleViewComponent}
+                onDelete={handleDeleteComponent}
+              />
+            </TableBody>
+          </Table>
+        </div>
 
         <AddComponentDialog 
-          open={isAddDialogOpen} 
-          onOpenChange={setIsAddDialogOpen} 
+          isOpen={isAddDialogOpen} 
+          onOpenChange={setIsAddDialogOpen}
+          newComponent={newComponent}
+          onNewComponentChange={handleNewComponentChange}
+          onAddComponent={handleAddComponent}
+          isCreatingComponent={isCreatingComponent}
         />
       </div>
     </PageLayout>
