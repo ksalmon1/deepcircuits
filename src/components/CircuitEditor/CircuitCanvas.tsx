@@ -57,9 +57,7 @@ const edgeTypes: EdgeTypes = {
 const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) => {
   const canvasRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  
-  const { isReady, loadingError, handleRetry } = useWokwiLoader();
-  const { pinCache } = useComponentPinCache();
+  const reactFlowWrapperRef = useRef<HTMLDivElement>(null);
   
   const {
     canvasSize,
@@ -101,29 +99,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
   const [reactFlowNodes, setReactFlowNodes, onNodesChange] = useNodesState([]);
   const [reactFlowEdges, setReactFlowEdges, onEdgesChange] = useEdgesState([]);
   
-  const {
-    zoom,
-    offset,
-    panMode,
-    isDraggingCanvas,
-    handleZoomIn,
-    handleZoomOut,
-    togglePanMode,
-    startPan,
-    pan,
-    endPan,
-    handleWheel,
-    updateCanvasDimensions,
-    screenToCanvasCoordinates
-  } = useCanvasNavigation(1);
-  
-  const { 
-    components: libraryComponents, 
-    componentsDetailsMap, 
-    isLoadingComponents, 
-    isLoadingDetails 
-  } = useComponentLibrary();
-
   useEffect(() => {
     if (!components || components.length === 0) return;
     
@@ -301,7 +276,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
       />
       
       <div 
-        ref={containerRef}
+        ref={reactFlowWrapperRef}
         className="h-full w-full overflow-hidden"
         style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
       >
@@ -351,31 +326,15 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
               }}
             >
               {showHorizontalGuide && reactFlowInstance && (() => {
-                const viewport = reactFlowInstance.getViewport();
-                
-                const mouseScreenX = mousePosition.x * viewport.zoom + viewport.x;
-                const mouseScreenY = mousePosition.y * viewport.zoom + viewport.y;
-                const lastFixedScreenX = lastFixedPointPosition.x * viewport.zoom + viewport.x;
-                
-                console.log('Rendering Horizontal Guide:', { 
-                  lastFixedScreenX, 
-                  mouseScreenY, 
-                  mouseScreenX,
-                  viewport,
-                  flowCoords: {
-                    mouseX: mousePosition.x,
-                    mouseY: mousePosition.y,
-                    lastFixedX: lastFixedPointPosition.x
-                  }
-                });
+                const containerWidth = reactFlowWrapperRef.current?.clientWidth ?? 0;
                 
                 return (
                   <line
-                    x1={lastFixedScreenX}
-                    y1={mouseScreenY}
-                    x2={mouseScreenX}
-                    y2={mouseScreenY}
-                    stroke="#3b82f6"
+                    x1={0}
+                    y1={mousePosition.y}
+                    x2={containerWidth}
+                    y2={mousePosition.y}
+                    stroke="#FF0000"
                     strokeWidth={2}
                     strokeDasharray="5,5"
                     pointerEvents="none"
@@ -384,31 +343,15 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
               })()}
               
               {showVerticalGuide && reactFlowInstance && (() => {
-                const viewport = reactFlowInstance.getViewport();
-                
-                const mouseScreenX = mousePosition.x * viewport.zoom + viewport.x;
-                const mouseScreenY = mousePosition.y * viewport.zoom + viewport.y;
-                const lastFixedScreenY = lastFixedPointPosition.y * viewport.zoom + viewport.y;
-                
-                console.log('Rendering Vertical Guide:', { 
-                  mouseScreenX, 
-                  lastFixedScreenY, 
-                  mouseScreenY,
-                  viewport,
-                  flowCoords: {
-                    mouseX: mousePosition.x,
-                    mouseY: mousePosition.y,
-                    lastFixedY: lastFixedPointPosition.y
-                  }
-                });
+                const containerHeight = reactFlowWrapperRef.current?.clientHeight ?? 0;
                 
                 return (
                   <line
-                    x1={mouseScreenX}
-                    y1={lastFixedScreenY}
-                    x2={mouseScreenX}
-                    y2={mouseScreenY}
-                    stroke="#3b82f6"
+                    x1={mousePosition.x}
+                    y1={0}
+                    x2={mousePosition.x}
+                    y2={containerHeight}
+                    stroke="#FF0000"
                     strokeWidth={2}
                     strokeDasharray="5,5"
                     pointerEvents="none"
