@@ -1,11 +1,13 @@
+
 import React, { memo, useState, useCallback } from 'react';
 import { CustomWireEdgeProps, WireData } from '@/types/circuit';
 import { useReactFlow } from '@xyflow/react';
 
 /**
- * Generates a straight path connecting the source, routing points, and target
+ * Generates an orthogonal path with only horizontal and vertical segments
+ * connecting the source, routing points, and target
  */
-const generateStraightPathWithPoints = (
+const generateOrthogonalPath = (
   sourceX: number,
   sourceY: number,
   targetX: number,
@@ -18,38 +20,49 @@ const generateStraightPathWithPoints = (
   const safeTargetX = isNaN(targetX) ? 0 : targetX;
   const safeTargetY = isNaN(targetY) ? 0 : targetY;
   
-  // Create an array with all points (source + routing points + target/cursor)
-  const points = [{ x: safeSourceX, y: safeSourceY }];
+  // Create a sequence of all points: source -> routing points -> target/cursor
+  const allPoints = [{ x: safeSourceX, y: safeSourceY }];
   
   // Add all routing points
   if (Array.isArray(routingPoints)) {
     routingPoints.forEach(point => {
       const x = isNaN(point.x) ? 0 : point.x;
       const y = isNaN(point.y) ? 0 : point.y;
-      points.push({ x, y });
+      allPoints.push({ x, y });
     });
   }
   
-  // Determine the final endpoint (cursor or target)
-  const finalEndPoint = cursorPosition && typeof cursorPosition === 'object'
-    ? { 
-        x: isNaN(cursorPosition.x) ? 0 : cursorPosition.x,
-        y: isNaN(cursorPosition.y) ? 0 : cursorPosition.y 
-      }
-    : { x: safeTargetX, y: safeTargetY };
+  // Add final point (either cursor position or target)
+  if (cursorPosition && typeof cursorPosition === 'object') {
+    const x = isNaN(cursorPosition.x) ? 0 : cursorPosition.x;
+    const y = isNaN(cursorPosition.y) ? 0 : cursorPosition.y;
+    allPoints.push({ x, y });
+  } else {
+    allPoints.push({ x: safeTargetX, y: safeTargetY });
+  }
   
-  // Add the final endpoint
-  points.push(finalEndPoint);
+  // Start the path at the first point
+  let path = `M ${allPoints[0].x},${allPoints[0].y}`;
   
-  // Generate the path string
-  if (points.length === 0) return '';
-  
-  // Start with the first point
-  let path = `M ${points[0].x},${points[0].y}`;
-  
-  // Add straight lines to each subsequent point
-  for (let i = 1; i < points.length; i++) {
-    path += ` L ${points[i].x},${points[i].y}`;
+  // Generate orthogonal segments between each pair of points
+  for (let i = 0; i < allPoints.length - 1; i++) {
+    const current = allPoints[i];
+    const next = allPoints[i + 1];
+    
+    // Create an L-shaped route between current and next points
+    // For odd-numbered segments, go horizontal first, then vertical
+    // For even-numbered segments, go vertical first, then horizontal
+    // This alternating pattern helps create more natural-looking orthogonal paths
+    
+    if (i % 2 === 0) {
+      // Horizontal first, then vertical
+      path += ` L ${next.x},${current.y}`; // Horizontal segment
+      path += ` L ${next.x},${next.y}`;    // Vertical segment
+    } else {
+      // Vertical first, then horizontal
+      path += ` L ${current.x},${next.y}`; // Vertical segment
+      path += ` L ${next.x},${next.y}`;    // Horizontal segment
+    }
   }
   
   return path;
@@ -168,8 +181,8 @@ function CustomWireEdge({
   const finalTargetX = cursorPosition && (safeSourceX === safeTargetX) ? cursorPosition.x : safeTargetX;
   const finalTargetY = cursorPosition && (safeSourceY === safeTargetY) ? cursorPosition.y : safeTargetY;
   
-  // Use straight path generation instead of orthogonal
-  const path = generateStraightPathWithPoints(
+  // Use orthogonal path generation instead of bezier or smooth step
+  const path = generateOrthogonalPath(
     safeSourceX, 
     safeSourceY, 
     finalTargetX, 
