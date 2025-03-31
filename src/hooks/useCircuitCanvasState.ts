@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from 'react';
 import { WokwiComponent } from '@/integrations/wokwi/WokwiIntegration';
 import { Node, Edge, ReactFlowInstance } from '@xyflow/react';
@@ -18,7 +19,8 @@ export function useCircuitCanvasState(components: WokwiComponent[]) {
   const [isReady, setIsReady] = useState(false);
   
   // React Flow state - related to the visualization library
-  const [nodes, setNodes] = useState<Node<WokwiNodeData>[]>([]);
+  // Note: We're using Node type without generic constraint to avoid type issues
+  const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
   
@@ -76,7 +78,7 @@ export function useCircuitCanvasState(components: WokwiComponent[]) {
   }, []);
 
   // Add node to canvas
-  const addNode = useCallback((node: Node<WokwiNodeData>) => {
+  const addNode = useCallback((node: Node) => {
     setNodes(prev => [...prev, node]);
   }, []);
 

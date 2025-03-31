@@ -1,5 +1,5 @@
 
-import { NodeProps, EdgeProps, Node } from '@xyflow/react';
+import { NodeProps, EdgeProps, Node, Edge } from '@xyflow/react';
 import { ComponentPin } from './pin';
 
 /**
@@ -62,9 +62,12 @@ export interface WokwiNodeData extends Record<string, unknown> {
 }
 
 /**
- * Props for the Wokwi component node
+ * Props for the Wokwi component node that correctly extends NodeProps
  */
-export interface WokwiNodeProps extends NodeProps<WokwiNodeData> {}
+export interface WokwiNodeProps extends NodeProps {
+  data: WokwiNodeData;
+  selected?: boolean;
+}
 
 /**
  * Error state for the circuit editor

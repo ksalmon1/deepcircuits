@@ -49,14 +49,14 @@ export const convertLibraryItemToCircuitComponent = (item: ComponentLibraryItem)
 /**
  * Convert a circuit component to a node for the React Flow canvas
  */
-export const componentToNode = (component: CircuitComponent): Node<WokwiNodeData> => {
+export const componentToNode = (component: CircuitComponent): Node => {
   return {
     id: component.id,
     type: 'wokwiComponent',
     position: { x: component.left, y: component.top },
     data: {
       type: component.type,
-      label: component.name || component.type, // Add label property
+      label: component.name || component.type,
       attributes: component.attributes || {},
       pins: component.pins ? component.pins.map(pin => ({
         name: pin.name,
@@ -66,7 +66,7 @@ export const componentToNode = (component: CircuitComponent): Node<WokwiNodeData
       })) : [],
       svgPath: component.svgPath,
       isOriginal: component.isOriginal,
-    },
+    } as WokwiNodeData,
     draggable: true,
   };
 };
@@ -74,8 +74,8 @@ export const componentToNode = (component: CircuitComponent): Node<WokwiNodeData
 /**
  * Convert a React Flow node back to a circuit component
  */
-export const nodeToCircuitComponent = (node: Node<WokwiNodeData>): CircuitComponent => {
-  const nodeData = node.data;
+export const nodeToCircuitComponent = (node: Node): CircuitComponent => {
+  const nodeData = node.data as WokwiNodeData;
   
   return {
     id: node.id,

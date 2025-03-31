@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { 
   isWokwiLoaded, 
@@ -48,8 +47,8 @@ interface CircuitCanvasProps {
 }
 
 // Define the custom node types
-const nodeTypes: NodeTypes = {
-  wokwiComponent: WokwiComponentNode
+const nodeTypes = {
+  wokwiComponent: WokwiComponentNode as any // Type assertion needed for compatibility
 };
 
 // Define the custom edge types
