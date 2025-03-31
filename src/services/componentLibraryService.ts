@@ -1,9 +1,8 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { ComponentLibraryItem } from '@/services/componentLibrary/types';
 import { WokwiComponent, WokwiPin } from '@/integrations/wokwi/WokwiIntegration';
 
-export { ComponentLibraryItem };
+export type { ComponentLibraryItem };
 
 export async function getComponents(): Promise<ComponentLibraryItem[]> {
   try {
@@ -37,7 +36,6 @@ export async function getComponents(): Promise<ComponentLibraryItem[]> {
   }
 }
 
-// Alias function for backward compatibility
 export const getAllComponents = getComponents;
 
 export async function getComponentById(id: string): Promise<ComponentLibraryItem | null> {
@@ -115,7 +113,6 @@ export async function getComponentWithDetails(id: string): Promise<ComponentLibr
   try {
     console.log('Getting component with details for ID:', id);
 
-    // Use the new RPC procedure
     const { data: rpcData, error: rpcError } = await supabase.rpc('get_component_with_details', {
       component_id: id
     });
@@ -130,13 +127,11 @@ export async function getComponentWithDetails(id: string): Promise<ComponentLibr
       return null;
     }
 
-    // Type check and handle RPC data
     if (typeof rpcData !== 'object' || rpcData === null) {
       console.error('RPC returned invalid data format for component ID:', id, rpcData);
       return null;
     }
 
-    // Safely access and type check each property
     const rpcDataObj = rpcData as Record<string, any>;
     const componentData = rpcDataObj.component as Record<string, any> || {};
     const pins = Array.isArray(rpcDataObj.pins) ? rpcDataObj.pins : [];
@@ -169,7 +164,6 @@ export async function getComponentWithDetails(id: string): Promise<ComponentLibr
   }
 }
 
-// Add CRUD operations for component library
 export async function createComponent(component: ComponentLibraryItem): Promise<{ success: boolean; data?: ComponentLibraryItem; error?: string }> {
   try {
     const { data, error } = await supabase.from('component_library').insert({
@@ -256,7 +250,6 @@ export async function deleteComponent(id: string): Promise<{ success: boolean; e
   }
 }
 
-// Helper function to convert ComponentLibraryItem to WokwiComponent
 export function convertLibraryItemToWokwiComponent(item: ComponentLibraryItem): WokwiComponent {
   return {
     id: item.id || crypto.randomUUID(),
