@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { ComponentPin, PinSignalType, SIGNAL_COLOR_MAP } from '@/types/pin';
 import { Button } from "@/components/ui/button";
