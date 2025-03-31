@@ -1,4 +1,3 @@
-
 import { ComponentPin, PinConnection, PinWithSignal } from "@/types/pin";
 import { CircuitComponent } from "@/types/component";
 import { PinError } from "./errorHandling";
@@ -15,7 +14,6 @@ import {
   findComponentById,
   getPinByIndex,
   canPinsConnect,
-  getWireColorFromSignal
 } from './wireUtils';
 
 // Re-export the pin manipulation functions with renamed imports to avoid circular dependencies

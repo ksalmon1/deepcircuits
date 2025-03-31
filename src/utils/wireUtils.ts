@@ -1,4 +1,3 @@
-
 import { Edge } from '@xyflow/react';
 import { CircuitComponent } from '@/types/component';
 import { WireData, WireEdge } from '@/types/circuit';
@@ -72,9 +71,6 @@ export function getWireColorFromSignal(signalType: string): string {
   return getSignalColor(signalType);
 }
 
-/**
- * Check if a pin can connect to another pin
- */
 export function canPinsConnect(sourcePin: ComponentPin, targetPin: ComponentPin): boolean {
   // Basic validation - pins must have signals
   if (!sourcePin.signals || !targetPin.signals) return false;
@@ -105,16 +101,10 @@ export function canPinsConnect(sourcePin: ComponentPin, targetPin: ComponentPin)
   return false;
 }
 
-/**
- * Create a unique ID for a wire
- */
 export function createWireId(): string {
   return `wire-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 }
 
-/**
- * Check if a connection is valid between components
- */
 export function isValidConnection(
   components: CircuitComponent[],
   sourceId: string,
@@ -144,9 +134,6 @@ export function isValidConnection(
   return canPinsConnect(sourcePin, targetPin);
 }
 
-/**
- * Create a wire edge between two components
- */
 export const createWireEdge = (
   components: CircuitComponent[],
   sourceId: string,
@@ -187,9 +174,6 @@ export const createWireEdge = (
   return edge;
 };
 
-/**
- * Find all wires connected to a component
- */
 export function findConnectedWires(
   edges: Edge[],
   componentId: string
@@ -199,9 +183,6 @@ export function findConnectedWires(
   );
 }
 
-/**
- * Convert edges to pin connections
- */
 export function edgesToConnections(edges: Edge[]): Array<{
   sourceId: string;
   targetId: string;
@@ -225,9 +206,6 @@ export function edgesToConnections(edges: Edge[]): Array<{
   });
 }
 
-/**
- * Check if two edges represent the same connection
- */
 export function areSameConnection(edge1: Edge, edge2: Edge): boolean {
   // Check direct match
   const directMatch = edge1.source === edge2.source && 
@@ -244,9 +222,6 @@ export function areSameConnection(edge1: Edge, edge2: Edge): boolean {
   return directMatch || reverseMatch;
 }
 
-/**
- * Calculate optimal routing points for a wire
- */
 export function calculateWireRoutingPoints(
   sourceX: number,
   sourceY: number,
