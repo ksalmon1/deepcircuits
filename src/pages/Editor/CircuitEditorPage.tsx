@@ -13,6 +13,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
 import ErrorBoundary from '@/components/CircuitEditor/ErrorBoundary';
+import { useCircuitCanvasState } from '@/hooks/useCircuitCanvasState';
 
 // Internal component that uses the context
 const CircuitEditorContent = () => {
@@ -34,6 +35,9 @@ const CircuitEditorContent = () => {
     errorState,
     clearError
   } = useCircuitEditor();
+  
+  // Directly use the useCircuitCanvasState hook instead of getting it from context
+  const canvasState = useCircuitCanvasState(components);
   
   const isMobile = useIsMobile();
   

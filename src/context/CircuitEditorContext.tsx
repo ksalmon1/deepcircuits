@@ -3,7 +3,6 @@ import React, { createContext, useContext, useState, useEffect, useCallback, Rea
 import { CircuitComponent } from '@/types/component';
 import { PinConnection } from '@/types/pin';
 import { toast } from 'sonner';
-import { useCircuitCanvasState } from '@/hooks/useCircuitCanvasState';
 import { WokwiComponent } from '@/integrations/wokwi/WokwiIntegration';
 import { AppError, formatErrorMessage, ComponentError, logError } from '@/utils/errorHandling';
 import { CircuitEditorErrorState } from '@/types/circuit';
@@ -24,9 +23,6 @@ interface CircuitEditorContextType {
   setConnections: React.Dispatch<React.SetStateAction<PinConnection[]>>;
   addConnection: (connection: PinConnection) => void;
   removeConnection: (connectionId: string) => void;
-  
-  // State from useCircuitCanvasState
-  canvasState: ReturnType<typeof useCircuitCanvasState>;
   
   // Editor state
   isSimulationRunning: boolean;
@@ -101,9 +97,6 @@ export const CircuitEditorProvider: React.FC<CircuitEditorProviderProps> = ({ ch
     errorContext: '',
     errorTimestamp: 0
   });
-  
-  // Initialize canvas state
-  const canvasState = useCircuitCanvasState(components as WokwiComponent[]);
   
   // Set error in the error state
   const setError = useCallback((error: Error, context: string, code: string = 'UNKNOWN_ERROR') => {
@@ -404,7 +397,6 @@ export const CircuitEditorProvider: React.FC<CircuitEditorProviderProps> = ({ ch
     setConnections,
     addConnection,
     removeConnection,
-    canvasState,
     isSimulationRunning,
     setIsSimulationRunning,
     code,

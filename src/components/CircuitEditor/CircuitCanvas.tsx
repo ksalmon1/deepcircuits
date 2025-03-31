@@ -65,7 +65,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
   const { isReady, loadingError, handleRetry } = useWokwiLoader();
   const { pinCache } = useComponentPinCache();
   
-  // Initialize circuit canvas state
+  // Directly use the useCircuitCanvasState hook
   const {
     canvasSize,
     setCanvasSize,

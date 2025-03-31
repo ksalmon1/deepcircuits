@@ -4,6 +4,7 @@ import CircuitCanvas from './CircuitCanvas';
 import ErrorBoundary from './ErrorBoundary';
 import { useCircuitEditor } from '@/context/CircuitEditorContext';
 import { CircuitComponent } from '@/types/component';
+import { useCircuitCanvasState } from '@/hooks/useCircuitCanvasState';
 
 /**
  * Props for CircuitCanvasWrapper when used directly
