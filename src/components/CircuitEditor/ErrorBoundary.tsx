@@ -1,94 +1,134 @@
 
 import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { logError } from '@/utils/errorHandling';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { RefreshCcw } from 'lucide-react';
+import { AppError, formatErrorMessage, logError } from '@/utils/errorHandling';
+import { toast } from 'sonner';
 
-interface Props {
+interface ErrorBoundaryProps {
   children: ReactNode;
   fallback?: ReactNode;
   onError?: (error: Error, errorInfo: ErrorInfo) => void;
-  resetKey?: any;
+  resetKey?: any; // When this key changes, the error boundary will reset
+  context?: string; // Context information for better error logging
 }
 
-interface State {
+interface ErrorBoundaryState {
   hasError: boolean;
   error: Error | null;
-  componentStack?: string;
+  errorInfo: ErrorInfo | null;
 }
 
 /**
- * Error boundary component to catch and handle errors in React component tree
+ * ErrorBoundary component that catches errors in its child components
+ * and displays a fallback UI instead of crashing the entire application.
  */
-class ErrorBoundary extends Component<Props, State> {
-  public state: State = {
-    hasError: false,
-    error: null
-  };
-
-  public static getDerivedStateFromError(error: Error): State {
-    // Update state so the next render will show the fallback UI
-    return { hasError: true, error };
+class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = {
+      hasError: false,
+      error: null,
+      errorInfo: null
+    };
   }
-
-  public componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    // Log the error
-    logError(error, { componentStack: errorInfo.componentStack });
+  
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    // Update state so the next render will show the fallback UI
+    return { hasError: true, error, errorInfo: null };
+  }
+  
+  componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
+    // Log the error to console
+    const context = this.props.context || 'ErrorBoundary';
+    logError(error, context, { errorInfo });
     
-    // Store component stack for display
-    this.setState({
-      componentStack: errorInfo.componentStack
-    });
+    // Set error info in state
+    this.setState({ errorInfo });
     
-    // Call the onError callback if provided
+    // Call onError prop if provided
     if (this.props.onError) {
       this.props.onError(error, errorInfo);
     }
+    
+    // Show a toast notification for non-critical errors
+    toast.error('An error occurred', {
+      description: formatErrorMessage(error),
+      duration: 5000,
+    });
   }
   
-  // Reset error state if resetKey changes
-  public componentDidUpdate(prevProps: Props): void {
-    if (this.state.hasError && prevProps.resetKey !== this.props.resetKey) {
-      this.setState({ hasError: false, error: null, componentStack: undefined });
+  componentDidUpdate(prevProps: ErrorBoundaryProps): void {
+    // Reset the error state if resetKey changed
+    if (this.props.resetKey !== prevProps.resetKey && this.state.hasError) {
+      this.setState({
+        hasError: false,
+        error: null,
+        errorInfo: null
+      });
     }
   }
-
-  public render(): ReactNode {
+  
+  resetErrorBoundary = (): void => {
+    this.setState({
+      hasError: false,
+      error: null,
+      errorInfo: null
+    });
+  };
+  
+  render(): ReactNode {
     if (this.state.hasError) {
-      // If a fallback UI is provided, render it
+      // If a custom fallback is provided, use it
       if (this.props.fallback) {
         return this.props.fallback;
       }
       
-      // Otherwise, render the default error UI
+      // Default fallback UI
       return (
-        <div className="p-6 h-full flex flex-col items-center justify-center">
-          <Alert variant="destructive" className="mb-4 max-w-md mx-auto">
+        <div className="p-4 border border-red-300 rounded bg-red-50 text-red-800 my-4">
+          <Alert variant="destructive">
             <AlertTitle>Something went wrong</AlertTitle>
             <AlertDescription className="mt-2">
-              {this.state.error?.message || 'An unexpected error occurred'}
-              
-              {process.env.NODE_ENV === 'development' && this.state.componentStack && (
-                <div className="mt-4 max-h-40 overflow-auto text-xs opacity-70 bg-gray-100 dark:bg-gray-800 p-2 rounded">
-                  <pre>{this.state.componentStack}</pre>
+              {this.state.error ? (
+                <div>
+                  <p className="mb-2 font-mono text-sm bg-red-100 p-2 rounded">
+                    {formatErrorMessage(this.state.error)}
+                  </p>
+                  {this.state.errorInfo && (
+                    <details className="mt-2">
+                      <summary className="cursor-pointer text-sm">Stack trace</summary>
+                      <pre className="mt-2 text-xs overflow-auto p-2 bg-red-100 rounded">
+                        {this.state.errorInfo.componentStack}
+                      </pre>
+                    </details>
+                  )}
                 </div>
+              ) : (
+                <p>An unknown error occurred.</p>
               )}
+              <div className="mt-4">
+                <Button 
+                  variant="outline" 
+                  onClick={this.resetErrorBoundary}
+                  className="mr-2"
+                >
+                  Try Again
+                </Button>
+                <Button 
+                  variant="default" 
+                  onClick={() => window.location.reload()}
+                >
+                  Reload Page
+                </Button>
+              </div>
             </AlertDescription>
           </Alert>
-          
-          <Button 
-            variant="outline" 
-            className="mt-4"
-            onClick={() => this.setState({ hasError: false, error: null, componentStack: undefined })}
-          >
-            <RefreshCcw className="h-4 w-4 mr-2" />
-            Try again
-          </Button>
         </div>
       );
     }
-
+    
+    // If there's no error, render children normally
     return this.props.children;
   }
 }

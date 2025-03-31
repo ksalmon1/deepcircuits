@@ -1,61 +1,62 @@
 
-import { Node, Edge, Position } from '@xyflow/react';
+import { Edge, Node, XYPosition } from '@xyflow/react';
+import { CircuitComponent } from './component';
 
 /**
- * Node data type for Wokwi component nodes
- */
-export interface WokwiNodeData {
-  type: string;
-  attributes?: Record<string, any>;
-  pins?: Array<{
-    name: string;
-    x: number;
-    y: number;
-    signals?: string[];
-  }>;
-  svgPath?: string | null;
-  isOriginal?: boolean;
-  [key: string]: unknown; // Add index signature to satisfy Record<string, unknown>
-}
-
-/**
- * Types for custom nodes in XY Flow
- */
-export type WokwiNode = Node<WokwiNodeData>;
-
-/**
- * Custom edge data type for wires with routing points
+ * Wire data interface for custom wire edges
  */
 export interface WireData {
   color: string;
   sourcePinIndex: number;
   targetPinIndex: number;
-  routingPoints?: Array<{ x: number, y: number }>;
-  cursorPosition?: { x: number, y: number }; // Add cursor position for wire following
-  [key: string]: unknown; // Add index signature to satisfy Record<string, unknown>
+  routingPoints?: Array<{ x: number; y: number }>;
+  cursorPosition?: XYPosition;
 }
 
 /**
- * Custom edge type for wires
+ * Extended Edge type for wires
  */
-export type WireEdge = Edge<WireData>;
+export interface WireEdge extends Edge {
+  data: WireData;
+}
 
 /**
- * Define state for wire connection process
+ * Node data for Wokwi components
+ */
+export interface WokwiNodeData {
+  type: string;
+  pins?: Array<{ name: string; x: number; y: number; signals: string[] }>;
+  attributes?: Record<string, any>;
+  svgPath?: string | null;
+  isOriginal?: boolean;
+}
+
+/**
+ * Circuit editor state interface
+ */
+export interface CircuitEditorState {
+  components: CircuitComponent[];
+  selectedComponentId: string | null;
+  isSimulationRunning: boolean;
+  error: Error | null;
+}
+
+/**
+ * Wire connection state for the wire routing system
  */
 export interface WireConnectionState {
   isConnecting: boolean;
   sourceNodeId?: string;
   sourceHandleId?: string;
-  routingPoints: Array<{ x: number, y: number }>;
   sourcePinIndex?: number;
+  routingPoints: Array<{ x: number; y: number }>;
   temporaryEdgeId?: string;
 }
 
 /**
- * Define props for the CustomWireEdge component
+ * Props for CustomWireEdge component
  */
-export interface CustomWireEdgeProps {
+export interface CustomWireEdgeProps extends Edge {
   id: string;
   source: string;
   target: string;
@@ -63,8 +64,8 @@ export interface CustomWireEdgeProps {
   sourceY: number;
   targetX: number;
   targetY: number;
-  sourcePosition?: Position;
-  targetPosition?: Position;
+  sourcePosition?: any;
+  targetPosition?: any;
   style?: React.CSSProperties;
   data?: WireData;
   selected?: boolean;
@@ -72,15 +73,13 @@ export interface CustomWireEdgeProps {
 }
 
 /**
- * Circuit project metadata
+ * Error state interface for circuit editor
  */
-export interface CircuitProject {
-  id: string;
-  name: string;
-  description?: string;
-  thumbnailUrl?: string;
-  isPublic: boolean;
-  createdAt: string;
-  updatedAt: string;
-  userId: string;
+export interface CircuitEditorErrorState {
+  hasError: boolean;
+  error: Error | null;
+  errorInfo: React.ErrorInfo | null;
+  errorCode: string;
+  errorContext: string;
+  errorTimestamp: number;
 }

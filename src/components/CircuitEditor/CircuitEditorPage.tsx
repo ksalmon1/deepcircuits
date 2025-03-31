@@ -12,6 +12,7 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/componen
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
+import ErrorBoundary from './ErrorBoundary';
 
 // Internal component that uses the context
 const CircuitEditorContent = () => {
@@ -29,28 +30,37 @@ const CircuitEditorContent = () => {
     saveProject,
     undoLastAction,
     exportProject,
-    importProject
+    importProject,
+    errorState,
+    clearError
   } = useCircuitEditor();
   
   const isMobile = useIsMobile();
   
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden">
-      <Toolbar 
-        isSimulationRunning={isSimulationRunning}
-        toggleSimulation={toggleSimulation}
-        saveProject={saveProject}
-        undoLastAction={undoLastAction}
-        exportProject={exportProject}
-        importProject={importProject}
-      />
+      <ErrorBoundary 
+        context="CircuitEditorToolbar" 
+        resetKey={errorState.errorTimestamp}
+      >
+        <Toolbar 
+          isSimulationRunning={isSimulationRunning}
+          toggleSimulation={toggleSimulation}
+          saveProject={saveProject}
+          undoLastAction={undoLastAction}
+          exportProject={exportProject}
+          importProject={importProject}
+        />
+      </ErrorBoundary>
       
       <ResizablePanelGroup direction={isMobile ? "vertical" : "horizontal"} className="flex-1 overflow-hidden">
         {!isMobile ? (
           <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>
-            <div className="h-full flex flex-col overflow-hidden">
-              <ComponentPanel onComponentSelect={selectComponent} />
-            </div>
+            <ErrorBoundary context="ComponentPanel">
+              <div className="h-full flex flex-col overflow-hidden">
+                <ComponentPanel onComponentSelect={selectComponent} />
+              </div>
+            </ErrorBoundary>
           </ResizablePanel>
         ) : (
           <Sheet>
@@ -60,7 +70,9 @@ const CircuitEditorContent = () => {
               </Button>
             </SheetTrigger>
             <SheetContent side="left">
-              <ComponentPanel onComponentSelect={selectComponent} />
+              <ErrorBoundary context="ComponentPanel">
+                <ComponentPanel onComponentSelect={selectComponent} />
+              </ErrorBoundary>
             </SheetContent>
           </Sheet>
         )}
@@ -70,10 +82,18 @@ const CircuitEditorContent = () => {
         <ResizablePanel defaultSize={60}>
           <div className="h-full flex flex-col">
             <div className="flex-1 relative">
-              <CircuitCanvasWrapper 
-                components={components} 
-                onComponentsChange={handleComponentsChange} 
-              />
+              <ErrorBoundary 
+                context="CircuitCanvas" 
+                resetKey={errorState.errorTimestamp}
+                onError={(error) => {
+                  console.error("Circuit canvas error:", error);
+                }}
+              >
+                <CircuitCanvasWrapper 
+                  components={components} 
+                  onComponentsChange={handleComponentsChange} 
+                />
+              </ErrorBoundary>
             </div>
           </div>
         </ResizablePanel>
@@ -89,21 +109,27 @@ const CircuitEditorContent = () => {
             </TabsList>
             
             <TabsContent value="code" className="flex-1 overflow-hidden">
-              <CodeEditor code={code} onChange={setCode} />
+              <ErrorBoundary context="CodeEditor">
+                <CodeEditor code={code} onChange={setCode} />
+              </ErrorBoundary>
             </TabsContent>
             
             <TabsContent value="properties" className="flex-1 overflow-auto p-4">
-              <PropertiesPanel 
-                selectedComponent={selectedComponent}
-                handleUpdateComponentAttributes={handleUpdateComponentAttributes}
-              />
+              <ErrorBoundary context="PropertiesPanel">
+                <PropertiesPanel 
+                  selectedComponent={selectedComponent}
+                  handleUpdateComponentAttributes={handleUpdateComponentAttributes}
+                />
+              </ErrorBoundary>
             </TabsContent>
             
             <TabsContent value="serial" className="flex-1 overflow-hidden">
-              <SerialMonitor 
-                isSimulationRunning={isSimulationRunning} 
-                serialOutput={serialOutput} 
-              />
+              <ErrorBoundary context="SerialMonitor">
+                <SerialMonitor 
+                  isSimulationRunning={isSimulationRunning} 
+                  serialOutput={serialOutput} 
+                />
+              </ErrorBoundary>
             </TabsContent>
           </Tabs>
         </ResizablePanel>
@@ -115,9 +141,29 @@ const CircuitEditorContent = () => {
 // Main component that provides the context
 const CircuitEditorPage = () => {
   return (
-    <CircuitEditorProvider>
-      <CircuitEditorContent />
-    </CircuitEditorProvider>
+    <ErrorBoundary 
+      context="CircuitEditorPage"
+      fallback={
+        <div className="p-8 flex flex-col items-center justify-center h-screen">
+          <div className="bg-red-50 border border-red-300 rounded-lg p-6 max-w-md">
+            <h2 className="text-xl font-bold text-red-800 mb-4">Circuit Editor Error</h2>
+            <p className="text-red-700 mb-4">
+              The circuit editor has encountered a critical error and cannot be loaded.
+            </p>
+            <Button 
+              onClick={() => window.location.reload()}
+              variant="destructive"
+            >
+              Reload Page
+            </Button>
+          </div>
+        </div>
+      }
+    >
+      <CircuitEditorProvider>
+        <CircuitEditorContent />
+      </CircuitEditorProvider>
+    </ErrorBoundary>
   );
 };
 

@@ -60,56 +60,79 @@ export function useWireSystem(components: WokwiComponent[]) {
   
   // Create a new edge when a connection is formed from React Flow
   const onConnect = useCallback((connection: Connection) => {
-    if (!connection.source || !connection.target || !connection.sourceHandle || !connection.targetHandle) {
-      return;
-    }
-    
-    // Extract component IDs and pin indices from the connection
-    const sourceId = connection.source;
-    const targetId = connection.target;
-    const sourcePinIndex = parseInt(connection.sourceHandle.split('-')[1]);
-    const targetPinIndex = parseInt(connection.targetHandle.split('-')[1]);
-    
-    // Determine wire color based on signal type
-    const signal = getPinSignalType(components, sourceId, sourcePinIndex);
-    const wireColor = getWireColorFromSignal(signal || '');
-    
-    // Create a new edge with the correct type
-    const newEdge: WireEdge = {
-      id: `wire-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-      source: sourceId,
-      target: targetId,
-      sourceHandle: connection.sourceHandle,
-      targetHandle: connection.targetHandle,
-      type: 'straight',
-      data: {
-        color: wireColor,
-        sourcePinIndex,
-        targetPinIndex,
-      },
-      animated: false,
-      style: {
-        stroke: wireColor,
-        strokeWidth: 2
+    try {
+      if (!connection.source || !connection.target || !connection.sourceHandle || !connection.targetHandle) {
+        throw new ComponentError('Invalid connection parameters', 'INVALID_CONNECTION_PARAMS');
       }
-    };
-    
-    // Use type assertion to ensure compatibility
-    setEdges((eds) => addEdge(newEdge, eds));
-    
-    // Also add to our internal connections system
-    connectPins(sourceId, sourcePinIndex, targetId, targetPinIndex);
-    
-    return newEdge;
+      
+      // Extract component IDs and pin indices from the connection
+      const sourceId = connection.source;
+      const targetId = connection.target;
+      const sourcePinIndex = parseInt(connection.sourceHandle.split('-')[1]);
+      const targetPinIndex = parseInt(connection.targetHandle.split('-')[1]);
+      
+      // Validate pin indices
+      if (isNaN(sourcePinIndex) || isNaN(targetPinIndex)) {
+        throw new ComponentError('Invalid pin format', 'INVALID_PIN_FORMAT');
+      }
+      
+      // Determine wire color based on signal type
+      const signal = getPinSignalType(components, sourceId, sourcePinIndex);
+      const wireColor = getWireColorFromSignal(signal || '');
+      
+      // Create a new edge with the correct type
+      const newEdge: WireEdge = {
+        id: `wire-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+        source: sourceId,
+        target: targetId,
+        sourceHandle: connection.sourceHandle,
+        targetHandle: connection.targetHandle,
+        type: 'straight',
+        data: {
+          color: wireColor,
+          sourcePinIndex,
+          targetPinIndex,
+        },
+        animated: false,
+        style: {
+          stroke: wireColor,
+          strokeWidth: 2
+        }
+      };
+      
+      // Use type assertion to ensure compatibility
+      setEdges((eds) => addEdge(newEdge, eds));
+      
+      // Also add to our internal connections system
+      connectPins(sourceId, sourcePinIndex, targetId, targetPinIndex);
+      
+      return newEdge;
+    } catch (error) {
+      console.error('Failed to create connection:', error);
+      toast.error('Failed to create connection');
+      return null;
+    }
   }, [components, setEdges, connectPins]);
   
   // Delete a wire by its ID
   const deleteWire = useCallback((wireId: string) => {
-    setEdges((edges) => edges.filter(e => e.id !== wireId));
-    
-    toast.info('Wire removed', {
-      duration: 1500,
-    });
+    try {
+      if (!wireId) {
+        throw new ComponentError('Invalid wire ID', 'INVALID_WIRE_ID');
+      }
+      
+      setEdges((edges) => edges.filter(e => e.id !== wireId));
+      
+      toast.info('Wire removed', {
+        duration: 1500,
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('Failed to delete wire:', error);
+      toast.error('Failed to delete wire');
+      return false;
+    }
   }, [setEdges]);
 
   return {
