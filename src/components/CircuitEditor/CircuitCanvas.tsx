@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { 
   isWokwiLoaded, 
@@ -39,29 +40,32 @@ import WokwiComponentNode from './CircuitCanvas/WokwiComponentNode';
 import CustomWireEdge from './CircuitCanvas/CustomWireEdge';
 import LoadingOverlay from './CircuitCanvas/LoadingOverlay';
 import { useCircuitCanvasState } from '@/hooks/useCircuitCanvasState';
-import { convertToCanvasCoordinates } from '@/utils/canvasUtils';
 
 interface CircuitCanvasProps {
   components: WokwiComponent[];
   onComponentsChange: (components: WokwiComponent[]) => void;
 }
 
+// Define the custom node types
 const nodeTypes = {
   wokwiComponent: WokwiComponentNode
 };
 
+// Define the custom edge types
 const edgeTypes: EdgeTypes = {
   customWire: CustomWireEdge
 };
 
 const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) => {
+  // Refs
   const canvasRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const reactFlowWrapperRef = useRef<HTMLDivElement>(null);
   
+  // Custom hooks
   const { isReady, loadingError, handleRetry } = useWokwiLoader();
   const { pinCache } = useComponentPinCache();
   
+  // Directly use the useCircuitCanvasState hook
   const {
     canvasSize,
     setCanvasSize,
@@ -86,6 +90,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     handleRetry: retryLoading
   } = useCircuitCanvasState(components);
   
+  // Initialize wire routing system
   const { 
     wireConnectionState,
     temporaryEdge,
@@ -93,12 +98,9 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     handleHandleClick,
     deleteWire,
     connectionLineStyle,
-    showHorizontalGuide,
-    showVerticalGuide,
-    lastFixedPointPosition,
-    mousePosition
   } = useWireRouting(components);
   
+  // React Flow state
   const [reactFlowNodes, setReactFlowNodes, onNodesChange] = useNodesState([]);
   const [reactFlowEdges, setReactFlowEdges, onEdgesChange] = useEdgesState([]);
   
@@ -124,9 +126,8 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     isLoadingComponents, 
     isLoadingDetails 
   } = useComponentLibrary();
-  
-  const reactFlowUtils = useReactFlow();
-  
+
+  // Convert components to nodes
   useEffect(() => {
     if (!components || components.length === 0) return;
     
@@ -145,6 +146,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     setReactFlowNodes(initialNodes);
   }, [components, setReactFlowNodes]);
   
+  // Update canvas dimensions when window size changes
   useEffect(() => {
     const updateSize = () => {
       if (containerRef.current) {
@@ -165,6 +167,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     };
   }, [updateCanvasDimensions, setCanvasSize]);
 
+  // Handle node drag end - update component positions
   const onNodeDragStop = useCallback((event: React.MouseEvent, node: any) => {
     const updatedComponents = components.map(comp => {
       if (comp.id === node.id) {
@@ -180,6 +183,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     onComponentsChange(updatedComponents);
   }, [components, onComponentsChange]);
 
+  // Listen for handle-click events from WokwiComponentNode
   useEffect(() => {
     const handlePinClick = (event: CustomEvent) => {
       const { nodeId, handleId } = event.detail;
@@ -193,6 +197,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     };
   }, [handleHandleClick]);
 
+  // Handle drop to create new component
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     
@@ -200,6 +205,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
       const componentData = e.dataTransfer.getData('component');
       if (!componentData) return;
       
+      // Parse the component data
       const componentInfo = JSON.parse(componentData);
       console.log('Dropped component data:', componentInfo);
       
@@ -304,7 +310,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
       />
       
       <div 
-        ref={reactFlowWrapperRef}
+        ref={containerRef}
         className="h-full w-full overflow-hidden"
         style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
       >
@@ -340,56 +346,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
             color="#e2e8f0" 
           />
           <Controls position="bottom-right" showInteractive={false} />
-          
-          {wireConnectionState.isConnecting && (showHorizontalGuide || showVerticalGuide) && (
-            <svg
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: '100%',
-                pointerEvents: 'none',
-                zIndex: 5,
-              }}
-            >
-              {showHorizontalGuide && (() => {
-                const projectedFixed = reactFlowUtils.flowToScreenPosition(lastFixedPointPosition);
-                const projectedMouse = reactFlowUtils.flowToScreenPosition(mousePosition);
-                
-                return (
-                  <line
-                    x1={projectedFixed.x}
-                    y1={projectedFixed.y}
-                    x2={projectedMouse.x}
-                    y2={projectedFixed.y}
-                    stroke="#3082f6"
-                    strokeWidth={1}
-                    strokeDasharray="5,5"
-                    // pointerEvents="none"
-                  />
-                );
-              })()}
-              
-              {showVerticalGuide && (() => {
-                const projectedFixed = reactFlowUtils.flowToScreenPosition(lastFixedPointPosition);
-                const projectedMouse = reactFlowUtils.flowToScreenPosition(mousePosition);
-                
-                return (
-                  <line
-                    x1={projectedFixed.x}
-                    y1={projectedFixed.y}
-                    x2={projectedFixed.x}
-                    y2={projectedMouse.y}
-                    stroke="#3082f6"
-                    strokeWidth={1}
-                    strokeDasharray="5,5"
-                    // pointerEvents="none"
-                  />
-                );
-              })()}
-            </svg>
-          )}
         </ReactFlow>
       </div>
     </div>

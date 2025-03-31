@@ -1,3 +1,4 @@
+
 import { useCallback, useState, useEffect } from 'react';
 import { Connection, useReactFlow, Edge, Position, XYPosition } from '@xyflow/react';
 import { WireData, WireEdge, WireConnectionState } from '@/types/circuit';
@@ -15,9 +16,6 @@ export const useWireRouting = (components: CircuitComponent[]) => {
   });
   const [temporaryEdge, setTemporaryEdge] = useState<Edge<WireData> | null>(null);
   const [mousePosition, setMousePosition] = useState<XYPosition>({ x: 0, y: 0 });
-  const [lastFixedPointPosition, setLastFixedPointPosition] = useState<XYPosition>({ x: 0, y: 0 });
-  const [showHorizontalGuide, setShowHorizontalGuide] = useState<boolean>(false);
-  const [showVerticalGuide, setShowVerticalGuide] = useState<boolean>(false);
 
   /**
    * Cancel the current wire connection
@@ -39,8 +37,6 @@ export const useWireRouting = (components: CircuitComponent[]) => {
     });
     
     setTemporaryEdge(null);
-    setShowHorizontalGuide(false);
-    setShowVerticalGuide(false);
     
     return true;
   }, [wireConnectionState, setEdges]);
@@ -72,42 +68,6 @@ export const useWireRouting = (components: CircuitComponent[]) => {
   useEffect(() => {
     if (!wireConnectionState.isConnecting) return;
     
-    // Get the last fixed point position
-    const updateLastFixedPoint = () => {
-      if (wireConnectionState.routingPoints.length > 0) {
-        // Use the last routing point as the reference
-        const lastPoint = wireConnectionState.routingPoints[wireConnectionState.routingPoints.length - 1];
-        setLastFixedPointPosition(lastPoint);
-      } else if (wireConnectionState.sourceNodeId) {
-        // Use source node handle as the reference
-        const nodes = getNodes();
-        const sourceNode = nodes.find(node => node.id === wireConnectionState.sourceNodeId);
-        
-        if (sourceNode && wireConnectionState.sourceHandleId) {
-          const handleId = wireConnectionState.sourceHandleId;
-          // Find the handle position from the DOM
-          const handleElement = document.querySelector(
-            `.react-flow__handle[data-handleid="${handleId}"][data-nodeid="${sourceNode.id}"]`
-          );
-          
-          if (handleElement) {
-            const rect = handleElement.getBoundingClientRect();
-            const viewport = getViewport();
-            
-            // Convert to flow coordinates
-            const handlePosition = {
-              x: (rect.left + rect.width / 2 - viewport.x) / viewport.zoom,
-              y: (rect.top + rect.height / 2 - viewport.y) / viewport.zoom
-            };
-            
-            setLastFixedPointPosition(handlePosition);
-          }
-        }
-      }
-    };
-    
-    updateLastFixedPoint();
-    
     const handleMouseMove = (event: MouseEvent) => {
       const reactFlowBounds = document.querySelector('.react-flow')?.getBoundingClientRect();
       if (reactFlowBounds) {
@@ -115,26 +75,6 @@ export const useWireRouting = (components: CircuitComponent[]) => {
         const mousePos = convertToCanvasCoordinates(event, reactFlowBounds, viewport);
         setMousePosition(mousePos);
         updateTemporaryEdge(mousePos);
-        
-        // Check alignment with last fixed point for guidelines
-        const threshold = 3; // pixels
-        const dx = Math.abs(mousePos.x - lastFixedPointPosition.x);
-        const dy = Math.abs(mousePos.y - lastFixedPointPosition.y);
-        
-        const shouldShowH = dx < threshold; // Show horizontal guide when X values are close
-        const shouldShowV = dy < threshold; // Show vertical guide when Y values are close
-        
-        // Add this console log:
-        console.log('Guide Check:', { 
-          mouse: mousePos, 
-          lastFixed: lastFixedPointPosition,
-          dx, dy,
-          showH: shouldShowH,
-          showV: shouldShowV
-        });
-        
-        setShowHorizontalGuide(shouldShowH);
-        setShowVerticalGuide(shouldShowV);
       }
     };
     
@@ -143,7 +83,7 @@ export const useWireRouting = (components: CircuitComponent[]) => {
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
     };
-  }, [wireConnectionState, getNodes, getViewport, updateTemporaryEdge, lastFixedPointPosition]);
+  }, [wireConnectionState.isConnecting, getViewport, updateTemporaryEdge]);
   
   /**
    * Create a temporary edge for wire routing
@@ -219,31 +159,8 @@ export const useWireRouting = (components: CircuitComponent[]) => {
     setEdges((eds) => [...eds, newTempEdge] as Edge[]);
     setMousePosition(initialMousePos);
     
-    // Initialize the last fixed point position
-    const nodes = getNodes();
-    const sourceNode = nodes.find(node => node.id === nodeId);
-    
-    if (sourceNode) {
-      const handleElement = document.querySelector(
-        `.react-flow__handle[data-handleid="${handleId}"][data-nodeid="${nodeId}"]`
-      );
-      
-      if (handleElement) {
-        const rect = handleElement.getBoundingClientRect();
-        const viewport = getViewport();
-        
-        // Convert to flow coordinates
-        const handlePosition = {
-          x: (rect.left + rect.width / 2 - viewport.x) / viewport.zoom,
-          y: (rect.top + rect.height / 2 - viewport.y) / viewport.zoom
-        };
-        
-        setLastFixedPointPosition(handlePosition);
-      }
-    }
-    
     return true;
-  }, [getInitialMousePosition, createTemporaryEdge, setEdges, getNodes, getViewport]);
+  }, [getInitialMousePosition, createTemporaryEdge, setEdges]);
   
   /**
    * Add a routing point at the specified position
@@ -272,11 +189,6 @@ export const useWireRouting = (components: CircuitComponent[]) => {
       }
       return edge;
     }));
-    
-    // Update the last fixed point when adding a routing point
-    setLastFixedPointPosition(point);
-    setShowHorizontalGuide(false);
-    setShowVerticalGuide(false);
     
     return true;
   }, [wireConnectionState, setEdges]);
@@ -397,10 +309,6 @@ export const useWireRouting = (components: CircuitComponent[]) => {
     
     setTemporaryEdge(null);
     
-    // Clear alignment guides
-    setShowHorizontalGuide(false);
-    setShowVerticalGuide(false);
-    
     toast.success('Connection created', {
       description: 'Wire connected successfully',
       duration: 1500,
@@ -467,9 +375,6 @@ export const useWireRouting = (components: CircuitComponent[]) => {
     wireConnectionState,
     temporaryEdge,
     mousePosition,
-    lastFixedPointPosition,
-    showHorizontalGuide,
-    showVerticalGuide,
     startWireConnection,
     addRoutingPoint,
     completeWireConnection,
