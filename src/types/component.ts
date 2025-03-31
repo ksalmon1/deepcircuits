@@ -3,18 +3,25 @@ import { WokwiPin } from "@/integrations/wokwi/WokwiIntegration";
 import { ComponentPin } from "@/types/pin";
 
 /**
+ * Base interface for common component properties
+ */
+export interface BaseComponent {
+  id?: string;
+  type: string;
+  name?: string;
+  pins?: ComponentPin[];
+}
+
+/**
  * Base interface for component library items
  */
-export interface ComponentLibraryItem {
-  id?: string;
+export interface ComponentLibraryItem extends BaseComponent {
   name: string;
-  type: string;
   category: string;
   description?: string;
   svgPath?: string;
   enabled: boolean;
   isOriginal: boolean;
-  pins?: ComponentPin[];
   properties?: Record<string, any>;
   createdAt?: string;
   updatedAt?: string;
@@ -23,13 +30,11 @@ export interface ComponentLibraryItem {
 /**
  * Extended component interface for circuit editor
  */
-export interface CircuitComponent {
+export interface CircuitComponent extends BaseComponent {
   id: string;
-  type: string;
   top: number;
   left: number;
   attributes: Record<string, any>;
-  pins?: ComponentPin[];
   svgPath?: string | null;
   isOriginal?: boolean;
 }

@@ -1,82 +1,76 @@
-
 import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { logError } from '@/utils/errorHandling';
 import { Button } from '@/components/ui/button';
-import { Frown, RefreshCw } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { RefreshCcw } from 'lucide-react';
 
 interface Props {
   children: ReactNode;
   fallback?: ReactNode;
+  onError?: (error: Error, errorInfo: ErrorInfo) => void;
+  resetKey?: any;
 }
 
 interface State {
   hasError: boolean;
   error: Error | null;
-  errorInfo: ErrorInfo | null;
 }
 
+/**
+ * Error boundary component to catch and handle errors in React component tree
+ */
 class ErrorBoundary extends Component<Props, State> {
-  constructor(props: Props) {
-    super(props);
-    this.state = {
-      hasError: false,
-      error: null,
-      errorInfo: null
-    };
-  }
-
-  static getDerivedStateFromError(error: Error): State {
-    return {
-      hasError: true,
-      error,
-      errorInfo: null
-    };
-  }
-
-  componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    console.error('Circuit editor error:', error, errorInfo);
-    this.setState({
-      error,
-      errorInfo
-    });
-  }
-
-  handleReset = (): void => {
-    this.setState({
-      hasError: false,
-      error: null,
-      errorInfo: null
-    });
+  public state: State = {
+    hasError: false,
+    error: null
   };
 
-  render(): ReactNode {
+  public static getDerivedStateFromError(error: Error): State {
+    // Update state so the next render will show the fallback UI
+    return { hasError: true, error };
+  }
+
+  public componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
+    // Log the error
+    logError(error, { componentStack: errorInfo.componentStack });
+    
+    // Call the onError callback if provided
+    if (this.props.onError) {
+      this.props.onError(error, errorInfo);
+    }
+  }
+  
+  // Reset error state if resetKey changes
+  public componentDidUpdate(prevProps: Props): void {
+    if (this.state.hasError && prevProps.resetKey !== this.props.resetKey) {
+      this.setState({ hasError: false, error: null });
+    }
+  }
+
+  public render(): ReactNode {
     if (this.state.hasError) {
+      // If a fallback UI is provided, render it
       if (this.props.fallback) {
         return this.props.fallback;
       }
-
+      
+      // Otherwise, render the default error UI
       return (
-        <div className="flex flex-col items-center justify-center h-full bg-gray-50 p-8 text-center">
-          <Frown className="h-16 w-16 text-amber-500 mb-4" />
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">Something went wrong</h2>
-          <p className="text-gray-600 mb-4">
-            We've encountered an error in the circuit editor.
-          </p>
-          
-          <div className="bg-gray-100 p-4 rounded-md mb-8 max-w-lg overflow-auto text-left text-sm">
-            <p className="font-medium">{this.state.error?.toString()}</p>
-            {this.state.errorInfo && (
-              <pre className="mt-2 text-xs text-gray-600 overflow-x-auto">
-                {this.state.errorInfo.componentStack}
-              </pre>
-            )}
-          </div>
+        <div className="p-6 h-full flex flex-col items-center justify-center">
+          <Alert variant="destructive" className="mb-4 max-w-md mx-auto">
+            <AlertTitle>Something went wrong</AlertTitle>
+            <AlertDescription>
+              {this.state.error?.message || 'An unexpected error occurred'}
+            </AlertDescription>
+          </Alert>
           
           <Button 
-            onClick={this.handleReset}
-            className="flex items-center"
+            variant="outline" 
+            className="mt-4"
+            onClick={() => this.setState({ hasError: false, error: null })}
           >
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Try Again
+            <RefreshCcw className="h-4 w-4 mr-2" />
+            Try again
           </Button>
         </div>
       );
