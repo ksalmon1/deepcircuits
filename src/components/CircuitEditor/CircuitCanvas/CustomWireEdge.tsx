@@ -217,7 +217,8 @@ function CustomWireEdge({
         style={{ pointerEvents }}
       />
       
-      {!isTemporary && Array.isArray(routingPoints) && routingPoints.map((point, index) => {
+      {/* Only show routing points when the wire is selected */}
+      {!isTemporary && selected && Array.isArray(routingPoints) && routingPoints.map((point, index) => {
         const x = isNaN(point.x) ? 0 : point.x;
         const y = isNaN(point.y) ? 0 : point.y;
         
@@ -226,11 +227,11 @@ function CustomWireEdge({
             key={`${id}-point-${index}`}
             cx={x}
             cy={y}
-            r={isActiveOrSelected ? 5 : 3}
-            fill={isActiveOrSelected ? edgeColor : 'white'}
-            stroke={edgeColor}
+            r={5}
+            fill={edgeColor}
+            stroke="#ffffff"
             strokeWidth={1.5}
-            opacity={isActiveOrSelected ? 1 : 0.5}
+            opacity={1}
             className="routing-point"
             onMouseDown={(e) => handlePointMouseDown(e, index)}
             cursor="move"
