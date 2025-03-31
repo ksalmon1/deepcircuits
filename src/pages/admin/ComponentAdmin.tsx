@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -34,6 +35,16 @@ const ComponentAdmin = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [uniqueCategories, setUniqueCategories] = useState<string[]>([]);
   const [uniqueTypes, setUniqueTypes] = useState<string[]>([]);
+  
+  // Add state for new component
+  const [newComponent, setNewComponent] = useState<Partial<ComponentLibraryItem>>({
+    name: "",
+    type: "",
+    category: "",
+    description: "",
+    enabled: true,
+    isOriginal: false
+  });
   
   // Add state for view and edit dialogs
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
