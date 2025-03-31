@@ -1,18 +1,18 @@
 
 import React from 'react';
-import CircuitCanvasWrapper from '@/components/CircuitEditor/CircuitCanvasWrapper';
-import CodeEditor from '@/components/CircuitEditor/CodeEditor';
-import SerialMonitor from '@/components/CircuitEditor/SerialMonitor';
-import ComponentPanel from '@/components/CircuitEditor/ComponentPanel';
-import Toolbar from '@/components/CircuitEditor/Toolbar';
-import PropertiesPanel from '@/components/CircuitEditor/PropertiesPanel';
+import CircuitCanvasWrapper from './CircuitCanvasWrapper';
+import CodeEditor from './CodeEditor';
+import SerialMonitor from './SerialMonitor';
+import ComponentPanel from './ComponentPanel';
+import Toolbar from './Toolbar';
+import PropertiesPanel from './PropertiesPanel';
 import { useCircuitEditor, CircuitEditorProvider } from '@/context/CircuitEditorContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
-import ErrorBoundary from '@/components/CircuitEditor/ErrorBoundary';
+import ErrorBoundary from './ErrorBoundary';
 
 // Internal component that uses the context
 const CircuitEditorContent = () => {
