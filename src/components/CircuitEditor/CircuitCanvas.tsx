@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { 
   isWokwiLoaded, 
@@ -60,7 +59,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
   const containerRef = useRef<HTMLDivElement>(null);
   const reactFlowWrapperRef = useRef<HTMLDivElement>(null);
   
-  // Restore the references to these hooks
   const { isReady, loadingError, handleRetry } = useWokwiLoader();
   const { pinCache } = useComponentPinCache();
   
@@ -104,7 +102,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
   const [reactFlowNodes, setReactFlowNodes, onNodesChange] = useNodesState([]);
   const [reactFlowEdges, setReactFlowEdges, onEdgesChange] = useEdgesState([]);
   
-  // Restore the canvasNavigation hook
   const {
     zoom,
     offset,
@@ -121,7 +118,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     screenToCanvasCoordinates
   } = useCanvasNavigation(1);
   
-  // Restore the componentLibrary hook
   const { 
     components: libraryComponents, 
     componentsDetailsMap, 
@@ -129,7 +125,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     isLoadingDetails 
   } = useComponentLibrary();
   
-  // Get the ReactFlow utility functions from the hook
   const reactFlowUtils = useReactFlow();
   
   useEffect(() => {
@@ -359,41 +354,37 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
               }}
             >
               {showHorizontalGuide && (() => {
-                // Project both points to screen coordinates
-                const projectedFixed = reactFlowUtils.project(lastFixedPointPosition);
-                const projectedMouse = reactFlowUtils.project(mousePosition);
+                const projectedFixed = reactFlowUtils.flowToScreenPosition(lastFixedPointPosition);
+                const projectedMouse = reactFlowUtils.flowToScreenPosition(mousePosition);
                 
-                // Draw H line AT fixed Y, from fixed X to mouse X
                 return (
                   <line
                     x1={projectedFixed.x}
                     y1={projectedFixed.y}
                     x2={projectedMouse.x}
-                    y2={projectedFixed.y} // Use fixed Y to keep it horizontal
+                    y2={projectedFixed.y}
                     stroke="#3082f6"
                     strokeWidth={1}
                     strokeDasharray="5,5"
-                    // pointerEvents="none" // Already set on SVG
+                    // pointerEvents="none"
                   />
                 );
               })()}
               
               {showVerticalGuide && (() => {
-                // Project both points to screen coordinates
-                const projectedFixed = reactFlowUtils.project(lastFixedPointPosition);
-                const projectedMouse = reactFlowUtils.project(mousePosition);
+                const projectedFixed = reactFlowUtils.flowToScreenPosition(lastFixedPointPosition);
+                const projectedMouse = reactFlowUtils.flowToScreenPosition(mousePosition);
                 
-                // Draw V line AT fixed X, from fixed Y to mouse Y
                 return (
                   <line
                     x1={projectedFixed.x}
                     y1={projectedFixed.y}
-                    x2={projectedFixed.x} // Use fixed X to keep it vertical
+                    x2={projectedFixed.x}
                     y2={projectedMouse.y}
                     stroke="#3082f6"
                     strokeWidth={1}
                     strokeDasharray="5,5"
-                    // pointerEvents="none" // Already set on SVG
+                    // pointerEvents="none"
                   />
                 );
               })()}
