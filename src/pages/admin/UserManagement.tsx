@@ -1,7 +1,7 @@
+
 import React, { useState } from "react";
 import PageLayout from "@/components/layout/PageLayout";
 import { useAuth } from "@/context/AuthContext";
-import { useProfile } from "@/hooks/use-profile";
 import { Navigate } from "react-router-dom";
 import { 
   Card, 
@@ -74,7 +74,6 @@ type UserEditFormValues = z.infer<typeof userEditFormSchema>;
 
 const UserManagement = () => {
   const { user } = useAuth();
-  const { isAdmin } = useProfile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -144,10 +143,6 @@ const UserManagement = () => {
 
   if (!user) {
     return <Navigate to="/login" />;
-  }
-
-  if (!isAdmin()) {
-    return <Navigate to="/dashboard" />;
   }
 
   const handleEditUser = (user: UserWithProfile) => {
