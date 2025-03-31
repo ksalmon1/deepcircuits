@@ -7,12 +7,19 @@
 export class AppError extends Error {
   public readonly code: string;
   public readonly isOperational: boolean;
+  public readonly details?: Record<string, any>;
   
-  constructor(message: string, code: string = 'APP_ERROR', isOperational: boolean = true) {
+  constructor(
+    message: string, 
+    code: string = 'APP_ERROR', 
+    isOperational: boolean = true,
+    details?: Record<string, any>
+  ) {
     super(message);
     this.name = this.constructor.name;
     this.code = code;
     this.isOperational = isOperational;
+    this.details = details;
     
     // Capture stack trace, excluding constructor call from it
     Error.captureStackTrace(this, this.constructor);
@@ -21,22 +28,36 @@ export class AppError extends Error {
 
 // API errors
 export class ApiError extends AppError {
-  constructor(message: string, code: string = 'API_ERROR') {
-    super(message, code);
+  constructor(message: string, code: string = 'API_ERROR', details?: Record<string, any>) {
+    super(message, code, true, details);
   }
 }
 
 // Authentication errors
 export class AuthError extends AppError {
-  constructor(message: string, code: string = 'AUTH_ERROR') {
-    super(message, code);
+  constructor(message: string, code: string = 'AUTH_ERROR', details?: Record<string, any>) {
+    super(message, code, true, details);
   }
 }
 
 // Component errors
 export class ComponentError extends AppError {
-  constructor(message: string, code: string = 'COMPONENT_ERROR') {
-    super(message, code);
+  constructor(message: string, code: string = 'COMPONENT_ERROR', details?: Record<string, any>) {
+    super(message, code, true, details);
+  }
+}
+
+// Simulation errors
+export class SimulationError extends AppError {
+  constructor(message: string, code: string = 'SIMULATION_ERROR', details?: Record<string, any>) {
+    super(message, code, true, details);
+  }
+}
+
+// Wire connection errors
+export class ConnectionError extends AppError {
+  constructor(message: string, code: string = 'CONNECTION_ERROR', details?: Record<string, any>) {
+    super(message, code, true, details);
   }
 }
 
@@ -93,4 +114,24 @@ export function extractValidationErrors(validationResult: any): string[] {
     const path = err.path.join('.');
     return `${path}: ${err.message}`;
   });
+}
+
+// Create an error handler wrapper for components
+export function withErrorHandling<T extends (...args: any[]) => any>(
+  fn: T,
+  errorHandler?: (error: any) => void
+): (...args: Parameters<T>) => ReturnType<T> | undefined {
+  return (...args: Parameters<T>): ReturnType<T> | undefined => {
+    try {
+      return fn(...args);
+    } catch (error) {
+      console.error('Error in component function:', error);
+      
+      if (errorHandler) {
+        errorHandler(error);
+      }
+      
+      return undefined;
+    }
+  };
 }

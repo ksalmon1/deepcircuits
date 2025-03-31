@@ -5,14 +5,60 @@ import { WokwiComponent } from '@/integrations/wokwi/WokwiIntegration';
 import { getWireColorFromSignal, getPinSignalType } from '@/utils/wireUtils';
 import { toast } from 'sonner';
 import { WireData, WireEdge } from '@/types/circuit';
+import { PinConnection } from '@/types/pin';
+import { AppError, ComponentError } from '@/utils/errorHandling';
+import { useCircuitEditor } from '@/context/CircuitEditorContext';
 
 /**
- * Hook for managing the wire connections system using React Flow
+ * Enhanced hook for managing wire connections between components
  */
-export const useWireSystem = (components: WokwiComponent[]) => {
+export function useWireSystem(components: WokwiComponent[]) {
   const { setEdges } = useReactFlow();
+  const { addConnection } = useCircuitEditor();
   
-  // Create a new edge when a connection is formed
+  // Connect pins with validation and error handling
+  const connectPins = useCallback((
+    sourceId: string, 
+    sourcePinIndex: number, 
+    targetId: string, 
+    targetPinIndex: number
+  ): boolean => {
+    try {
+      // Validate inputs
+      if (!sourceId || !targetId) {
+        throw new ComponentError('Invalid source or target component ID', 'WIRE_INVALID_COMPONENT');
+      }
+      
+      if (sourcePinIndex < 0 || targetPinIndex < 0) {
+        throw new ComponentError('Invalid pin indices', 'WIRE_INVALID_PIN');
+      }
+      
+      // Prevent self-connections
+      if (sourceId === targetId) {
+        toast.error('Cannot connect a component to itself');
+        return false;
+      }
+      
+      // Create the connection
+      const newConnection: PinConnection = {
+        sourceId,
+        sourcePinIndex,
+        targetId,
+        targetPinIndex
+      };
+      
+      // Add to context
+      addConnection(newConnection);
+      
+      return true;
+    } catch (error) {
+      console.error('Failed to connect pins:', error);
+      toast.error('Failed to create connection');
+      return false;
+    }
+  }, [addConnection]);
+  
+  // Create a new edge when a connection is formed from React Flow
   const onConnect = useCallback((connection: Connection) => {
     if (!connection.source || !connection.target || !connection.sourceHandle || !connection.targetHandle) {
       return;
@@ -51,13 +97,11 @@ export const useWireSystem = (components: WokwiComponent[]) => {
     // Use type assertion to ensure compatibility
     setEdges((eds) => addEdge(newEdge, eds));
     
-    toast.success('Connection created', {
-      description: 'Wire connected successfully',
-      duration: 1500,
-    });
+    // Also add to our internal connections system
+    connectPins(sourceId, sourcePinIndex, targetId, targetPinIndex);
     
     return newEdge;
-  }, [components, setEdges]);
+  }, [components, setEdges, connectPins]);
   
   // Delete a wire by its ID
   const deleteWire = useCallback((wireId: string) => {
@@ -69,10 +113,11 @@ export const useWireSystem = (components: WokwiComponent[]) => {
   }, [setEdges]);
 
   return {
+    connectPins,
     onConnect,
     deleteWire,
     connectionLineStyle: { stroke: '#9b87f5', strokeWidth: 2 },
   };
-};
+}
 
 export default useWireSystem;

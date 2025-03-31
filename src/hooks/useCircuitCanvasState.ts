@@ -33,7 +33,19 @@ export function useCircuitCanvasState(components: WokwiComponent[]) {
   // Handle retry when loading fails
   const handleRetry = useCallback(() => {
     setLoadingError(null);
-    setLoadingAttempts(0);
+    setLoadingAttempts(prev => prev + 1);
+  }, []);
+  
+  // Reset canvas state
+  const resetCanvasState = useCallback(() => {
+    setNodes([]);
+    setEdges([]);
+    setHoveredComponent(null);
+    setHoveredPins([]);
+    setVisiblePins({});
+    setHoveredPin(null);
+    setDraggingComponent(null);
+    setDragOffset({ x: 0, y: 0 });
   }, []);
 
   return {
@@ -74,6 +86,7 @@ export function useCircuitCanvasState(components: WokwiComponent[]) {
     setDragOffset,
     
     // Functions
-    handleRetry
+    handleRetry,
+    resetCanvasState
   };
 }

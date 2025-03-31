@@ -2,6 +2,7 @@
 import { CircuitComponent, ComponentLibraryItem } from '@/types/component';
 import { ComponentPin } from '@/types/pin';
 import componentRegistry from '@/integrations/components/registry';
+import { ComponentError } from './errorHandling';
 
 /**
  * Get component pins with default values for missing fields
@@ -44,6 +45,35 @@ export function generateComponentId(type: string): string {
 }
 
 /**
+ * Create a new circuit component
+ */
+export function createCircuitComponent(
+  type: string,
+  position: { left: number; top: number },
+  attributes: Record<string, any> = {},
+  svgPath?: string | null,
+  isOriginal?: boolean
+): CircuitComponent {
+  if (!type) {
+    throw new ComponentError('Component type is required', 'COMPONENT_INVALID_TYPE');
+  }
+  
+  // Get pins from registry
+  const pins = componentRegistry.getComponentPinInfo(type);
+  
+  return {
+    id: generateComponentId(type),
+    type,
+    top: position.top,
+    left: position.left,
+    attributes,
+    pins: normalizePins(pins),
+    svgPath,
+    isOriginal
+  };
+}
+
+/**
  * Check if a point is inside a component
  */
 export function isPointInComponent(
@@ -73,6 +103,10 @@ export function isPointInComponent(
       width = 80;
       height = 30;
       break;
+    default:
+      // Default dimensions
+      width = 100;
+      height = 100;
   }
   
   return (
@@ -123,4 +157,17 @@ export function findClosestPin(
   }
   
   return null;
+}
+
+/**
+ * Clone a component
+ */
+export function cloneComponent(component: CircuitComponent, newPosition?: { left: number; top: number }): CircuitComponent {
+  return {
+    ...component,
+    id: generateComponentId(component.type),
+    left: newPosition?.left ?? component.left + 20, // Offset slightly if no position provided
+    top: newPosition?.top ?? component.top + 20,
+    pins: [...(component.pins || [])]
+  };
 }

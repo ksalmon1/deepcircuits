@@ -1,3 +1,4 @@
+
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { logError } from '@/utils/errorHandling';
 import { Button } from '@/components/ui/button';
@@ -14,6 +15,7 @@ interface Props {
 interface State {
   hasError: boolean;
   error: Error | null;
+  componentStack?: string;
 }
 
 /**
@@ -34,6 +36,11 @@ class ErrorBoundary extends Component<Props, State> {
     // Log the error
     logError(error, { componentStack: errorInfo.componentStack });
     
+    // Store component stack for display
+    this.setState({
+      componentStack: errorInfo.componentStack
+    });
+    
     // Call the onError callback if provided
     if (this.props.onError) {
       this.props.onError(error, errorInfo);
@@ -43,7 +50,7 @@ class ErrorBoundary extends Component<Props, State> {
   // Reset error state if resetKey changes
   public componentDidUpdate(prevProps: Props): void {
     if (this.state.hasError && prevProps.resetKey !== this.props.resetKey) {
-      this.setState({ hasError: false, error: null });
+      this.setState({ hasError: false, error: null, componentStack: undefined });
     }
   }
 
@@ -59,15 +66,21 @@ class ErrorBoundary extends Component<Props, State> {
         <div className="p-6 h-full flex flex-col items-center justify-center">
           <Alert variant="destructive" className="mb-4 max-w-md mx-auto">
             <AlertTitle>Something went wrong</AlertTitle>
-            <AlertDescription>
+            <AlertDescription className="mt-2">
               {this.state.error?.message || 'An unexpected error occurred'}
+              
+              {process.env.NODE_ENV === 'development' && this.state.componentStack && (
+                <div className="mt-4 max-h-40 overflow-auto text-xs opacity-70 bg-gray-100 dark:bg-gray-800 p-2 rounded">
+                  <pre>{this.state.componentStack}</pre>
+                </div>
+              )}
             </AlertDescription>
           </Alert>
           
           <Button 
             variant="outline" 
             className="mt-4"
-            onClick={() => this.setState({ hasError: false, error: null })}
+            onClick={() => this.setState({ hasError: false, error: null, componentStack: undefined })}
           >
             <RefreshCcw className="h-4 w-4 mr-2" />
             Try again
