@@ -1,20 +1,19 @@
 
-import React, { useState } from "react";
-import { ComponentLibraryItem } from "@/services/componentLibraryService";
-import { ComponentPin } from "@/types/database";
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
+import { useComponentLibrary } from '@/hooks/useComponentLibrary';
 import { 
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger
-} from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
+import { 
   Dialog,
   DialogContent,
   DialogDescription,
@@ -22,293 +21,257 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { AlertCircle, Cpu, AlertTriangle } from "lucide-react";
-import { ORIGINAL_WOKWI_COMPONENTS } from "@/integrations/wokwi/WokwiIntegration";
-import VisualPinEditor from "@/components/CircuitEditor/VisualPinEditor";
-import DynamicPropertyEditor from "@/components/CircuitEditor/DynamicPropertyEditor";
+import { ComponentLibraryItem } from "@/services/componentLibrary/types";
+import { AlertCircle } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import EnhancedComponentPreview from "@/components/CircuitEditor/EnhancedComponentPreview";
-import { useToast } from "@/hooks/use-toast";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-
-interface PinConfig {
-  name: string;
-  x: number;
-  y: number;
-  signals: string[];
-}
 
 interface EditComponentDialogProps {
-  isOpen: boolean;
-  onOpenChange: (open: boolean) => void;
-  selectedComponent: ComponentLibraryItem | null;
-  editedComponent: ComponentLibraryItem | null;
-  isLoadingComponentDetails: boolean;
-  componentDetailsError: Error | null;
-  wokwiReady: boolean;
-  activeTab: string;
-  onActiveTabChange: (tab: string) => void;
-  onSaveComponent: () => void;
-  isUpdatingComponent: boolean;
-  updateComponentProperty: (property: string, value: any) => void;
-  updateComponentProperties: (properties: Record<string, any>) => void;
-  updatePinConfiguration: (pinConfig: PinConfig[]) => void;
+  component: ComponentLibraryItem | null;
+  open: boolean;
+  onClose: () => void;
+  onSaved?: () => void;
 }
 
-const EditComponentDialog = ({
-  isOpen,
-  onOpenChange,
-  selectedComponent,
-  editedComponent,
-  isLoadingComponentDetails,
-  componentDetailsError,
-  wokwiReady,
-  activeTab,
-  onActiveTabChange,
-  onSaveComponent,
-  isUpdatingComponent,
-  updateComponentProperty,
-  updateComponentProperties,
-  updatePinConfiguration
-}: EditComponentDialogProps) => {
-  const { toast } = useToast();
-  const [typeChangeWarning, setTypeChangeWarning] = useState<string | null>(null);
+const EditComponentDialog = ({ component, open, onClose, onSaved }: EditComponentDialogProps) => {
+  const { updateComponent, isUpdatingComponent, updateComponentError } = useComponentLibrary();
   
-  // Check if component type is being changed
-  const handleTypeChange = (newType: string) => {
-    if (selectedComponent && selectedComponent.type !== newType) {
-      setTypeChangeWarning(
-        "Changing the component type may cause errors if another component is already using this type. " +
-        "Make sure this type is unique across all components."
-      );
+  // Form state
+  const [name, setName] = useState('');
+  const [type, setType] = useState('');
+  const [category, setCategory] = useState('');
+  const [description, setDescription] = useState('');
+  const [svgPath, setSvgPath] = useState('');
+  const [enabled, setEnabled] = useState(true);
+  const [isOriginal, setIsOriginal] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  // Reset form when component changes
+  useEffect(() => {
+    if (component) {
+      setName(component.name || '');
+      setType(component.type || '');
+      setCategory(component.category || '');
+      setDescription(component.description || '');
+      setSvgPath(component.svgPath || '');
+      setEnabled(component.enabled);
+      setIsOriginal(component.isOriginal);
+      setError(null);
     } else {
-      setTypeChangeWarning(null);
+      // Reset form if no component
+      setName('');
+      setType('');
+      setCategory('');
+      setDescription('');
+      setSvgPath('');
+      setEnabled(true);
+      setIsOriginal(false);
+      setError(null);
     }
+  }, [component]);
+
+  // Handle update error
+  useEffect(() => {
+    if (updateComponentError) {
+      console.error('Update error:', updateComponentError);
+      setError(`Error updating component: ${updateComponentError.message || 'Unknown error'}`);
+    }
+  }, [updateComponentError]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
     
-    updateComponentProperty('type', newType);
+    try {
+      // Validation
+      if (!name) {
+        setError('Name is required');
+        return;
+      }
+      
+      if (!type) {
+        setError('Type is required');
+        return;
+      }
+      
+      if (!category) {
+        setError('Category is required');
+        return;
+      }
+      
+      if (component && component.id) {
+        // Update existing component
+        const updatedComponent: ComponentLibraryItem = {
+          id: component.id,
+          name,
+          type, // Keep the original type for now to prevent conflicts
+          category,
+          description,
+          svgPath,
+          enabled,
+          isOriginal,
+          pins: component.pins, // Preserve pins
+          properties: component.properties // Preserve properties
+        };
+        
+        console.log('Updating component:', updatedComponent);
+        
+        await updateComponent(updatedComponent);
+        
+        // Close dialog and refresh list
+        if (onSaved) {
+          onSaved();
+        }
+        onClose();
+      }
+    } catch (err) {
+      console.error('Error in handleSubmit:', err);
+      setError(`Error saving component: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    }
   };
   
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
+    <Dialog open={open} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            Edit Component
-            {editedComponent?.isOriginal && (
-              <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200">
-                Original Wokwi Component
-              </Badge>
-            )}
-          </DialogTitle>
+          <DialogTitle>Edit Component</DialogTitle>
           <DialogDescription>
-            Modify component properties and configuration.
+            Update component in the library.
           </DialogDescription>
         </DialogHeader>
-
-        {isLoadingComponentDetails ? (
-          <div className="py-8 text-center">
-            <Cpu className="h-8 w-8 mx-auto mb-2 animate-spin text-primary" />
-            <p>Loading component details...</p>
-          </div>
-        ) : componentDetailsError ? (
-          <div className="py-8 text-center text-destructive">
-            <AlertCircle className="h-8 w-8 mx-auto mb-2" />
-            <p>Error loading component details</p>
-            <p className="text-sm mt-2">{componentDetailsError.message}</p>
-            <Button 
-              className="mt-4" 
-              variant="outline" 
-              onClick={() => onOpenChange(false)}
-            >
-              Close
-            </Button>
-          </div>
-        ) : editedComponent && (
-          <Tabs 
-            defaultValue="details" 
-            className="mt-4"
-            value={activeTab}
-            onValueChange={onActiveTabChange}
-          >
-            <TabsList className="grid grid-cols-4">
-              <TabsTrigger value="details">Basic Details</TabsTrigger>
-              <TabsTrigger value="properties">Properties</TabsTrigger>
-              <TabsTrigger value="pins">Pin Configuration</TabsTrigger>
-              <TabsTrigger value="preview">Preview</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="details" className="py-4">
-              {typeChangeWarning && (
-                <Alert variant="warning" className="mb-4">
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertDescription>{typeChangeWarning}</AlertDescription>
-                </Alert>
-              )}
-              
-              <div className="grid gap-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="grid gap-2">
-                    <label htmlFor="name">Component Name</label>
-                    <Input 
-                      id="name" 
-                      value={editedComponent.name} 
-                      onChange={(e) => updateComponentProperty('name', e.target.value)}
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <label htmlFor="type">Component Type</label>
-                    <Select 
-                      value={editedComponent.type}
-                      onValueChange={handleTypeChange}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select type" />
-                      </SelectTrigger>
-                      <SelectContent className="overflow-y-auto max-h-[300px]">
-                        <SelectItem key="custom" value="custom">Custom</SelectItem>
-                        {ORIGINAL_WOKWI_COMPONENTS.map(type => (
-                          <SelectItem key={type} value={type}>{type}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="grid gap-2">
-                    <label htmlFor="category">Category</label>
-                    <Select 
-                      value={editedComponent.category}
-                      onValueChange={(value) => updateComponentProperty('category', value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="input">Input</SelectItem>
-                        <SelectItem value="output">Output</SelectItem>
-                        <SelectItem value="passive">Passive</SelectItem>
-                        <SelectItem value="microcontroller">Microcontroller</SelectItem>
-                        <SelectItem value="sensor">Sensor</SelectItem>
-                        <SelectItem value="display">Display</SelectItem>
-                        <SelectItem value="power">Power</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid gap-2">
-                    <label htmlFor="svgPath">SVG Path (Optional)</label>
-                    <Input 
-                      id="svgPath" 
-                      value={editedComponent.svgPath || ''} 
-                      onChange={(e) => updateComponentProperty('svgPath', e.target.value)}
-                      placeholder="URL or path to custom SVG"
-                    />
-                  </div>
-                </div>
-                
-                <div className="grid gap-2">
-                  <label htmlFor="description">Description</label>
-                  <Textarea 
-                    id="description" 
-                    value={editedComponent.description || ''} 
-                    onChange={(e) => updateComponentProperty('description', e.target.value)}
-                    rows={3}
-                  />
-                </div>
-                
-                <div className="flex items-center space-x-2">
-                  <Switch 
-                    id="enabled" 
-                    checked={editedComponent.enabled} 
-                    onCheckedChange={(checked) => updateComponentProperty('enabled', checked)}
-                  />
-                  <label htmlFor="enabled">Enable component for users</label>
-                </div>
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="properties" className="py-4">
-              {editedComponent && (
-                <DynamicPropertyEditor 
-                  properties={editedComponent.properties || {}}
-                  onChange={updateComponentProperties}
-                  componentType={editedComponent.type}
-                />
-              )}
-            </TabsContent>
-            
-            <TabsContent value="pins" className="py-4 min-h-[450px]">
-              <div className="flex flex-col h-full">
-                <div className="border rounded-md bg-gray-50 p-4 h-full" style={{ minHeight: '500px' }}>
-                  <VisualPinEditor
-                    componentType={editedComponent.type}
-                    pins={editedComponent.pins || []}
-                    onPinsChange={updatePinConfiguration}
-                    readonly={false}
-                    height={500}
-                  />
-                </div>
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="preview" className="py-4">
-              <div className="flex flex-col">
-                <h3 className="text-lg font-medium mb-4">Component Preview</h3>
-                
-                <div className="border rounded-md bg-gray-50 p-6">
-                  <div className="flex justify-center items-center">
-                    {wokwiReady ? (
-                      <EnhancedComponentPreview
-                        componentType={editedComponent.type}
-                        properties={editedComponent.properties || {}}
-                        previewId={`preview-${editedComponent.id}`}
-                      />
-                    ) : (
-                      <div className="text-center py-8">
-                        <div className="flex justify-center mb-4">
-                          <AlertCircle className="h-8 w-8 text-amber-500" />
-                        </div>
-                        <p className="font-medium">Loading Wokwi Elements...</p>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Please wait while the component preview is being initialized.
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="mt-6 space-y-3 text-sm">
-                    <p className="font-medium">Component Properties Preview:</p>
-                    <div className="bg-gray-100 p-3 rounded-md">
-                      <pre className="text-xs overflow-auto max-h-40">
-                        {JSON.stringify(editedComponent.properties || {}, null, 2)}
-                      </pre>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </TabsContent>
-          </Tabs>
+        
+        {error && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         )}
         
-        <DialogFooter className="mt-6">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button 
-            onClick={() => {
-              try {
-                onSaveComponent();
-              } catch (error) {
-                toast({
-                  title: "Error saving component",
-                  description: error instanceof Error ? error.message : "An unknown error occurred",
-                  variant: "destructive"
-                });
-              }
-            }}
-            disabled={isUpdatingComponent}
-          >
-            {isUpdatingComponent ? 'Saving...' : 'Save Changes'}
-          </Button>
-        </DialogFooter>
+        <form onSubmit={handleSubmit} className="grid gap-4 py-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="space-y-4">
+              <div className="grid gap-2">
+                <Label htmlFor="name">Name</Label>
+                <Input
+                  id="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Component name"
+                />
+              </div>
+              
+              <div className="grid gap-2">
+                <Label htmlFor="type">Type</Label>
+                <Input
+                  id="type"
+                  value={type}
+                  onChange={(e) => setType(e.target.value)}
+                  placeholder="Component type (e.g., wokwi-led)"
+                  disabled={true} // Disable type change to prevent unique constraint issues
+                />
+                <p className="text-xs text-muted-foreground">Type cannot be changed after creation.</p>
+              </div>
+              
+              <div className="grid gap-2">
+                <Label htmlFor="category">Category</Label>
+                <Select 
+                  value={category} 
+                  onValueChange={setCategory}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="input">Input</SelectItem>
+                    <SelectItem value="output">Output</SelectItem>
+                    <SelectItem value="power">Power</SelectItem>
+                    <SelectItem value="passive">Passive</SelectItem>
+                    <SelectItem value="ic">Integrated Circuit</SelectItem>
+                    <SelectItem value="mcu">Microcontroller</SelectItem>
+                    <SelectItem value="connector">Connector</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="grid gap-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Component description"
+                  rows={3}
+                />
+              </div>
+              
+              <div className="grid gap-2">
+                <Label htmlFor="svgPath">SVG Path (optional)</Label>
+                <Textarea
+                  id="svgPath"
+                  value={svgPath}
+                  onChange={(e) => setSvgPath(e.target.value)}
+                  placeholder="SVG path data (optional)"
+                  rows={3}
+                />
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="enabled"
+                  checked={enabled}
+                  onCheckedChange={setEnabled}
+                />
+                <Label htmlFor="enabled">Enabled</Label>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="isOriginal"
+                  checked={isOriginal}
+                  onCheckedChange={setIsOriginal}
+                />
+                <Label htmlFor="isOriginal">Is Original Component</Label>
+              </div>
+            </div>
+            
+            <div className="space-y-4">
+              <Label>Component Preview</Label>
+              <div className="border rounded-lg p-4 h-64 flex items-center justify-center bg-gray-50">
+                <EnhancedComponentPreview 
+                  componentType={type} 
+                  svgPath={svgPath}
+                  isOriginal={isOriginal}
+                />
+              </div>
+              
+              <div className="border rounded-lg p-4 h-32 overflow-auto">
+                <h4 className="text-sm font-medium mb-2">Pins Configuration</h4>
+                {component?.pins && component.pins.length > 0 ? (
+                  <div className="space-y-2">
+                    {component.pins.map((pin, index) => (
+                      <div key={index} className="text-xs">
+                        {pin.name} ({pin.x}, {pin.y})
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No pins defined</p>
+                )}
+              </div>
+            </div>
+          </div>
+        
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isUpdatingComponent}>
+              {isUpdatingComponent ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

@@ -162,7 +162,7 @@ function CustomWireEdge({
       />
       
       {/* Only show routing points for permanent wires */}
-      {!isTemporary && routingPoints.map((point, index) => (
+      {!isTemporary && Array.isArray(routingPoints) && routingPoints.map((point, index) => (
         <circle
           key={`${id}-point-${index}`}
           cx={point.x}
