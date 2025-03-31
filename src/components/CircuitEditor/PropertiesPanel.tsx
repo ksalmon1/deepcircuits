@@ -71,7 +71,8 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
               if (handleUpdateComponentAttributes && selectedComponent.id) {
                 handleUpdateComponentAttributes(selectedComponent.id, updatedProps);
               }
-            }} 
+            }}
+            componentType={selectedComponent.type}
           />
         ) : (
           <div className="text-sm text-gray-500 italic">No attributes available</div>
