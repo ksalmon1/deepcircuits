@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { 
   isWokwiLoaded, 
@@ -10,7 +9,7 @@ import { toast } from 'sonner';
 import { useComponentLibrary } from '@/hooks/useComponentLibrary';
 import { useCanvasNavigation } from '@/hooks/useCanvasNavigation';
 import { useWireRouting } from '@/hooks/useWireRouting';
-import { wokwiComponentToNode } from '@/utils/componentConversion';
+import { componentToNode } from './CircuitCanvas/utils';
 import { useWokwiLoader } from '@/hooks/useWokwiLoader';
 import { useComponentPinCache } from '@/hooks/useComponentPinCache';
 import {
@@ -93,16 +92,12 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
   // Initialize wire routing system
   const { 
     wireConnectionState,
-    startWireConnection,
-    updateWireRouting,
-    finalizeWireConnection,
-    cancelWireConnection,
-    getTemporaryEdge,
+    temporaryEdge,
     handleCanvasClick,
     handleHandleClick,
     deleteWire,
     connectionLineStyle,
-  } = useWireRouting();
+  } = useWireRouting(components);
   
   // React Flow state
   const [reactFlowNodes, setReactFlowNodes, onNodesChange] = useNodesState([]);
@@ -131,21 +126,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     isLoadingDetails 
   } = useComponentLibrary();
 
-  // Add temporary edge for wire connection in progress
-  useEffect(() => {
-    if (wireConnectionState.isConnecting) {
-      const tempEdge = getTemporaryEdge();
-      if (tempEdge) {
-        setReactFlowEdges((edges) => {
-          // Remove any previous temporary edges
-          const filteredEdges = edges.filter(e => !e.id.startsWith('temp-wire-'));
-          // Add the new temporary edge
-          return [...filteredEdges, tempEdge];
-        });
-      }
-    }
-  }, [wireConnectionState, getTemporaryEdge, setReactFlowEdges]);
-
   // Convert components to nodes
   useEffect(() => {
     if (!components || components.length === 0) return;
@@ -159,7 +139,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
         svgPathLength: comp.svgPath?.length || 0,
       });
       
-      return wokwiComponentToNode(comp);
+      return componentToNode(comp);
     });
     
     setReactFlowNodes(initialNodes);
@@ -202,40 +182,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     onComponentsChange(updatedComponents);
   }, [components, onComponentsChange]);
 
-  // Handle pin clicks for wire connections
-  useEffect(() => {
-    const handlePinClick = (event: CustomEvent) => {
-      const { nodeId, handleId, pinIndex } = event.detail;
-      console.log('Handle click event received:', { nodeId, handleId, pinIndex });
-      handleHandleClick(nodeId, handleId);
-    };
-    
-    document.addEventListener('handle-click', handlePinClick as EventListener);
-    
-    return () => {
-      document.removeEventListener('handle-click', handlePinClick as EventListener);
-    };
-  }, [handleHandleClick]);
-  
-  // Mouse move handler for wire routing updates
-  useEffect(() => {
-    const handleMouseMove = (event: MouseEvent) => {
-      if (wireConnectionState.isConnecting && reactFlowInstance) {
-        const position = reactFlowInstance.screenToFlowPosition({
-          x: event.clientX,
-          y: event.clientY
-        });
-        updateWireRouting(position.x, position.y);
-      }
-    };
-    
-    window.addEventListener('mousemove', handleMouseMove);
-    
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-    };
-  }, [wireConnectionState.isConnecting, reactFlowInstance, updateWireRouting]);
-  
   // Handle drop to create new component
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -244,10 +190,8 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
       const componentData = e.dataTransfer.getData('component');
       if (!componentData) return;
       
-      console.log('Dropped component data:', componentData);
-      
-      // Parse the component data
       const componentInfo = JSON.parse(componentData);
+      console.log('Dropped component data:', componentInfo);
       
       const rect = canvasRef.current?.getBoundingClientRect();
       if (!rect) return;
@@ -340,6 +284,19 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
       }
     }
   }, [wireConnectionState.isConnecting, reactFlowInstance, handleCanvasClick]);
+  
+  useEffect(() => {
+    const handlePinClick = (event: CustomEvent) => {
+      const { nodeId, handleId } = event.detail;
+      handleHandleClick(nodeId, handleId);
+    };
+    
+    document.addEventListener('handle-click', handlePinClick as EventListener);
+    
+    return () => {
+      document.removeEventListener('handle-click', handlePinClick as EventListener);
+    };
+  }, [handleHandleClick]);
 
   return (
     <div className="h-full w-full bg-white relative flex flex-col overflow-hidden">

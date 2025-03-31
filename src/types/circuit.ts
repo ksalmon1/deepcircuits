@@ -17,7 +17,7 @@ export interface WireData extends Record<string, unknown> {
 /**
  * Interface for a wire edge that includes WireData
  */
-export interface WireEdge extends Edge<WireData> {
+export interface WireEdge {
   id: string;
   source: string;
   target: string;
@@ -64,8 +64,7 @@ export interface WokwiNodeData extends Record<string, unknown> {
 /**
  * Props for the Wokwi component node
  */
-export interface WokwiNodeProps {
-  id: string;
+export interface WokwiNodeProps extends Omit<NodeProps, 'data'> {
   data: WokwiNodeData;
   selected: boolean;
 }

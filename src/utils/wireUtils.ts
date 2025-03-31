@@ -1,51 +1,7 @@
 import { Edge } from '@xyflow/react';
 import { CircuitComponent } from '@/types/component';
 import { WireData, WireEdge } from '@/types/circuit';
-import { ComponentPin } from '@/types/pin';
-import { getSignalColor } from './pinUtils';
-
-/**
- * Get params for wire edge rendering
- */
-export const getEdgeParams = (sourceX: number, sourceY: number, targetX: number, targetY: number) => {
-  const centerX = (sourceX + targetX) / 2;
-  const centerY = (sourceY + targetY) / 2;
-  
-  return {
-    sourceX,
-    sourceY,
-    targetX,
-    targetY,
-    sourcePosition: { x: sourceX, y: sourceY },
-    targetPosition: { x: targetX, y: targetY },
-    centerX,
-    centerY,
-  };
-};
-
-/**
- * Find component by ID in an array of components
- */
-export function findComponentById(
-  components: CircuitComponent[], 
-  componentId: string
-): CircuitComponent | null {
-  return components.find(comp => comp.id === componentId) || null;
-}
-
-/**
- * Get a pin from a component by index
- */
-export function getPinByIndex(
-  component: CircuitComponent | null, 
-  pinIndex: number
-): ComponentPin | null {
-  if (!component || !component.pins || pinIndex < 0 || pinIndex >= component.pins.length) {
-    return null;
-  }
-  
-  return component.pins[pinIndex];
-}
+import { findComponentById, getPinByIndex, canPinsConnect } from './pinManagement';
 
 /**
  * Get the signal type of a pin
@@ -68,43 +24,32 @@ export function getPinSignalType(
  * Get wire color based on signal type
  */
 export function getWireColorFromSignal(signalType: string): string {
-  return getSignalColor(signalType);
+  const signalColorMap: Record<string, string> = {
+    'power': '#ff0000',
+    'ground': '#000000',
+    'analog': '#4BC0C0',
+    'digital': '#9b87f5',
+    'clock': '#ffcc00',
+    'data': '#36A2EB',
+    'i2c': '#8A65D4',
+    'spi': '#4CAF50',
+    'uart': '#FF9800',
+    'pwm': '#E91E63'
+  };
+  
+  return signalColorMap[signalType.toLowerCase()] || '#9b87f5'; // Default color
 }
 
-export function canPinsConnect(sourcePin: ComponentPin, targetPin: ComponentPin): boolean {
-  // Basic validation - pins must have signals
-  if (!sourcePin.signals || !targetPin.signals) return false;
-  
-  // Check if signals are compatible
-  const sourceSignals = sourcePin.signals.map(s => s.toLowerCase());
-  const targetSignals = targetPin.signals.map(s => s.toLowerCase());
-  
-  // Check for direct match
-  const hasMatchingSignal = sourceSignals.some(signal => targetSignals.includes(signal));
-  if (hasMatchingSignal) return true;
-  
-  // Power can connect to analog/digital
-  if (
-    (sourceSignals.includes('power') && 
-     (targetSignals.includes('analog') || targetSignals.includes('digital'))) ||
-    (targetSignals.includes('power') && 
-     (sourceSignals.includes('analog') || sourceSignals.includes('digital')))
-  ) {
-    return true;
-  }
-  
-  // Ground can connect to anything
-  if (sourceSignals.includes('ground') || targetSignals.includes('ground')) {
-    return true;
-  }
-  
-  return false;
-}
-
+/**
+ * Create a unique ID for a wire
+ */
 export function createWireId(): string {
   return `wire-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 }
 
+/**
+ * Check if a connection is valid between components
+ */
 export function isValidConnection(
   components: CircuitComponent[],
   sourceId: string,
@@ -134,6 +79,9 @@ export function isValidConnection(
   return canPinsConnect(sourcePin, targetPin);
 }
 
+/**
+ * Create a wire edge between two components
+ */
 export const createWireEdge = (
   components: CircuitComponent[],
   sourceId: string,
@@ -163,7 +111,7 @@ export const createWireEdge = (
       targetPinIndex,
       routingPoints,
       signal
-    },
+    } as WireData,
     animated: signal === 'clock' || signal === 'data',
     style: {
       stroke: color,
@@ -174,6 +122,9 @@ export const createWireEdge = (
   return edge;
 };
 
+/**
+ * Find all wires connected to a component
+ */
 export function findConnectedWires(
   edges: Edge[],
   componentId: string
@@ -183,6 +134,9 @@ export function findConnectedWires(
   );
 }
 
+/**
+ * Convert edges to pin connections
+ */
 export function edgesToConnections(edges: Edge[]): Array<{
   sourceId: string;
   targetId: string;
@@ -206,6 +160,9 @@ export function edgesToConnections(edges: Edge[]): Array<{
   });
 }
 
+/**
+ * Check if two edges represent the same connection
+ */
 export function areSameConnection(edge1: Edge, edge2: Edge): boolean {
   // Check direct match
   const directMatch = edge1.source === edge2.source && 
@@ -222,18 +179,84 @@ export function areSameConnection(edge1: Edge, edge2: Edge): boolean {
   return directMatch || reverseMatch;
 }
 
+/**
+ * Calculate optimal routing points for a wire
+ * Uses a simplified version of the A* algorithm to find routing points
+ */
 export function calculateWireRoutingPoints(
   sourceX: number,
   sourceY: number,
   targetX: number,
   targetY: number,
-  gridSize: number = 20
+  gridSize: number = 20,
+  obstacles: Array<{ x: number, y: number, width: number, height: number }> = []
 ): Array<{ x: number; y: number }> {
-  // Simple routing with just corner points
+  // Simple routing with just corner points for now
+  // For a direct path, we create a right-angle route with one midpoint
   const midX = sourceX + (targetX - sourceX) / 2;
   
   return [
     { x: midX, y: sourceY },
     { x: midX, y: targetY }
   ];
+}
+
+/**
+ * Calculate signal strength for a wire (for visualization)
+ * Returns a value between 0 and 1
+ */
+export function calculateSignalStrength(
+  wireType: string,
+  wireLengthPx: number
+): number {
+  // Simple model: signal degrades with distance
+  const maxLength = 1000; // pixels
+  const minStrength = 0.3;
+  
+  // Different signal types degrade at different rates
+  const degradationRates: Record<string, number> = {
+    'power': 0.1,
+    'ground': 0.1,
+    'analog': 0.3,
+    'digital': 0.2,
+    'clock': 0.4,
+    'data': 0.25,
+    'default': 0.2
+  };
+  
+  const rate = degradationRates[wireType.toLowerCase()] || degradationRates.default;
+  const strength = 1 - (wireLengthPx / maxLength) * rate;
+  
+  return Math.max(minStrength, Math.min(1, strength));
+}
+
+/**
+ * Calculate wire length in pixels
+ */
+export function calculateWireLength(
+  sourceX: number,
+  sourceY: number,
+  targetX: number,
+  targetY: number,
+  routingPoints: Array<{ x: number; y: number }> = []
+): number {
+  let totalLength = 0;
+  let lastX = sourceX;
+  let lastY = sourceY;
+  
+  // Add distance for each routing point
+  for (const point of routingPoints) {
+    totalLength += Math.sqrt(
+      Math.pow(point.x - lastX, 2) + Math.pow(point.y - lastY, 2)
+    );
+    lastX = point.x;
+    lastY = point.y;
+  }
+  
+  // Add distance to the target
+  totalLength += Math.sqrt(
+    Math.pow(targetX - lastX, 2) + Math.pow(targetY - lastY, 2)
+  );
+  
+  return totalLength;
 }

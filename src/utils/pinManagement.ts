@@ -7,14 +7,8 @@ import {
   updatePinPosition as updatePosition, 
   updatePinProperties as updateProps, 
   updatePinNameAndSignals as updateNameAndSignals,
-  deletePin as removePinFromArray,
-  getSignalColor
+  deletePin as removePinFromArray 
 } from './pinUtils';
-import {
-  findComponentById,
-  getPinByIndex,
-  canPinsConnect,
-} from './wireUtils';
 
 // Re-export the pin manipulation functions with renamed imports to avoid circular dependencies
 export const createNewPin = createPin;
@@ -22,7 +16,30 @@ export const updatePinPosition = updatePosition;
 export const updatePinProperties = updateProps;
 export const updatePinNameAndSignals = updateNameAndSignals;
 export const deletePin = removePinFromArray;
-export const isPointNearPin = isNearPin;
+
+/**
+ * Get a pin from a component by index
+ */
+export function getPinByIndex(
+  component: CircuitComponent | null, 
+  pinIndex: number
+): ComponentPin | null {
+  if (!component || !component.pins || pinIndex < 0 || pinIndex >= component.pins.length) {
+    return null;
+  }
+  
+  return component.pins[pinIndex];
+}
+
+/**
+ * Find a component in the array by ID
+ */
+export function findComponentById(
+  components: CircuitComponent[], 
+  componentId: string
+): CircuitComponent | null {
+  return components.find(comp => comp.id === componentId) || null;
+}
 
 /**
  * Get the signal type of a pin
@@ -45,7 +62,67 @@ export function getPinSignalType(
  * Get wire color based on signal type
  */
 export function getWireColorFromSignal(signalType: string): string {
-  return getSignalColor(signalType);
+  const signalColorMap: Record<string, string> = {
+    'power': '#ff0000',
+    'ground': '#000000',
+    'analog': '#4BC0C0',
+    'digital': '#9b87f5',
+    'clock': '#ffcc00',
+    'data': '#36A2EB',
+    'i2c': '#8A65D4',
+    'spi': '#4CAF50',
+    'uart': '#FF9800',
+    'pwm': '#E91E63'
+  };
+  
+  return signalColorMap[signalType.toLowerCase()] || '#9b87f5'; // Default color
+}
+
+/**
+ * Check if a pin can connect to another pin
+ */
+export function canPinsConnect(sourcePin: ComponentPin, targetPin: ComponentPin): boolean {
+  // Basic validation - pins must have signals
+  if (!sourcePin.signals || !targetPin.signals) return false;
+  
+  // Check if signals are compatible
+  const sourceSignals = sourcePin.signals.map(s => s.toLowerCase());
+  const targetSignals = targetPin.signals.map(s => s.toLowerCase());
+  
+  // Check for direct match
+  const hasMatchingSignal = sourceSignals.some(signal => targetSignals.includes(signal));
+  if (hasMatchingSignal) return true;
+  
+  // Power can connect to analog/digital
+  if (
+    (sourceSignals.includes('power') && 
+     (targetSignals.includes('analog') || targetSignals.includes('digital'))) ||
+    (targetSignals.includes('power') && 
+     (sourceSignals.includes('analog') || sourceSignals.includes('digital')))
+  ) {
+    return true;
+  }
+  
+  // Ground can connect to anything
+  if (sourceSignals.includes('ground') || targetSignals.includes('ground')) {
+    return true;
+  }
+  
+  return false;
+}
+
+/**
+ * Check if a point is near a pin
+ */
+export function isPointNearPin(
+  x: number,
+  y: number,
+  pinX: number,
+  pinY: number,
+  threshold = 10
+): boolean {
+  const distance = Math.sqrt(Math.pow(x - pinX, 2) + Math.pow(y - pinY, 2));
+  return distance <= threshold;
 }
 
 /**
