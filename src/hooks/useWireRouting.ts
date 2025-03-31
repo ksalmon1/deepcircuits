@@ -1,4 +1,3 @@
-
 import { useCallback, useState, useEffect } from 'react';
 import { Connection, useReactFlow, Edge, Position, XYPosition } from '@xyflow/react';
 import { WireData, WireEdge, WireConnectionState } from '@/types/circuit';
@@ -122,8 +121,20 @@ export const useWireRouting = (components: CircuitComponent[]) => {
         const dx = Math.abs(mousePos.x - lastFixedPointPosition.x);
         const dy = Math.abs(mousePos.y - lastFixedPointPosition.y);
         
-        setShowHorizontalGuide(dx < threshold); // Show horizontal guide when X values are close
-        setShowVerticalGuide(dy < threshold); // Show vertical guide when Y values are close
+        const shouldShowH = dx < threshold; // Show horizontal guide when X values are close
+        const shouldShowV = dy < threshold; // Show vertical guide when Y values are close
+        
+        // Add this console log:
+        console.log('Guide Check:', { 
+          mouse: mousePos, 
+          lastFixed: lastFixedPointPosition,
+          dx, dy,
+          showH: shouldShowH,
+          showV: shouldShowV
+        });
+        
+        setShowHorizontalGuide(shouldShowH);
+        setShowVerticalGuide(shouldShowV);
       }
     };
     
