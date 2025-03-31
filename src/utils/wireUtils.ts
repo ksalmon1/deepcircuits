@@ -1,3 +1,4 @@
+
 import { Edge } from '@xyflow/react';
 import { CircuitComponent } from '@/types/component';
 import { WireData } from '@/types/circuit';
