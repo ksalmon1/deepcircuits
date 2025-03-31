@@ -27,11 +27,6 @@ export interface ComponentRenderer {
    * Clean up any resources when component is removed
    */
   cleanup(element: HTMLElement): void;
-  
-  /**
-   * Internal helper methods can be prefixed with underscore
-   */
-  _renderPins?: (pins: Array<{ name: string; x: number; y: number; signals?: string[] }>) => HTMLElement[];
 }
 
 /**

@@ -1,3 +1,4 @@
+
 import { ComponentLibraryItem } from '@/types/component';
 import { mapComponentFromDb } from './converters';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,7 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 export async function getAllComponents(): Promise<ComponentLibraryItem[]> {
   try {
     const { data, error } = await supabase
-      .from('components')
+      .from('component_library')
       .select('*')
       .order('name');
       
@@ -30,7 +31,7 @@ export async function getAllComponents(): Promise<ComponentLibraryItem[]> {
 export async function getComponentById(id: string): Promise<ComponentLibraryItem | null> {
   try {
     const { data, error } = await supabase
-      .from('components')
+      .from('component_library')
       .select('*')
       .eq('id', id)
       .single();
@@ -97,7 +98,7 @@ export async function getComponentWithDetails(id: string): Promise<ComponentLibr
         signals: p.signals || []
       })),
       properties: propsData.reduce((acc, prop) => {
-        acc[prop.key] = prop.value;
+        acc[prop.property_key] = prop.property_value;
         return acc;
       }, {} as Record<string, any>)
     };

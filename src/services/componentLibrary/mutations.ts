@@ -1,3 +1,4 @@
+
 import { ComponentLibraryItem } from '@/types/component';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -7,7 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 export async function createComponent(component: ComponentLibraryItem): Promise<string> {
   try {
     const { data, error } = await supabase
-      .from('components')
+      .from('component_library')
       .insert({
         name: component.name,
         type: component.type,
@@ -52,8 +53,8 @@ export async function createComponent(component: ComponentLibraryItem): Promise<
     if (component.properties && Object.keys(component.properties).length > 0) {
       const propsToInsert = Object.entries(component.properties).map(([key, value]) => ({
         component_id: componentId,
-        key,
-        value
+        property_key: key,
+        property_value: value
       }));
       
       const { error: propsError } = await supabase
@@ -84,7 +85,7 @@ export async function updateComponent(component: ComponentLibraryItem): Promise<
   try {
     // Update basic component info
     const { error } = await supabase
-      .from('components')
+      .from('component_library')
       .update({
         name: component.name,
         type: component.type,
@@ -153,8 +154,8 @@ export async function updateComponent(component: ComponentLibraryItem): Promise<
       if (Object.keys(component.properties).length > 0) {
         const propsToInsert = Object.entries(component.properties).map(([key, value]) => ({
           component_id: component.id,
-          key,
-          value
+          property_key: key,
+          property_value: value
         }));
         
         const { error: propsError } = await supabase
@@ -180,7 +181,7 @@ export async function deleteComponent(id: string): Promise<void> {
   try {
     // Cascade delete will handle pins and properties
     const { error } = await supabase
-      .from('components')
+      .from('component_library')
       .delete()
       .eq('id', id);
       

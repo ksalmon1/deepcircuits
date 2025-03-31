@@ -1,66 +1,44 @@
 
 import { ComponentRenderer } from './registry';
-import { ComponentPin } from '@/types/pin';
 
 /**
- * SVG component renderer implementation for custom components
+ * SVG component renderer implementation
+ * Handles rendering custom SVG-based components
  */
 export const svgRenderer: ComponentRenderer = {
   canRender(componentType: string): boolean {
-    // This renderer can handle any component type that's meant to be rendered as SVG
-    // Typically, these would be custom components or components with SVG paths
-    return componentType.startsWith('custom-') || componentType.includes('svg');
+    // This renderer handles types that start with 'svg-'
+    return componentType.startsWith('svg-');
   },
   
   render(element: HTMLElement, componentType: string, options?: any): void {
-    // Clear any existing content
-    element.innerHTML = '';
-    
     try {
-      if (options && options.svgPath) {
-        // Direct SVG path provided
-        element.innerHTML = options.svgPath;
-      } else {
-        // Create a placeholder SVG
-        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        svg.setAttribute('width', '100%');
-        svg.setAttribute('height', '100%');
-        svg.setAttribute('viewBox', '0 0 100 100');
-        
-        // Create a default shape based on component type
-        const shape = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-        shape.setAttribute('x', '10');
-        shape.setAttribute('y', '10');
-        shape.setAttribute('width', '80');
-        shape.setAttribute('height', '80');
-        shape.setAttribute('fill', '#e2e8f0');
-        shape.setAttribute('stroke', '#94a3b8');
-        shape.setAttribute('stroke-width', '2');
-        
-        svg.appendChild(shape);
-        
-        // Add label
-        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        text.setAttribute('x', '50');
-        text.setAttribute('y', '55');
-        text.setAttribute('text-anchor', 'middle');
-        text.setAttribute('fill', '#475569');
-        text.setAttribute('font-size', '12');
-        text.textContent = componentType;
-        
-        svg.appendChild(text);
-        element.appendChild(svg);
+      console.log('Rendering SVG component:', componentType);
+      element.innerHTML = '';
+      
+      // If SVG content is directly provided in options
+      if (options && options.svgContent) {
+        element.innerHTML = options.svgContent;
+        this._setupSvgElement(element.querySelector('svg'));
+        return;
       }
       
-      // Add pins visually if provided
-      if (options && options.pins && Array.isArray(options.pins)) {
-        const pinElements = this._renderPins(options.pins);
-        
-        // Add the pin elements to the main element
-        pinElements.forEach(pinEl => {
-          element.appendChild(pinEl);
-        });
+      // If a path to an SVG file is provided
+      if (options && options.svgPath) {
+        this._loadSvgFromPath(element, options.svgPath);
+        return;
       }
+      
+      // If this is a predefined SVG component
+      const svgContent = this._getSvgContentForType(componentType);
+      if (svgContent) {
+        element.innerHTML = svgContent;
+        this._setupSvgElement(element.querySelector('svg'));
+        return;
+      }
+      
+      // If we couldn't render anything
+      element.innerHTML = `<div class="error">Could not render SVG component: ${componentType}</div>`;
     } catch (error) {
       console.error(`Error rendering SVG component ${componentType}:`, error);
       element.innerHTML = `<div class="error">Failed to render ${componentType}</div>`;
@@ -68,7 +46,10 @@ export const svgRenderer: ComponentRenderer = {
   },
   
   getComponentPinInfo(componentType: string): Array<{ name: string; x: number; y: number; signals: string[] }> {
-    // Return empty array for unknown components
+    // Return predefined pin configurations for known SVG components
+    // In a real implementation, this could be loaded from a database or configuration
+    
+    // Default empty array for unknown components
     return [];
   },
   
@@ -76,48 +57,56 @@ export const svgRenderer: ComponentRenderer = {
     element.innerHTML = '';
   },
   
-  // Helper method to render pins
-  _renderPins(pins: Array<{ name: string; x: number; y: number; signals?: string[] }>): HTMLElement[] {
-    return pins.map(pin => {
-      const pinEl = document.createElement('div');
-      pinEl.className = 'component-pin';
-      pinEl.style.position = 'absolute';
-      pinEl.style.left = `${pin.x}px`;
-      pinEl.style.top = `${pin.y}px`;
-      pinEl.style.width = '6px';
-      pinEl.style.height = '6px';
-      pinEl.style.backgroundColor = '#3b82f6';
-      pinEl.style.borderRadius = '50%';
-      pinEl.style.transform = 'translate(-50%, -50%)';
-      pinEl.setAttribute('data-pin-name', pin.name);
-      
-      // Add tooltip
-      const tooltip = document.createElement('div');
-      tooltip.className = 'pin-tooltip';
-      tooltip.textContent = pin.name;
-      tooltip.style.position = 'absolute';
-      tooltip.style.left = '10px';
-      tooltip.style.top = '0';
-      tooltip.style.backgroundColor = '#334155';
-      tooltip.style.color = 'white';
-      tooltip.style.padding = '2px 6px';
-      tooltip.style.borderRadius = '4px';
-      tooltip.style.fontSize = '10px';
-      tooltip.style.pointerEvents = 'none';
-      tooltip.style.opacity = '0';
-      tooltip.style.transition = 'opacity 0.2s';
-      
-      pinEl.appendChild(tooltip);
-      
-      pinEl.addEventListener('mouseenter', () => {
-        tooltip.style.opacity = '1';
+  // Helper method to set up SVG element properties
+  _setupSvgElement(svgElement: SVGElement | null): void {
+    if (svgElement) {
+      // Ensure the SVG is responsive
+      if (!svgElement.hasAttribute('width')) {
+        svgElement.setAttribute('width', '100%');
+      }
+      if (!svgElement.hasAttribute('height')) {
+        svgElement.setAttribute('height', '100%');
+      }
+      svgElement.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+    }
+  },
+  
+  // Helper method to load SVG from a URL
+  _loadSvgFromPath(element: HTMLElement, svgPath: string): void {
+    fetch(svgPath)
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`Failed to load SVG: ${response.status} ${response.statusText}`);
+        }
+        return response.text();
+      })
+      .then(svgContent => {
+        element.innerHTML = svgContent;
+        this._setupSvgElement(element.querySelector('svg'));
+      })
+      .catch(error => {
+        console.error('Error loading SVG:', error);
+        element.innerHTML = `<div class="error">Failed to load SVG: ${error.message}</div>`;
       });
+  },
+  
+  // Helper method to get SVG content for predefined types
+  _getSvgContentForType(componentType: string): string | null {
+    // Example implementation - in a real app this would be more sophisticated
+    const svgMap: Record<string, string> = {
+      'svg-resistor': `<svg viewBox="0 0 100 30" xmlns="http://www.w3.org/2000/svg">
+        <rect x="30" y="10" width="40" height="10" fill="#f5f5f5" stroke="#333" />
+        <line x1="0" y1="15" x2="30" y2="15" stroke="#333" />
+        <line x1="70" y1="15" x2="100" y2="15" stroke="#333" />
+      </svg>`,
       
-      pinEl.addEventListener('mouseleave', () => {
-        tooltip.style.opacity = '0';
-      });
-      
-      return pinEl;
-    });
+      'svg-led': `<svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="50" cy="25" r="20" fill="#ff0000" stroke="#333" />
+        <line x1="0" y1="25" x2="30" y2="25" stroke="#333" />
+        <line x1="70" y1="25" x2="100" y2="25" stroke="#333" />
+      </svg>`
+    };
+    
+    return svgMap[componentType] || null;
   }
 };

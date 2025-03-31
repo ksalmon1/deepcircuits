@@ -34,7 +34,12 @@ export const convertLibraryItemToCircuitComponent = (item: ComponentLibraryItem)
     top: 0,
     left: 0,
     attributes: {},
-    pins: item.pins || [], 
+    pins: item.pins ? item.pins.map(pin => ({
+      name: pin.name,
+      x: pin.x,
+      y: pin.y,
+      signals: pin.signals || []
+    })) : [], 
     svgPath: item.svgPath,
     isOriginal: item.isOriginal
   };
@@ -51,7 +56,12 @@ export const componentToNode = (component: CircuitComponent): Node<WokwiNodeData
     data: {
       type: component.type,
       attributes: component.attributes || {},
-      pins: component.pins || [],
+      pins: component.pins ? component.pins.map(pin => ({
+        name: pin.name,
+        x: pin.x,
+        y: pin.y,
+        signals: pin.signals || []
+      })) : [],
       svgPath: component.svgPath,
       isOriginal: component.isOriginal,
     },

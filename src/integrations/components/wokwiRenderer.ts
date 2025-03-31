@@ -61,8 +61,15 @@ export const wokwiRenderer: ComponentRenderer = {
     }
   },
   
-  getComponentPinInfo(componentType: string): Array<{ name: string; x: number; y: number; signals?: string[] }> {
-    return getWokwiComponentPinInfo(componentType);
+  getComponentPinInfo(componentType: string): Array<{ name: string; x: number; y: number; signals: string[] }> {
+    // Ensure that signals is always present, even if empty
+    const pins = getWokwiComponentPinInfo(componentType);
+    return pins.map(pin => ({
+      name: pin.name,
+      x: pin.x,
+      y: pin.y,
+      signals: pin.signals || []
+    }));
   },
   
   cleanup(element: HTMLElement): void {
