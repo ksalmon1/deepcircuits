@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { 
   isWokwiLoaded, 
@@ -59,6 +60,10 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
   const containerRef = useRef<HTMLDivElement>(null);
   const reactFlowWrapperRef = useRef<HTMLDivElement>(null);
   
+  // Restore the references to these hooks
+  const { isReady, loadingError, handleRetry } = useWokwiLoader();
+  const { pinCache } = useComponentPinCache();
+  
   const {
     canvasSize,
     setCanvasSize,
@@ -98,6 +103,31 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
   
   const [reactFlowNodes, setReactFlowNodes, onNodesChange] = useNodesState([]);
   const [reactFlowEdges, setReactFlowEdges, onEdgesChange] = useEdgesState([]);
+  
+  // Restore the canvasNavigation hook
+  const {
+    zoom,
+    offset,
+    panMode,
+    isDraggingCanvas,
+    handleZoomIn,
+    handleZoomOut,
+    togglePanMode,
+    startPan,
+    pan,
+    endPan,
+    handleWheel,
+    updateCanvasDimensions,
+    screenToCanvasCoordinates
+  } = useCanvasNavigation(1);
+  
+  // Restore the componentLibrary hook
+  const { 
+    components: libraryComponents, 
+    componentsDetailsMap, 
+    isLoadingComponents, 
+    isLoadingDetails 
+  } = useComponentLibrary();
   
   useEffect(() => {
     if (!components || components.length === 0) return;
