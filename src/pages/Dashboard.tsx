@@ -8,7 +8,7 @@ import { Plus, Search, ArrowUpDown } from "lucide-react";
 import ProjectCard, { ProjectData } from "@/components/common/ProjectCard";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import DashboardAnalytics from "@/components/DashboardAnalytics";
+import DashboardAnalytics from "@/components/dashboard/DashboardAnalytics";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import {
