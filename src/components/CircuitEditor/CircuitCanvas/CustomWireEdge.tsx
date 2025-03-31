@@ -1,13 +1,11 @@
-
 import React, { memo, useState, useCallback } from 'react';
 import { CustomWireEdgeProps, WireData } from '@/types/circuit';
 import { useReactFlow } from '@xyflow/react';
 
 /**
- * Generates an orthogonal path with only horizontal and vertical segments
- * connecting the source, routing points, and target
+ * Generates a straight path connecting the source, routing points, and target
  */
-const generateOrthogonalPath = (
+const generateStraightPathWithPoints = (
   sourceX: number,
   sourceY: number,
   targetX: number,
@@ -20,15 +18,15 @@ const generateOrthogonalPath = (
   const safeTargetX = isNaN(targetX) ? 0 : targetX;
   const safeTargetY = isNaN(targetY) ? 0 : targetY;
   
-  // Create an array of fixed points (source + routing points)
-  const fixedPoints = [{ x: safeSourceX, y: safeSourceY }];
+  // Create an array with all points (source + routing points + target/cursor)
+  const points = [{ x: safeSourceX, y: safeSourceY }];
   
   // Add all routing points
   if (Array.isArray(routingPoints)) {
     routingPoints.forEach(point => {
       const x = isNaN(point.x) ? 0 : point.x;
       const y = isNaN(point.y) ? 0 : point.y;
-      fixedPoints.push({ x, y });
+      points.push({ x, y });
     });
   }
   
@@ -40,46 +38,18 @@ const generateOrthogonalPath = (
       }
     : { x: safeTargetX, y: safeTargetY };
   
-  // Start the path at the first point
-  let path = `M ${fixedPoints[0].x},${fixedPoints[0].y}`;
+  // Add the final endpoint
+  points.push(finalEndPoint);
   
-  // Generate orthogonal segments between fixed points only
-  for (let i = 0; i < fixedPoints.length - 1; i++) {
-    const current = fixedPoints[i];
-    const next = fixedPoints[i + 1];
-    
-    // Create an L-shaped route between current and next points
-    // For odd-numbered segments, go horizontal first, then vertical
-    // For even-numbered segments, go vertical first, then horizontal
-    if (i % 2 === 0) {
-      // Horizontal first, then vertical
-      path += ` L ${next.x},${current.y}`; // Horizontal segment
-      path += ` L ${next.x},${next.y}`;    // Vertical segment
-    } else {
-      // Vertical first, then horizontal
-      path += ` L ${current.x},${next.y}`; // Vertical segment
-      path += ` L ${next.x},${next.y}`;    // Horizontal segment
-    }
-  }
+  // Generate the path string
+  if (points.length === 0) return '';
   
-  // Handle the final segment to the cursor/target separately
-  const lastFixedPoint = fixedPoints[fixedPoints.length - 1];
+  // Start with the first point
+  let path = `M ${points[0].x},${points[0].y}`;
   
-  // Only add the final segment if it's different from the last fixed point
-  if (lastFixedPoint.x !== finalEndPoint.x || lastFixedPoint.y !== finalEndPoint.y) {
-    // New logic: Choose elbow based on distance
-    const dx = finalEndPoint.x - lastFixedPoint.x;
-    const dy = finalEndPoint.y - lastFixedPoint.y;
-    
-    if (Math.abs(dx) > Math.abs(dy)) {
-      // Horizontal distance is greater: Draw V then H
-      path += ` L ${lastFixedPoint.x},${finalEndPoint.y}`; // Vertical segment
-      path += ` L ${finalEndPoint.x},${finalEndPoint.y}`;  // Horizontal segment
-    } else {
-      // Vertical distance is greater or equal: Draw H then V
-      path += ` L ${finalEndPoint.x},${lastFixedPoint.y}`; // Horizontal segment
-      path += ` L ${finalEndPoint.x},${finalEndPoint.y}`;  // Vertical segment
-    }
+  // Add straight lines to each subsequent point
+  for (let i = 1; i < points.length; i++) {
+    path += ` L ${points[i].x},${points[i].y}`;
   }
   
   return path;
@@ -198,8 +168,8 @@ function CustomWireEdge({
   const finalTargetX = cursorPosition && (safeSourceX === safeTargetX) ? cursorPosition.x : safeTargetX;
   const finalTargetY = cursorPosition && (safeSourceY === safeTargetY) ? cursorPosition.y : safeTargetY;
   
-  // Use orthogonal path generation instead of bezier or smooth step
-  const path = generateOrthogonalPath(
+  // Use straight path generation instead of orthogonal
+  const path = generateStraightPathWithPoints(
     safeSourceX, 
     safeSourceY, 
     finalTargetX, 
