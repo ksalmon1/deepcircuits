@@ -45,7 +45,7 @@ export const getComponent = async (id: string): Promise<ComponentLibraryItem | n
       .from('component_library')
       .select('*')
       .eq('id', id)
-      .single();
+      .maybeSingle();
 
     if (error) {
       console.error('Error fetching component:', error);
@@ -321,11 +321,16 @@ export const getComponentWithDetails = async (id: string): Promise<ComponentLibr
         .from('component_library')
         .select('*')
         .eq('id', id)
-        .single();
+        .maybeSingle();
 
       if (componentError) {
         console.error('Error fetching component:', componentError);
         throw componentError;
+      }
+
+      if (!componentData) {
+        console.log(`No component found with ID: ${id}`);
+        return null;
       }
 
       // Get component pins
@@ -383,31 +388,42 @@ export const getComponentWithDetails = async (id: string): Promise<ComponentLibr
       return null;
     }
 
-    // Extract data from RPC response
-    const component = rpcData.component;
-    const pins = rpcData.pins || [];
-    const properties = rpcData.properties || {};
+    // Type check and handle RPC data
+    if (typeof rpcData !== 'object' || rpcData === null) {
+      console.error('RPC returned invalid data format for component ID:', id, rpcData);
+      return null;
+    }
+
+    // Extract data with proper type checking
+    const componentData = rpcData.component ? 
+      (typeof rpcData.component === 'object' ? rpcData.component : {}) : {};
+    
+    const pins = rpcData.pins ? 
+      (Array.isArray(rpcData.pins) ? rpcData.pins : []) : [];
+    
+    const properties = rpcData.properties ? 
+      (typeof rpcData.properties === 'object' ? rpcData.properties : {}) : {};
 
     console.log('Mapped component data:', {
-      id: component.id,
-      type: component.type,
-      pins: pins.length,
-      properties: Object.keys(properties).length
+      id: componentData.id,
+      type: componentData.type,
+      pins: Array.isArray(pins) ? pins.length : 0,
+      properties: properties ? Object.keys(properties).length : 0
     });
 
     return {
-      id: component.id,
-      name: component.name,
-      type: component.type,
-      category: component.category,
-      description: component.description,
-      svgPath: component.svg_path,
-      enabled: component.enabled,
-      isOriginal: component.is_original,
+      id: componentData.id,
+      name: componentData.name,
+      type: componentData.type,
+      category: componentData.category,
+      description: componentData.description,
+      svgPath: componentData.svg_path,
+      enabled: componentData.enabled,
+      isOriginal: componentData.is_original,
       pins: pins,
       properties: properties,
-      createdAt: component.created_at,
-      updatedAt: component.updated_at
+      createdAt: componentData.created_at,
+      updatedAt: componentData.updated_at
     };
   } catch (error) {
     console.error('Error in getComponentWithDetails:', error);
