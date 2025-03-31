@@ -1,9 +1,9 @@
 
 import React, { ReactNode } from 'react';
-import { ErrorProvider } from './ErrorContext';
-import { ProjectProvider } from './ProjectContext';
-import { SimulationProvider } from './SimulationContext';
-import { SelectionProvider } from './SelectionContext';
+import { ErrorProvider, useError } from './ErrorContext';
+import { ProjectProvider, useProject } from './ProjectContext';
+import { SimulationProvider, useSimulation } from './SimulationContext';
+import { SelectionProvider, useSelection } from './SelectionContext';
 
 // This is now a composite provider that combines all the individual providers
 interface CircuitEditorProviderProps {
