@@ -92,12 +92,16 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
   // Initialize wire routing system
   const { 
     wireConnectionState,
-    temporaryEdge,
+    startWireConnection,
+    updateWireRouting,
+    finalizeWireConnection,
+    cancelWireConnection,
+    getTemporaryEdge,
     handleCanvasClick,
     handleHandleClick,
     deleteWire,
     connectionLineStyle,
-  } = useWireRouting(components);
+  } = useWireRouting();
   
   // React Flow state
   const [reactFlowNodes, setReactFlowNodes, onNodesChange] = useNodesState([]);
@@ -190,8 +194,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
       const componentData = e.dataTransfer.getData('component');
       if (!componentData) return;
       
-      const componentInfo = JSON.parse(componentData);
-      console.log('Dropped component data:', componentInfo);
+      console.log('Dropped component data:', componentData);
       
       const rect = canvasRef.current?.getBoundingClientRect();
       if (!rect) return;

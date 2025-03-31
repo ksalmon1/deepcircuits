@@ -1,17 +1,21 @@
+
 import { useCallback, useState } from 'react';
 import { Edge, Connection, useReactFlow } from '@xyflow/react';
 import { 
   calculateWireRoutingPoints,
-  getWireColorFromSignal 
+  getPinSignalType 
 } from '@/utils/wireUtils';
 import { WireConnectionState, WireData } from '@/types/circuit';
 import { getEdgeParams } from '@/utils/wireUtils';
+import { useWireSystem } from './useWireSystem';
 
 /**
  * Hook for managing wire routing and connection state in the circuit editor.
  */
 export const useWireRouting = () => {
-  const { setEdges, getNodes } = useReactFlow();
+  const { getNodes } = useReactFlow();
+  const { connectPins, deleteWire: deleteWireFromSystem } = useWireSystem([]);
+  
   const [wireConnectionState, setWireConnectionState] = useState<WireConnectionState>({
     isConnecting: false,
     routingPoints: [],
@@ -72,7 +76,7 @@ export const useWireRouting = () => {
     targetNodeId: string,
     targetHandleId: string,
     targetPinIndex: number,
-    connectPins: (
+    connectPinsFunc: (
       sourceId: string,
       sourcePinIndex: number,
       targetId: string,
@@ -81,11 +85,11 @@ export const useWireRouting = () => {
     ) => boolean
   ) => {
     setWireConnectionState(prevState => {
-      if (!prevState.isConnecting || !prevState.sourceNodeId || !prevState.sourcePinIndex) {
+      if (!prevState.isConnecting || !prevState.sourceNodeId || prevState.sourcePinIndex === undefined) {
         return prevState;
       }
 
-      const success = connectPins(
+      const success = connectPinsFunc(
         prevState.sourceNodeId,
         prevState.sourcePinIndex,
         targetNodeId,
@@ -124,7 +128,9 @@ export const useWireRouting = () => {
       return null;
     }
 
-    const sourceHandle = sourceNode.data?.pins?.find((pin, index) => index === wireConnectionState.sourcePinIndex);
+    const sourceHandle = sourceNode.data && sourceNode.data.pins && Array.isArray(sourceNode.data.pins) ? 
+      sourceNode.data.pins.find((pin: any, index: number) => index === wireConnectionState.sourcePinIndex) : 
+      undefined;
 
     if (!sourceHandle) {
       return null;
@@ -160,14 +166,49 @@ export const useWireRouting = () => {
         stroke: '#9b87f5',
         strokeWidth: 2,
       },
-      sourceX: edgeParams.sourceX,
-      sourceY: edgeParams.sourceY,
-      targetX: edgeParams.targetX,
-      targetY: edgeParams.targetY,
     };
 
     return edge;
   }, [wireConnectionState, getNodes]);
+
+  /**
+   * Handle canvas click when wire connection is in progress
+   */
+  const handleCanvasClick = useCallback((event: React.MouseEvent, position: { x: number; y: number }) => {
+    // Cancel the current wire connection
+    cancelWireConnection();
+  }, [cancelWireConnection]);
+
+  /**
+   * Handle clicking on a node handle
+   */
+  const handleHandleClick = useCallback((nodeId: string, handleId: string) => {
+    const handleParts = handleId.split('-');
+    if (handleParts.length !== 2) return;
+    
+    const pinIndex = parseInt(handleParts[1], 10);
+    if (isNaN(pinIndex)) return;
+    
+    if (!wireConnectionState.isConnecting) {
+      // Start a new connection
+      startWireConnection(nodeId, handleId, pinIndex);
+    } else if (wireConnectionState.sourceNodeId && wireConnectionState.sourcePinIndex !== undefined) {
+      // Finish an existing connection
+      finalizeWireConnection(
+        nodeId, 
+        handleId, 
+        pinIndex, 
+        connectPins
+      );
+    }
+  }, [wireConnectionState, startWireConnection, finalizeWireConnection, connectPins]);
+
+  /**
+   * Delete a wire
+   */
+  const deleteWire = useCallback((wireId: string) => {
+    return deleteWireFromSystem(wireId);
+  }, [deleteWireFromSystem]);
 
   return {
     wireConnectionState,
@@ -176,5 +217,9 @@ export const useWireRouting = () => {
     finalizeWireConnection,
     cancelWireConnection,
     getTemporaryEdge,
+    handleCanvasClick,
+    handleHandleClick,
+    deleteWire,
+    connectionLineStyle: { stroke: '#9b87f5', strokeWidth: 2 }
   };
 };
