@@ -19,8 +19,8 @@ import NotFound from "@/pages/NotFound";
 import ForgotPassword from "@/pages/ForgotPassword";
 import ResetPassword from "@/pages/ResetPassword";
 import CircuitEditorLayout from "@/components/CircuitEditor/CircuitEditorLayout";
-import { ProtectedRoute, PublicOnlyRoute } from "@/components/ProtectedRoute";
-import { AdminRoute } from "@/components/AdminRoute";
+import { ProtectedRoute, PublicOnlyRoute } from "@/guards/ProtectedRoute";
+import { AdminRoute } from "@/guards/AdminRoute";
 import { AuthProvider } from "@/context/AuthContext";
 
 import "./App.css";
