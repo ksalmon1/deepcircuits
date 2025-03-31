@@ -127,18 +127,7 @@ export const useComponentLibrary = () => {
   // Helper to get component details including pins from the cache
   const getComponentDetailsWithPins = (componentId?: string) => {
     if (!componentId || !componentsDetailsMap) return null;
-    
-    const details = componentsDetailsMap[componentId];
-    if (details) {
-      // Make sure to transform into the expected format if needed
-      const result = {
-        ...details,
-        pins: details.pins || [],
-        properties: details.properties || {}
-      };
-      return result;
-    }
-    return null;
+    return componentsDetailsMap[componentId];
   };
   
   return {

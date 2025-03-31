@@ -1,6 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import type { ComponentLibraryItem } from '@/services/componentLibrary/types';
+import { ComponentLibraryItem } from '@/services/componentLibrary/types';
 import { WokwiComponent, WokwiPin } from '@/integrations/wokwi/WokwiIntegration';
 
 export type { ComponentLibraryItem };
@@ -299,8 +299,6 @@ async function insertPins(componentId: string, pins: WokwiPin[]): Promise<{ succ
       return { success: true };
     }
 
-    console.log(`Inserting ${pins.length} pins for component ${componentId}`);
-    
     const pinsToInsert = pins.map(pin => ({
       component_id: componentId,
       name: pin.name,
@@ -318,7 +316,6 @@ async function insertPins(componentId: string, pins: WokwiPin[]): Promise<{ succ
       return { success: false, error: error.message };
     }
 
-    console.log(`Successfully inserted ${pins.length} pins for component ${componentId}`);
     return { success: true };
   } catch (error) {
     console.error('Error in insertPins:', error);
@@ -329,7 +326,6 @@ async function insertPins(componentId: string, pins: WokwiPin[]): Promise<{ succ
 async function updatePins(componentId: string, pins: WokwiPin[]): Promise<{ success: boolean; error?: string }> {
   try {
     // Delete existing pins
-    console.log(`Deleting existing pins for component ${componentId}`);
     const { error: deleteError } = await supabase
       .from('component_pins')
       .delete()
@@ -342,12 +338,10 @@ async function updatePins(componentId: string, pins: WokwiPin[]): Promise<{ succ
 
     // Skip insertion if no pins to add
     if (!pins || pins.length === 0) {
-      console.log('No pins to insert, skipping insertion');
       return { success: true };
     }
 
     // Insert new pins
-    console.log(`Inserting ${pins.length} pins for component ${componentId}`);
     return insertPins(componentId, pins);
   } catch (error) {
     console.error('Error in updatePins:', error);
@@ -362,8 +356,6 @@ async function insertProperties(componentId: string, properties: Record<string, 
       return { success: true };
     }
 
-    console.log(`Inserting ${Object.keys(properties).length} properties for component ${componentId}`);
-    
     const propertiesToInsert = Object.entries(properties).map(([key, value]) => ({
       component_id: componentId,
       property_key: key,
@@ -379,7 +371,6 @@ async function insertProperties(componentId: string, properties: Record<string, 
       return { success: false, error: error.message };
     }
 
-    console.log(`Successfully inserted ${Object.keys(properties).length} properties for component ${componentId}`);
     return { success: true };
   } catch (error) {
     console.error('Error in insertProperties:', error);
@@ -390,7 +381,6 @@ async function insertProperties(componentId: string, properties: Record<string, 
 async function updateProperties(componentId: string, properties: Record<string, any>): Promise<{ success: boolean; error?: string }> {
   try {
     // Delete existing properties
-    console.log(`Deleting existing properties for component ${componentId}`);
     const { error: deleteError } = await supabase
       .from('component_properties')
       .delete()
@@ -403,12 +393,10 @@ async function updateProperties(componentId: string, properties: Record<string, 
 
     // Skip insertion if no properties to add
     if (!properties || Object.keys(properties).length === 0) {
-      console.log('No properties to insert, skipping insertion');
       return { success: true };
     }
 
     // Insert new properties
-    console.log(`Inserting ${Object.keys(properties).length} properties for component ${componentId}`);
     return insertProperties(componentId, properties);
   } catch (error) {
     console.error('Error in updateProperties:', error);
@@ -422,10 +410,9 @@ export function convertLibraryItemToWokwiComponent(item: ComponentLibraryItem): 
     type: item.type,
     top: 0,
     left: 0,
-    attributes: item.properties || {},
+    attributes: {},
     pins: item.pins || [],
     svgPath: item.svgPath,
-    isOriginal: item.isOriginal,
-    originalId: item.id  // Store the original component ID for future reference
+    isOriginal: item.isOriginal
   };
 }

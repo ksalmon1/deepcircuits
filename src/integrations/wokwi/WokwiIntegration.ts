@@ -1,4 +1,4 @@
-import { WokwiElements } from '@wokwi/elements';
+import '@wokwi/elements';
 
 // Track whether we've seen the components load successfully
 let componentsLoadedSuccessfully = false;
@@ -52,19 +52,18 @@ export interface WokwiPin {
   name: string;
   x: number;
   y: number;
-  signals?: string[];
+  signals: string[];
 }
 
 export interface WokwiComponent {
-  id: string;
   type: string;
+  id: string;
   top: number;
   left: number;
-  attributes: Record<string, any>;
-  pins: WokwiPin[];
-  svgPath?: string;
-  isOriginal?: boolean;
-  originalId?: string; // Reference to the original component in the library
+  attributes: WokwiElementProps;
+  pins?: WokwiPin[];
+  isOriginal?: boolean; // Flag to indicate if this is an original Wokwi component
+  svgPath?: string | null; // Added SVG path for custom components
 }
 
 // Function to render a wokwi element with given properties
