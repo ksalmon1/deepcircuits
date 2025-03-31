@@ -2,6 +2,7 @@
 import { Node } from '@xyflow/react';
 import { WokwiComponent } from '@/integrations/wokwi/WokwiIntegration';
 import { WokwiNodeData } from '@/types/circuit';
+import { Position } from '@xyflow/react';
 
 /**
  * Converts a Wokwi component to an XY Flow node
@@ -41,4 +42,21 @@ export const componentToNode = (component: WokwiComponent): Node<WokwiNodeData> 
   });
   
   return node;
+};
+
+/**
+ * Get edge parameters based on source and target positions
+ */
+export const getEdgeParams = (
+  source: { x: number; y: number; position: Position },
+  target: { x: number; y: number; position: Position }
+) => {
+  return {
+    sourceX: source.x,
+    sourceY: source.y,
+    targetX: target.x,
+    targetY: target.y,
+    sourcePosition: source.position,
+    targetPosition: target.position,
+  };
 };

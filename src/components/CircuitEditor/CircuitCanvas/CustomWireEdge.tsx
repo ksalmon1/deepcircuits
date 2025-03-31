@@ -1,7 +1,6 @@
 
 import React, { FC, useEffect, useMemo, useState } from 'react';
 import { Position, EdgeProps, getBezierPath } from '@xyflow/react';
-import { Handle } from '@/types/circuit';
 import { getEdgeParams } from './utils';
 
 interface CustomWireEdgeProps extends EdgeProps {

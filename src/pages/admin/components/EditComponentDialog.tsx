@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { ComponentLibraryItem } from "@/services/componentLibraryService";
 import { ComponentPin } from "@/types/database";
@@ -73,7 +72,6 @@ const EditComponentDialog = ({
   const { toast } = useToast();
   const [typeChangeWarning, setTypeChangeWarning] = useState<string | null>(null);
   
-  // Check if component type is being changed
   const handleTypeChange = (newType: string) => {
     if (selectedComponent && selectedComponent.type !== newType) {
       setTypeChangeWarning(
@@ -138,7 +136,7 @@ const EditComponentDialog = ({
             
             <TabsContent value="details" className="py-4">
               {typeChangeWarning && (
-                <Alert variant="warning" className="mb-4">
+                <Alert variant="destructive" className="mb-4">
                   <AlertTriangle className="h-4 w-4" />
                   <AlertDescription>{typeChangeWarning}</AlertDescription>
                 </Alert>
