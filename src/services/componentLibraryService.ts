@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { ComponentLibraryItem } from '@/services/componentLibrary/types';
 import { WokwiComponent, WokwiPin } from '@/integrations/wokwi/WokwiIntegration';
@@ -181,6 +182,16 @@ export async function createComponent(component: ComponentLibraryItem): Promise<
       return { success: false, error: error.message };
     }
 
+    // Insert pins if provided
+    if (component.pins && component.pins.length > 0) {
+      await insertPins(data.id, component.pins);
+    }
+
+    // Insert properties if provided
+    if (component.properties && Object.keys(component.properties).length > 0) {
+      await insertProperties(data.id, component.properties);
+    }
+
     return { 
       success: true, 
       data: {
@@ -206,7 +217,20 @@ export async function createComponent(component: ComponentLibraryItem): Promise<
 
 export async function updateComponent(component: ComponentLibraryItem): Promise<{ success: boolean; error?: string }> {
   try {
-    const { error } = await supabase
+    if (!component.id) {
+      console.error('Component ID is missing for update');
+      return { success: false, error: 'Component ID is required' };
+    }
+
+    console.log('Updating component ID:', component.id, 'with data:', {
+      name: component.name,
+      type: component.type,
+      pins: component.pins?.length || 0,
+      properties: component.properties ? Object.keys(component.properties).length : 0
+    });
+
+    // First, update the component basic info
+    const { error: componentError } = await supabase
       .from('component_library')
       .update({
         name: component.name,
@@ -219,9 +243,27 @@ export async function updateComponent(component: ComponentLibraryItem): Promise<
       })
       .eq('id', component.id);
 
-    if (error) {
-      console.error('Error updating component:', error);
-      return { success: false, error: error.message };
+    if (componentError) {
+      console.error('Error updating component:', componentError);
+      return { success: false, error: componentError.message };
+    }
+
+    // Update pins if provided
+    if (component.pins) {
+      console.log(`Updating ${component.pins.length} pins for component ${component.id}:`, component.pins);
+      const pinsResult = await updatePins(component.id, component.pins);
+      if (!pinsResult.success) {
+        return { success: false, error: pinsResult.error };
+      }
+    }
+
+    // Update properties if provided
+    if (component.properties) {
+      console.log(`Updating ${Object.keys(component.properties).length} properties for component ${component.id}:`, component.properties);
+      const propertiesResult = await updateProperties(component.id, component.properties);
+      if (!propertiesResult.success) {
+        return { success: false, error: propertiesResult.error };
+      }
     }
 
     return { success: true };
@@ -247,6 +289,118 @@ export async function deleteComponent(id: string): Promise<{ success: boolean; e
   } catch (error) {
     console.error('Error in deleteComponent:', error);
     return { success: false, error: 'Failed to delete component' };
+  }
+}
+
+// Helper functions for component pins
+async function insertPins(componentId: string, pins: WokwiPin[]): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (!pins || pins.length === 0) {
+      return { success: true };
+    }
+
+    const pinsToInsert = pins.map(pin => ({
+      component_id: componentId,
+      name: pin.name,
+      x: pin.x,
+      y: pin.y,
+      signals: Array.isArray(pin.signals) ? pin.signals : []
+    }));
+
+    const { error } = await supabase
+      .from('component_pins')
+      .insert(pinsToInsert);
+
+    if (error) {
+      console.error('Error inserting pins:', error);
+      return { success: false, error: error.message };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error in insertPins:', error);
+    return { success: false, error: 'Failed to insert pins' };
+  }
+}
+
+async function updatePins(componentId: string, pins: WokwiPin[]): Promise<{ success: boolean; error?: string }> {
+  try {
+    // Delete existing pins
+    const { error: deleteError } = await supabase
+      .from('component_pins')
+      .delete()
+      .eq('component_id', componentId);
+
+    if (deleteError) {
+      console.error('Error deleting existing pins:', deleteError);
+      return { success: false, error: deleteError.message };
+    }
+
+    // Skip insertion if no pins to add
+    if (!pins || pins.length === 0) {
+      return { success: true };
+    }
+
+    // Insert new pins
+    return insertPins(componentId, pins);
+  } catch (error) {
+    console.error('Error in updatePins:', error);
+    return { success: false, error: 'Failed to update pins' };
+  }
+}
+
+// Helper functions for component properties
+async function insertProperties(componentId: string, properties: Record<string, any>): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (!properties || Object.keys(properties).length === 0) {
+      return { success: true };
+    }
+
+    const propertiesToInsert = Object.entries(properties).map(([key, value]) => ({
+      component_id: componentId,
+      property_key: key,
+      property_value: value
+    }));
+
+    const { error } = await supabase
+      .from('component_properties')
+      .insert(propertiesToInsert);
+
+    if (error) {
+      console.error('Error inserting properties:', error);
+      return { success: false, error: error.message };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error in insertProperties:', error);
+    return { success: false, error: 'Failed to insert properties' };
+  }
+}
+
+async function updateProperties(componentId: string, properties: Record<string, any>): Promise<{ success: boolean; error?: string }> {
+  try {
+    // Delete existing properties
+    const { error: deleteError } = await supabase
+      .from('component_properties')
+      .delete()
+      .eq('component_id', componentId);
+
+    if (deleteError) {
+      console.error('Error deleting existing properties:', deleteError);
+      return { success: false, error: deleteError.message };
+    }
+
+    // Skip insertion if no properties to add
+    if (!properties || Object.keys(properties).length === 0) {
+      return { success: true };
+    }
+
+    // Insert new properties
+    return insertProperties(componentId, properties);
+  } catch (error) {
+    console.error('Error in updateProperties:', error);
+    return { success: false, error: 'Failed to update properties' };
   }
 }
 
