@@ -1,5 +1,5 @@
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { ComponentPin } from '@/types/pin';
 import { usePinEditor } from '@/hooks/usePinEditor';
 import { useCanvasNavigation } from '@/hooks/useCanvasNavigation';
