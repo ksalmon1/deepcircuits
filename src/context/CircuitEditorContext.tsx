@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { CircuitComponent } from '@/types/component';
 import { PinConnection } from '@/types/pin';
@@ -19,6 +18,7 @@ interface CircuitEditorContextType {
   
   // Connections
   connections: PinConnection[];
+  setConnections: React.Dispatch<React.SetStateAction<PinConnection[]>>;
   addConnection: (connection: PinConnection) => void;
   removeConnection: (connectionId: string) => void;
   
@@ -248,6 +248,7 @@ export const CircuitEditorProvider: React.FC<CircuitEditorProviderProps> = ({ ch
     selectedComponent,
     selectComponent,
     connections,
+    setConnections,
     addConnection,
     removeConnection,
     canvasState,
