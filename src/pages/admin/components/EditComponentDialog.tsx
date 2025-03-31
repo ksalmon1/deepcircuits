@@ -246,6 +246,7 @@ const EditComponentDialog = ({
                     onPinsChange={updatePinConfiguration}
                     readonly={false}
                     height={500}
+                    svgPath={editedComponent.svgPath || undefined}
                   />
                 </div>
               </div>

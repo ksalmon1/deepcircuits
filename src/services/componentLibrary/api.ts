@@ -211,10 +211,6 @@ export const updateComponent = async (component: ComponentLibraryItem): Promise<
         console.error('Error checking for existing components with same type:', checkError);
         throw checkError;
       }
-      
-      if (existingComponents && existingComponents.length > 0) {
-        throw new Error(`Cannot change type to ${component.type} as it already exists in another component`);
-      }
     }
 
     // Update component basic info
@@ -259,6 +255,8 @@ export const updateComponent = async (component: ComponentLibraryItem): Promise<
  * Insert pins for a component
  */
 const insertPins = async (componentId: string, pins: any[]): Promise<void> => {
+  if (!pins || pins.length === 0) return;
+  
   const pinsToInsert = pins.map(pin => ({
     component_id: componentId,
     name: pin.name,
@@ -293,7 +291,7 @@ const updatePins = async (componentId: string, pins: any[]): Promise<void> => {
   }
 
   // Insert new pins if any
-  if (pins.length > 0) {
+  if (pins && pins.length > 0) {
     await insertPins(componentId, pins);
   }
 };
@@ -302,6 +300,8 @@ const updatePins = async (componentId: string, pins: any[]): Promise<void> => {
  * Insert properties for a component
  */
 const insertProperties = async (componentId: string, properties: Record<string, any>): Promise<void> => {
+  if (!properties || Object.keys(properties).length === 0) return;
+  
   const propertiesToInsert = Object.entries(properties).map(([key, value]) => ({
     component_id: componentId,
     property_key: key,
@@ -334,7 +334,7 @@ const updateProperties = async (componentId: string, properties: Record<string, 
   }
 
   // Insert new properties if any
-  if (Object.keys(properties).length > 0) {
+  if (properties && Object.keys(properties).length > 0) {
     await insertProperties(componentId, properties);
   }
 };

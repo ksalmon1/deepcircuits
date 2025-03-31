@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { ComponentPin } from '@/types/database';
 import { isWokwiLoaded, forceLoadWokwiElements } from '@/integrations/wokwi/WokwiIntegration';
@@ -20,6 +19,7 @@ interface VisualPinEditorProps {
   height?: number;
   className?: string;
   readonly?: boolean;
+  svgPath?: string; // Added SVG path prop
 }
 
 /**
@@ -37,15 +37,18 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
   width = 300, 
   height = 300,
   className = '',
-  readonly = false
+  readonly = false,
+  svgPath // Added SVG path prop
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
+  const svgRef = useRef<HTMLDivElement>(null);
   const [componentLoaded, setComponentLoaded] = useState(false);
   const [draggingPin, setDraggingPin] = useState<number | null>(null);
   const [componentElement, setComponentElement] = useState<HTMLElement | null>(null);
   const [debugInfo, setDebugInfo] = useState<string>('No interactions yet');
   const [hoveredPinIndex, setHoveredPinIndex] = useState<number | null>(null);
+  const [svgLoaded, setSvgLoaded] = useState(false);
   
   const {
     zoom,
@@ -71,6 +74,43 @@ const VisualPinEditor: React.FC<VisualPinEditorProps> = ({
       onChange(updatedPins);
     }
   };
+  
+  useEffect(() => {
+    if (svgPath && svgRef.current) {
+      setSvgLoaded(false);
+      const loadSvg = async () => {
+        try {
+          const response = await fetch(svgPath);
+          if (!response.ok) {
+            throw new Error(`Failed to load SVG: ${response.status}`);
+          }
+          
+          const svgContent = await response.text();
+          svgRef.current!.innerHTML = svgContent;
+          
+          // Find the SVG element and set its size
+          const svgElement = svgRef.current!.querySelector('svg');
+          if (svgElement) {
+            svgElement.style.width = '100%';
+            svgElement.style.height = 'auto';
+            svgElement.style.maxHeight = '100%';
+            svgElement.style.position = 'absolute';
+            svgElement.style.top = '0';
+            svgElement.style.left = '0';
+            svgElement.style.zIndex = '4';
+            svgElement.style.pointerEvents = 'none'; // Allow clicking through the SVG
+          }
+          
+          setSvgLoaded(true);
+          console.log("SVG loaded successfully");
+        } catch (error) {
+          console.error("Error loading SVG:", error);
+        }
+      };
+      
+      loadSvg();
+    }
+  }, [svgPath]);
   
   useEffect(() => {
     const loadWokwi = async () => {
@@ -279,6 +319,22 @@ Calculated pin position relative to component origin: (${canvasX}, ${canvasY})`;
               height: '100%'
             }}
           >
+            {/* SVG Reference Layer */}
+            {svgPath && (
+              <div 
+                ref={svgRef} 
+                className="absolute" 
+                style={{ 
+                  left: '0', 
+                  top: '0', 
+                  width: '100%',
+                  height: '100%',
+                  zIndex: 4,
+                  opacity: 0.7
+                }}
+              />
+            )}
+            
             <div 
               ref={previewRef} 
               className="absolute" 
