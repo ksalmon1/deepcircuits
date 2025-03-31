@@ -75,6 +75,14 @@ export const getComponent = async (id: string): Promise<ComponentLibraryItem | n
 // Create a new component
 export const createComponent = async (component: ComponentLibraryItem): Promise<ComponentLibraryItem | null> => {
   try {
+    console.log('Creating component with data:', {
+      name: component.name,
+      type: component.type,
+      pins: component.pins?.length,
+      properties: component.properties ? Object.keys(component.properties).length : 0
+    });
+
+    // First, insert the component basic information
     const { data, error } = await supabase
       .from('component_library')
       .insert([{
@@ -94,6 +102,49 @@ export const createComponent = async (component: ComponentLibraryItem): Promise<
       throw error;
     }
 
+    const componentId = data.id;
+    console.log('Component created with ID:', componentId);
+
+    // Insert pins if provided
+    if (component.pins && component.pins.length > 0) {
+      console.log(`Inserting ${component.pins.length} pins for component ${componentId}`);
+      const pinsToInsert = component.pins.map(pin => ({
+        component_id: componentId,
+        name: pin.name,
+        x: pin.x,
+        y: pin.y,
+        signals: pin.signals || []
+      }));
+
+      const { error: pinsError } = await supabase
+        .from('component_pins')
+        .insert(pinsToInsert);
+
+      if (pinsError) {
+        console.error('Error inserting pins:', pinsError);
+        // Continue despite pin errors
+      }
+    }
+
+    // Insert properties if provided
+    if (component.properties && Object.keys(component.properties).length > 0) {
+      console.log(`Inserting ${Object.keys(component.properties).length} properties for component ${componentId}`);
+      const propertiesToInsert = Object.entries(component.properties).map(([key, value]) => ({
+        component_id: componentId,
+        property_key: key,
+        property_value: value
+      }));
+
+      const { error: propertiesError } = await supabase
+        .from('component_properties')
+        .insert(propertiesToInsert);
+
+      if (propertiesError) {
+        console.error('Error inserting properties:', propertiesError);
+        // Continue despite property errors
+      }
+    }
+
     return {
       id: data.id,
       name: data.name,
@@ -103,6 +154,8 @@ export const createComponent = async (component: ComponentLibraryItem): Promise<
       svgPath: data.svg_path,
       enabled: data.enabled,
       isOriginal: data.is_original,
+      pins: component.pins,
+      properties: component.properties,
       createdAt: data.created_at,
       updatedAt: data.updated_at
     };
@@ -115,6 +168,15 @@ export const createComponent = async (component: ComponentLibraryItem): Promise<
 // Update an existing component
 export const updateComponent = async (component: ComponentLibraryItem): Promise<ComponentLibraryItem | null> => {
   try {
+    console.log('Updating component with ID:', component.id);
+    console.log('Component data:', {
+      name: component.name,
+      type: component.type,
+      pins: component.pins?.length,
+      properties: component.properties ? Object.keys(component.properties).length : 0
+    });
+
+    // Update basic component information
     const { data, error } = await supabase
       .from('component_library')
       .update({
@@ -135,6 +197,70 @@ export const updateComponent = async (component: ComponentLibraryItem): Promise<
       throw error;
     }
 
+    // Handle pins update - first delete existing pins
+    console.log(`Deleting existing pins for component ${component.id}`);
+    const { error: deletePinsError } = await supabase
+      .from('component_pins')
+      .delete()
+      .eq('component_id', component.id);
+
+    if (deletePinsError) {
+      console.error('Error deleting existing pins:', deletePinsError);
+      // Continue despite errors
+    }
+
+    // Insert new pins if provided
+    if (component.pins && component.pins.length > 0) {
+      console.log(`Inserting ${component.pins.length} pins for component ${component.id}`);
+      const pinsToInsert = component.pins.map(pin => ({
+        component_id: component.id,
+        name: pin.name,
+        x: pin.x,
+        y: pin.y,
+        signals: pin.signals || []
+      }));
+
+      const { error: insertPinsError } = await supabase
+        .from('component_pins')
+        .insert(pinsToInsert);
+
+      if (insertPinsError) {
+        console.error('Error inserting pins:', insertPinsError);
+        // Continue despite errors
+      }
+    }
+
+    // Handle properties update - first delete existing properties
+    console.log(`Deleting existing properties for component ${component.id}`);
+    const { error: deletePropertiesError } = await supabase
+      .from('component_properties')
+      .delete()
+      .eq('component_id', component.id);
+
+    if (deletePropertiesError) {
+      console.error('Error deleting existing properties:', deletePropertiesError);
+      // Continue despite errors
+    }
+
+    // Insert new properties if provided
+    if (component.properties && Object.keys(component.properties).length > 0) {
+      console.log(`Inserting ${Object.keys(component.properties).length} properties for component ${component.id}`);
+      const propertiesToInsert = Object.entries(component.properties).map(([key, value]) => ({
+        component_id: component.id,
+        property_key: key,
+        property_value: value
+      }));
+
+      const { error: insertPropertiesError } = await supabase
+        .from('component_properties')
+        .insert(propertiesToInsert);
+
+      if (insertPropertiesError) {
+        console.error('Error inserting properties:', insertPropertiesError);
+        // Continue despite errors
+      }
+    }
+
     return {
       id: data.id,
       name: data.name,
@@ -144,6 +270,8 @@ export const updateComponent = async (component: ComponentLibraryItem): Promise<
       svgPath: data.svg_path,
       enabled: data.enabled,
       isOriginal: data.is_original,
+      pins: component.pins,
+      properties: component.properties,
       createdAt: data.created_at,
       updatedAt: data.updated_at
     };
@@ -156,6 +284,8 @@ export const updateComponent = async (component: ComponentLibraryItem): Promise<
 // Delete a component by ID
 export const deleteComponent = async (id: string): Promise<string | null> => {
   try {
+    // Note: We don't need to manually delete pins and properties 
+    // as they should have ON DELETE CASCADE constraints
     const { data, error } = await supabase
       .from('component_library')
       .delete()
@@ -176,54 +306,108 @@ export const deleteComponent = async (id: string): Promise<string | null> => {
 // Get a component with all its details
 export const getComponentWithDetails = async (id: string): Promise<ComponentLibraryItem | null> => {
   try {
-    const { data, error } = await supabase
-      .from('component_library')
-      .select(`
-        *,
-        component_pins(*)
-      `)
-      .eq('id', id)
-      .single();
+    console.log('Fetching component details for ID:', id);
 
-    if (error) {
-      console.error('Error fetching component details:', error);
-      throw error;
+    // First try to use the RPC function
+    const { data: rpcData, error: rpcError } = await supabase
+      .rpc('get_component_with_details', { component_id: id });
+
+    if (rpcError) {
+      console.error('Error fetching component details via RPC:', rpcError);
+      console.log('Falling back to direct queries');
+      
+      // Get component basic info
+      const { data: componentData, error: componentError } = await supabase
+        .from('component_library')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (componentError) {
+        console.error('Error fetching component:', componentError);
+        throw componentError;
+      }
+
+      // Get component pins
+      const { data: pinsData, error: pinsError } = await supabase
+        .from('component_pins')
+        .select('*')
+        .eq('component_id', id);
+
+      if (pinsError) {
+        console.error('Error fetching pins:', pinsError);
+        // Continue despite errors
+      }
+
+      // Get component properties
+      const { data: propertiesData, error: propertiesError } = await supabase
+        .from('component_properties')
+        .select('*')
+        .eq('component_id', id);
+
+      if (propertiesError) {
+        console.error('Error fetching properties:', propertiesError);
+        // Continue despite errors
+      }
+
+      // Convert properties to key-value object
+      let properties: Record<string, any> = {};
+      if (propertiesData && propertiesData.length > 0) {
+        properties = propertiesData.reduce((props, prop) => {
+          props[prop.property_key] = prop.property_value;
+          return props;
+        }, {} as Record<string, any>);
+      }
+
+      return {
+        id: componentData.id,
+        name: componentData.name,
+        type: componentData.type,
+        category: componentData.category,
+        description: componentData.description,
+        svgPath: componentData.svg_path,
+        enabled: componentData.enabled,
+        isOriginal: componentData.is_original,
+        pins: pinsData || [],
+        properties: properties,
+        createdAt: componentData.created_at,
+        updatedAt: componentData.updated_at
+      };
     }
 
-    if (!data) return null;
-
-    // Get properties separately since we can't do a nested select easily
-    const { data: propertiesData, error: propertiesError } = await supabase
-      .from('component_properties')
-      .select('*')
-      .eq('component_id', id);
-
-    if (propertiesError) {
-      console.error('Error fetching component properties:', propertiesError);
+    // If RPC was successful, map the data to our ComponentLibraryItem format
+    console.log('RPC successful, mapping data...');
+    
+    if (!rpcData) {
+      console.error('RPC returned no data for component ID:', id);
+      return null;
     }
 
-    // Convert properties to key-value object
-    let properties: Record<string, any> = {};
-    if (propertiesData && propertiesData.length > 0) {
-      properties = propertiesData.reduce((props, prop) => {
-        props[prop.property_key] = prop.property_value;
-        return props;
-      }, {} as Record<string, any>);
-    }
+    // Extract data from RPC response
+    const component = rpcData.component;
+    const pins = rpcData.pins || [];
+    const properties = rpcData.properties || {};
+
+    console.log('Mapped component data:', {
+      id: component.id,
+      type: component.type,
+      pins: pins.length,
+      properties: Object.keys(properties).length
+    });
 
     return {
-      id: data.id,
-      name: data.name,
-      type: data.type,
-      category: data.category,
-      description: data.description,
-      svgPath: data.svg_path,
-      enabled: data.enabled,
-      isOriginal: data.is_original,
-      pins: data.component_pins || [],
+      id: component.id,
+      name: component.name,
+      type: component.type,
+      category: component.category,
+      description: component.description,
+      svgPath: component.svg_path,
+      enabled: component.enabled,
+      isOriginal: component.is_original,
+      pins: pins,
       properties: properties,
-      createdAt: data.created_at,
-      updatedAt: data.updated_at
+      createdAt: component.created_at,
+      updatedAt: component.updated_at
     };
   } catch (error) {
     console.error('Error in getComponentWithDetails:', error);

@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { ComponentLibraryItem } from "@/services/componentLibraryService";
 import { ComponentPin } from "@/types/database";
@@ -138,7 +137,7 @@ const EditComponentDialog = ({
             
             <TabsContent value="details" className="py-4">
               {typeChangeWarning && (
-                <Alert variant="warning" className="mb-4">
+                <Alert variant="destructive" className="mb-4">
                   <AlertTriangle className="h-4 w-4" />
                   <AlertDescription>{typeChangeWarning}</AlertDescription>
                 </Alert>

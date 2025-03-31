@@ -4,6 +4,25 @@ import { WokwiComponent } from '@/integrations/wokwi/WokwiIntegration';
 import { WokwiNodeData } from '@/types/circuit';
 
 /**
+ * Get params for wire edge rendering
+ */
+export const getEdgeParams = (sourceX: number, sourceY: number, targetX: number, targetY: number) => {
+  const centerX = (sourceX + targetX) / 2;
+  const centerY = (sourceY + targetY) / 2;
+  
+  return {
+    sourceX,
+    sourceY,
+    targetX,
+    targetY,
+    sourcePosition: { x: sourceX, y: sourceY },
+    targetPosition: { x: targetX, y: targetY },
+    centerX,
+    centerY,
+  };
+};
+
+/**
  * Converts a Wokwi component to an XY Flow node
  */
 export const componentToNode = (component: WokwiComponent): Node<WokwiNodeData> => {
@@ -14,7 +33,8 @@ export const componentToNode = (component: WokwiComponent): Node<WokwiNodeData> 
     svgPath: component.svgPath ? `${component.svgPath.substring(0, 20)}...` : 'missing',
     isOriginal: component.isOriginal,
     hasSvgPath: !!component.svgPath,
-    svgPathLength: component.svgPath?.length || 0
+    svgPathLength: component.svgPath?.length || 0,
+    pins: component.pins ? component.pins.length : 0
   }));
   
   // Create a complete node with all component data carefully preserved
@@ -37,7 +57,8 @@ export const componentToNode = (component: WokwiComponent): Node<WokwiNodeData> 
     nodeId: node.id,
     type: node.data.type,
     hasSvgPath: !!node.data.svgPath,
-    svgPathLength: node.data.svgPath?.length || 0
+    svgPathLength: node.data.svgPath?.length || 0,
+    pins: node.data.pins.length
   });
   
   return node;
