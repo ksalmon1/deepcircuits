@@ -42,7 +42,6 @@ import {
   getDefaultPropertiesForType,
   uniqueCategories
 } from "./components/ComponentUtils";
-import { useQueryClient } from "@tanstack/react-query";
 
 /**
  * Component Library Admin Page
@@ -51,7 +50,6 @@ import { useQueryClient } from "@tanstack/react-query";
 const ComponentLibrary = () => {
   const { user, isAdmin } = useAuth();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   
   // Filter and search state
   const [searchTerm, setSearchTerm] = useState("");
@@ -291,13 +289,6 @@ const ComponentLibrary = () => {
       
       updateComponent(editedComponent);
       setIsEditDialogOpen(false);
-      
-      // Invalidate queries to refresh data
-      queryClient.invalidateQueries({ queryKey: ['components'] });
-      queryClient.invalidateQueries({ queryKey: ['componentsDetails'] });
-      if (editedComponent.id) {
-        queryClient.invalidateQueries({ queryKey: ['component', editedComponent.id] });
-      }
     } catch (error) {
       console.error("Error saving component:", error);
       toast({

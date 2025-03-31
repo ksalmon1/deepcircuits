@@ -40,64 +40,26 @@ export const renderCustomComponent = (
   // Clear existing content
   element.innerHTML = '';
   
-  // First, check if SVG path is provided via data attribute
+  // The SVG will now be loaded from the database and passed to this function
+  // through the component library hooks
   const svgPath = element.getAttribute('data-svg-path');
   
   if (svgPath) {
-    console.log(`Rendering custom component ${type} using SVG path`);
     // Create an SVG element from the SVG path
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = svgPath.trim();
     const svg = tempDiv.firstChild as SVGElement;
     
-    if (svg) {
-      // Make sure SVG has width and height attributes
-      if (!svg.hasAttribute('width')) {
-        svg.setAttribute('width', '100%');
+    // Apply properties if needed
+    if (props.voltage && svg) {
+      const textElement = svg.querySelector('text[text-anchor="middle"]');
+      if (textElement) {
+        textElement.textContent = `${props.voltage}V`;
       }
-      if (!svg.hasAttribute('height')) {
-        svg.setAttribute('height', '100%');
-      }
-      
-      // Apply properties if needed
-      if (props.voltage && svg) {
-        const textElement = svg.querySelector('text[text-anchor="middle"]');
-        if (textElement) {
-          textElement.textContent = `${props.voltage}V`;
-        }
-      }
-      
-      element.appendChild(svg);
-    } else {
-      console.error(`Invalid SVG data for component ${type}`);
     }
+    
+    element.appendChild(svg);
   } else {
     console.error(`No SVG data found for component ${type}`);
-    // Fallback to a default visual representation
-    const defaultSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    defaultSvg.setAttribute('width', '100%');
-    defaultSvg.setAttribute('height', '100%');
-    defaultSvg.setAttribute('viewBox', '0 0 100 100');
-    
-    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    rect.setAttribute('x', '10');
-    rect.setAttribute('y', '10');
-    rect.setAttribute('width', '80');
-    rect.setAttribute('height', '80');
-    rect.setAttribute('fill', '#f0f0f0');
-    rect.setAttribute('stroke', '#888');
-    rect.setAttribute('stroke-width', '2');
-    
-    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    text.setAttribute('x', '50');
-    text.setAttribute('y', '55');
-    text.setAttribute('text-anchor', 'middle');
-    text.setAttribute('fill', '#333');
-    text.setAttribute('font-size', '14');
-    text.textContent = type;
-    
-    defaultSvg.appendChild(rect);
-    defaultSvg.appendChild(text);
-    element.appendChild(defaultSvg);
   }
 };

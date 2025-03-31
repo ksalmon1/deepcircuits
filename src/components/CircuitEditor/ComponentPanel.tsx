@@ -32,10 +32,6 @@ const ComponentPanel: React.FC<ComponentPanelProps> = ({ onComponentSelect }) =>
   }, [components]);
 
   const handleDragStart = (e: React.DragEvent, component: any) => {
-    // Get component details including SVG path from the details map
-    const componentDetails = component.id && componentsDetailsMap ? 
-      componentsDetailsMap[component.id] : null;
-    
     // Create a WokwiComponent object from the component library item
     const wokwiComponent: WokwiComponent = {
       id: crypto.randomUUID(),
@@ -44,13 +40,13 @@ const ComponentPanel: React.FC<ComponentPanelProps> = ({ onComponentSelect }) =>
       top: 0,
       left: 0,
       pins: [],
-      // Include the SVG path from the component details or component itself
-      svgPath: componentDetails?.svgPath || component.svgPath,
+      // Include the SVG path from the component
+      svgPath: component.svgPath,
       isOriginal: component.isOriginal
     };
     
     console.log(`Drag start for component: ${component.name} (${component.type})`);
-    console.log(`SVG path included:`, wokwiComponent.svgPath ? 'Yes' : 'No');
+    console.log(`SVG path included: ${component.svgPath ? 'Yes' : 'No'}`);
     
     e.dataTransfer.setData('component', JSON.stringify(wokwiComponent));
     e.dataTransfer.effectAllowed = 'copy';
