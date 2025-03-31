@@ -8,7 +8,6 @@ import {
   Card, 
   CardContent, 
   CardDescription, 
-  CardFooter, 
   CardHeader, 
   CardTitle 
 } from "@/components/ui/card";
@@ -23,11 +22,6 @@ const AdminSettings = () => {
   const { user } = useAuth();
   const { isAdmin, isLoading } = useProfile();
 
-  if (!user) {
-    return <Navigate to="/login" />;
-  }
-
-  // Show loading state while checking admin status
   if (isLoading) {
     return (
       <PageLayout>
@@ -38,7 +32,7 @@ const AdminSettings = () => {
     );
   }
 
-  if (!isAdmin()) {
+  if (!user || !isAdmin()) {
     return <Navigate to="/dashboard" />;
   }
 

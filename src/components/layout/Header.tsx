@@ -25,6 +25,8 @@ const Header = () => {
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
   const closeMenu = () => setIsMenuOpen(false);
 
+  const userIsAdmin = !isProfileLoading && isAdmin && isAdmin();
+
   return (
     <header className="sticky top-0 z-50 border-b border-neutral-100 bg-white/95 py-4 backdrop-blur-sm">
       <div className="container flex items-center justify-between">
@@ -67,7 +69,7 @@ const Header = () => {
                       Profile Settings
                     </Link>
                   </DropdownMenuItem>
-                  {isAdmin && !isProfileLoading && isAdmin() && (
+                  {userIsAdmin && (
                     <DropdownMenuItem asChild>
                       <Link to="/admin" className="flex items-center gap-2 w-full">
                         <Shield className="h-4 w-4" />
@@ -159,7 +161,7 @@ const Header = () => {
                 <Button asChild variant="outline" className="w-full" onClick={closeMenu}>
                   <Link to="/profile">Profile Settings</Link>
                 </Button>
-                {isAdmin && !isProfileLoading && isAdmin() && (
+                {userIsAdmin && (
                   <Button asChild variant="outline" className="w-full" onClick={closeMenu}>
                     <Link to="/admin">Admin Settings</Link>
                   </Button>
