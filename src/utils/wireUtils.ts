@@ -1,59 +1,136 @@
 
-import { CircuitComponent } from "@/types/component";
-import { getPinSignalType, getWireColorFromSignal } from "./pinManagement";
+import { Edge } from '@xyflow/react';
+import { CircuitComponent } from '@/types/component';
+import { WireData, WireEdge } from '@/types/circuit';
+import { getPinSignalType, getWireColorFromSignal, findComponentById, getPinByIndex, canPinsConnect } from './pinManagement';
 
 /**
- * Create a unique ID for a new wire
+ * Create a unique ID for a wire
  */
-export const createWireId = (): string => {
-  return `wire-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-};
+export function createWireId(): string {
+  return `wire-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+}
 
 /**
- * Check if a wire connection is valid based on signal types
+ * Check if a connection is valid between components
  */
-export const isValidConnection = (
+export function isValidConnection(
   components: CircuitComponent[],
   sourceId: string,
   sourcePinIndex: number,
   targetId: string,
   targetPinIndex: number
-): boolean => {
-  // Prevent connecting a component to itself
+): boolean {
+  // Prevent self-connections
   if (sourceId === targetId) {
     return false;
   }
   
-  const sourceSignal = getPinSignalType(components, sourceId, sourcePinIndex);
-  const targetSignal = getPinSignalType(components, targetId, targetPinIndex);
+  const sourceComponent = findComponentById(components, sourceId);
+  const targetComponent = findComponentById(components, targetId);
   
-  // Allow connection if we don't have signal information
-  if (!sourceSignal || !targetSignal) {
-    return true;
+  if (!sourceComponent || !targetComponent) {
+    return false;
   }
   
-  // For now, allow all connections between different components
-  // This can be enhanced with more specific validation logic
-  return true;
-};
+  const sourcePin = getPinByIndex(sourceComponent, sourcePinIndex);
+  const targetPin = getPinByIndex(targetComponent, targetPinIndex);
+  
+  if (!sourcePin || !targetPin) {
+    return false;
+  }
+  
+  return canPinsConnect(sourcePin, targetPin);
+}
 
 /**
- * Calculate wire routing points between source and target
+ * Create a wire edge between two components
  */
-export const calculateWireRoutingPoints = (
-  sourceX: number,
-  sourceY: number,
-  targetX: number,
-  targetY: number
-): Array<{ x: number, y: number }> => {
-  // For now, create a simple middle point for better routing
-  const midX = (sourceX + targetX) / 2;
+export function createWireEdge(
+  components: CircuitComponent[],
+  sourceId: string,
+  sourcePinIndex: number,
+  targetId: string,
+  targetPinIndex: number,
+  routingPoints: Array<{ x: number; y: number }> = []
+): Edge<WireData> {
+  const signal = getPinSignalType(components, sourceId, sourcePinIndex);
+  const wireColor = getWireColorFromSignal(signal || '');
   
-  return [
-    { x: midX, y: sourceY },
-    { x: midX, y: targetY }
-  ];
-};
+  return {
+    id: createWireId(),
+    source: sourceId,
+    target: targetId,
+    sourceHandle: `pin-${sourcePinIndex}`,
+    targetHandle: `pin-${targetPinIndex}`,
+    type: 'customWire',
+    data: {
+      color: wireColor,
+      sourcePinIndex,
+      targetPinIndex,
+      routingPoints,
+    },
+    animated: signal === 'clock' || signal === 'data',
+    style: {
+      stroke: wireColor,
+      strokeWidth: 2
+    }
+  };
+}
 
-// Re-export pin management functions that are related to wires
-export { getPinSignalType, getWireColorFromSignal };
+/**
+ * Find all wires connected to a component
+ */
+export function findConnectedWires(
+  edges: Edge[],
+  componentId: string
+): Edge[] {
+  return edges.filter(edge => 
+    edge.source === componentId || edge.target === componentId
+  );
+}
+
+/**
+ * Convert edges to pin connections
+ */
+export function edgesToConnections(edges: Edge[]): Array<{
+  sourceId: string;
+  targetId: string;
+  sourcePinIndex: number;
+  targetPinIndex: number;
+}> {
+  return edges.map(edge => {
+    const sourceHandle = edge.sourceHandle || '';
+    const targetHandle = edge.targetHandle || '';
+    
+    // Extract pin indices from handle IDs (format: "pin-{index}")
+    const sourcePinIndex = parseInt(sourceHandle.split('-')[1] || '0');
+    const targetPinIndex = parseInt(targetHandle.split('-')[1] || '0');
+    
+    return {
+      sourceId: edge.source,
+      targetId: edge.target,
+      sourcePinIndex,
+      targetPinIndex
+    };
+  });
+}
+
+/**
+ * Check if two edges represent the same connection
+ */
+export function areSameConnection(edge1: Edge, edge2: Edge): boolean {
+  // Check direct match
+  const directMatch = edge1.source === edge2.source && 
+                      edge1.target === edge2.target &&
+                      edge1.sourceHandle === edge2.sourceHandle &&
+                      edge1.targetHandle === edge2.targetHandle;
+  
+  // Check reverse match
+  const reverseMatch = edge1.source === edge2.target &&
+                       edge1.target === edge2.source &&
+                       edge1.sourceHandle === edge2.targetHandle &&
+                       edge1.targetHandle === edge2.sourceHandle;
+  
+  return directMatch || reverseMatch;
+}

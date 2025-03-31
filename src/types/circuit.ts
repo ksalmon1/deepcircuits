@@ -17,12 +17,12 @@ export interface WireData {
 /**
  * Extended Edge type for wires
  */
-export interface WireEdge extends Edge {
-  data: WireData;
+export interface WireEdge extends Edge<WireData> {
+  // Edge already has the data property, so we just need to extend with WireData
 }
 
 /**
- * Node data for Wokwi components
+ * Node data for circuit components
  */
 export interface WokwiNodeData {
   type: string;
@@ -58,7 +58,7 @@ export interface WireConnectionState {
 /**
  * Props for CustomWireEdge component
  */
-export interface CustomWireEdgeProps extends Edge {
+export interface CustomWireEdgeProps {
   id: string;
   source: string;
   target: string;
@@ -84,4 +84,26 @@ export interface CircuitEditorErrorState {
   errorCode: string;
   errorContext: string;
   errorTimestamp: number;
+}
+
+/**
+ * Circuit simulation configuration
+ */
+export interface CircuitSimulationConfig {
+  timeStep: number;
+  maxIterations: number;
+  tolerance: number;
+  outputSampling: number;
+}
+
+/**
+ * Circuit simulation results
+ */
+export interface CircuitSimulationResults {
+  nodeVoltages: Record<string, number>;
+  branchCurrents: Record<string, number>;
+  simulationTime: number;
+  iterations: number;
+  converged: boolean;
+  error?: string;
 }

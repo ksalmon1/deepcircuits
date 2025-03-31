@@ -1,6 +1,5 @@
 
-import { WokwiPin } from "@/integrations/wokwi/WokwiIntegration";
-import { ComponentPin } from "@/types/pin";
+import { ComponentPin } from "./pin";
 
 /**
  * Base interface for common component properties
@@ -40,11 +39,18 @@ export interface CircuitComponent extends BaseComponent {
 }
 
 /**
- * Database component property
+ * Component property definition for metadata
  */
 export interface ComponentProperty {
   key: string;
   value: any;
+  type?: 'string' | 'number' | 'boolean' | 'color' | 'select';
+  label?: string;
+  description?: string;
+  options?: Array<{value: string, label: string}>;
+  min?: number;
+  max?: number;
+  step?: number;
 }
 
 /**
@@ -61,4 +67,25 @@ export interface ComponentMetadata {
   isOriginal: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+/**
+ * Component rendering options
+ */
+export interface ComponentRenderOptions {
+  showPins?: boolean;
+  highlightPins?: boolean;
+  showLabels?: boolean;
+  interactive?: boolean;
+  scale?: number;
+}
+
+/**
+ * Component instance for simulation
+ */
+export interface ComponentInstance {
+  component: CircuitComponent;
+  state: Record<string, any>;
+  pinStates: Record<number, any>;
+  update: (delta: number) => void;
 }

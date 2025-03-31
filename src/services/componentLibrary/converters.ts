@@ -31,6 +31,7 @@ export const convertLibraryItemToCircuitComponent = (item: ComponentLibraryItem)
   return {
     id: item.id || crypto.randomUUID(),
     type: item.type,
+    name: item.name,
     top: 0,
     left: 0,
     attributes: {},
@@ -76,6 +77,7 @@ export const nodeToCircuitComponent = (node: Node<WokwiNodeData>): CircuitCompon
   return {
     id: node.id,
     type: node.data.type,
+    name: node.data.type, // Use type as name if not explicitly set
     top: node.position.y,
     left: node.position.x,
     attributes: node.data.attributes || {},

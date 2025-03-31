@@ -1,134 +1,156 @@
 
-import { ComponentPin, PinSignalType, SIGNAL_COLOR_MAP } from "@/types/pin";
+import { ComponentPin, PinConnection, PinWithSignal } from "@/types/pin";
 import { CircuitComponent } from "@/types/component";
+import { PinError } from "./errorHandling";
 
 /**
- * Checks if a point is near a pin (for interaction detection)
+ * Get a pin from a component by index
  */
-export const isPointNearPin = (
-  x: number, 
-  y: number, 
-  pinX: number, 
-  pinY: number, 
-  threshold = 10
-): boolean => {
-  const distance = Math.sqrt(Math.pow(x - pinX, 2) + Math.pow(y - pinY, 2));
-  return distance <= threshold;
-};
-
-/**
- * Creates a new pin with default values
- */
-export const createNewPin = (
-  x: number, 
-  y: number, 
-  existingPins: ComponentPin[]
-): ComponentPin => {
-  const newPinNumber = existingPins.length + 1;
-  
-  return {
-    name: `Pin ${newPinNumber}`,
-    x: Math.round(x),
-    y: Math.round(y),
-    signals: [PinSignalType.DIGITAL]
-  };
-};
-
-/**
- * Updates a pin's position
- */
-export const updatePinPosition = (
-  pins: ComponentPin[], 
-  pinIndex: number, 
-  x: number, 
-  y: number
-): ComponentPin[] => {
-  if (pinIndex < 0 || pinIndex >= pins.length) {
-    return pins;
-  }
-  
-  const updatedPins = [...pins];
-  updatedPins[pinIndex] = {
-    ...updatedPins[pinIndex],
-    x: Math.round(x),
-    y: Math.round(y)
-  };
-  
-  return updatedPins;
-};
-
-/**
- * Updates a pin's properties
- */
-export const updatePinProperties = (
-  pins: ComponentPin[], 
-  pinIndex: number, 
-  properties: Partial<ComponentPin>
-): ComponentPin[] => {
-  if (pinIndex < 0 || pinIndex >= pins.length) {
-    return pins;
-  }
-  
-  const updatedPins = [...pins];
-  updatedPins[pinIndex] = {
-    ...updatedPins[pinIndex],
-    ...properties
-  };
-  
-  return updatedPins;
-};
-
-/**
- * Deletes a pin
- */
-export const deletePin = (
-  pins: ComponentPin[], 
+export function getPinByIndex(
+  component: CircuitComponent | null, 
   pinIndex: number
-): ComponentPin[] => {
-  if (pinIndex < 0 || pinIndex >= pins.length) {
-    return pins;
+): ComponentPin | null {
+  if (!component || !component.pins || pinIndex < 0 || pinIndex >= component.pins.length) {
+    return null;
   }
   
-  return pins.filter((_, i) => i !== pinIndex);
-};
+  return component.pins[pinIndex];
+}
+
+/**
+ * Find a component in the array by ID
+ */
+export function findComponentById(
+  components: CircuitComponent[], 
+  componentId: string
+): CircuitComponent | null {
+  return components.find(comp => comp.id === componentId) || null;
+}
 
 /**
  * Get the signal type of a pin
  */
-export const getPinSignalType = (
-  components: CircuitComponent[], 
-  componentId: string, 
+export function getPinSignalType(
+  components: CircuitComponent[],
+  componentId: string,
   pinIndex: number
-): string | null => {
-  const component = components.find(comp => comp.id === componentId);
-  if (!component || !component.pins || pinIndex >= component.pins.length) {
-    return null;
-  }
+): string | null {
+  const component = findComponentById(components, componentId);
+  if (!component) return null;
   
-  const pin = component.pins[pinIndex];
-  return pin.signals && pin.signals.length > 0 ? pin.signals[0] : null;
-};
+  const pin = getPinByIndex(component, pinIndex);
+  if (!pin || !pin.signals || pin.signals.length === 0) return null;
+  
+  return pin.signals[0];
+}
 
 /**
  * Get wire color based on signal type
  */
-export const getWireColorFromSignal = (signal: string): string => {
-  if (!signal) return SIGNAL_COLOR_MAP[PinSignalType.OTHER];
+export function getWireColorFromSignal(signalType: string): string {
+  const signalColorMap: Record<string, string> = {
+    'power': '#ff0000',
+    'ground': '#000000',
+    'analog': '#4BC0C0',
+    'digital': '#9b87f5',
+    'clock': '#ffcc00',
+    'data': '#36A2EB',
+    'i2c': '#8A65D4',
+    'spi': '#4CAF50',
+    'uart': '#FF9800',
+    'pwm': '#E91E63'
+  };
   
-  const lowerSignal = signal.toLowerCase();
+  return signalColorMap[signalType.toLowerCase()] || '#9b87f5'; // Default color
+}
+
+/**
+ * Check if a pin can connect to another pin
+ */
+export function canPinsConnect(sourcePin: ComponentPin, targetPin: ComponentPin): boolean {
+  // Basic validation - pins must have signals
+  if (!sourcePin.signals || !targetPin.signals) return false;
   
-  // Direct match in our map
-  if (SIGNAL_COLOR_MAP[lowerSignal]) {
-    return SIGNAL_COLOR_MAP[lowerSignal];
+  // Check if signals are compatible
+  const sourceSignals = sourcePin.signals.map(s => s.toLowerCase());
+  const targetSignals = targetPin.signals.map(s => s.toLowerCase());
+  
+  // Check for direct match
+  const hasMatchingSignal = sourceSignals.some(signal => targetSignals.includes(signal));
+  if (hasMatchingSignal) return true;
+  
+  // Power can connect to analog/digital
+  if (
+    (sourceSignals.includes('power') && 
+     (targetSignals.includes('analog') || targetSignals.includes('digital'))) ||
+    (targetSignals.includes('power') && 
+     (sourceSignals.includes('analog') || sourceSignals.includes('digital')))
+  ) {
+    return true;
   }
   
-  // Check for partial matches
-  for (const [key, color] of Object.entries(SIGNAL_COLOR_MAP)) {
-    if (lowerSignal.includes(key)) {
-      return color;
+  // Ground can connect to anything
+  if (sourceSignals.includes('ground') || targetSignals.includes('ground')) {
+    return true;
+  }
+  
+  return false;
+}
+
+/**
+ * Check if a point is near a pin
+ */
+export function isPointNearPin(
+  x: number,
+  y: number,
+  pinX: number,
+  pinY: number,
+  threshold = 10
+): boolean {
+  const distance = Math.sqrt(Math.pow(x - pinX, 2) + Math.pow(y - pinY, 2));
+  return distance <= threshold;
+}
+
+/**
+ * Validate pin connections in a circuit
+ */
+export function validatePinConnections(
+  components: CircuitComponent[],
+  connections: PinConnection[]
+): string[] {
+  const errors: string[] = [];
+  
+  for (const conn of connections) {
+    const sourceComponent = findComponentById(components, conn.sourceId);
+    const targetComponent = findComponentById(components, conn.targetId);
+    
+    if (!sourceComponent) {
+      errors.push(`Source component ${conn.sourceId} not found`);
+      continue;
+    }
+    
+    if (!targetComponent) {
+      errors.push(`Target component ${conn.targetId} not found`);
+      continue;
+    }
+    
+    const sourcePin = getPinByIndex(sourceComponent, conn.sourcePinIndex);
+    const targetPin = getPinByIndex(targetComponent, conn.targetPinIndex);
+    
+    if (!sourcePin) {
+      errors.push(`Source pin ${conn.sourcePinIndex} not found on component ${conn.sourceId}`);
+      continue;
+    }
+    
+    if (!targetPin) {
+      errors.push(`Target pin ${conn.targetPinIndex} not found on component ${conn.targetId}`);
+      continue;
+    }
+    
+    if (!canPinsConnect(sourcePin, targetPin)) {
+      errors.push(`Incompatible signals between ${sourceComponent.name || sourceComponent.type}:${sourcePin.name} and ${targetComponent.name || targetComponent.type}:${targetPin.name}`);
     }
   }
   
-  // Default color if no match
-  return SIGNAL_COLOR_MAP[PinSignalType.OTHER];
-};
+  return errors;
+}
