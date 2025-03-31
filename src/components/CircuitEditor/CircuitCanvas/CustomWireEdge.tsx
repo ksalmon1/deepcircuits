@@ -84,8 +84,17 @@ function CustomWireEdge({
     setEdges(edges => {
       return edges.map(edge => {
         if (edge.id === id) {
-          const newRoutingPoints = [...(edge.data?.routingPoints || [])];
-          newRoutingPoints[draggingPointIndex] = { x: mouseX, y: mouseY };
+          // Fix: Safely handle the routing points with type checking
+          const currentRoutingPoints = edge.data?.routingPoints;
+          // Ensure routingPoints is an array before spreading
+          const newRoutingPoints = Array.isArray(currentRoutingPoints) 
+            ? [...currentRoutingPoints]
+            : [];
+          
+          // Update point if index is valid
+          if (draggingPointIndex >= 0 && draggingPointIndex < newRoutingPoints.length) {
+            newRoutingPoints[draggingPointIndex] = { x: mouseX, y: mouseY };
+          }
           
           return {
             ...edge,
