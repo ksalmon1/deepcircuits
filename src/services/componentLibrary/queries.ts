@@ -2,6 +2,7 @@
 import { ComponentLibraryItem } from '@/types/component';
 import { mapComponentFromDb } from './converters';
 import { supabase } from '@/integrations/supabase/client';
+import { ComponentError } from '@/utils/errorHandling';
 
 /**
  * Fetch all components from the library
@@ -15,13 +16,16 @@ export async function getAllComponents(): Promise<ComponentLibraryItem[]> {
       
     if (error) {
       console.error('Error fetching components:', error);
-      throw new Error(`Failed to fetch components: ${error.message}`);
+      throw new ComponentError(`Failed to fetch components: ${error.message}`, 'FETCH_COMPONENTS_ERROR');
     }
     
     return data.map(mapComponentFromDb);
   } catch (error) {
+    if (error instanceof ComponentError) {
+      throw error; // Re-throw our own error types
+    }
     console.error('Unexpected error fetching components:', error);
-    throw error;
+    throw new ComponentError('Failed to load component library', 'COMPONENT_LIBRARY_ERROR');
   }
 }
 
@@ -43,13 +47,16 @@ export async function getComponentById(id: string): Promise<ComponentLibraryItem
       }
       
       console.error(`Error fetching component with ID ${id}:`, error);
-      throw new Error(`Failed to fetch component: ${error.message}`);
+      throw new ComponentError(`Failed to fetch component: ${error.message}`, 'FETCH_COMPONENT_ERROR');
     }
     
     return data ? mapComponentFromDb(data) : null;
   } catch (error) {
+    if (error instanceof ComponentError) {
+      throw error; // Re-throw our own error types
+    }
     console.error(`Unexpected error fetching component with ID ${id}:`, error);
-    throw error;
+    throw new ComponentError(`Failed to load component with ID ${id}`, 'COMPONENT_LOAD_ERROR');
   }
 }
 
@@ -80,7 +87,7 @@ export async function getComponentWithDetails(id: string): Promise<ComponentLibr
       
     if (pinsError) {
       console.error(`Error fetching pins for component ${id}:`, pinsError);
-      throw new Error(`Failed to fetch component pins: ${pinsError.message}`);
+      throw new ComponentError(`Failed to fetch component pins: ${pinsError.message}`, 'FETCH_PINS_ERROR');
     }
     
     // Fetch component properties
@@ -91,7 +98,7 @@ export async function getComponentWithDetails(id: string): Promise<ComponentLibr
       
     if (propsError) {
       console.error(`Error fetching properties for component ${id}:`, propsError);
-      throw new Error(`Failed to fetch component properties: ${propsError.message}`);
+      throw new ComponentError(`Failed to fetch component properties: ${propsError.message}`, 'FETCH_PROPERTIES_ERROR');
     }
     
     // Map pins and properties to component
@@ -117,7 +124,10 @@ export async function getComponentWithDetails(id: string): Promise<ComponentLibr
     
     return componentWithDetails;
   } catch (error) {
+    if (error instanceof ComponentError) {
+      throw error; // Re-throw our own error types
+    }
     console.error(`Unexpected error fetching component details for ID ${id}:`, error);
-    throw error;
+    throw new ComponentError(`Failed to load component details for ID ${id}`, 'COMPONENT_DETAILS_ERROR');
   }
 }

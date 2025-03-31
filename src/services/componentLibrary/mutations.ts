@@ -1,6 +1,7 @@
 
 import { ComponentLibraryItem } from '@/types/component';
 import { supabase } from '@/integrations/supabase/client';
+import { ComponentError } from '@/utils/errorHandling';
 
 /**
  * Create a new component in the library
@@ -23,7 +24,7 @@ export async function createComponent(component: ComponentLibraryItem): Promise<
       
     if (error) {
       console.error('Error creating component:', error);
-      throw new Error(`Failed to create component: ${error.message}`);
+      throw new ComponentError(`Failed to create component: ${error.message}`, 'CREATE_COMPONENT_ERROR');
     }
     
     const componentId = data.id;
@@ -44,7 +45,7 @@ export async function createComponent(component: ComponentLibraryItem): Promise<
         
       if (pinsError) {
         console.error('Error creating component pins:', pinsError);
-        throw new Error(`Failed to create component pins: ${pinsError.message}`);
+        throw new ComponentError(`Failed to create component pins: ${pinsError.message}`, 'CREATE_PINS_ERROR');
       }
     }
     
@@ -62,14 +63,17 @@ export async function createComponent(component: ComponentLibraryItem): Promise<
         
       if (propsError) {
         console.error('Error creating component properties:', propsError);
-        throw new Error(`Failed to create component properties: ${propsError.message}`);
+        throw new ComponentError(`Failed to create component properties: ${propsError.message}`, 'CREATE_PROPERTIES_ERROR');
       }
     }
     
     return componentId;
   } catch (error) {
+    if (error instanceof ComponentError) {
+      throw error; // Re-throw our own error types
+    }
     console.error('Unexpected error creating component:', error);
-    throw error;
+    throw new ComponentError('Failed to create component due to an unexpected error', 'COMPONENT_CREATE_ERROR');
   }
 }
 
@@ -78,7 +82,7 @@ export async function createComponent(component: ComponentLibraryItem): Promise<
  */
 export async function updateComponent(component: ComponentLibraryItem): Promise<void> {
   if (!component.id) {
-    throw new Error('Component ID is required for updates');
+    throw new ComponentError('Component ID is required for updates', 'MISSING_COMPONENT_ID');
   }
   
   try {
@@ -98,7 +102,7 @@ export async function updateComponent(component: ComponentLibraryItem): Promise<
       
     if (error) {
       console.error(`Error updating component ${component.id}:`, error);
-      throw new Error(`Failed to update component: ${error.message}`);
+      throw new ComponentError(`Failed to update component: ${error.message}`, 'UPDATE_COMPONENT_ERROR');
     }
     
     // Handle pins update if provided
@@ -111,7 +115,7 @@ export async function updateComponent(component: ComponentLibraryItem): Promise<
         
       if (deleteError) {
         console.error(`Error deleting pins for component ${component.id}:`, deleteError);
-        throw new Error(`Failed to update component pins: ${deleteError.message}`);
+        throw new ComponentError(`Failed to update component pins: ${deleteError.message}`, 'DELETE_PINS_ERROR');
       }
       
       // Create new pins
@@ -130,7 +134,7 @@ export async function updateComponent(component: ComponentLibraryItem): Promise<
           
         if (pinsError) {
           console.error(`Error creating pins for component ${component.id}:`, pinsError);
-          throw new Error(`Failed to update component pins: ${pinsError.message}`);
+          throw new ComponentError(`Failed to update component pins: ${pinsError.message}`, 'CREATE_PINS_ERROR');
         }
       }
     }
@@ -145,7 +149,7 @@ export async function updateComponent(component: ComponentLibraryItem): Promise<
         
       if (deletePropsError) {
         console.error(`Error deleting properties for component ${component.id}:`, deletePropsError);
-        throw new Error(`Failed to update component properties: ${deletePropsError.message}`);
+        throw new ComponentError(`Failed to update component properties: ${deletePropsError.message}`, 'DELETE_PROPERTIES_ERROR');
       }
       
       // Create new properties
@@ -162,13 +166,16 @@ export async function updateComponent(component: ComponentLibraryItem): Promise<
           
         if (propsError) {
           console.error(`Error creating properties for component ${component.id}:`, propsError);
-          throw new Error(`Failed to update component properties: ${propsError.message}`);
+          throw new ComponentError(`Failed to update component properties: ${propsError.message}`, 'CREATE_PROPERTIES_ERROR');
         }
       }
     }
   } catch (error) {
+    if (error instanceof ComponentError) {
+      throw error; // Re-throw our own error types
+    }
     console.error(`Unexpected error updating component ${component.id}:`, error);
-    throw error;
+    throw new ComponentError(`Failed to update component due to an unexpected error`, 'COMPONENT_UPDATE_ERROR');
   }
 }
 
@@ -185,10 +192,13 @@ export async function deleteComponent(id: string): Promise<void> {
       
     if (error) {
       console.error(`Error deleting component ${id}:`, error);
-      throw new Error(`Failed to delete component: ${error.message}`);
+      throw new ComponentError(`Failed to delete component: ${error.message}`, 'DELETE_COMPONENT_ERROR');
     }
   } catch (error) {
+    if (error instanceof ComponentError) {
+      throw error; // Re-throw our own error types
+    }
     console.error(`Unexpected error deleting component ${id}:`, error);
-    throw error;
+    throw new ComponentError(`Failed to delete component due to an unexpected error`, 'COMPONENT_DELETE_ERROR');
   }
 }

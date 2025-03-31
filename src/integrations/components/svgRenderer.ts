@@ -1,9 +1,7 @@
 
 import { ComponentRenderer } from './registry';
 
-/**
- * Helper function to set up SVG element properties
- */
+// Helper function to set up SVG element properties
 function setupSvgElement(svgElement: SVGElement | null): void {
   if (svgElement) {
     // Ensure the SVG is responsive
@@ -17,11 +15,9 @@ function setupSvgElement(svgElement: SVGElement | null): void {
   }
 }
 
-/**
- * Helper function to load SVG from a URL
- */
-function loadSvgFromPath(element: HTMLElement, svgPath: string): void {
-  fetch(svgPath)
+// Helper function to load SVG from a URL
+function loadSvgFromPath(element: HTMLElement, svgPath: string): Promise<void> {
+  return fetch(svgPath)
     .then(response => {
       if (!response.ok) {
         throw new Error(`Failed to load SVG: ${response.status} ${response.statusText}`);
@@ -35,12 +31,11 @@ function loadSvgFromPath(element: HTMLElement, svgPath: string): void {
     .catch(error => {
       console.error('Error loading SVG:', error);
       element.innerHTML = `<div class="error">Failed to load SVG: ${error.message}</div>`;
+      throw error; // Re-throw to allow caller to handle
     });
 }
 
-/**
- * Helper function to get SVG content for predefined types
- */
+// Helper function to get SVG content for predefined types
 function getSvgContentForType(componentType: string): string | null {
   // Example implementation - in a real app this would be more sophisticated
   const svgMap: Record<string, string> = {
@@ -84,7 +79,10 @@ export const svgRenderer: ComponentRenderer = {
       
       // If a path to an SVG file is provided
       if (options && options.svgPath) {
-        loadSvgFromPath(element, options.svgPath);
+        loadSvgFromPath(element, options.svgPath)
+          .catch(error => {
+            console.error(`Failed to load SVG from path for ${componentType}:`, error);
+          });
         return;
       }
       
