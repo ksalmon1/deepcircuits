@@ -10,20 +10,27 @@ const generatePath = (
   routingPoints: Array<{ x: number, y: number }> = [],
   cursorPosition?: { x: number, y: number }
 ): string => {
-  // Start path at source
-  let path = `M ${sourceX},${sourceY}`;
+  const safeSourceX = isNaN(sourceX) ? 0 : sourceX;
+  const safeSourceY = isNaN(sourceY) ? 0 : sourceY;
+  const safeTargetX = isNaN(targetX) ? 0 : targetX;
+  const safeTargetY = isNaN(targetY) ? 0 : targetY;
   
-  // Add each routing point as a line segment
-  routingPoints.forEach(point => {
-    path += ` L ${point.x},${point.y}`;
-  });
+  let path = `M ${safeSourceX},${safeSourceY}`;
   
-  // If we're in connecting mode and have a cursor position, use that as the final point
-  // Otherwise use the target coordinates
-  if (cursorPosition) {
-    path += ` L ${cursorPosition.x},${cursorPosition.y}`;
+  if (Array.isArray(routingPoints)) {
+    routingPoints.forEach(point => {
+      const x = isNaN(point.x) ? 0 : point.x;
+      const y = isNaN(point.y) ? 0 : point.y;
+      path += ` L ${x},${y}`;
+    });
+  }
+  
+  if (cursorPosition && typeof cursorPosition === 'object') {
+    const x = isNaN(cursorPosition.x) ? 0 : cursorPosition.x;
+    const y = isNaN(cursorPosition.y) ? 0 : cursorPosition.y;
+    path += ` L ${x},${y}`;
   } else {
-    path += ` L ${targetX},${targetY}`;
+    path += ` L ${safeTargetX},${safeTargetY}`;
   }
   
   return path;
@@ -52,9 +59,8 @@ function CustomWireEdge({
   const cursorPosition = data?.cursorPosition;
   
   const handleEdgeClick = (event: React.MouseEvent) => {
-    // Only handle double-clicks for deletion
     if (event.detail === 2 && onDelete) {
-      event.stopPropagation(); // Stop propagation to prevent canvas click
+      event.stopPropagation();
       onDelete(id);
     }
   };
@@ -75,7 +81,6 @@ function CustomWireEdge({
     
     const reactFlowRect = reactFlow.getBoundingClientRect();
     
-    // Get the mouse position relative to the flow container
     const { left, top } = reactFlowRect;
     const mouseX = event.clientX - left;
     const mouseY = event.clientY - top;
@@ -83,14 +88,11 @@ function CustomWireEdge({
     setEdges(edges => {
       return edges.map(edge => {
         if (edge.id === id) {
-          // Fix: Safely check if routingPoints is an array
           const currentRoutingPoints = edge.data?.routingPoints;
-          // Use Array.isArray to ensure routingPoints is an array
           const newRoutingPoints = Array.isArray(currentRoutingPoints) 
             ? [...currentRoutingPoints]
             : [];
           
-          // Update point if index is valid
           if (draggingPointIndex >= 0 && draggingPointIndex < newRoutingPoints.length) {
             newRoutingPoints[draggingPointIndex] = { x: mouseX, y: mouseY };
           }
@@ -112,12 +114,9 @@ function CustomWireEdge({
     setDraggingPointIndex(null);
   }, []);
   
-  // Add global mouse move and mouse up event listeners when dragging a point
   React.useEffect(() => {
     if (draggingPointIndex !== null) {
-      // Properly type the global event handlers
       const handleGlobalMouseMove = (e: MouseEvent) => {
-        // Convert the MouseEvent to React.MouseEvent equivalent with type assertion
         const reactEvent = {
           clientX: e.clientX,
           clientY: e.clientY,
@@ -142,18 +141,19 @@ function CustomWireEdge({
     }
   }, [draggingPointIndex, handlePointDrag, handlePointMouseUp]);
   
-  // Use cursor position if available (for temporary edges)
-  // If sourceX/Y and targetX/Y are the same (temporary edge), we use the cursor position
-  const finalTargetX = cursorPosition && (sourceX === targetX) ? cursorPosition.x : targetX;
-  const finalTargetY = cursorPosition && (sourceY === targetY) ? cursorPosition.y : targetY;
+  const safeSourceX = isNaN(sourceX) ? 0 : sourceX;
+  const safeSourceY = isNaN(sourceY) ? 0 : sourceY;
+  const safeTargetX = isNaN(targetX) ? 0 : targetX;
+  const safeTargetY = isNaN(targetY) ? 0 : targetY;
   
-  const path = generatePath(sourceX, sourceY, finalTargetX, finalTargetY, routingPoints, cursorPosition);
+  const finalTargetX = cursorPosition && (safeSourceX === safeTargetX) ? cursorPosition.x : safeTargetX;
+  const finalTargetY = cursorPosition && (safeSourceY === safeTargetY) ? cursorPosition.y : safeTargetY;
   
-  // Use pointer-events: none for the temporary edge to prevent it from capturing clicks
+  const path = generatePath(safeSourceX, safeSourceY, finalTargetX, finalTargetY, routingPoints, cursorPosition);
+  
   const isTemporary = id.startsWith('temp-wire-');
   const pointerEvents = isTemporary ? 'none' : 'auto';
   
-  // Check if edge is being dragged or is selected
   const isActiveOrSelected = draggingPointIndex !== null || selected;
   
   return (
@@ -169,29 +169,32 @@ function CustomWireEdge({
         style={{ pointerEvents }}
       />
       
-      {/* Only show routing points for permanent wires */}
-      {!isTemporary && routingPoints.map((point, index) => (
-        <circle
-          key={`${id}-point-${index}`}
-          cx={point.x}
-          cy={point.y}
-          r={isActiveOrSelected ? 5 : 3}
-          fill={isActiveOrSelected ? edgeColor : 'white'}
-          stroke={edgeColor}
-          strokeWidth={1.5}
-          opacity={isActiveOrSelected ? 1 : 0.5}
-          className="routing-point"
-          onMouseDown={(e) => handlePointMouseDown(e, index)}
-          cursor="move"
-          style={{ pointerEvents: 'all' }}
-        />
-      ))}
+      {!isTemporary && Array.isArray(routingPoints) && routingPoints.map((point, index) => {
+        const x = isNaN(point.x) ? 0 : point.x;
+        const y = isNaN(point.y) ? 0 : point.y;
+        
+        return (
+          <circle
+            key={`${id}-point-${index}`}
+            cx={x}
+            cy={y}
+            r={isActiveOrSelected ? 5 : 3}
+            fill={isActiveOrSelected ? edgeColor : 'white'}
+            stroke={edgeColor}
+            strokeWidth={1.5}
+            opacity={isActiveOrSelected ? 1 : 0.5}
+            className="routing-point"
+            onMouseDown={(e) => handlePointMouseDown(e, index)}
+            cursor="move"
+            style={{ pointerEvents: 'all' }}
+          />
+        );
+      })}
       
-      {/* Render cursor point if in connecting mode */}
       {cursorPosition && (
         <circle
-          cx={cursorPosition.x}
-          cy={cursorPosition.y}
+          cx={isNaN(cursorPosition.x) ? 0 : cursorPosition.x}
+          cy={isNaN(cursorPosition.y) ? 0 : cursorPosition.y}
           r={5}
           fill={edgeColor}
           stroke="#ffffff"

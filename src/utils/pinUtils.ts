@@ -147,3 +147,27 @@ export const deletePin = (
   
   return updatedPins;
 };
+
+/**
+ * Get a color based on signal type
+ * @param signal - Signal type as string
+ * @returns Color hex code
+ */
+export const getSignalColor = (signal?: string): string => {
+  if (!signal) return '#4BC0C0'; // Default to teal if no signal
+  
+  const signalColorMap: Record<string, string> = {
+    'power': '#ff0000',
+    'ground': '#000000',
+    'analog': '#4BC0C0',
+    'digital': '#9b87f5',
+    'clock': '#ffcc00',
+    'data': '#36A2EB',
+    'i2c': '#8A65D4',
+    'spi': '#4CAF50',
+    'uart': '#FF9800',
+    'pwm': '#E91E63'
+  };
+  
+  return signalColorMap[signal.toLowerCase()] || '#9b87f5'; // Default to purple if unknown signal
+};

@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { 
   isWokwiLoaded, 
@@ -9,7 +10,7 @@ import { toast } from 'sonner';
 import { useComponentLibrary } from '@/hooks/useComponentLibrary';
 import { useCanvasNavigation } from '@/hooks/useCanvasNavigation';
 import { useWireRouting } from '@/hooks/useWireRouting';
-import { componentToNode } from './CircuitCanvas/utils';
+import { wokwiComponentToNode } from '@/utils/componentConversion';
 import { useWokwiLoader } from '@/hooks/useWokwiLoader';
 import { useComponentPinCache } from '@/hooks/useComponentPinCache';
 import {
@@ -139,7 +140,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
         svgPathLength: comp.svgPath?.length || 0,
       });
       
-      return componentToNode(comp);
+      return wokwiComponentToNode(comp);
     });
     
     setReactFlowNodes(initialNodes);
@@ -182,6 +183,20 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     onComponentsChange(updatedComponents);
   }, [components, onComponentsChange]);
 
+  // Listen for handle-click events from WokwiComponentNode
+  useEffect(() => {
+    const handlePinClick = (event: CustomEvent) => {
+      const { nodeId, handleId } = event.detail;
+      handleHandleClick(nodeId, handleId);
+    };
+    
+    document.addEventListener('handle-click', handlePinClick as EventListener);
+    
+    return () => {
+      document.removeEventListener('handle-click', handlePinClick as EventListener);
+    };
+  }, [handleHandleClick]);
+
   // Handle drop to create new component
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -190,6 +205,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
       const componentData = e.dataTransfer.getData('component');
       if (!componentData) return;
       
+      // Parse the component data
       const componentInfo = JSON.parse(componentData);
       console.log('Dropped component data:', componentInfo);
       
@@ -284,19 +300,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
       }
     }
   }, [wireConnectionState.isConnecting, reactFlowInstance, handleCanvasClick]);
-  
-  useEffect(() => {
-    const handlePinClick = (event: CustomEvent) => {
-      const { nodeId, handleId } = event.detail;
-      handleHandleClick(nodeId, handleId);
-    };
-    
-    document.addEventListener('handle-click', handlePinClick as EventListener);
-    
-    return () => {
-      document.removeEventListener('handle-click', handlePinClick as EventListener);
-    };
-  }, [handleHandleClick]);
 
   return (
     <div className="h-full w-full bg-white relative flex flex-col overflow-hidden">
