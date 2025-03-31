@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { WokwiPin } from '@/integrations/wokwi/WokwiIntegration';
 import { CUSTOM_COMPONENTS } from '@/integrations/custom/CustomComponents';
@@ -269,7 +270,7 @@ const updatePins = async (componentId: string, pins: any[]): Promise<void> => {
         orientation: pin.orientation,
         value: pin.value,
         enabled: pin.enabled
-      }))
+      })))
       .eq('component_id', componentId);
   } catch (error) {
     console.error('Error updating pins:', error);
@@ -294,7 +295,10 @@ const updateProperties = async (componentId: string, properties: Record<string, 
   try {
     await supabase
       .from('component_properties')
-      .update(properties)
+      .update(Object.entries(properties).map(([key, value]) => ({
+        property_key: key,
+        property_value: value
+      })))
       .eq('component_id', componentId);
   } catch (error) {
     console.error('Error updating properties:', error);
