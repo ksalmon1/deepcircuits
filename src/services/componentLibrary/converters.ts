@@ -66,7 +66,7 @@ export const componentToNode = (component: CircuitComponent): Node<WokwiNodeData
       })) : [],
       svgPath: component.svgPath,
       isOriginal: component.isOriginal,
-    } as WokwiNodeData,
+    },
     draggable: true,
   };
 };
@@ -75,20 +75,22 @@ export const componentToNode = (component: CircuitComponent): Node<WokwiNodeData
  * Convert a React Flow node back to a circuit component
  */
 export const nodeToCircuitComponent = (node: Node<WokwiNodeData>): CircuitComponent => {
+  const nodeData = node.data;
+  
   return {
     id: node.id,
-    type: node.data.type,
-    name: node.data.type, // Use type as name if not explicitly set
+    type: nodeData.type,
+    name: nodeData.label || nodeData.type, // Use label as name if available
     top: node.position.y,
     left: node.position.x,
-    attributes: node.data.attributes || {},
-    pins: (node.data.pins || []).map(pin => ({
+    attributes: nodeData.attributes || {},
+    pins: (nodeData.pins || []).map(pin => ({
       name: pin.name,
       x: pin.x,
       y: pin.y,
       signals: pin.signals || []
     })),
-    svgPath: node.data.svgPath,
-    isOriginal: node.data.isOriginal
+    svgPath: nodeData.svgPath,
+    isOriginal: nodeData.isOriginal
   };
 };

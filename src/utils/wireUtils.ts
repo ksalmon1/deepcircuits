@@ -82,37 +82,45 @@ export function isValidConnection(
 /**
  * Create a wire edge between two components
  */
-export function createWireEdge(
+export const createWireEdge = (
   components: CircuitComponent[],
   sourceId: string,
   sourcePinIndex: number,
   targetId: string,
   targetPinIndex: number,
   routingPoints: Array<{ x: number; y: number }> = []
-): Edge<WireData> {
-  const signal = getPinSignalType(components, sourceId, sourcePinIndex);
-  const wireColor = getWireColorFromSignal(signal || '');
+): Edge<WireData> => {
+  // Generate a unique edge ID
+  const edgeId = createWireId();
   
-  return {
-    id: createWireId(),
+  // Get the signal type to determine wire color
+  const signal = getPinSignalType(components, sourceId, sourcePinIndex);
+  const color = getWireColorFromSignal(signal || '');
+  
+  // Create the edge with custom data
+  const edge: Edge<WireData> = {
+    id: edgeId,
     source: sourceId,
     target: targetId,
     sourceHandle: `pin-${sourcePinIndex}`,
     targetHandle: `pin-${targetPinIndex}`,
     type: 'customWire',
     data: {
-      color: wireColor,
+      color,
       sourcePinIndex,
       targetPinIndex,
       routingPoints,
+      signal
     } as WireData,
     animated: signal === 'clock' || signal === 'data',
     style: {
-      stroke: wireColor,
+      stroke: color,
       strokeWidth: 2
     }
   };
-}
+  
+  return edge;
+};
 
 /**
  * Find all wires connected to a component

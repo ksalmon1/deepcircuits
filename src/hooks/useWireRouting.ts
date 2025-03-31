@@ -152,7 +152,7 @@ export const useWireRouting = (components: CircuitComponent[]) => {
     
     return true;
   }, [wireConnectionState, setEdges]);
-  
+
   const completeWireConnection = useCallback((targetNodeId: string, targetHandleId: string) => {
     if (!wireConnectionState.isConnecting || !wireConnectionState.sourceNodeId || !wireConnectionState.sourceHandleId) {
       return false;

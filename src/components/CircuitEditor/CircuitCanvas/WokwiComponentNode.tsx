@@ -1,9 +1,11 @@
+
 import React, { useEffect, memo, useRef } from 'react';
 import { Handle, Position, NodeProps, useReactFlow } from '@xyflow/react';
 import { WokwiNodeData } from '@/types/circuit';
 import { toast } from 'sonner';
 import { getWireColorFromSignal } from '@/utils/pinManagement';
 
+// Define the component props
 interface WokwiComponentNodeProps extends NodeProps<WokwiNodeData> {}
 
 const WokwiComponentNode = ({ 
@@ -14,11 +16,13 @@ const WokwiComponentNode = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const reactFlow = useReactFlow();
 
-  const type = data?.type || '';
-  const attributes = data?.attributes || {};
-  const pins = data?.pins || [];
-  const svgPath = data?.svgPath;
-  const isOriginal = data?.isOriginal;
+  // Safely access data properties with type checking
+  const nodeData = data as WokwiNodeData;
+  const type = nodeData?.type || '';
+  const attributes = nodeData?.attributes || {};
+  const pins = nodeData?.pins || [];
+  const svgPath = nodeData?.svgPath;
+  const isOriginal = nodeData?.isOriginal;
 
   useEffect(() => {
     const renderComponent = async () => {
