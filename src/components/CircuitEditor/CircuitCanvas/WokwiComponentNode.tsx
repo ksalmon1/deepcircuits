@@ -1,8 +1,10 @@
+
 import React, { useEffect, memo, useRef, useContext } from 'react';
 import { Handle, Position, NodeProps, useReactFlow } from '@xyflow/react';
 import { WokwiNodeData } from '@/types/circuit';
 import { toast } from 'sonner';
 import { getWireColorFromSignal } from '@/utils/wireUtils';
+import { useComponentLibrary } from '@/hooks/useComponentLibrary';
 
 interface WokwiComponentNodeProps extends NodeProps {
   data: WokwiNodeData;
@@ -15,12 +17,24 @@ const WokwiComponentNode = ({
 }: WokwiComponentNodeProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const reactFlow = useReactFlow();
+  const { componentsDetailsMap } = useComponentLibrary();
 
   const type = data?.type || '';
   const attributes = data?.attributes || {};
-  const pins = data?.pins || [];
+  let pins = data?.pins || [];
   const svgPath = data?.svgPath;
   const isOriginal = data?.isOriginal;
+
+  // Try to get more detailed pins from Supabase if available
+  useEffect(() => {
+    if (componentsDetailsMap && data?.originalId) {
+      const details = componentsDetailsMap[data.originalId];
+      if (details && details.pins && details.pins.length > 0) {
+        console.log(`Using pins from Supabase for component ${id} (${type})`);
+        pins = details.pins;
+      }
+    }
+  }, [id, type, componentsDetailsMap, data?.originalId]);
 
   useEffect(() => {
     const renderComponent = async () => {
@@ -85,7 +99,7 @@ const WokwiComponentNode = ({
         containerRef.current.innerHTML = '';
       }
     };
-  }, [id, type, attributes, svgPath, isOriginal]);
+  }, [id, type, attributes, svgPath, isOriginal, pins]);
 
   useEffect(() => {
     const nodeElement = document.getElementById(`node-${id}`);

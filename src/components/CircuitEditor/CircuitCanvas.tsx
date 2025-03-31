@@ -125,7 +125,8 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     components: libraryComponents, 
     componentsDetailsMap, 
     isLoadingComponents, 
-    isLoadingDetails 
+    isLoadingDetails,
+    getComponentDetailsWithPins
   } = useComponentLibrary();
 
   // Convert components to nodes
@@ -210,48 +211,48 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
       const left = Math.floor(position.x / gridSize) * gridSize;
       const top = Math.floor(position.y / gridSize) * gridSize;
       
+      // Find the library component by type to get detailed information
       const libraryComponent = libraryComponents?.find(c => c.type === componentInfo.type);
       
-      let pins;
-      if (libraryComponent?.id && componentsDetailsMap && componentsDetailsMap[libraryComponent.id]) {
-        const details = componentsDetailsMap[libraryComponent.id];
-        if (details && details.pins && details.pins.length > 0) {
-          pins = details.pins.map((pin: any) => ({
-            name: pin.name,
-            x: Number(pin.x),
-            y: Number(pin.y),
-            signals: pin.signals || []
-          }));
+      // Get pins and properties from component details in Supabase
+      let pins = [];
+      let properties = {};
+      
+      if (libraryComponent?.id) {
+        // First try to get from the details map (should be pre-loaded)
+        const details = getComponentDetailsWithPins(libraryComponent.id);
+        if (details) {
+          console.log(`Found component details for ${componentInfo.type} from cache`);
+          pins = details.pins || [];
+          properties = details.properties || {};
         }
       }
       
-      if (!pins && libraryComponent?.pins) {
-        pins = libraryComponent.pins.map(pin => ({
-          name: pin.name,
-          x: Number(pin.x),
-          y: Number(pin.y),
-          signals: pin.signals || []
-        }));
+      // Fallback: if no pins from Supabase, use the ones from the library component
+      if (!pins.length && libraryComponent?.pins) {
+        pins = libraryComponent.pins;
+        console.log(`Using pins from library component for ${componentInfo.type}:`, pins);
       }
       
-      if (!pins) {
+      // Final fallback: use default Wokwi pin info as last resort
+      if (!pins.length) {
         pins = getComponentPinInfo(componentInfo.type);
+        console.log(`Using default Wokwi pins for ${componentInfo.type}:`, pins);
       }
       
-      // Create the new component with svgPath and isOriginal values from the drag data
+      // Create the new component with all available data
       const newComponent: WokwiComponent = {
         type: componentInfo.type,
         id: `comp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         top,
         left,
-        attributes: { color: 'red' },
+        attributes: { ...properties },  // Use properties from Supabase as attributes
         pins,
-        // Ensure svgPath and isOriginal are properly passed from the drag data
         svgPath: componentInfo.svgPath,
         isOriginal: componentInfo.isOriginal
       };
       
-      console.log('Created new component:', newComponent);
+      console.log('Created new component with Supabase data:', newComponent);
       
       const updatedComponents = [...components, newComponent];
       onComponentsChange(updatedComponents);
