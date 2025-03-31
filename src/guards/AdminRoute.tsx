@@ -11,13 +11,12 @@ interface AdminRouteProps {
 
 export const AdminRoute = ({ children }: AdminRouteProps) => {
   const { user } = useAuth();
-  const { isAdmin, isLoading } = useProfile();
+  const { isAdmin, isLoading, error } = useProfile();
   const location = useLocation();
   
-  console.log("AdminRoute: Checking admin status", { isLoading, user: !!user, isAdmin: isAdmin ? isAdmin() : false });
-  
-  // Show loading state while checking admin status
+  // 1. Handle Loading
   if (isLoading) {
+    console.log("AdminRoute: Waiting, profile loading...");
     return (
       <div className="flex h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -26,13 +25,18 @@ export const AdminRoute = ({ children }: AdminRouteProps) => {
     );
   }
   
-  // Check if user is logged in and has admin role
-  if (!user || !isAdmin()) {
-    console.log("AdminRoute: Redirecting to /dashboard - Not an admin");
+  // 2. Handle Error (Optional but Recommended)
+  if (error) {
+    console.error("AdminRoute: Error loading profile, redirecting", error);
     return <Navigate to="/dashboard" replace state={{ from: location }} />;
   }
   
-  // User is an admin, render children
-  console.log("AdminRoute: User is admin, rendering children");
-  return <>{children}</>;
+  // 3. Final Decision (Only if not loading and no error)
+  if (user && isAdmin()) {
+    console.log("AdminRoute: Access granted.");
+    return <>{children}</>;
+  } else {
+    console.log("AdminRoute: Access denied, redirecting.");
+    return <Navigate to="/dashboard" replace state={{ from: location }} />;
+  }
 };
