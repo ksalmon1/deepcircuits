@@ -1,5 +1,10 @@
 
-import { useCircuitEditor as useCircuitEditorContext } from '@/context/CircuitEditorContext';
+import { 
+  useProject,
+  useSimulation,
+  useSelection,
+  useError
+} from '@/context/CircuitEditorContext';
 import { useCallback } from 'react';
 import { CircuitComponent } from '@/types/component';
 import { PinConnection } from '@/types/pin';
@@ -9,13 +14,21 @@ import { AppError } from '@/utils/errorHandling';
 /**
  * Enhanced hook for circuit editor functionality
  * Provides additional error handling and domain-specific operations
+ * This is a facade that combines all the individual context hooks
  */
 export function useCircuitEditor() {
-  const context = useCircuitEditorContext();
+  const projectContext = useProject();
+  const simulationContext = useSimulation();
+  const selectionContext = useSelection();
+  const errorContext = useError();
   
-  if (!context) {
-    throw new Error('useCircuitEditor must be used within a CircuitEditorProvider');
-  }
+  // Combine all contexts into a unified interface
+  const context = {
+    ...projectContext,
+    ...simulationContext,
+    ...selectionContext,
+    ...errorContext
+  };
   
   // Enhanced add component with error handling
   const addComponent = useCallback((component: CircuitComponent) => {
@@ -28,25 +41,25 @@ export function useCircuitEditor() {
         throw new Error('Component must have a type');
       }
       
-      context.setComponents(prev => [...prev, component]);
+      projectContext.setComponents(prev => [...prev, component]);
       return component.id;
     } catch (error) {
       console.error('Failed to add component:', error);
       toast.error('Failed to add component');
       throw error;
     }
-  }, [context]);
+  }, [projectContext]);
   
   // Enhanced remove component with error handling and connection cleanup
   const removeComponent = useCallback((componentId: string) => {
     try {
       // Remove the component
-      context.setComponents(prev => 
+      projectContext.setComponents(prev => 
         prev.filter(comp => comp.id !== componentId)
       );
       
       // Clean up any connections associated with this component
-      context.setConnections(prev => 
+      projectContext.setConnections(prev => 
         prev.filter(conn => 
           conn.sourceId !== componentId && conn.targetId !== componentId
         )
@@ -58,7 +71,7 @@ export function useCircuitEditor() {
       toast.error('Failed to remove component');
       return false;
     }
-  }, [context]);
+  }, [projectContext]);
   
   // Enhanced connect pins with validation
   const connectPins = useCallback((sourceId: string, sourcePinIndex: number, targetId: string, targetPinIndex: number): boolean => {
@@ -70,7 +83,7 @@ export function useCircuitEditor() {
       }
       
       // Check if connection already exists
-      const connectionExists = context.connections.some(
+      const connectionExists = projectContext.connections.some(
         conn => 
           (conn.sourceId === sourceId && conn.sourcePinIndex === sourcePinIndex && 
            conn.targetId === targetId && conn.targetPinIndex === targetPinIndex) ||
@@ -91,35 +104,35 @@ export function useCircuitEditor() {
         targetPinIndex
       };
       
-      context.addConnection(newConnection);
+      projectContext.addConnection(newConnection);
       return true;
     } catch (error) {
       console.error('Failed to connect pins:', error);
       toast.error('Failed to create connection');
       return false;
     }
-  }, [context]);
+  }, [projectContext]);
   
   // Run simulation with enhanced error handling
   const runSimulation = useCallback(async () => {
     try {
-      if (context.components.length === 0) {
+      if (projectContext.components.length === 0) {
         toast.error('Cannot run simulation: No components added');
         return false;
       }
       
-      if (context.connections.length === 0) {
+      if (projectContext.connections.length === 0) {
         toast.warning('Running simulation with no connections between components');
       }
       
-      context.toggleSimulation();
+      simulationContext.toggleSimulation();
       return true;
     } catch (error) {
       console.error('Failed to run simulation:', error);
       toast.error('Failed to start simulation');
       return false;
     }
-  }, [context]);
+  }, [projectContext, simulationContext]);
 
   return {
     ...context,

@@ -5,7 +5,7 @@ import {
   Play, Pause, Save, Undo, Redo, 
   Download, Upload, Code, RotateCcw, ZoomIn, ZoomOut, Trash
 } from 'lucide-react';
-import { useCircuitEditor } from '@/context/CircuitEditorContext';
+import { useProject, useSimulation } from '@/context/CircuitEditorContext';
 
 interface ToolbarProps {
   isSimulationRunning: boolean;
@@ -76,13 +76,16 @@ const Toolbar: React.FC<ToolbarProps> = ({
  */
 export const ContextToolbar = () => {
   const { 
-    isSimulationRunning, 
-    toggleSimulation, 
     saveProject, 
     undoLastAction, 
     exportProject, 
     importProject 
-  } = useCircuitEditor();
+  } = useProject();
+  
+  const {
+    isSimulationRunning,
+    toggleSimulation
+  } = useSimulation();
   
   return (
     <Toolbar 

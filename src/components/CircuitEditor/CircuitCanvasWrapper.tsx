@@ -2,7 +2,7 @@
 import React from 'react';
 import CircuitCanvas from './CircuitCanvas';
 import ErrorBoundary from './ErrorBoundary';
-import { useCircuitEditor } from '@/context/CircuitEditorContext';
+import { useProject } from '@/context/CircuitEditorContext';
 import { CircuitComponent } from '@/types/component';
 import { useCircuitCanvasState } from '@/hooks/useCircuitCanvasState';
 
@@ -16,13 +16,13 @@ export interface CircuitCanvasWrapperProps {
 
 /**
  * Context-aware CircuitCanvas wrapper
- * This version directly uses the CircuitEditorContext
+ * This version directly uses the Circuit contexts
  */
 const CircuitCanvasWrapper: React.FC<CircuitCanvasWrapperProps> = ({ 
   components: propComponents, 
   onComponentsChange: propOnComponentsChange 
 }) => {
-  const { components: contextComponents, handleComponentsChange } = useCircuitEditor();
+  const { components: contextComponents, handleComponentsChange } = useProject();
   
   // Use props if provided, otherwise use context
   const components = propComponents || contextComponents;

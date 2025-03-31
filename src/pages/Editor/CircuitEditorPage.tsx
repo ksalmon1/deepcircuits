@@ -6,7 +6,13 @@ import SerialMonitor from '@/components/CircuitEditor/SerialMonitor';
 import ComponentPanel from '@/components/CircuitEditor/ComponentPanel';
 import Toolbar from '@/components/CircuitEditor/Toolbar';
 import PropertiesPanel from '@/components/CircuitEditor/PropertiesPanel';
-import { useCircuitEditor, CircuitEditorProvider } from '@/context/CircuitEditorContext';
+import { 
+  CircuitEditorProvider, 
+  useProject, 
+  useSimulation, 
+  useSelection, 
+  useError 
+} from '@/context/CircuitEditorContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -17,26 +23,35 @@ import { useCircuitCanvasState } from '@/hooks/useCircuitCanvasState';
 
 // Internal component that uses the context
 const CircuitEditorContent = () => {
+  // Use the individual contexts instead of the combined useCircuitEditor
   const {
     components,
-    selectedComponent,
-    code,
-    setCode,
-    isSimulationRunning,
-    serialOutput,
     handleComponentsChange,
-    selectComponent,
     handleUpdateComponentAttributes,
-    toggleSimulation,
     saveProject,
     undoLastAction,
     exportProject,
     importProject,
-    errorState,
-    clearError
-  } = useCircuitEditor();
+    code,
+    setCode
+  } = useProject();
   
-  // Directly use the useCircuitCanvasState hook instead of getting it from context
+  const {
+    isSimulationRunning,
+    toggleSimulation,
+    serialOutput
+  } = useSimulation();
+  
+  const {
+    selectedComponent,
+    selectComponent
+  } = useSelection();
+  
+  const {
+    errorState
+  } = useError();
+  
+  // Directly use the useCircuitCanvasState hook
   const canvasState = useCircuitCanvasState(components);
   
   const isMobile = useIsMobile();
