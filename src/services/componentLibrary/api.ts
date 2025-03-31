@@ -1,223 +1,233 @@
 
-import { supabase } from "@/integrations/supabase/client";
-import { mapComponentFromDb } from "./utils";
-import { ComponentLibraryItem } from "./types";
+import { supabase } from '@/integrations/supabase/client';
+import { ComponentLibraryItem, ComponentMetadata } from '@/types/component';
+import { WokwiPin } from '@/integrations/wokwi/WokwiIntegration';
 
 /**
- * Get all components from the component library
+ * Fetch all components from the library
  */
-export const getAllComponents = async (): Promise<ComponentLibraryItem[]> => {
+export async function getAllComponents(): Promise<ComponentLibraryItem[]> {
   try {
     const { data, error } = await supabase
       .from('component_library')
       .select('*')
-      .order('name');
+      .order('name', { ascending: true });
 
     if (error) {
       console.error('Error fetching components:', error);
-      throw error;
+      return [];
     }
 
-    return data.map(mapComponentFromDb);
+    return data.map(component => ({
+      id: component.id,
+      name: component.name,
+      type: component.type,
+      category: component.category,
+      description: component.description,
+      svgPath: component.svg_path,
+      enabled: component.enabled,
+      isOriginal: component.is_original,
+      pins: [],
+      properties: {},
+      createdAt: component.created_at,
+      updatedAt: component.updated_at
+    }));
   } catch (error) {
     console.error('Error in getAllComponents:', error);
-    throw error;
+    return [];
   }
-};
+}
 
 /**
- * Get a component with all its details (pins and properties)
- * First tries to use RPC function, falls back to direct queries if needed
+ * Get a component by ID
  */
-export const getComponentWithDetails = async (componentId: string): Promise<any> => {
+export async function getComponentById(id: string): Promise<ComponentLibraryItem | null> {
   try {
-    console.log('Fetching component details for ID:', componentId);
-    
-    // First try to use the RPC function
-    const { data: rpcData, error: rpcError } = await supabase
-      .rpc('get_component_with_details', { component_id: componentId });
+    const { data, error } = await supabase
+      .from('component_library')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      console.error('Error fetching component by ID:', id, error);
+      return null;
+    }
+
+    if (!data) {
+      console.log('Component not found with ID:', id);
+      return null;
+    }
+
+    return {
+      id: data.id,
+      name: data.name,
+      type: data.type,
+      category: data.category,
+      description: data.description,
+      svgPath: data.svg_path,
+      enabled: data.enabled,
+      isOriginal: data.is_original,
+      pins: [],
+      properties: {},
+      createdAt: data.created_at,
+      updatedAt: data.updated_at
+    };
+  } catch (error) {
+    console.error('Error in getComponentById:', error);
+    return null;
+  }
+}
+
+/**
+ * Search components by name
+ */
+export async function searchComponents(query: string): Promise<ComponentLibraryItem[]> {
+  try {
+    const { data, error } = await supabase
+      .from('component_library')
+      .select('*')
+      .ilike('name', `%${query}%`)
+      .limit(10);
+
+    if (error) {
+      console.error('Error searching components:', error);
+      return [];
+    }
+
+    return data.map(component => ({
+      id: component.id,
+      name: component.name,
+      type: component.type,
+      category: component.category,
+      description: component.description,
+      svgPath: component.svg_path,
+      enabled: component.enabled,
+      isOriginal: component.is_original,
+      pins: [],
+      properties: {},
+      createdAt: component.created_at,
+      updatedAt: component.updated_at
+    }));
+  } catch (error) {
+    console.error('Error in searchComponents:', error);
+    return [];
+  }
+}
+
+/**
+ * Get component with details including pins and properties
+ */
+export async function getComponentWithDetails(id: string): Promise<ComponentLibraryItem | null> {
+  try {
+    console.log('Getting component with details for ID:', id);
+
+    const { data: rpcData, error: rpcError } = await supabase.rpc('get_component_with_details', {
+      component_id: id
+    });
 
     if (rpcError) {
-      console.error('Error fetching component details via RPC:', rpcError);
-      console.log('Falling back to direct queries');
-      return await getComponentDetailsDirectly(componentId);
+      console.error('Error in RPC get_component_with_details:', rpcError);
+      return null;
     }
 
     if (!rpcData) {
-      // If no data returned from RPC, fall back to direct queries
-      console.log('No data returned from RPC, falling back to direct queries');
-      return await getComponentDetailsDirectly(componentId);
-    }
-    
-    console.log('Component details fetched via RPC:', rpcData);
-    return rpcData;
-  } catch (error) {
-    console.error('Error in getComponentWithDetails:', error);
-    console.log('Falling back to direct queries due to error');
-    return await getComponentDetailsDirectly(componentId);
-  }
-};
-
-/**
- * Fallback function to get component details directly from the tables
- */
-const getComponentDetailsDirectly = async (componentId: string): Promise<any> => {
-  try {
-    console.log('Getting component details directly for ID:', componentId);
-    
-    // Get component basic info
-    const { data: componentData, error: componentError } = await supabase
-      .from('component_library')
-      .select('*')
-      .eq('id', componentId)
-      .single();
-
-    if (componentError) {
-      console.error('Error fetching component:', componentError);
-      throw componentError;
+      console.log('No data returned from RPC for component ID:', id);
+      return null;
     }
 
-    // Get component pins
-    const { data: pinsData, error: pinsError } = await supabase
-      .from('component_pins')
-      .select('*')
-      .eq('component_id', componentId);
-
-    if (pinsError) {
-      console.error('Error fetching pins:', pinsError);
-      throw pinsError;
+    if (typeof rpcData !== 'object' || rpcData === null) {
+      console.error('RPC returned invalid data format for component ID:', id, rpcData);
+      return null;
     }
 
-    // Get component properties
-    const { data: propertiesData, error: propertiesError } = await supabase
-      .from('component_properties')
-      .select('*')
-      .eq('component_id', componentId);
+    const rpcDataObj = rpcData as Record<string, any>;
+    const componentData = rpcDataObj.component as Record<string, any> || {};
+    const pins = Array.isArray(rpcDataObj.pins) ? rpcDataObj.pins : [];
+    const properties = typeof rpcDataObj.properties === 'object' ? rpcDataObj.properties as Record<string, any> : {};
 
-    if (propertiesError) {
-      console.error('Error fetching properties:', propertiesError);
-      throw propertiesError;
-    }
-
-    console.log('Component data:', componentData);
-    console.log('Pins data:', pinsData);
-    console.log('Properties data:', propertiesData);
-
-    // Convert properties to key-value pairs
-    const properties: Record<string, any> = {};
-    propertiesData.forEach(prop => {
-      properties[prop.property_key] = prop.property_value;
+    console.log('Mapped component data:', {
+      id: componentData.id,
+      type: componentData.type,
+      pins: pins.length,
+      properties: Object.keys(properties).length
     });
 
-    // Map pins to the expected format
-    const pins = pinsData.map(pin => ({
-      name: pin.name,
-      x: pin.x,
-      y: pin.y,
-      signals: pin.signals || []
-    }));
-
-    // Construct the result object
-    const component = mapComponentFromDb(componentData);
-    
     return {
-      component: component,
+      id: componentData.id,
+      name: componentData.name,
+      type: componentData.type,
+      category: componentData.category,
+      description: componentData.description,
+      svgPath: componentData.svg_path,
+      enabled: componentData.enabled,
+      isOriginal: componentData.is_original,
       pins: pins,
-      properties: properties
+      properties: properties,
+      createdAt: componentData.created_at,
+      updatedAt: componentData.updated_at
     };
   } catch (error) {
-    console.error('Error in getComponentDetailsDirectly:', error);
-    throw error;
+    console.error('Error in getComponentWithDetails:', error);
+    return null;
   }
-};
+}
 
 /**
- * Create a new component with its pins and properties
+ * Create a new component
  */
-export const createComponent = async (component: ComponentLibraryItem): Promise<string> => {
+export async function createComponent(component: ComponentLibraryItem): Promise<string> {
   try {
-    const { data: componentData, error: componentError } = await supabase
-      .from('component_library')
-      .insert({
-        name: component.name,
-        type: component.type,
-        category: component.category,
-        description: component.description,
-        svg_path: component.svgPath,
-        enabled: component.enabled,
-        is_original: component.isOriginal
-      })
-      .select('id')
-      .single();
+    const { data, error } = await supabase.from('component_library').insert({
+      name: component.name,
+      type: component.type,
+      category: component.category,
+      description: component.description,
+      svg_path: component.svgPath,
+      enabled: component.enabled,
+      is_original: component.isOriginal
+    }).select().single();
 
-    if (componentError) {
-      console.error('Error creating component:', componentError);
-      throw componentError;
+    if (error) {
+      console.error('Error creating component:', error);
+      throw new Error(error.message);
     }
 
-    const componentId = componentData.id;
-
+    // Insert pins if provided
     if (component.pins && component.pins.length > 0) {
-      await insertPins(componentId, component.pins);
+      await insertPins(data.id, component.pins);
     }
 
+    // Insert properties if provided
     if (component.properties && Object.keys(component.properties).length > 0) {
-      await insertProperties(componentId, component.properties);
+      await insertProperties(data.id, component.properties);
     }
 
-    return componentId;
+    return data.id;
   } catch (error) {
     console.error('Error in createComponent:', error);
     throw error;
   }
-};
+}
 
 /**
- * Update an existing component with its pins and properties
+ * Update an existing component
  */
-export const updateComponent = async (component: ComponentLibraryItem): Promise<void> => {
-  if (!component.id) {
-    throw new Error('Component ID is required for update');
-  }
-
+export async function updateComponent(component: ComponentLibraryItem): Promise<void> {
   try {
-    console.log('Updating component ID:', component.id);
-    
-    // First, get the current component data to check if type is changing
-    const { data: currentComponent, error: fetchError } = await supabase
-      .from('component_library')
-      .select('type')
-      .eq('id', component.id)
-      .single();
-    
-    if (fetchError) {
-      console.error('Error fetching current component data:', fetchError);
-      throw fetchError;
-    }
-    
-    const isChangingType = currentComponent.type !== component.type;
-    
-    if (isChangingType) {
-      console.log('Type is changing from', currentComponent.type, 'to', component.type);
-      
-      // Check if the new type already exists in another component
-      const { data: existingComponents, error: checkError } = await supabase
-        .from('component_library')
-        .select('id')
-        .eq('type', component.type)
-        .neq('id', component.id);
-      
-      if (checkError) {
-        console.error('Error checking for existing components with same type:', checkError);
-        throw checkError;
-      }
-      
-      if (existingComponents && existingComponents.length > 0) {
-        throw new Error(`Cannot change type to ${component.type} as it already exists in another component`);
-      }
+    if (!component.id) {
+      console.error('Component ID is missing for update');
+      throw new Error('Component ID is required');
     }
 
-    // Update component basic info
+    console.log('Updating component ID:', component.id, 'with data:', {
+      name: component.name,
+      type: component.type,
+      pins: component.pins?.length || 0,
+      properties: component.properties ? Object.keys(component.properties).length : 0
+    });
+
+    // First, update the component basic info
     const { error: componentError } = await supabase
       .from('component_library')
       .update({
@@ -233,129 +243,150 @@ export const updateComponent = async (component: ComponentLibraryItem): Promise<
 
     if (componentError) {
       console.error('Error updating component:', componentError);
-      throw componentError;
+      throw new Error(componentError.message);
     }
-
-    console.log('Basic component info updated successfully');
 
     // Update pins if provided
     if (component.pins) {
+      console.log(`Updating ${component.pins.length} pins for component ${component.id}:`, component.pins);
       await updatePins(component.id, component.pins);
-      console.log('Component pins updated successfully');
     }
 
     // Update properties if provided
     if (component.properties) {
+      console.log(`Updating ${Object.keys(component.properties).length} properties for component ${component.id}:`, component.properties);
       await updateProperties(component.id, component.properties);
-      console.log('Component properties updated successfully');
     }
   } catch (error) {
     console.error('Error in updateComponent:', error);
     throw error;
   }
-};
+}
 
 /**
- * Insert pins for a component
+ * Delete a component
  */
-const insertPins = async (componentId: string, pins: any[]): Promise<void> => {
-  const pinsToInsert = pins.map(pin => ({
-    component_id: componentId,
-    name: pin.name,
-    x: pin.x,
-    y: pin.y,
-    signals: pin.signals || []
-  }));
-
-  const { error } = await supabase
-    .from('component_pins')
-    .insert(pinsToInsert);
-
-  if (error) {
-    console.error('Error inserting pins:', error);
-    throw error;
-  }
-};
-
-/**
- * Update pins for a component (delete existing ones and insert new ones)
- */
-const updatePins = async (componentId: string, pins: any[]): Promise<void> => {
-  // Delete existing pins
-  const { error: deletePinsError } = await supabase
-    .from('component_pins')
-    .delete()
-    .eq('component_id', componentId);
-
-  if (deletePinsError) {
-    console.error('Error deleting existing pins:', deletePinsError);
-    throw deletePinsError;
-  }
-
-  // Insert new pins if any
-  if (pins.length > 0) {
-    await insertPins(componentId, pins);
-  }
-};
-
-/**
- * Insert properties for a component
- */
-const insertProperties = async (componentId: string, properties: Record<string, any>): Promise<void> => {
-  const propertiesToInsert = Object.entries(properties).map(([key, value]) => ({
-    component_id: componentId,
-    property_key: key,
-    property_value: value
-  }));
-
-  const { error } = await supabase
-    .from('component_properties')
-    .insert(propertiesToInsert);
-
-  if (error) {
-    console.error('Error inserting properties:', error);
-    throw error;
-  }
-};
-
-/**
- * Update properties for a component (delete existing ones and insert new ones)
- */
-const updateProperties = async (componentId: string, properties: Record<string, any>): Promise<void> => {
-  // Delete existing properties
-  const { error: deletePropertiesError } = await supabase
-    .from('component_properties')
-    .delete()
-    .eq('component_id', componentId);
-
-  if (deletePropertiesError) {
-    console.error('Error deleting existing properties:', deletePropertiesError);
-    throw deletePropertiesError;
-  }
-
-  // Insert new properties if any
-  if (Object.keys(properties).length > 0) {
-    await insertProperties(componentId, properties);
-  }
-};
-
-/**
- * Delete a component and its associated pins and properties
- */
-export const deleteComponent = async (componentId: string): Promise<void> => {
+export async function deleteComponent(id: string): Promise<void> {
   try {
-    // No need to delete pins and properties separately due to cascade delete
     const { error } = await supabase
       .from('component_library')
       .delete()
-      .eq('id', componentId);
+      .eq('id', id);
 
     if (error) {
       console.error('Error deleting component:', error);
-      throw error;
+      throw new Error(error.message);
     }
   } catch (error) {
     console.error('Error in deleteComponent:', error);
     throw error;
   }
-};
+}
+
+// Helper functions for component pins
+async function insertPins(componentId: string, pins: WokwiPin[]): Promise<void> {
+  try {
+    if (!pins || pins.length === 0) {
+      return;
+    }
+
+    const pinsToInsert = pins.map(pin => ({
+      component_id: componentId,
+      name: pin.name,
+      x: pin.x,
+      y: pin.y,
+      signals: Array.isArray(pin.signals) ? pin.signals : []
+    }));
+
+    const { error } = await supabase
+      .from('component_pins')
+      .insert(pinsToInsert);
+
+    if (error) {
+      console.error('Error inserting pins:', error);
+      throw new Error(error.message);
+    }
+  } catch (error) {
+    console.error('Error in insertPins:', error);
+    throw error;
+  }
+}
+
+async function updatePins(componentId: string, pins: WokwiPin[]): Promise<void> {
+  try {
+    // Delete existing pins
+    const { error: deleteError } = await supabase
+      .from('component_pins')
+      .delete()
+      .eq('component_id', componentId);
+
+    if (deleteError) {
+      console.error('Error deleting existing pins:', deleteError);
+      throw new Error(deleteError.message);
+    }
+
+    // Skip insertion if no pins to add
+    if (!pins || pins.length === 0) {
+      return;
+    }
+
+    // Insert new pins
+    await insertPins(componentId, pins);
+  } catch (error) {
+    console.error('Error in updatePins:', error);
+    throw error;
+  }
+}
+
+// Helper functions for component properties
+async function insertProperties(componentId: string, properties: Record<string, any>): Promise<void> {
+  try {
+    if (!properties || Object.keys(properties).length === 0) {
+      return;
+    }
+
+    const propertiesToInsert = Object.entries(properties).map(([key, value]) => ({
+      component_id: componentId,
+      property_key: key,
+      property_value: value
+    }));
+
+    const { error } = await supabase
+      .from('component_properties')
+      .insert(propertiesToInsert);
+
+    if (error) {
+      console.error('Error inserting properties:', error);
+      throw new Error(error.message);
+    }
+  } catch (error) {
+    console.error('Error in insertProperties:', error);
+    throw error;
+  }
+}
+
+async function updateProperties(componentId: string, properties: Record<string, any>): Promise<void> {
+  try {
+    // Delete existing properties
+    const { error: deleteError } = await supabase
+      .from('component_properties')
+      .delete()
+      .eq('component_id', componentId);
+
+    if (deleteError) {
+      console.error('Error deleting existing properties:', deleteError);
+      throw new Error(deleteError.message);
+    }
+
+    // Skip insertion if no properties to add
+    if (!properties || Object.keys(properties).length === 0) {
+      return;
+    }
+
+    // Insert new properties
+    await insertProperties(componentId, properties);
+  } catch (error) {
+    console.error('Error in updateProperties:', error);
+    throw error;
+  }
+}

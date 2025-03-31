@@ -1,6 +1,6 @@
 
 import { useState, useCallback } from 'react';
-import { WokwiComponent } from '@/integrations/wokwi/WokwiIntegration';
+import { CircuitComponent } from '@/types/component';
 import { toast } from 'sonner';
 
 // Default initial code for Arduino sketch
@@ -20,15 +20,16 @@ void loop() {
 }`;
 
 export function useCircuitEditor() {
-  const [components, setComponents] = useState<WokwiComponent[]>([]);
-  const [selectedComponent, setSelectedComponent] = useState<WokwiComponent | null>(null);
+  const [components, setComponents] = useState<CircuitComponent[]>([]);
+  const [selectedComponent, setSelectedComponent] = useState<CircuitComponent | null>(null);
   const [code, setCode] = useState<string>(initialCode);
   const [isSimulationRunning, setIsSimulationRunning] = useState<boolean>(false);
   const [serialOutput, setSerialOutput] = useState<string[]>([]);
   
-  const handleComponentsChange = useCallback((updatedComponents: WokwiComponent[]) => {
+  const handleComponentsChange = useCallback((updatedComponents: CircuitComponent[]) => {
     setComponents(updatedComponents);
     
+    // Update selected component if it was modified
     if (selectedComponent) {
       const updatedSelectedComponent = updatedComponents.find(
         (comp) => comp.id === selectedComponent.id
@@ -36,6 +37,7 @@ export function useCircuitEditor() {
       setSelectedComponent(updatedSelectedComponent || null);
     }
     
+    // If selected component was removed, clear selection
     if (
       selectedComponent &&
       !updatedComponents.some((comp) => comp.id === selectedComponent.id)
@@ -44,7 +46,7 @@ export function useCircuitEditor() {
     }
   }, [selectedComponent]);
   
-  const handleComponentSelect = useCallback((component: WokwiComponent) => {
+  const handleComponentSelect = useCallback((component: CircuitComponent) => {
     setSelectedComponent(component);
   }, []);
   
@@ -60,6 +62,31 @@ export function useCircuitEditor() {
   
   const toggleSimulation = useCallback(() => {
     setIsSimulationRunning(!isSimulationRunning);
+    
+    if (!isSimulationRunning) {
+      // Starting simulation
+      setSerialOutput(prev => [
+        ...prev, 
+        '--- Simulation started ---',
+        'Compiling code...',
+        'Uploading to virtual microcontroller...'
+      ]);
+      
+      // Simulate some output after a delay
+      setTimeout(() => {
+        setSerialOutput(prev => [
+          ...prev,
+          'Program running...',
+          'LED ON'
+        ]);
+      }, 1500);
+    } else {
+      // Stopping simulation
+      setSerialOutput(prev => [
+        ...prev, 
+        '--- Simulation stopped ---'
+      ]);
+    }
   }, [isSimulationRunning]);
   
   const saveProject = useCallback(() => {
@@ -71,11 +98,64 @@ export function useCircuitEditor() {
   }, []);
   
   const exportProject = useCallback(() => {
+    const projectData = {
+      components,
+      code
+    };
+    
+    const dataStr = JSON.stringify(projectData, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+    
+    const exportFileDefaultName = 'circuit-project.json';
+    
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+    
     toast.success('Project exported successfully!');
-  }, []);
+  }, [components, code]);
   
   const importProject = useCallback(() => {
-    toast.success('Project imported successfully!');
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    
+    input.onchange = (e: Event) => {
+      const target = e.target as HTMLInputElement;
+      if (target?.files && target.files[0]) {
+        const file = target.files[0];
+        const reader = new FileReader();
+        
+        reader.onload = (e) => {
+          try {
+            const result = e.target?.result as string;
+            const projectData = JSON.parse(result);
+            
+            if (projectData.components && Array.isArray(projectData.components)) {
+              setComponents(projectData.components);
+            }
+            
+            if (projectData.code && typeof projectData.code === 'string') {
+              setCode(projectData.code);
+            }
+            
+            toast.success('Project imported successfully!');
+          } catch (error) {
+            console.error('Error parsing imported project:', error);
+            toast.error('Failed to import project. Invalid file format.');
+          }
+        };
+        
+        reader.onerror = () => {
+          toast.error('Failed to read the file');
+        };
+        
+        reader.readAsText(file);
+      }
+    };
+    
+    input.click();
   }, []);
   
   return {

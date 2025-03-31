@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import CircuitCanvas from './CircuitCanvas';
+import CircuitCanvasWrapper from './CircuitCanvasWrapper';
 import ComponentPanel from './ComponentPanel';
 import CodeEditor from './CodeEditor';
 import SerialMonitor from './SerialMonitor';
@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
-import { WokwiComponent } from '@/integrations/wokwi/WokwiIntegration';
+import { CircuitComponent } from '@/types/component';
 
 export const CircuitEditorLayout = () => {
   const navigate = useNavigate();
@@ -26,7 +26,7 @@ export const CircuitEditorLayout = () => {
   const [showSerialMonitor, setShowSerialMonitor] = useState<boolean>(false);
   const [verticalSplit, setVerticalSplit] = useState<boolean>(true);
   // Circuit components state - lifted up from CircuitCanvas
-  const [circuitComponents, setCircuitComponents] = useState<WokwiComponent[]>([]);
+  const [circuitComponents, setCircuitComponents] = useState<CircuitComponent[]>([]);
   
   // State for CodeEditor
   const [code, setCode] = useState<string>('// Write your Arduino code here\nvoid setup() {\n  // Initialize components\n}\n\nvoid loop() {\n  // Main program loop\n}\n');
@@ -154,7 +154,7 @@ export const CircuitEditorLayout = () => {
     setVerticalSplit(!verticalSplit);
   };
 
-  const handleComponentSelect = (component: WokwiComponent) => {
+  const handleComponentSelect = (component: CircuitComponent) => {
     console.log('Component selected:', component);
     // In a real implementation, this would add the component to the canvas
     setCircuitComponents(prev => [...prev, component]);
@@ -264,7 +264,7 @@ export const CircuitEditorLayout = () => {
                 (showCodeEditor && showSerialMonitor ? 'w-1/2' : 'w-2/3') : 
                 (showCodeEditor && showSerialMonitor ? 'h-1/2' : 'h-2/3')
               } overflow-hidden`}>
-                <CircuitCanvas 
+                <CircuitCanvasWrapper 
                   components={circuitComponents} 
                   onComponentsChange={setCircuitComponents}
                 />
@@ -317,7 +317,7 @@ export const CircuitEditorLayout = () => {
           ) : (
             // If no editors are open, show only the circuit canvas
             <div className="flex-1 overflow-hidden">
-              <CircuitCanvas 
+              <CircuitCanvasWrapper 
                 components={circuitComponents} 
                 onComponentsChange={setCircuitComponents} 
               />

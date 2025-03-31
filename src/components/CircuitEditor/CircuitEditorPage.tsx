@@ -1,6 +1,6 @@
 
 import React from 'react';
-import CircuitCanvas from './CircuitCanvas';
+import CircuitCanvasWrapper from './CircuitCanvasWrapper';
 import CodeEditor from './CodeEditor';
 import SerialMonitor from './SerialMonitor';
 import ComponentPanel from './ComponentPanel';
@@ -69,7 +69,7 @@ const CircuitEditorPage = () => {
         <ResizablePanel defaultSize={60}>
           <div className="h-full flex flex-col">
             <div className="flex-1 relative">
-              <CircuitCanvas 
+              <CircuitCanvasWrapper 
                 components={components} 
                 onComponentsChange={handleComponentsChange} 
               />

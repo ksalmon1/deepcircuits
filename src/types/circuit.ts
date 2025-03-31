@@ -1,7 +1,9 @@
 
 import { Node, Edge, Position } from '@xyflow/react';
 
-// Node data type for Wokwi component nodes
+/**
+ * Node data type for Wokwi component nodes
+ */
 export interface WokwiNodeData {
   type: string;
   attributes?: Record<string, any>;
@@ -16,10 +18,14 @@ export interface WokwiNodeData {
   [key: string]: unknown; // Add index signature to satisfy Record<string, unknown>
 }
 
-// Types for custom nodes in XY Flow
+/**
+ * Types for custom nodes in XY Flow
+ */
 export type WokwiNode = Node<WokwiNodeData>;
 
-// Custom edge data type for wires with routing points
+/**
+ * Custom edge data type for wires with routing points
+ */
 export interface WireData {
   color: string;
   sourcePinIndex: number;
@@ -29,10 +35,14 @@ export interface WireData {
   [key: string]: unknown; // Add index signature to satisfy Record<string, unknown>
 }
 
-// Custom edge type for wires
+/**
+ * Custom edge type for wires
+ */
 export type WireEdge = Edge<WireData>;
 
-// Define state for wire connection process
+/**
+ * Define state for wire connection process
+ */
 export interface WireConnectionState {
   isConnecting: boolean;
   sourceNodeId?: string;
@@ -42,7 +52,9 @@ export interface WireConnectionState {
   temporaryEdgeId?: string;
 }
 
-// Define props for the CustomWireEdge component
+/**
+ * Define props for the CustomWireEdge component
+ */
 export interface CustomWireEdgeProps {
   id: string;
   source: string;
@@ -57,4 +69,18 @@ export interface CustomWireEdgeProps {
   data?: WireData;
   selected?: boolean;
   onDelete?: (id: string) => void;
+}
+
+/**
+ * Circuit project metadata
+ */
+export interface CircuitProject {
+  id: string;
+  name: string;
+  description?: string;
+  thumbnailUrl?: string;
+  isPublic: boolean;
+  createdAt: string;
+  updatedAt: string;
+  userId: string;
 }

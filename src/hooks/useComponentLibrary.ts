@@ -1,13 +1,13 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
-  getComponents, 
+  getAllComponents, 
   getComponentWithDetails, 
   createComponent, 
   updateComponent, 
-  deleteComponent,
-  ComponentLibraryItem 
-} from '@/services/componentLibraryService';
+  deleteComponent 
+} from '@/services/componentLibrary/api';
+import { ComponentLibraryItem } from '@/types/component';
 
 /**
  * Hook for interacting with the component library
@@ -24,7 +24,7 @@ export const useComponentLibrary = () => {
     refetch: refetchComponents
   } = useQuery({
     queryKey: ['components'],
-    queryFn: getComponents
+    queryFn: getAllComponents
   });
   
   // Fetch all component details on load
@@ -34,7 +34,7 @@ export const useComponentLibrary = () => {
   } = useQuery({
     queryKey: ['componentsDetails'],
     queryFn: async () => {
-      const detailsMap: Record<string, any> = {};
+      const detailsMap: Record<string, ComponentLibraryItem> = {};
       
       if (components && components.length > 0) {
         console.log(`Fetching details for ${components.length} components`);
