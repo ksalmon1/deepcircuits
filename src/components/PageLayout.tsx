@@ -21,7 +21,7 @@ const PageLayout = ({
     <div className="flex min-h-screen flex-col">
       {withHeader && <Header />}
       <main className="flex-1">
-        <div className="container mx-auto py-4">
+        <div className="container">
           {withBreadcrumbs && <Breadcrumbs />}
           {children}
         </div>

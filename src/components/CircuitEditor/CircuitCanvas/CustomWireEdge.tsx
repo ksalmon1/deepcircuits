@@ -1,4 +1,5 @@
-import React, { memo, useState, useCallback, useEffect } from 'react';
+
+import React, { memo, useState, useCallback } from 'react';
 import { CustomWireEdgeProps, WireData } from '@/types/circuit';
 import { useReactFlow } from '@xyflow/react';
 
@@ -83,20 +84,11 @@ function CustomWireEdge({
     setEdges(edges => {
       return edges.map(edge => {
         if (edge.id === id) {
-          // Fix TypeScript error by ensuring routingPoints is an array
-          const currentRoutingPoints = Array.isArray(edge.data?.routingPoints) ? 
-            edge.data.routingPoints : [];
-            
-          const newRoutingPoints = [...currentRoutingPoints];
+          const newRoutingPoints = [...(edge.data?.routingPoints || [])];
+          newRoutingPoints[draggingPointIndex] = { x: mouseX, y: mouseY };
           
-          if (draggingPointIndex < newRoutingPoints.length) {
-            newRoutingPoints[draggingPointIndex] = { x: mouseX, y: mouseY };
-          }
-          
-          // Keep the edge selected while dragging by setting the selected flag
           return {
             ...edge,
-            selected: true,
             data: {
               ...edge.data,
               routingPoints: newRoutingPoints
@@ -113,11 +105,11 @@ function CustomWireEdge({
   }, []);
   
   // Add global mouse move and mouse up event listeners when dragging a point
-  useEffect(() => {
+  React.useEffect(() => {
     if (draggingPointIndex !== null) {
       // Properly type the global event handlers
       const handleGlobalMouseMove = (e: MouseEvent) => {
-        // Create a React.MouseEvent compatible object
+        // Convert the MouseEvent to React.MouseEvent equivalent with type assertion
         const reactEvent = {
           clientX: e.clientX,
           clientY: e.clientY,
@@ -153,9 +145,6 @@ function CustomWireEdge({
   const isTemporary = id.startsWith('temp-wire-');
   const pointerEvents = isTemporary ? 'none' : 'auto';
   
-  // Wire is considered actively being edited if either selected or being dragged
-  const isActiveOrSelected = selected || draggingPointIndex !== null;
-  
   return (
     <>
       <path
@@ -163,22 +152,23 @@ function CustomWireEdge({
         className="react-flow__edge-path custom-wire-path"
         d={path}
         stroke={edgeColor}
-        strokeWidth={isActiveOrSelected ? 3 : 2}
+        strokeWidth={selected ? 3 : 2}
         fill="none"
         onClick={handleEdgeClick}
         style={{ pointerEvents }}
       />
       
-      {/* Only show routing points when the wire is selected and it's not a temporary wire */}
-      {isActiveOrSelected && !isTemporary && routingPoints.map((point, index) => (
+      {/* Only show routing points for permanent wires */}
+      {!isTemporary && routingPoints.map((point, index) => (
         <circle
           key={`${id}-point-${index}`}
           cx={point.x}
           cy={point.y}
-          r={5}
-          fill={edgeColor}
-          stroke="white"
+          r={selected ? 5 : 3}
+          fill={selected ? edgeColor : 'white'}
+          stroke={edgeColor}
           strokeWidth={1.5}
+          opacity={selected ? 1 : 0.5}
           className="routing-point"
           onMouseDown={(e) => handlePointMouseDown(e, index)}
           cursor="move"
