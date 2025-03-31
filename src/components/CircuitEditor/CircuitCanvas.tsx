@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { 
   isWokwiLoaded, 
@@ -358,12 +357,20 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
               {showHorizontalGuide && reactFlowInstance && (() => {
                 const containerWidth = reactFlowWrapperRef.current?.clientWidth ?? 0;
                 
+                console.log('Rendering Horizontal Guide:', {
+                  containerWidth,
+                  showHorizontalGuide,
+                  mousePosition
+                });
+                
+                const testY = 50;
+                
                 return (
                   <line
                     x1={0}
-                    y1={mousePosition.y}
+                    y1={testY}
                     x2={containerWidth}
-                    y2={mousePosition.y}
+                    y2={testY}
                     stroke="#FF0000"
                     strokeWidth={2}
                     strokeDasharray="5,5"
@@ -375,11 +382,19 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
               {showVerticalGuide && reactFlowInstance && (() => {
                 const containerHeight = reactFlowWrapperRef.current?.clientHeight ?? 0;
                 
+                console.log('Rendering Vertical Guide:', {
+                  containerHeight,
+                  showVerticalGuide,
+                  mousePosition
+                });
+                
+                const testX = 100; 
+                
                 return (
                   <line
-                    x1={mousePosition.x}
+                    x1={testX}
                     y1={0}
-                    x2={mousePosition.x}
+                    x2={testX}
                     y2={containerHeight}
                     stroke="#FF0000"
                     strokeWidth={2}
