@@ -1,8 +1,7 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { ComponentPin, PinSignalType, SIGNAL_COLOR_MAP } from '@/types/pin';
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { X, Edit, Check, Trash2 } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import { 
@@ -21,23 +20,15 @@ interface PinListProps {
   onHoverPin?: (index: number | null) => void;
   onUpdatePinSignal?: (index: number, signal: string) => void;
   onUpdatePinName?: (index: number, name: string) => void;
+  
+  // New props for name editing
+  editingPinName?: number | null;
+  editingPinNameValue?: string;
+  setEditingPinNameValue?: (value: string) => void;
+  onStartEditName?: (index: number) => void;
+  onSubmitNameEdit?: () => void;
+  onKeyPress?: (e: React.KeyboardEvent) => void;
 }
-
-const AVAILABLE_SIGNALS = [
-  "Digital Input",
-  "Digital Output",
-  "Analog Input", 
-  "Analog Output",
-  "Power",
-  "Ground",
-  "Clock",
-  "Data",
-  "Reset",
-  "Passive",
-  "I2C",
-  "SPI",
-  "Custom"
-];
 
 /**
  * List of pins with their properties
@@ -50,11 +41,16 @@ const PinList: React.FC<PinListProps> = ({
   onEditPin,
   onHoverPin,
   onUpdatePinName,
-  onUpdatePinSignal
-}) => {
-  const [editingPinName, setEditingPinName] = useState<number | null>(null);
-  const [editingPinNameValue, setEditingPinNameValue] = useState<string>('');
+  onUpdatePinSignal,
   
+  // Name editing state and handlers
+  editingPinName = null,
+  editingPinNameValue = '',
+  setEditingPinNameValue = () => {},
+  onStartEditName = () => {},
+  onSubmitNameEdit = () => {},
+  onKeyPress = () => {}
+}) => {
   const inputRef = useRef<HTMLInputElement>(null);
   
   useEffect(() => {
@@ -62,27 +58,6 @@ const PinList: React.FC<PinListProps> = ({
       inputRef.current.focus();
     }
   }, [editingPinName]);
-
-  const handleStartEditName = (index: number) => {
-    if (readonly) return;
-    setEditingPinName(index);
-    setEditingPinNameValue(pins[index].name);
-  };
-
-  const handleSubmitNameEdit = () => {
-    if (editingPinName !== null && editingPinNameValue.trim()) {
-      onUpdatePinName(editingPinName, editingPinNameValue.trim());
-      setEditingPinName(null);
-    }
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleSubmitNameEdit();
-    } else if (e.key === 'Escape') {
-      setEditingPinName(null);
-    }
-  };
 
   // Function to get a color based on signal type
   const getSignalColor = (signal: string): string => {
@@ -103,8 +78,8 @@ const PinList: React.FC<PinListProps> = ({
         <div 
           key={i}
           className="border rounded p-2 relative group"
-          onMouseEnter={() => onHoverPin(i)}
-          onMouseLeave={() => onHoverPin(null)}
+          onMouseEnter={() => onHoverPin?.(i)}
+          onMouseLeave={() => onHoverPin?.(null)}
         >
           <div className="overflow-hidden flex-grow">
             <div className="font-medium truncate flex items-center gap-1 mb-1">
@@ -126,8 +101,8 @@ const PinList: React.FC<PinListProps> = ({
                     type="text"
                     value={editingPinNameValue}
                     onChange={(e) => setEditingPinNameValue(e.target.value)}
-                    onBlur={handleSubmitNameEdit}
-                    onKeyDown={handleKeyPress}
+                    onBlur={onSubmitNameEdit}
+                    onKeyDown={onKeyPress}
                     className="text-sm border rounded p-1 flex-grow"
                     placeholder="Pin name"
                   />
@@ -135,7 +110,7 @@ const PinList: React.FC<PinListProps> = ({
                     variant="ghost"
                     size="icon"
                     className="h-6 w-6 text-gray-500"
-                    onClick={handleSubmitNameEdit}
+                    onClick={onSubmitNameEdit}
                   >
                     <Check className="h-3 w-3" />
                   </Button>
@@ -148,7 +123,7 @@ const PinList: React.FC<PinListProps> = ({
                       variant="ghost"
                       size="icon"
                       className="h-6 w-6 text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={() => handleStartEditName(i)}
+                      onClick={() => onStartEditName(i)}
                     >
                       <Edit className="h-3 w-3" />
                     </Button>
@@ -165,7 +140,7 @@ const PinList: React.FC<PinListProps> = ({
               <div className="flex items-center gap-2">
                 <Select
                   value={pin.signals && pin.signals.length > 0 ? pin.signals[0].toLowerCase() : 'digital'}
-                  onValueChange={(value) => onUpdatePinSignal(i, value)}
+                  onValueChange={(value) => onUpdatePinSignal?.(i, value)}
                 >
                   <SelectTrigger className="w-full h-7 text-xs">
                     <SelectValue placeholder="Signal type" />
