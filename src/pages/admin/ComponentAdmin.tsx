@@ -90,6 +90,7 @@ const ComponentLibrary = () => {
     isCreatingComponent,
     isUpdatingComponent,
     isDeletingComponent,
+    updateComponentError,
   } = useComponentLibrary();
   
   // Component detail loading state
@@ -173,6 +174,19 @@ const ComponentLibrary = () => {
     
     fetchComponentDetails();
   }, [selectedComponent?.id, isEditDialogOpen, isViewDialogOpen, toast]);
+
+  // Display toast when update error occurs
+  useEffect(() => {
+    if (updateComponentError) {
+      toast({
+        title: "Error updating component",
+        description: updateComponentError instanceof Error 
+          ? updateComponentError.message 
+          : "Failed to update component. Make sure the component type is unique.",
+        variant: "destructive"
+      });
+    }
+  }, [updateComponentError, toast]);
 
   // Redirect if not authenticated or not admin
   if (!user) {
@@ -268,13 +282,23 @@ const ComponentLibrary = () => {
       return;
     }
     
-    if (editedComponent.type !== selectedComponent?.type) {
-      editedComponent.isOriginal = isOriginalWokwiComponent(editedComponent.type);
+    try {
+      if (editedComponent.type !== selectedComponent?.type) {
+        editedComponent.isOriginal = isOriginalWokwiComponent(editedComponent.type);
+      }
+      
+      updateComponent(editedComponent);
+      setIsEditDialogOpen(false);
+    } catch (error) {
+      console.error("Error saving component:", error);
+      toast({
+        title: "Error saving component",
+        description: error instanceof Error 
+          ? error.message 
+          : "An unknown error occurred while saving the component.",
+        variant: "destructive"
+      });
     }
-    
-    updateComponent(editedComponent);
-    
-    setIsEditDialogOpen(false);
   };
 
   const handleConfirmDelete = () => {

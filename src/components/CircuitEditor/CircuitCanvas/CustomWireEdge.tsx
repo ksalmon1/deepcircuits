@@ -145,6 +145,9 @@ function CustomWireEdge({
   const isTemporary = id.startsWith('temp-wire-');
   const pointerEvents = isTemporary ? 'none' : 'auto';
   
+  // Check if edge is being dragged or is selected
+  const isActiveOrSelected = draggingPointIndex !== null || selected;
+  
   return (
     <>
       <path
@@ -152,7 +155,7 @@ function CustomWireEdge({
         className="react-flow__edge-path custom-wire-path"
         d={path}
         stroke={edgeColor}
-        strokeWidth={selected ? 3 : 2}
+        strokeWidth={isActiveOrSelected ? 3 : 2}
         fill="none"
         onClick={handleEdgeClick}
         style={{ pointerEvents }}
@@ -164,11 +167,11 @@ function CustomWireEdge({
           key={`${id}-point-${index}`}
           cx={point.x}
           cy={point.y}
-          r={selected ? 5 : 3}
-          fill={selected ? edgeColor : 'white'}
+          r={isActiveOrSelected ? 5 : 3}
+          fill={isActiveOrSelected ? edgeColor : 'white'}
           stroke={edgeColor}
           strokeWidth={1.5}
-          opacity={selected ? 1 : 0.5}
+          opacity={isActiveOrSelected ? 1 : 0.5}
           className="routing-point"
           onMouseDown={(e) => handlePointMouseDown(e, index)}
           cursor="move"

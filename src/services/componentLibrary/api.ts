@@ -181,6 +181,42 @@ export const updateComponent = async (component: ComponentLibraryItem): Promise<
   }
 
   try {
+    console.log('Updating component ID:', component.id);
+    
+    // First, get the current component data to check if type is changing
+    const { data: currentComponent, error: fetchError } = await supabase
+      .from('component_library')
+      .select('type')
+      .eq('id', component.id)
+      .single();
+    
+    if (fetchError) {
+      console.error('Error fetching current component data:', fetchError);
+      throw fetchError;
+    }
+    
+    const isChangingType = currentComponent.type !== component.type;
+    
+    if (isChangingType) {
+      console.log('Type is changing from', currentComponent.type, 'to', component.type);
+      
+      // Check if the new type already exists in another component
+      const { data: existingComponents, error: checkError } = await supabase
+        .from('component_library')
+        .select('id')
+        .eq('type', component.type)
+        .neq('id', component.id);
+      
+      if (checkError) {
+        console.error('Error checking for existing components with same type:', checkError);
+        throw checkError;
+      }
+      
+      if (existingComponents && existingComponents.length > 0) {
+        throw new Error(`Cannot change type to ${component.type} as it already exists in another component`);
+      }
+    }
+
     // Update component basic info
     const { error: componentError } = await supabase
       .from('component_library')
@@ -200,14 +236,18 @@ export const updateComponent = async (component: ComponentLibraryItem): Promise<
       throw componentError;
     }
 
+    console.log('Basic component info updated successfully');
+
     // Update pins if provided
     if (component.pins) {
       await updatePins(component.id, component.pins);
+      console.log('Component pins updated successfully');
     }
 
     // Update properties if provided
     if (component.properties) {
       await updateProperties(component.id, component.properties);
+      console.log('Component properties updated successfully');
     }
   } catch (error) {
     console.error('Error in updateComponent:', error);
@@ -224,7 +264,7 @@ const insertPins = async (componentId: string, pins: any[]): Promise<void> => {
     name: pin.name,
     x: pin.x,
     y: pin.y,
-    signals: pin.signals
+    signals: pin.signals || []
   }));
 
   const { error } = await supabase

@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { ComponentLibraryItem } from "@/services/componentLibraryService";
 import { ComponentPin } from "@/types/database";
 import { Button } from "@/components/ui/button";
@@ -22,11 +22,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { AlertCircle, Cpu } from "lucide-react";
+import { AlertCircle, Cpu, AlertTriangle } from "lucide-react";
 import { ORIGINAL_WOKWI_COMPONENTS } from "@/integrations/wokwi/WokwiIntegration";
 import VisualPinEditor from "@/components/CircuitEditor/VisualPinEditor";
 import DynamicPropertyEditor from "@/components/CircuitEditor/DynamicPropertyEditor";
 import EnhancedComponentPreview from "@/components/CircuitEditor/EnhancedComponentPreview";
+import { useToast } from "@/hooks/use-toast";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface PinConfig {
   name: string;
@@ -68,6 +70,23 @@ const EditComponentDialog = ({
   updateComponentProperties,
   updatePinConfiguration
 }: EditComponentDialogProps) => {
+  const { toast } = useToast();
+  const [typeChangeWarning, setTypeChangeWarning] = useState<string | null>(null);
+  
+  // Check if component type is being changed
+  const handleTypeChange = (newType: string) => {
+    if (selectedComponent && selectedComponent.type !== newType) {
+      setTypeChangeWarning(
+        "Changing the component type may cause errors if another component is already using this type. " +
+        "Make sure this type is unique across all components."
+      );
+    } else {
+      setTypeChangeWarning(null);
+    }
+    
+    updateComponentProperty('type', newType);
+  };
+  
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
@@ -118,6 +137,13 @@ const EditComponentDialog = ({
             </TabsList>
             
             <TabsContent value="details" className="py-4">
+              {typeChangeWarning && (
+                <Alert variant="warning" className="mb-4">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>{typeChangeWarning}</AlertDescription>
+                </Alert>
+              )}
+              
               <div className="grid gap-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="grid gap-2">
@@ -132,7 +158,7 @@ const EditComponentDialog = ({
                     <label htmlFor="type">Component Type</label>
                     <Select 
                       value={editedComponent.type}
-                      onValueChange={(value) => updateComponentProperty('type', value)}
+                      onValueChange={handleTypeChange}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select type" />
@@ -267,7 +293,17 @@ const EditComponentDialog = ({
         <DialogFooter className="mt-6">
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button 
-            onClick={onSaveComponent}
+            onClick={() => {
+              try {
+                onSaveComponent();
+              } catch (error) {
+                toast({
+                  title: "Error saving component",
+                  description: error instanceof Error ? error.message : "An unknown error occurred",
+                  variant: "destructive"
+                });
+              }
+            }}
             disabled={isUpdatingComponent}
           >
             {isUpdatingComponent ? 'Saving...' : 'Save Changes'}
