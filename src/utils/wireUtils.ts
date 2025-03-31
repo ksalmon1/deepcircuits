@@ -1,11 +1,44 @@
-
 import { Edge } from '@xyflow/react';
 import { CircuitComponent } from '@/types/component';
 import { WireData, WireEdge } from '@/types/circuit';
-import { getPinSignalType, getWireColorFromSignal, findComponentById, getPinByIndex, canPinsConnect } from './pinManagement';
+import { findComponentById, getPinByIndex, canPinsConnect } from './pinManagement';
 
-// Export these functions so they can be imported directly from wireUtils
-export { getPinSignalType, getWireColorFromSignal };
+/**
+ * Get the signal type of a pin
+ */
+export function getPinSignalType(
+  components: CircuitComponent[],
+  componentId: string,
+  pinIndex: number
+): string | null {
+  const component = findComponentById(components, componentId);
+  if (!component) return null;
+  
+  const pin = getPinByIndex(component, pinIndex);
+  if (!pin || !pin.signals || pin.signals.length === 0) return null;
+  
+  return pin.signals[0];
+}
+
+/**
+ * Get wire color based on signal type
+ */
+export function getWireColorFromSignal(signalType: string): string {
+  const signalColorMap: Record<string, string> = {
+    'power': '#ff0000',
+    'ground': '#000000',
+    'analog': '#4BC0C0',
+    'digital': '#9b87f5',
+    'clock': '#ffcc00',
+    'data': '#36A2EB',
+    'i2c': '#8A65D4',
+    'spi': '#4CAF50',
+    'uart': '#FF9800',
+    'pwm': '#E91E63'
+  };
+  
+  return signalColorMap[signalType.toLowerCase()] || '#9b87f5'; // Default color
+}
 
 /**
  * Create a unique ID for a wire

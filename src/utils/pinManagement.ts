@@ -1,23 +1,21 @@
-
 import { ComponentPin, PinConnection, PinWithSignal } from "@/types/pin";
 import { CircuitComponent } from "@/types/component";
 import { PinError } from "./errorHandling";
 import { 
-  createNewPin, 
-  updatePinPosition, 
-  updatePinProperties, 
-  updatePinNameAndSignals,
-  deletePin 
+  isPointNearPin as isNearPin,
+  createNewPin as createPin, 
+  updatePinPosition as updatePosition, 
+  updatePinProperties as updateProps, 
+  updatePinNameAndSignals as updateNameAndSignals,
+  deletePin as removePinFromArray 
 } from './pinUtils';
 
-// Re-export the pin manipulation functions
-export { 
-  createNewPin, 
-  updatePinPosition, 
-  updatePinProperties, 
-  updatePinNameAndSignals,
-  deletePin 
-};
+// Re-export the pin manipulation functions with renamed imports to avoid circular dependencies
+export const createNewPin = createPin;
+export const updatePinPosition = updatePosition;
+export const updatePinProperties = updateProps;
+export const updatePinNameAndSignals = updateNameAndSignals;
+export const deletePin = removePinFromArray;
 
 /**
  * Get a pin from a component by index

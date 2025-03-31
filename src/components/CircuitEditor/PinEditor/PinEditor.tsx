@@ -5,10 +5,10 @@ import { usePinEditor } from '@/hooks/usePinEditor';
 import { useCanvasNavigation } from '@/hooks/useCanvasNavigation';
 import { isWokwiLoaded, forceLoadWokwiElements } from '@/integrations/wokwi/WokwiIntegration';
 import { renderWokwiComponentPreview } from '@/utils/componentPreviewUtils';
-import { isPointNearPin } from '@/utils/pinManagement';
+import { isPointNearPin } from '@/utils/pinUtils';
 import { AppError, logError, PinError } from '@/utils/errorHandling';
 import { toast } from 'sonner';
-import { Button } from '@/components/ui/button'; // Add Button import
+import { Button } from '@/components/ui/button';
 import CanvasToolbar from './CanvasToolbar';
 import PinVisualizer from './PinVisualizer';
 import PinList from './PinList';
