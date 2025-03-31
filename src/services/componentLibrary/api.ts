@@ -188,12 +188,12 @@ export const updateComponent = async (component: ComponentLibraryItem): Promise<
       .from('component_library')
       .update({
         name: component.name,
+        type: component.type,  // Now including type in the update
         category: component.category,
         description: component.description,
         svg_path: component.svgPath,
         enabled: component.enabled,
         is_original: component.isOriginal
-        // Don't include type in the update to avoid the unique constraint issue
       })
       .eq('id', component.id);
 

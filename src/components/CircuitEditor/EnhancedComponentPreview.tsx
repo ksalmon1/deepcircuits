@@ -11,7 +11,8 @@ import {
 
 interface EnhancedComponentPreviewProps {
   componentType: string;
-  properties: Record<string, any>;
+  properties?: Record<string, any>;
+  svgPath?: string;
   customSvgPath?: string;
   previewId?: string;
   showPins?: boolean;
@@ -22,7 +23,8 @@ interface EnhancedComponentPreviewProps {
 
 const EnhancedComponentPreview: React.FC<EnhancedComponentPreviewProps> = ({
   componentType,
-  properties,
+  properties = {},
+  svgPath,
   customSvgPath,
   previewId = `preview-${componentType}-${Date.now()}`,
   showPins = true,

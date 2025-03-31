@@ -15,9 +15,11 @@ const generatePath = (
   let path = `M ${sourceX},${sourceY}`;
   
   // Add each routing point as a line segment
-  routingPoints.forEach(point => {
-    path += ` L ${point.x},${point.y}`;
-  });
+  if (routingPoints && Array.isArray(routingPoints)) {
+    routingPoints.forEach(point => {
+      path += ` L ${point.x},${point.y}`;
+    });
+  }
   
   // If we're in connecting mode and have a cursor position, use that as the final point
   // Otherwise use the target coordinates

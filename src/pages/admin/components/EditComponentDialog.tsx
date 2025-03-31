@@ -104,7 +104,7 @@ const EditComponentDialog = ({ component, open, onClose, onSaved }: EditComponen
         const updatedComponent: ComponentLibraryItem = {
           id: component.id,
           name,
-          type, // Keep the original type for now to prevent conflicts
+          type, // Allowing type to be changed now
           category,
           description,
           svgPath,
@@ -168,9 +168,8 @@ const EditComponentDialog = ({ component, open, onClose, onSaved }: EditComponen
                   value={type}
                   onChange={(e) => setType(e.target.value)}
                   placeholder="Component type (e.g., wokwi-led)"
-                  disabled={true} // Disable type change to prevent unique constraint issues
                 />
-                <p className="text-xs text-muted-foreground">Type cannot be changed after creation.</p>
+                <p className="text-xs text-muted-foreground">Changing type may affect component behavior.</p>
               </div>
               
               <div className="grid gap-2">
@@ -242,7 +241,7 @@ const EditComponentDialog = ({ component, open, onClose, onSaved }: EditComponen
                 <EnhancedComponentPreview 
                   componentType={type} 
                   svgPath={svgPath}
-                  isOriginal={isOriginal}
+                  isOriginalComponent={isOriginal}
                 />
               </div>
               
