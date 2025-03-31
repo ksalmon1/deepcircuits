@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { 
   isWokwiLoaded, 
@@ -195,6 +196,9 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
       if (!componentData) return;
       
       console.log('Dropped component data:', componentData);
+      
+      // Parse the component data
+      const componentInfo = JSON.parse(componentData);
       
       const rect = canvasRef.current?.getBoundingClientRect();
       if (!rect) return;
