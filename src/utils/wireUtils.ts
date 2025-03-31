@@ -166,3 +166,38 @@ export function areSameConnection(edge1: Edge, edge2: Edge): boolean {
   
   return directMatch || reverseMatch;
 }
+
+/**
+ * Check if two points are aligned horizontally (same y-coordinate)
+ */
+export function arePointsHorizontallyAligned(point1: { x: number, y: number }, point2: { x: number, y: number }, threshold: number = 3): boolean {
+  return Math.abs(point1.y - point2.y) <= threshold;
+}
+
+/**
+ * Check if two points are aligned vertically (same x-coordinate)
+ */
+export function arePointsVerticallyAligned(point1: { x: number, y: number }, point2: { x: number, y: number }, threshold: number = 3): boolean {
+  return Math.abs(point1.x - point2.x) <= threshold;
+}
+
+/**
+ * Snap a point to another point's coordinates if they're within threshold
+ */
+export function snapPointToAlignment(
+  point: { x: number, y: number },
+  referencePoint: { x: number, y: number },
+  threshold: number = 3
+): { x: number, y: number } {
+  const newPoint = { ...point };
+  
+  if (arePointsHorizontallyAligned(point, referencePoint, threshold)) {
+    newPoint.y = referencePoint.y;
+  }
+  
+  if (arePointsVerticallyAligned(point, referencePoint, threshold)) {
+    newPoint.x = referencePoint.x;
+  }
+  
+  return newPoint;
+}

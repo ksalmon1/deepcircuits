@@ -98,6 +98,10 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     handleHandleClick,
     deleteWire,
     connectionLineStyle,
+    showHorizontalGuide,
+    showVerticalGuide,
+    lastFixedPointPosition,
+    mousePosition
   } = useWireRouting(components);
   
   // React Flow state
@@ -346,6 +350,47 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
             color="#e2e8f0" 
           />
           <Controls position="bottom-right" showInteractive={false} />
+          
+          {/* Alignment Guides */}
+          {wireConnectionState.isConnecting && (
+            <svg
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                pointerEvents: 'none',
+                zIndex: 5,
+              }}
+            >
+              {showHorizontalGuide && (
+                <line
+                  x1={lastFixedPointPosition.x}
+                  y1={mousePosition.y}
+                  x2={mousePosition.x}
+                  y2={mousePosition.y}
+                  stroke="#3b82f6"
+                  strokeWidth={1}
+                  strokeDasharray="5,5"
+                  pointerEvents="none"
+                />
+              )}
+              
+              {showVerticalGuide && (
+                <line
+                  x1={mousePosition.x}
+                  y1={lastFixedPointPosition.y}
+                  x2={mousePosition.x}
+                  y2={mousePosition.y}
+                  stroke="#3b82f6"
+                  strokeWidth={1}
+                  strokeDasharray="5,5"
+                  pointerEvents="none"
+                />
+              )}
+            </svg>
+          )}
         </ReactFlow>
       </div>
     </div>
