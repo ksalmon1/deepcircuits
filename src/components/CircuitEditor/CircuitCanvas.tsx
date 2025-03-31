@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { 
   isWokwiLoaded, 
@@ -127,6 +128,9 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     isLoadingComponents, 
     isLoadingDetails 
   } = useComponentLibrary();
+  
+  // Get project function from useReactFlow hook
+  const { project } = useReactFlow();
   
   useEffect(() => {
     if (!components || components.length === 0) return;
@@ -342,7 +346,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
           />
           <Controls position="bottom-right" showInteractive={false} />
           
-          {wireConnectionState.isConnecting && (
+          {wireConnectionState.isConnecting && (showHorizontalGuide || showVerticalGuide) && (
             <svg
               style={{
                 position: 'absolute',
@@ -354,52 +358,46 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
                 zIndex: 5,
               }}
             >
-              {showHorizontalGuide && reactFlowInstance && (() => {
-                const containerWidth = reactFlowWrapperRef.current?.clientWidth ?? 0;
+              {showHorizontalGuide && (() => {
+                // Project both points to screen coordinates
+                const projectedFixed = project(lastFixedPointPosition);
+                const projectedMouse = project(mousePosition);
                 
-                console.log('Rendering Horizontal Guide:', {
-                  containerWidth,
-                  showHorizontalGuide,
-                  mousePosition
-                });
+                // Remove any previous console logs here
                 
-                const testY = 50;
-                
+                // Draw H line AT fixed Y, from fixed X to mouse X
                 return (
                   <line
-                    x1={0}
-                    y1={testY}
-                    x2={containerWidth}
-                    y2={testY}
-                    stroke="#FF0000"
-                    strokeWidth={2}
+                    x1={projectedFixed.x}
+                    y1={projectedFixed.y}
+                    x2={projectedMouse.x}
+                    y2={projectedFixed.y} // Use fixed Y to keep it horizontal
+                    stroke="#3082f6"
+                    strokeWidth={1}
                     strokeDasharray="5,5"
-                    pointerEvents="none"
+                    // pointerEvents="none" // Already set on SVG
                   />
                 );
               })()}
               
-              {showVerticalGuide && reactFlowInstance && (() => {
-                const containerHeight = reactFlowWrapperRef.current?.clientHeight ?? 0;
+              {showVerticalGuide && (() => {
+                // Project both points to screen coordinates
+                const projectedFixed = project(lastFixedPointPosition);
+                const projectedMouse = project(mousePosition);
                 
-                console.log('Rendering Vertical Guide:', {
-                  containerHeight,
-                  showVerticalGuide,
-                  mousePosition
-                });
+                // Remove any previous console logs here
                 
-                const testX = 100; 
-                
+                // Draw V line AT fixed X, from fixed Y to mouse Y
                 return (
                   <line
-                    x1={testX}
-                    y1={0}
-                    x2={testX}
-                    y2={containerHeight}
-                    stroke="#FF0000"
-                    strokeWidth={2}
+                    x1={projectedFixed.x}
+                    y1={projectedFixed.y}
+                    x2={projectedFixed.x} // Use fixed X to keep it vertical
+                    y2={projectedMouse.y}
+                    stroke="#3082f6"
+                    strokeWidth={1}
                     strokeDasharray="5,5"
-                    pointerEvents="none"
+                    // pointerEvents="none" // Already set on SVG
                   />
                 );
               })()}
