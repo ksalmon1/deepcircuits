@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { 
   isWokwiLoaded, 
@@ -40,6 +39,7 @@ import WokwiComponentNode from './CircuitCanvas/WokwiComponentNode';
 import CustomWireEdge from './CircuitCanvas/CustomWireEdge';
 import LoadingOverlay from './CircuitCanvas/LoadingOverlay';
 import { useCircuitCanvasState } from '@/hooks/useCircuitCanvasState';
+import { convertToCanvasCoordinates } from '@/utils/canvasUtils';
 
 interface CircuitCanvasProps {
   components: WokwiComponent[];
@@ -364,31 +364,51 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
                 zIndex: 5,
               }}
             >
-              {showHorizontalGuide && (
-                <line
-                  x1={lastFixedPointPosition.x}
-                  y1={mousePosition.y}
-                  x2={mousePosition.x}
-                  y2={mousePosition.y}
-                  stroke="#3b82f6"
-                  strokeWidth={1}
-                  strokeDasharray="5,5"
-                  pointerEvents="none"
-                />
-              )}
+              {showHorizontalGuide && reactFlowInstance && (() => {
+                // Convert flow coordinates to screen coordinates
+                const viewport = reactFlowInstance.getViewport();
+                
+                // Calculate screen coordinates for horizontal guide
+                const mouseScreenX = mousePosition.x * viewport.zoom + viewport.x;
+                const mouseScreenY = mousePosition.y * viewport.zoom + viewport.y;
+                const lastFixedScreenX = lastFixedPointPosition.x * viewport.zoom + viewport.x;
+                
+                return (
+                  <line
+                    x1={lastFixedScreenX}
+                    y1={mouseScreenY}
+                    x2={mouseScreenX}
+                    y2={mouseScreenY}
+                    stroke="#3b82f6"
+                    strokeWidth={1}
+                    strokeDasharray="5,5"
+                    pointerEvents="none"
+                  />
+                );
+              })()}
               
-              {showVerticalGuide && (
-                <line
-                  x1={mousePosition.x}
-                  y1={lastFixedPointPosition.y}
-                  x2={mousePosition.x}
-                  y2={mousePosition.y}
-                  stroke="#3b82f6"
-                  strokeWidth={1}
-                  strokeDasharray="5,5"
-                  pointerEvents="none"
-                />
-              )}
+              {showVerticalGuide && reactFlowInstance && (() => {
+                // Convert flow coordinates to screen coordinates
+                const viewport = reactFlowInstance.getViewport();
+                
+                // Calculate screen coordinates for vertical guide
+                const mouseScreenX = mousePosition.x * viewport.zoom + viewport.x;
+                const mouseScreenY = mousePosition.y * viewport.zoom + viewport.y;
+                const lastFixedScreenY = lastFixedPointPosition.y * viewport.zoom + viewport.y;
+                
+                return (
+                  <line
+                    x1={mouseScreenX}
+                    y1={lastFixedScreenY}
+                    x2={mouseScreenX}
+                    y2={mouseScreenY}
+                    stroke="#3b82f6"
+                    strokeWidth={1}
+                    strokeDasharray="5,5"
+                    pointerEvents="none"
+                  />
+                );
+              })()}
             </svg>
           )}
         </ReactFlow>
