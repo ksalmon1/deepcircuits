@@ -1,5 +1,6 @@
 
 import { WokwiPin } from "@/integrations/wokwi/WokwiIntegration";
+import { ComponentPin } from "@/types/pin";
 
 /**
  * Base interface for component library items
@@ -13,7 +14,7 @@ export interface ComponentLibraryItem {
   svgPath?: string;
   enabled: boolean;
   isOriginal: boolean;
-  pins?: WokwiPin[];
+  pins?: ComponentPin[];
   properties?: Record<string, any>;
   createdAt?: string;
   updatedAt?: string;
@@ -28,7 +29,7 @@ export interface CircuitComponent {
   top: number;
   left: number;
   attributes: Record<string, any>;
-  pins?: WokwiPin[];
+  pins?: ComponentPin[];
   svgPath?: string | null;
   isOriginal?: boolean;
 }

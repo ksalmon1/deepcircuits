@@ -1,11 +1,11 @@
 import { useCallback, useState, useEffect } from 'react';
 import { Connection, useReactFlow, Edge, Position, XYPosition } from '@xyflow/react';
 import { WireData, WireConnectionState, WireEdge } from '@/types/circuit';
-import { getWireColorFromSignal, getPinSignalType } from '@/utils/wireUtils';
-import { WokwiComponent } from '@/integrations/wokwi/WokwiIntegration';
+import { getPinSignalType, getWireColorFromSignal, isValidConnection, createWireId } from '@/utils/wireUtils';
+import { CircuitComponent } from '@/types/component';
 import { toast } from 'sonner';
 
-export const useWireRouting = (components: WokwiComponent[]) => {
+export const useWireRouting = (components: CircuitComponent[]) => {
   const { setEdges, getNodes, getEdges, getViewport } = useReactFlow();
   const [wireConnectionState, setWireConnectionState] = useState<WireConnectionState>({
     isConnecting: false,
@@ -14,7 +14,6 @@ export const useWireRouting = (components: WokwiComponent[]) => {
   const [temporaryEdge, setTemporaryEdge] = useState<Edge<WireData> | null>(null);
   const [mousePosition, setMousePosition] = useState<XYPosition>({ x: 0, y: 0 });
 
-  // Define cancelWireConnection first since it's used in other functions
   const cancelWireConnection = useCallback(() => {
     if (!wireConnectionState.isConnecting) return;
     
@@ -168,11 +167,25 @@ export const useWireRouting = (components: WokwiComponent[]) => {
     
     const targetPinIndex = parseInt(targetHandleId.split('-')[1]);
     
+    if (!isValidConnection(
+      components, 
+      wireConnectionState.sourceNodeId, 
+      wireConnectionState.sourcePinIndex || 0,
+      targetNodeId,
+      targetPinIndex
+    )) {
+      toast.error('Invalid connection', {
+        description: 'These pins cannot be connected together',
+        duration: 2000,
+      });
+      return false;
+    }
+    
     const signal = getPinSignalType(components, wireConnectionState.sourceNodeId, wireConnectionState.sourcePinIndex || 0);
     const wireColor = getWireColorFromSignal(signal || '');
     
     const newEdge: WireEdge = {
-      id: `wire-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+      id: createWireId(),
       source: wireConnectionState.sourceNodeId,
       target: targetNodeId,
       sourceHandle: wireConnectionState.sourceHandleId,

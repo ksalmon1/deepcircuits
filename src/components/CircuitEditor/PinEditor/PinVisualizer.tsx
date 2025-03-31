@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
-import { ComponentPin } from '@/types/database';
+import { ComponentPin } from '@/types/pin';
+import { getWireColorFromSignal } from '@/utils/pinManagement';
 
 interface PinVisualizerProps {
   pins: ComponentPin[];
@@ -27,35 +28,14 @@ const PinVisualizer: React.FC<PinVisualizerProps> = ({
   const getSignalColor = (signals: string[] | undefined): string => {
     if (!signals || signals.length === 0) return '#4BC0C0'; // Default to teal
     
-    const signal = signals[0].toLowerCase();
-    const colors: Record<string, string> = {
-      'power': '#FF6384',    // Red
-      'ground': '#36A2EB',   // Blue
-      'digital': '#4BC0C0',  // Teal
-      'analog': '#FFCE56',   // Yellow
-      'passive': '#9966FF',  // Purple
-      'i2c': '#FF9F40',      // Orange
-      'spi': '#C9CBCF',      // Gray
-      'uart': '#7CFC00',     // Lime
-      'rx': '#FF00FF',       // Magenta
-      'tx': '#00FFFF',       // Cyan
-    };
-    
-    // Try to match any part of the signal name with the color map
-    for (const [key, color] of Object.entries(colors)) {
-      if (signal.includes(key)) {
-        return color;
-      }
-    }
-    
-    return colors[signal] || '#4BC0C0'; // Default to teal if no match
+    return getWireColorFromSignal(signals[0]);
   };
   
   return (
     <>
       {pins.map((pin, i) => {
-        const pinX = Number(pin.x);
-        const pinY = Number(pin.y);
+        const pinX = pin.x;
+        const pinY = pin.y;
         const isHovered = hoveredPin === i || hoveredPinIndex === i;
         const pinColor = getSignalColor(pin.signals);
         

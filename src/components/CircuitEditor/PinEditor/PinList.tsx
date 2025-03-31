@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ComponentPin } from '@/types/database';
+import { ComponentPin, PinSignalType, SIGNAL_COLOR_MAP } from '@/types/pin';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { X, Edit, Check, Trash2 } from 'lucide-react';
@@ -85,21 +85,7 @@ const PinList: React.FC<PinListProps> = ({
 
   // Function to get a color based on signal type
   const getSignalColor = (signal: string): string => {
-    const normalizedSignal = signal.toLowerCase();
-    const colors: Record<string, string> = {
-      'power': '#FF6384',    // Red
-      'ground': '#36A2EB',   // Blue
-      'digital': '#4BC0C0',  // Teal
-      'analog': '#FFCE56',   // Yellow
-      'passive': '#9966FF',  // Purple
-      'i2c': '#FF9F40',      // Orange
-      'spi': '#C9CBCF',      // Gray
-      'uart': '#7CFC00',     // Lime
-      'rx': '#FF00FF',       // Magenta
-      'tx': '#00FFFF',       // Cyan
-    };
-    
-    return colors[normalizedSignal] || '#4BC0C0'; // Default to teal if no match
+    return SIGNAL_COLOR_MAP[signal.toLowerCase()] || SIGNAL_COLOR_MAP[PinSignalType.OTHER];
   };
   
   if (pins.length === 0) {

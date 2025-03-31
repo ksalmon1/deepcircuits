@@ -1,9 +1,8 @@
-
 import React, { useState, useRef, useEffect } from 'react';
-import { ComponentPin } from '@/types/database';
+import { ComponentPin } from '@/types/pin';
 import { isWokwiLoaded, forceLoadWokwiElements } from '@/integrations/wokwi/WokwiIntegration';
 import { renderWokwiComponentPreview } from '@/utils/componentPreviewUtils';
-import { isPointNearPin, createNewPin, updatePinPosition, updatePinProperties, deletePin } from '@/utils/pinUtils';
+import { isPointNearPin, createNewPin, updatePinPosition, updatePinProperties, deletePin } from '@/utils/pinManagement';
 import { useCanvasNavigation } from '@/hooks/useCanvasNavigation';
 import CanvasToolbar from './PinEditor/CanvasToolbar';
 import PinVisualizer from './PinEditor/PinVisualizer';
@@ -139,8 +138,8 @@ Calculated pin position relative to component origin: (${canvasX}, ${canvasY})`;
     
     for (let i = 0; i < pinData.length; i++) {
       const pin = pinData[i];
-      const pinX = Number(pin.x);
-      const pinY = Number(pin.y);
+      const pinX = pin.x;
+      const pinY = pin.y;
       
       if (isPointNearPin(canvasX, canvasY, pinX, pinY)) {
         setDraggingPin(i);
@@ -212,11 +211,9 @@ Calculated pin position relative to component origin: (${canvasX}, ${canvasY})`;
   const handleUpdatePinSignal = (index: number, signal: string) => {
     if (readonly) return;
     
-    const updatedPins = [...pinData];
-    updatedPins[index] = {
-      ...updatedPins[index],
+    const updatedPins = updatePinProperties(pinData, index, {
       signals: [signal]
-    };
+    });
     
     handlePinsChange(updatedPins);
   };
@@ -224,11 +221,7 @@ Calculated pin position relative to component origin: (${canvasX}, ${canvasY})`;
   const handleUpdatePinName = (index: number, name: string) => {
     if (readonly) return;
     
-    const updatedPins = [...pinData];
-    updatedPins[index] = {
-      ...updatedPins[index],
-      name
-    };
+    const updatedPins = updatePinProperties(pinData, index, { name });
     
     handlePinsChange(updatedPins);
   };
