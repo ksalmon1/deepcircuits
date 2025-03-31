@@ -1,4 +1,3 @@
-
 import React, { memo, useState, useCallback } from 'react';
 import { CustomWireEdgeProps, WireData } from '@/types/circuit';
 import { useReactFlow } from '@xyflow/react';
@@ -84,9 +83,9 @@ function CustomWireEdge({
     setEdges(edges => {
       return edges.map(edge => {
         if (edge.id === id) {
-          // Fix: Safely handle the routing points with type checking
+          // Fix: Safely check if routingPoints is an array
           const currentRoutingPoints = edge.data?.routingPoints;
-          // Ensure routingPoints is an array before spreading
+          // Use Array.isArray to ensure routingPoints is an array
           const newRoutingPoints = Array.isArray(currentRoutingPoints) 
             ? [...currentRoutingPoints]
             : [];

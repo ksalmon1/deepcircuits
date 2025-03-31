@@ -19,13 +19,14 @@ export function useComponentPinCache() {
 
   // Populate the pin cache with data from the component library
   const populatePinCache = useCallback(() => {
-    if (libraryComponents && componentsDetailsMap && Object.keys(componentsDetailsMap).length > 0) {
+    // Check if libraryComponents is an array before proceeding
+    if (Array.isArray(libraryComponents) && componentsDetailsMap && Object.keys(componentsDetailsMap).length > 0) {
       console.log('Loading pin data from componentsDetailsMap:', Object.keys(componentsDetailsMap).length);
       
       libraryComponents.forEach(component => {
         if (component.id && componentsDetailsMap[component.id]) {
           const details = componentsDetailsMap[component.id];
-          if (details && details.pins && details.pins.length > 0) {
+          if (details && details.pins && Array.isArray(details.pins) && details.pins.length > 0) {
             console.log(`Found pins for ${component.name} (${component.type}) from details:`, details.pins);
             pinCache[component.type] = details.pins.map((pin: any) => ({
               name: pin.name,
@@ -38,11 +39,11 @@ export function useComponentPinCache() {
       });
       
       console.log('Pin cache after loading from details:', pinCache);
-    } else if (libraryComponents && libraryComponents.length > 0) {
+    } else if (Array.isArray(libraryComponents) && libraryComponents.length > 0) {
       console.log('Loading pin data from library components:', libraryComponents.length);
       
       libraryComponents.forEach(component => {
-        if (component.pins && component.pins.length > 0) {
+        if (component.pins && Array.isArray(component.pins) && component.pins.length > 0) {
           console.log(`Found pins for ${component.name} (${component.type}):`, component.pins);
           pinCache[component.type] = component.pins.map(pin => ({
             name: pin.name,

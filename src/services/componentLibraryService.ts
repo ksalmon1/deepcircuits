@@ -1,10 +1,22 @@
-import { supabase } from '@/supabaseClient';
+
+import { supabase } from '@/integrations/supabase/client';
 import { WokwiComponent } from '@/integrations/wokwi/WokwiIntegration';
+
+// Type definition for Component Library Item
+export interface ComponentLibraryItem extends WokwiComponent {
+  name: string;
+  category: string;
+  description?: string;
+  enabled: boolean;
+  isOriginal: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
 
 export async function getComponents(): Promise<WokwiComponent[]> {
   try {
     const { data, error } = await supabase
-      .from('components')
+      .from('component_library')  // Changed from 'components' to 'component_library'
       .select('*')
       .order('name', { ascending: true });
 
@@ -33,10 +45,13 @@ export async function getComponents(): Promise<WokwiComponent[]> {
   }
 }
 
+// Alias function for backward compatibility
+export const getAllComponents = getComponents;
+
 export async function getComponentById(id: string): Promise<WokwiComponent | null> {
   try {
     const { data, error } = await supabase
-      .from('components')
+      .from('component_library')  // Changed from 'components' to 'component_library'
       .select('*')
       .eq('id', id)
       .single();
@@ -74,7 +89,7 @@ export async function getComponentById(id: string): Promise<WokwiComponent | nul
 export async function searchComponents(query: string): Promise<WokwiComponent[]> {
   try {
     const { data, error } = await supabase
-      .from('components')
+      .from('component_library')  // Changed from 'components' to 'component_library'
       .select('*')
       .ilike('name', `%${query}%`)
       .limit(10);
@@ -130,17 +145,10 @@ export async function getComponentWithDetails(id: string): Promise<WokwiComponen
     }
 
     // Safely access and type check each property
-    const componentData = typeof rpcData === 'object' && rpcData !== null && 'component' in rpcData && 
-      typeof rpcData.component === 'object' && rpcData.component !== null ? 
-      (rpcData.component as Record<string, any>) : {};
-    
-    const pins = typeof rpcData === 'object' && rpcData !== null && 'pins' in rpcData && 
-      Array.isArray(rpcData.pins) ? 
-      (rpcData.pins as Array<any>) : [];
-    
-    const properties = typeof rpcData === 'object' && rpcData !== null && 'properties' in rpcData && 
-      typeof rpcData.properties === 'object' && rpcData.properties !== null ? 
-      (rpcData.properties as Record<string, any>) : {};
+    const rpcDataObj = rpcData as Record<string, any>;
+    const componentData = rpcDataObj.component as Record<string, any> || {};
+    const pins = Array.isArray(rpcDataObj.pins) ? rpcDataObj.pins : [];
+    const properties = typeof rpcDataObj.properties === 'object' ? rpcDataObj.properties as Record<string, any> : {};
 
     console.log('Mapped component data:', {
       id: componentData.id,
@@ -166,5 +174,92 @@ export async function getComponentWithDetails(id: string): Promise<WokwiComponen
   } catch (error) {
     console.error('Error in getComponentWithDetails:', error);
     return null;
+  }
+}
+
+// Add CRUD operations for component library
+export async function createComponent(component: ComponentLibraryItem): Promise<{ success: boolean; data?: ComponentLibraryItem; error?: string }> {
+  try {
+    const { data, error } = await supabase.from('component_library').insert({
+      name: component.name,
+      type: component.type,
+      category: component.category,
+      description: component.description,
+      svg_path: component.svgPath,
+      enabled: component.enabled,
+      is_original: component.isOriginal
+    }).select().single();
+
+    if (error) {
+      console.error('Error creating component:', error);
+      return { success: false, error: error.message };
+    }
+
+    return { 
+      success: true, 
+      data: {
+        id: data.id,
+        name: data.name,
+        type: data.type,
+        category: data.category,
+        description: data.description,
+        svgPath: data.svg_path,
+        enabled: data.enabled,
+        isOriginal: data.is_original,
+        pins: [],
+        properties: {},
+        createdAt: data.created_at,
+        updatedAt: data.updated_at
+      }
+    };
+  } catch (error) {
+    console.error('Error in createComponent:', error);
+    return { success: false, error: 'Failed to create component' };
+  }
+}
+
+export async function updateComponent(component: ComponentLibraryItem): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { error } = await supabase
+      .from('component_library')
+      .update({
+        name: component.name,
+        type: component.type,
+        category: component.category,
+        description: component.description,
+        svg_path: component.svgPath,
+        enabled: component.enabled,
+        is_original: component.isOriginal
+      })
+      .eq('id', component.id);
+
+    if (error) {
+      console.error('Error updating component:', error);
+      return { success: false, error: error.message };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error in updateComponent:', error);
+    return { success: false, error: 'Failed to update component' };
+  }
+}
+
+export async function deleteComponent(id: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { error } = await supabase
+      .from('component_library')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting component:', error);
+      return { success: false, error: error.message };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error in deleteComponent:', error);
+    return { success: false, error: 'Failed to delete component' };
   }
 }

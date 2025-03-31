@@ -1,6 +1,7 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
-  getAllComponents, 
+  getComponents, 
   getComponentWithDetails, 
   createComponent, 
   updateComponent, 
@@ -23,7 +24,7 @@ export const useComponentLibrary = () => {
     refetch: refetchComponents
   } = useQuery({
     queryKey: ['components'],
-    queryFn: getAllComponents
+    queryFn: getComponents
   });
   
   // Fetch all component details on load
@@ -65,7 +66,7 @@ export const useComponentLibrary = () => {
       console.log(`Fetched details for ${Object.keys(detailsMap).length} components`);
       return detailsMap;
     },
-    enabled: components.length > 0
+    enabled: Array.isArray(components) && components.length > 0
   });
   
   // Query factory for fetching a single component with details
