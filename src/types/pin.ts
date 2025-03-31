@@ -45,3 +45,41 @@ export interface PinVisualization {
   size?: number;
   highlighted?: boolean;
 }
+
+/**
+ * Enum for pin signal types
+ */
+export enum PinSignalType {
+  POWER = 'power',
+  GROUND = 'ground',
+  DIGITAL = 'digital',
+  ANALOG = 'analog',
+  PASSIVE = 'passive',
+  I2C = 'i2c',
+  SPI = 'spi',
+  UART = 'uart',
+  RX = 'rx',
+  TX = 'tx',
+  CLOCK = 'clock',
+  DATA = 'data',
+  OTHER = 'other'
+}
+
+/**
+ * Map of signal types to colors for visualization
+ */
+export const SIGNAL_COLOR_MAP: Record<string, string> = {
+  [PinSignalType.POWER]: '#ff0000',
+  [PinSignalType.GROUND]: '#000000',
+  [PinSignalType.ANALOG]: '#4BC0C0',
+  [PinSignalType.DIGITAL]: '#9b87f5',
+  [PinSignalType.CLOCK]: '#ffcc00',
+  [PinSignalType.DATA]: '#36A2EB',
+  [PinSignalType.I2C]: '#8A65D4',
+  [PinSignalType.SPI]: '#4CAF50',
+  [PinSignalType.UART]: '#FF9800',
+  [PinSignalType.RX]: '#E91E63',
+  [PinSignalType.TX]: '#673AB7',
+  [PinSignalType.PASSIVE]: '#795548',
+  [PinSignalType.OTHER]: '#9E9E9E'
+};

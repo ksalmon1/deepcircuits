@@ -4,6 +4,9 @@ import { CircuitComponent } from '@/types/component';
 import { WireData, WireEdge } from '@/types/circuit';
 import { getPinSignalType, getWireColorFromSignal, findComponentById, getPinByIndex, canPinsConnect } from './pinManagement';
 
+// Export these functions so they can be imported directly from wireUtils
+export { getPinSignalType, getWireColorFromSignal };
+
 /**
  * Create a unique ID for a wire
  */

@@ -2,6 +2,22 @@
 import { ComponentPin, PinConnection, PinWithSignal } from "@/types/pin";
 import { CircuitComponent } from "@/types/component";
 import { PinError } from "./errorHandling";
+import { 
+  createNewPin, 
+  updatePinPosition, 
+  updatePinProperties, 
+  updatePinNameAndSignals,
+  deletePin 
+} from './pinUtils';
+
+// Re-export the pin manipulation functions
+export { 
+  createNewPin, 
+  updatePinPosition, 
+  updatePinProperties, 
+  updatePinNameAndSignals,
+  deletePin 
+};
 
 /**
  * Get a pin from a component by index

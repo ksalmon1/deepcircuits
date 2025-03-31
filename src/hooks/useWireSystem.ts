@@ -1,6 +1,8 @@
+
 import { useCallback } from 'react';
 import { Connection, useReactFlow, addEdge, Edge } from '@xyflow/react';
 import { WokwiComponent } from '@/integrations/wokwi/WokwiIntegration';
+// Import the functions directly from wireUtils where they are now exported
 import { getWireColorFromSignal, getPinSignalType } from '@/utils/wireUtils';
 import { toast } from 'sonner';
 import { WireData, WireEdge } from '@/types/circuit';

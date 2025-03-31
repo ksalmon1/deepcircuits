@@ -1,5 +1,5 @@
 
-import { ComponentPin } from '@/types/database';
+import { ComponentPin } from '@/types/pin';
 
 /**
  * Checks if a point is within a specified distance of a pin
@@ -85,11 +85,34 @@ export const updatePinPosition = (
  * Updates a pin's properties
  * @param pins - Array of pins
  * @param pinIndex - Index of the pin to update
- * @param name - New pin name
- * @param signals - New pin signals
+ * @param props - Properties to update
  * @returns Updated array of pins
  */
 export const updatePinProperties = (
+  pins: ComponentPin[],
+  pinIndex: number,
+  props: Partial<ComponentPin>
+): ComponentPin[] => {
+  if (pinIndex < 0 || pinIndex >= pins.length) return pins;
+  
+  const updatedPins = [...pins];
+  updatedPins[pinIndex] = {
+    ...updatedPins[pinIndex],
+    ...props
+  };
+  
+  return updatedPins;
+};
+
+/**
+ * Updates a pin's name and signals
+ * @param pins - Array of pins
+ * @param pinIndex - Index of the pin to update
+ * @param name - New pin name
+ * @param signals - New pin signals as comma-separated string
+ * @returns Updated array of pins
+ */
+export const updatePinNameAndSignals = (
   pins: ComponentPin[],
   pinIndex: number,
   name: string,

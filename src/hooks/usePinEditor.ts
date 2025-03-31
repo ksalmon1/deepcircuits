@@ -1,7 +1,12 @@
 
 import { useState, useCallback } from 'react';
 import { ComponentPin } from '@/types/pin';
-import { createNewPin, updatePinPosition, updatePinProperties, deletePin } from '@/utils/pinManagement';
+import { 
+  createNewPin,
+  updatePinPosition,
+  updatePinProperties,
+  deletePin
+} from '@/utils/pinManagement';
 
 /**
  * Custom hook to manage pin editor state and operations
