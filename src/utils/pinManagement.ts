@@ -14,7 +14,8 @@ import {
 import {
   findComponentById,
   getPinByIndex,
-  canPinsConnect
+  canPinsConnect,
+  getWireColorFromSignal
 } from './wireUtils';
 
 // Re-export the pin manipulation functions with renamed imports to avoid circular dependencies

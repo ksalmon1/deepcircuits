@@ -1,13 +1,12 @@
-
 import { useCallback } from 'react';
 import { Connection, useReactFlow, addEdge, Edge } from '@xyflow/react';
 import { WokwiComponent } from '@/integrations/wokwi/WokwiIntegration';
 import { 
-  getWireColorFromSignal, 
   getPinSignalType, 
   createWireEdge, 
   isValidConnection, 
-  calculateWireRoutingPoints 
+  calculateWireRoutingPoints,
+  getWireColorFromSignal 
 } from '@/utils/wireUtils';
 import { toast } from 'sonner';
 import { WireData, WireEdge } from '@/types/circuit';
@@ -82,8 +81,8 @@ export function useWireSystem(components: WokwiComponent[]) {
         calculatedRoutingPoints
       );
       
-      // Add to React Flow
-      setEdges((eds) => addEdge(newEdge, eds) as Edge[]);
+      // Add to React Flow - use explicit type casting for safety
+      setEdges((eds) => addEdge(newEdge as unknown as Connection, eds) as Edge[]);
       
       // Create the connection object
       const newConnection: PinConnection = {

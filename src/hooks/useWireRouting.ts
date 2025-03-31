@@ -1,7 +1,8 @@
+
 import { useCallback, useState, useEffect } from 'react';
 import { Connection, useReactFlow, Edge, Position, XYPosition } from '@xyflow/react';
 import { WireData, WireEdge, WireConnectionState } from '@/types/circuit';
-import { getPinSignalType, getWireColorFromSignal, isValidConnection, createWireId } from '@/utils/wireUtils';
+import { getPinSignalType, isValidConnection, createWireId, getWireColorFromSignal } from '@/utils/wireUtils';
 import { CircuitComponent } from '@/types/component';
 import { toast } from 'sonner';
 
@@ -65,7 +66,7 @@ export const useWireRouting = (components: CircuitComponent[]) => {
           ...edge,
           targetPosition: Position.Left,
           data: {
-            ...edge.data,
+            ...(edge.data as WireData),
             cursorPosition: mousePos
           }
         };

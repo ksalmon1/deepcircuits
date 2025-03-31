@@ -63,23 +63,25 @@ export const libraryItemToCircuitComponent = (item: ComponentLibraryItem): Circu
  * Convert a circuit component to a node for the React Flow canvas
  */
 export const circuitComponentToNode = (component: CircuitComponent): Node => {
+  const nodeData: WokwiNodeData = {
+    type: component.type,
+    label: component.name || component.type,
+    attributes: component.attributes || {},
+    pins: component.pins ? component.pins.map(pin => ({
+      name: pin.name,
+      x: pin.x,
+      y: pin.y,
+      signals: pin.signals || []
+    })) : [],
+    svgPath: component.svgPath,
+    isOriginal: component.isOriginal,
+  };
+
   return {
     id: component.id,
     type: 'wokwiComponent',
     position: { x: component.left, y: component.top },
-    data: {
-      type: component.type,
-      label: component.name || component.type,
-      attributes: component.attributes || {},
-      pins: component.pins ? component.pins.map(pin => ({
-        name: pin.name,
-        x: pin.x,
-        y: pin.y,
-        signals: pin.signals || []
-      })) : [],
-      svgPath: component.svgPath,
-      isOriginal: component.isOriginal,
-    } as WokwiNodeData,
+    data: nodeData,
     draggable: true,
   };
 };
@@ -88,12 +90,13 @@ export const circuitComponentToNode = (component: CircuitComponent): Node => {
  * Convert a React Flow node back to a circuit component
  */
 export const nodeToCircuitComponent = (node: Node): CircuitComponent => {
-  const nodeData = node.data as WokwiNodeData;
+  // Type assertion with safe fallbacks
+  const nodeData = node.data as unknown as WokwiNodeData;
   
   return {
     id: node.id,
-    type: nodeData.type,
-    name: nodeData.label || nodeData.type, // Use label as name if available
+    type: nodeData.type || 'unknown',
+    name: nodeData.label || nodeData.type || 'unknown',
     top: node.position.y,
     left: node.position.x,
     attributes: nodeData.attributes || {},

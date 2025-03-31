@@ -66,6 +66,13 @@ export function getPinSignalType(
 }
 
 /**
+ * Get wire color based on signal type
+ */
+export function getWireColorFromSignal(signalType: string): string {
+  return getSignalColor(signalType);
+}
+
+/**
  * Check if a pin can connect to another pin
  */
 export function canPinsConnect(sourcePin: ComponentPin, targetPin: ComponentPin): boolean {
@@ -153,7 +160,7 @@ export const createWireEdge = (
   
   // Get the signal type to determine wire color
   const signal = getPinSignalType(components, sourceId, sourcePinIndex);
-  const color = getSignalColor(signal || '');
+  const color = getWireColorFromSignal(signal || '');
   
   // Create the edge with custom data
   const edge: Edge<WireData> = {
