@@ -20,7 +20,7 @@ const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const isMobile = useIsMobile();
   const { user, signOut } = useAuth();
-  const { isAdmin } = useProfile();
+  const { isAdmin, isLoading: isProfileLoading } = useProfile();
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
   const closeMenu = () => setIsMenuOpen(false);
@@ -62,14 +62,14 @@ const Header = () => {
                   </div>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
-                    <Link to="/profile" className="flex items-center gap-2">
+                    <Link to="/profile" className="flex items-center gap-2 w-full">
                       <Settings className="h-4 w-4" />
                       Profile Settings
                     </Link>
                   </DropdownMenuItem>
-                  {isAdmin() && (
+                  {isAdmin && !isProfileLoading && isAdmin() && (
                     <DropdownMenuItem asChild>
-                      <Link to="/admin" className="flex items-center gap-2">
+                      <Link to="/admin" className="flex items-center gap-2 w-full">
                         <Shield className="h-4 w-4" />
                         Admin Settings
                       </Link>
@@ -159,7 +159,7 @@ const Header = () => {
                 <Button asChild variant="outline" className="w-full" onClick={closeMenu}>
                   <Link to="/profile">Profile Settings</Link>
                 </Button>
-                {isAdmin() && (
+                {isAdmin && !isProfileLoading && isAdmin() && (
                   <Button asChild variant="outline" className="w-full" onClick={closeMenu}>
                     <Link to="/admin">Admin Settings</Link>
                   </Button>

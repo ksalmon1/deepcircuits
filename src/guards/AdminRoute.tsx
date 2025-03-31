@@ -1,4 +1,5 @@
 
+import { ReactNode } from "react";
 import { AuthGuard } from "./AuthGuard";
 
 interface AdminRouteProps {

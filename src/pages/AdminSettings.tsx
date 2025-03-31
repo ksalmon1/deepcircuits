@@ -1,9 +1,8 @@
 
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useProfile } from "@/hooks/use-profile";
-import { Navigate } from "react-router-dom";
 import PageLayout from "@/components/layout/PageLayout";
 import { 
   Card, 
@@ -22,10 +21,21 @@ import {
 
 const AdminSettings = () => {
   const { user } = useAuth();
-  const { isAdmin } = useProfile();
+  const { isAdmin, isLoading } = useProfile();
 
   if (!user) {
     return <Navigate to="/login" />;
+  }
+
+  // Show loading state while checking admin status
+  if (isLoading) {
+    return (
+      <PageLayout>
+        <div className="container py-8">
+          <h1 className="text-3xl font-bold mb-6">Loading Admin Dashboard...</h1>
+        </div>
+      </PageLayout>
+    );
   }
 
   if (!isAdmin()) {
