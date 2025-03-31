@@ -4,7 +4,7 @@ import { Handle, Position, useReactFlow } from '@xyflow/react';
 import { WokwiNodeData, WokwiNodeProps } from '@/types/circuit';
 import { toast } from 'sonner';
 import { getSignalColor } from '@/utils/pinUtils';
-import { setupSvgElement, renderSvgContent } from '@/utils/componentUtils';
+import { renderSvgContent } from '@/utils/svgUtils';
 
 // Use the WokwiNodeProps interface that correctly extends NodeProps
 const WokwiComponentNode = ({ 
