@@ -1,4 +1,3 @@
-
 import { Battery, Lightbulb, Code, Share2, History, Download } from "lucide-react";
 
 const features = [

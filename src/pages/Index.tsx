@@ -1,11 +1,11 @@
 
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
-import HeroSection from "@/components/HeroSection";
-import FeaturesSection from "@/components/FeaturesSection";
-import PricingSection from "@/components/PricingSection";
-import TestimonialSection from "@/components/TestimonialSection";
-import CTASection from "@/components/CTASection";
+import Header from "@/components/layout/Header";
+import Footer from "@/components/layout/Footer";
+import HeroSection from "@/components/landing/HeroSection";
+import FeaturesSection from "@/components/landing/FeaturesSection";
+import PricingSection from "@/components/landing/PricingSection";
+import TestimonialSection from "@/components/landing/TestimonialSection";
+import CTASection from "@/components/landing/CTASection";
 
 const Index = () => {
   return (

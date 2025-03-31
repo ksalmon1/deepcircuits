@@ -24,7 +24,7 @@ import {
   Shield
 } from "lucide-react";
 
-// Import the new component files
+// Import the component files from their new locations
 import ProfileForm from "@/components/profile/ProfileForm";
 import SubscriptionTab from "@/components/profile/SubscriptionTab";
 import SecurityTab from "@/components/profile/SecurityTab";

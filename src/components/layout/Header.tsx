@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { CircuitBoard, Menu, User, X, Settings, Shield, LogOut } from "lucide-react";
@@ -6,7 +5,7 @@ import { useState } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/context/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MainNavigation } from "@/components/MainNavigation";
+import { MainNavigation } from "@/components/layout/MainNavigation";
 import {
   DropdownMenu,
   DropdownMenuContent,
