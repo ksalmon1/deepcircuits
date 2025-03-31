@@ -63,14 +63,23 @@ const generateOrthogonalPath = (
   }
   
   // Handle the final segment to the cursor/target separately
-  // This ensures smooth cursor tracking without visual glitches
   const lastFixedPoint = fixedPoints[fixedPoints.length - 1];
   
   // Only add the final segment if it's different from the last fixed point
   if (lastFixedPoint.x !== finalEndPoint.x || lastFixedPoint.y !== finalEndPoint.y) {
-    // Always draw horizontal line first, then vertical for consistent cursor tracking
-    path += ` L ${finalEndPoint.x},${lastFixedPoint.y}`; // Horizontal segment to cursor/target x
-    path += ` L ${finalEndPoint.x},${finalEndPoint.y}`;  // Vertical segment to cursor/target y
+    // New logic: Choose elbow based on distance
+    const dx = finalEndPoint.x - lastFixedPoint.x;
+    const dy = finalEndPoint.y - lastFixedPoint.y;
+    
+    if (Math.abs(dx) > Math.abs(dy)) {
+      // Horizontal distance is greater: Draw V then H
+      path += ` L ${lastFixedPoint.x},${finalEndPoint.y}`; // Vertical segment
+      path += ` L ${finalEndPoint.x},${finalEndPoint.y}`;  // Horizontal segment
+    } else {
+      // Vertical distance is greater or equal: Draw H then V
+      path += ` L ${finalEndPoint.x},${lastFixedPoint.y}`; // Horizontal segment
+      path += ` L ${finalEndPoint.x},${finalEndPoint.y}`;  // Vertical segment
+    }
   }
   
   return path;
