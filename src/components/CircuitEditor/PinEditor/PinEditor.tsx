@@ -1,5 +1,5 @@
 
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useEffect, memo, useRef, useState, useCallback } from 'react';
 import { ComponentPin } from '@/types/pin';
 import { usePinEditor } from '@/hooks/usePinEditor';
 import { useCanvasNavigation } from '@/hooks/useCanvasNavigation';
@@ -8,6 +8,7 @@ import { renderWokwiComponentPreview } from '@/utils/componentPreviewUtils';
 import { isPointNearPin } from '@/utils/pinManagement';
 import { AppError, logError, PinError } from '@/utils/errorHandling';
 import { toast } from 'sonner';
+import { Button } from '@/components/ui/button'; // Add Button import
 import CanvasToolbar from './CanvasToolbar';
 import PinVisualizer from './PinVisualizer';
 import PinList from './PinList';

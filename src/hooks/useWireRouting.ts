@@ -1,6 +1,6 @@
 import { useCallback, useState, useEffect } from 'react';
 import { Connection, useReactFlow, Edge, Position, XYPosition } from '@xyflow/react';
-import { WireData, WireConnectionState, WireEdge } from '@/types/circuit';
+import { WireData, WireEdge, WireConnectionState } from '@/types/circuit';
 import { getPinSignalType, getWireColorFromSignal } from '@/utils/pinManagement';
 import { isValidConnection, createWireId } from '@/utils/wireUtils';
 import { CircuitComponent } from '@/types/component';
@@ -103,7 +103,7 @@ export const useWireRouting = (components: CircuitComponent[]) => {
     const signal = getPinSignalType(components, nodeId, pinIndex);
     const wireColor = getWireColorFromSignal(signal || '');
     
-    const newTempEdge: WireEdge = {
+    const newTempEdge: Edge<WireData> = {
       id: tempEdgeId,
       source: nodeId,
       target: nodeId,
@@ -120,7 +120,7 @@ export const useWireRouting = (components: CircuitComponent[]) => {
     };
     
     setTemporaryEdge(newTempEdge);
-    setEdges((eds) => [...eds, newTempEdge]);
+    setEdges((eds) => [...eds, newTempEdge] as Edge[]);
     setMousePosition(initialMousePos);
     
     return true;
@@ -185,7 +185,7 @@ export const useWireRouting = (components: CircuitComponent[]) => {
     const signal = getPinSignalType(components, wireConnectionState.sourceNodeId, wireConnectionState.sourcePinIndex || 0);
     const wireColor = getWireColorFromSignal(signal || '');
     
-    const newEdge: WireEdge = {
+    const newEdge: Edge<WireData> = {
       id: createWireId(),
       source: wireConnectionState.sourceNodeId,
       target: targetNodeId,
@@ -202,7 +202,7 @@ export const useWireRouting = (components: CircuitComponent[]) => {
     
     setEdges(edges => {
       const filteredEdges = edges.filter(edge => edge.id !== wireConnectionState.temporaryEdgeId);
-      return [...filteredEdges, newEdge];
+      return [...filteredEdges, newEdge] as Edge[];
     });
     
     setWireConnectionState({

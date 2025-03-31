@@ -64,7 +64,7 @@ export const componentToNode = (component: CircuitComponent): Node<WokwiNodeData
       })) : [],
       svgPath: component.svgPath,
       isOriginal: component.isOriginal,
-    },
+    } as WokwiNodeData,
     draggable: true,
   };
 };

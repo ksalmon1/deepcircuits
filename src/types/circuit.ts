@@ -11,6 +11,7 @@ export interface WireData {
   targetPinIndex: number;
   routingPoints?: Array<{ x: number; y: number }>;
   cursorPosition?: XYPosition;
+  [key: string]: unknown; // Add index signature to satisfy Record<string, unknown>
 }
 
 /**
@@ -29,6 +30,7 @@ export interface WokwiNodeData {
   attributes?: Record<string, any>;
   svgPath?: string | null;
   isOriginal?: boolean;
+  [key: string]: unknown; // Add index signature to satisfy Record<string, unknown>
 }
 
 /**

@@ -1,4 +1,3 @@
-
 import { useCallback } from 'react';
 import { Connection, useReactFlow, addEdge, Edge } from '@xyflow/react';
 import { WokwiComponent } from '@/integrations/wokwi/WokwiIntegration';
@@ -81,7 +80,7 @@ export function useWireSystem(components: WokwiComponent[]) {
       const wireColor = getWireColorFromSignal(signal || '');
       
       // Create a new edge with the correct type
-      const newEdge: WireEdge = {
+      const newEdge: Edge<WireData> = {
         id: `wire-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
         source: sourceId,
         target: targetId,
@@ -100,8 +99,8 @@ export function useWireSystem(components: WokwiComponent[]) {
         }
       };
       
-      // Use type assertion to ensure compatibility
-      setEdges((eds) => addEdge(newEdge, eds));
+      // Use type casting to ensure compatibility
+      setEdges((eds) => addEdge(newEdge, eds) as Edge[]);
       
       // Also add to our internal connections system
       connectPins(sourceId, sourcePinIndex, targetId, targetPinIndex);
