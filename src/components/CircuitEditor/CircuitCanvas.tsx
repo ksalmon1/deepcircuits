@@ -129,8 +129,8 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     isLoadingDetails 
   } = useComponentLibrary();
   
-  // Get project function from useReactFlow hook
-  const { project } = useReactFlow();
+  // Get the ReactFlow utility functions from the hook
+  const reactFlowUtils = useReactFlow();
   
   useEffect(() => {
     if (!components || components.length === 0) return;
@@ -360,10 +360,8 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
             >
               {showHorizontalGuide && (() => {
                 // Project both points to screen coordinates
-                const projectedFixed = project(lastFixedPointPosition);
-                const projectedMouse = project(mousePosition);
-                
-                // Remove any previous console logs here
+                const projectedFixed = reactFlowUtils.project(lastFixedPointPosition);
+                const projectedMouse = reactFlowUtils.project(mousePosition);
                 
                 // Draw H line AT fixed Y, from fixed X to mouse X
                 return (
@@ -382,10 +380,8 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
               
               {showVerticalGuide && (() => {
                 // Project both points to screen coordinates
-                const projectedFixed = project(lastFixedPointPosition);
-                const projectedMouse = project(mousePosition);
-                
-                // Remove any previous console logs here
+                const projectedFixed = reactFlowUtils.project(lastFixedPointPosition);
+                const projectedMouse = reactFlowUtils.project(mousePosition);
                 
                 // Draw V line AT fixed X, from fixed Y to mouse Y
                 return (
