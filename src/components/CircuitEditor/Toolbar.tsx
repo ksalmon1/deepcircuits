@@ -1,7 +1,11 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { PlayCircle, StopCircle, Save, Undo, Download, Upload } from 'lucide-react';
+import { 
+  Play, Pause, Save, Undo, Redo, 
+  Download, Upload, Code, RotateCcw, ZoomIn, ZoomOut, Trash
+} from 'lucide-react';
+import { useCircuitEditor } from '@/context/CircuitEditorContext';
 
 interface ToolbarProps {
   isSimulationRunning: boolean;
@@ -12,6 +16,10 @@ interface ToolbarProps {
   importProject: () => void;
 }
 
+/**
+ * Toolbar with actions for the circuit editor
+ * This is a transitional component that will eventually use context directly
+ */
 const Toolbar: React.FC<ToolbarProps> = ({
   isSimulationRunning,
   toggleSimulation,
@@ -21,47 +29,70 @@ const Toolbar: React.FC<ToolbarProps> = ({
   importProject
 }) => {
   return (
-    <div className="flex items-center gap-2 p-2 border-b">
-      <Button 
-        size="sm" 
-        variant={isSimulationRunning ? "destructive" : "default"}
-        onClick={toggleSimulation}
-      >
-        {isSimulationRunning ? (
-          <>
-            <StopCircle className="mr-1 h-4 w-4" />
-            Stop
-          </>
-        ) : (
-          <>
-            <PlayCircle className="mr-1 h-4 w-4" />
-            Run
-          </>
-        )}
-      </Button>
-      
-      <Button size="sm" variant="outline" onClick={saveProject}>
-        <Save className="mr-1 h-4 w-4" />
-        Save
-      </Button>
-      
-      <Button size="sm" variant="outline" onClick={undoLastAction} disabled={true}>
-        <Undo className="mr-1 h-4 w-4" />
-        Undo
-      </Button>
-      
-      <div className="ml-auto flex gap-2">
-        <Button size="sm" variant="outline" onClick={exportProject}>
-          <Download className="mr-1 h-4 w-4" />
-          Export
+    <div className="bg-background border-b p-2 flex items-center justify-between">
+      <div className="flex items-center space-x-2">
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={toggleSimulation}
+          className={isSimulationRunning ? "bg-red-100" : ""}
+        >
+          {isSimulationRunning ? (
+            <>
+              <Pause className="h-4 w-4 mr-1" /> Stop
+            </>
+          ) : (
+            <>
+              <Play className="h-4 w-4 mr-1" /> Run
+            </>
+          )}
         </Button>
         
-        <Button size="sm" variant="outline" onClick={importProject}>
-          <Upload className="mr-1 h-4 w-4" />
-          Import
+        <Button variant="outline" size="sm" onClick={saveProject}>
+          <Save className="h-4 w-4 mr-1" /> Save
+        </Button>
+        
+        <Button variant="outline" size="sm" onClick={undoLastAction}>
+          <Undo className="h-4 w-4 mr-1" /> Undo
+        </Button>
+      </div>
+      
+      <div className="flex items-center space-x-2">
+        <Button variant="outline" size="sm" onClick={exportProject}>
+          <Download className="h-4 w-4 mr-1" /> Export
+        </Button>
+        
+        <Button variant="outline" size="sm" onClick={importProject}>
+          <Upload className="h-4 w-4 mr-1" /> Import
         </Button>
       </div>
     </div>
+  );
+};
+
+/**
+ * Context-aware version of Toolbar
+ * This will eventually replace the prop-based version
+ */
+export const ContextToolbar = () => {
+  const { 
+    isSimulationRunning, 
+    toggleSimulation, 
+    saveProject, 
+    undoLastAction, 
+    exportProject, 
+    importProject 
+  } = useCircuitEditor();
+  
+  return (
+    <Toolbar 
+      isSimulationRunning={isSimulationRunning}
+      toggleSimulation={toggleSimulation}
+      saveProject={saveProject}
+      undoLastAction={undoLastAction}
+      exportProject={exportProject}
+      importProject={importProject}
+    />
   );
 };
 

@@ -6,14 +6,15 @@ import SerialMonitor from './SerialMonitor';
 import ComponentPanel from './ComponentPanel';
 import Toolbar from './Toolbar';
 import PropertiesPanel from './PropertiesPanel';
-import { useCircuitEditor } from '@/hooks/useCircuitEditor';
+import { useCircuitEditor, CircuitEditorProvider } from '@/context/CircuitEditorContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
 
-const CircuitEditorPage = () => {
+// Internal component that uses the context
+const CircuitEditorContent = () => {
   const {
     components,
     selectedComponent,
@@ -22,7 +23,7 @@ const CircuitEditorPage = () => {
     isSimulationRunning,
     serialOutput,
     handleComponentsChange,
-    handleComponentSelect,
+    selectComponent,
     handleUpdateComponentAttributes,
     toggleSimulation,
     saveProject,
@@ -48,7 +49,7 @@ const CircuitEditorPage = () => {
         {!isMobile ? (
           <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>
             <div className="h-full flex flex-col overflow-hidden">
-              <ComponentPanel onComponentSelect={handleComponentSelect} />
+              <ComponentPanel onComponentSelect={selectComponent} />
             </div>
           </ResizablePanel>
         ) : (
@@ -59,7 +60,7 @@ const CircuitEditorPage = () => {
               </Button>
             </SheetTrigger>
             <SheetContent side="left">
-              <ComponentPanel onComponentSelect={handleComponentSelect} />
+              <ComponentPanel onComponentSelect={selectComponent} />
             </SheetContent>
           </Sheet>
         )}
@@ -108,6 +109,15 @@ const CircuitEditorPage = () => {
         </ResizablePanel>
       </ResizablePanelGroup>
     </div>
+  );
+};
+
+// Main component that provides the context
+const CircuitEditorPage = () => {
+  return (
+    <CircuitEditorProvider>
+      <CircuitEditorContent />
+    </CircuitEditorProvider>
   );
 };
 

@@ -12,12 +12,28 @@ import {
 import { toast } from 'sonner';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { CircuitComponent } from '@/types/component';
+import { CircuitEditorProvider, useCircuitEditor } from '@/context/CircuitEditorContext';
 
-export const CircuitEditorLayout = () => {
+/**
+ * Circuit Editor Layout Content - uses the CircuitEditorContext
+ */
+const CircuitEditorLayoutContent = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const params = useParams();
   const projectId = params.id || null;
+  
+  const {
+    components, 
+    code, 
+    setCode, 
+    isSimulationRunning,
+    serialOutput,
+    handleComponentsChange,
+    selectComponent,
+    toggleSimulation,
+    saveProject
+  } = useCircuitEditor();
   
   const [circuitName, setCircuitName] = useState<string>('Untitled Circuit');
   const [isSaving, setIsSaving] = useState<boolean>(false);
@@ -25,15 +41,6 @@ export const CircuitEditorLayout = () => {
   const [showCodeEditor, setShowCodeEditor] = useState<boolean>(false);
   const [showSerialMonitor, setShowSerialMonitor] = useState<boolean>(false);
   const [verticalSplit, setVerticalSplit] = useState<boolean>(true);
-  // Circuit components state - lifted up from CircuitCanvas
-  const [circuitComponents, setCircuitComponents] = useState<CircuitComponent[]>([]);
-  
-  // State for CodeEditor
-  const [code, setCode] = useState<string>('// Write your Arduino code here\nvoid setup() {\n  // Initialize components\n}\n\nvoid loop() {\n  // Main program loop\n}\n');
-  
-  // State for SerialMonitor
-  const [isSimulationRunning, setIsSimulationRunning] = useState<boolean>(false);
-  const [serialOutput, setSerialOutput] = useState<string[]>([]);
   
   // Load project data based on ID (mock implementation)
   useEffect(() => {
@@ -65,19 +72,13 @@ export const CircuitEditorLayout = () => {
     setTimeout(() => {
       setIsSaving(false);
       setIsModified(false);
-      toast.success('Circuit saved successfully', {
-        description: `${circuitName} has been saved`,
-      });
+      saveProject();
     }, 800);
   };
 
   const handleSimulate = () => {
     setShowSerialMonitor(true);
-    setIsSimulationRunning(true);
-    setSerialOutput(prev => [...prev, 'Starting simulation...', 'Initializing components...', 'Simulation running.']);
-    toast.info('Starting simulation...', {
-      description: 'Simulation started. Check the serial monitor for output.',
-    });
+    toggleSimulation();
   };
 
   const handleClearCircuit = () => {
@@ -87,7 +88,7 @@ export const CircuitEditorLayout = () => {
         label: 'Clear',
         onClick: () => {
           // Implement the clear functionality
-          setCircuitComponents([]);
+          handleComponentsChange([]);
           toast.success('Circuit cleared');
         },
       },
@@ -122,9 +123,6 @@ export const CircuitEditorLayout = () => {
     console.log('Compiling code:', codeToCompile);
     // In a real app, this would send the code to a backend API
     // For now, we'll just show a toast message and update serial output
-    setSerialOutput(prev => [...prev, 'Compiling code...']);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setSerialOutput(prev => [...prev, 'Compilation successful', 'Uploading to microcontroller...', 'Running program.']);
     toast.success('Code compiled and uploaded to simulated microcontroller');
   };
 
@@ -135,10 +133,10 @@ export const CircuitEditorLayout = () => {
 
   // Update isModified when circuit components change
   useEffect(() => {
-    if (circuitComponents.length > 0) {
+    if (components.length > 0) {
       setIsModified(true);
     }
-  }, [circuitComponents]);
+  }, [components]);
 
   // Mock function to simulate circuit changes
   useEffect(() => {
@@ -157,7 +155,8 @@ export const CircuitEditorLayout = () => {
   const handleComponentSelect = (component: CircuitComponent) => {
     console.log('Component selected:', component);
     // In a real implementation, this would add the component to the canvas
-    setCircuitComponents(prev => [...prev, component]);
+    handleComponentsChange([...components, component]);
+    selectComponent(component);
   };
 
   return (
@@ -220,11 +219,11 @@ export const CircuitEditorLayout = () => {
             <Trash2 className="mr-1 h-4 w-4" />
             Clear
           </Button>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={() => {}}>
             <Undo className="mr-1 h-4 w-4" />
             Undo
           </Button>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={() => {}}>
             <Redo className="mr-1 h-4 w-4" />
             Redo
           </Button>
@@ -265,8 +264,8 @@ export const CircuitEditorLayout = () => {
                 (showCodeEditor && showSerialMonitor ? 'h-1/2' : 'h-2/3')
               } overflow-hidden`}>
                 <CircuitCanvasWrapper 
-                  components={circuitComponents} 
-                  onComponentsChange={setCircuitComponents}
+                  components={components} 
+                  onComponentsChange={handleComponentsChange}
                 />
               </div>
               
@@ -318,14 +317,25 @@ export const CircuitEditorLayout = () => {
             // If no editors are open, show only the circuit canvas
             <div className="flex-1 overflow-hidden">
               <CircuitCanvasWrapper 
-                components={circuitComponents} 
-                onComponentsChange={setCircuitComponents} 
+                components={components} 
+                onComponentsChange={handleComponentsChange} 
               />
             </div>
           )}
         </div>
       </div>
     </div>
+  );
+};
+
+/**
+ * Main Circuit Editor Layout component that provides the context
+ */
+export const CircuitEditorLayout = () => {
+  return (
+    <CircuitEditorProvider>
+      <CircuitEditorLayoutContent />
+    </CircuitEditorProvider>
   );
 };
 
