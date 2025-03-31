@@ -22,13 +22,13 @@ import { toast } from "sonner";
 
 const ComponentAdmin = () => {
   const { user } = useAuth();
-  const { isAdmin, isLoading } = useProfile();
+  const { isAdmin, isLoading: isProfileLoading } = useProfile(); // Renamed to avoid conflict
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [components, setComponents] = useState<ComponentLibraryItem[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); // This one is for components loading
   const [uniqueCategories, setUniqueCategories] = useState<string[]>([]);
   const [newComponent, setNewComponent] = useState<Partial<ComponentLibraryItem>>({
     name: "",
@@ -40,9 +40,9 @@ const ComponentAdmin = () => {
   });
   const [isCreatingComponent, setIsCreatingComponent] = useState(false);
 
-  console.log("ComponentAdmin: Rendering", { isAdmin: isAdmin ? isAdmin() : false, isLoading });
+  console.log("ComponentAdmin: Rendering", { isAdmin: isAdmin ? isAdmin() : false, isLoading: isProfileLoading });
 
-  if (isLoading) {
+  if (isProfileLoading) {
     return (
       <PageLayout>
         <div className="container py-8">
