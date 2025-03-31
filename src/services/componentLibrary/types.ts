@@ -20,3 +20,10 @@ export interface ComponentLibraryItem {
   createdAt?: string;
   updatedAt?: string;
 }
+
+// Extended WokwiComponent interface to match what's being used in the app
+export interface ExtendedWokwiComponent extends ComponentLibraryItem {
+  top: number;
+  left: number;
+  attributes: Record<string, any>;
+}

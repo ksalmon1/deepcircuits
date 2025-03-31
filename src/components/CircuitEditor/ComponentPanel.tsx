@@ -3,6 +3,8 @@ import React, { useEffect, useState } from 'react';
 import { WokwiComponent } from '@/integrations/wokwi/WokwiIntegration';
 import { useComponentLibrary } from '@/hooks/useComponentLibrary';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ComponentLibraryItem } from '@/services/componentLibrary/types';
+import { convertLibraryItemToWokwiComponent } from '@/services/componentLibraryService';
 
 export interface ComponentPanelProps {
   onComponentSelect: (component: WokwiComponent) => void;
@@ -10,7 +12,7 @@ export interface ComponentPanelProps {
 
 const ComponentPanel: React.FC<ComponentPanelProps> = ({ onComponentSelect }) => {
   const { components, isLoadingComponents, componentsDetailsMap } = useComponentLibrary();
-  const [categorizedComponents, setCategorizedComponents] = useState<Record<string, any[]>>({});
+  const [categorizedComponents, setCategorizedComponents] = useState<Record<string, ComponentLibraryItem[]>>({});
   
   useEffect(() => {
     if (components && components.length > 0) {
@@ -25,25 +27,15 @@ const ComponentPanel: React.FC<ComponentPanelProps> = ({ onComponentSelect }) =>
         }
         acc[category].push(component);
         return acc;
-      }, {} as Record<string, any[]>);
+      }, {} as Record<string, ComponentLibraryItem[]>);
 
       setCategorizedComponents(grouped);
     }
   }, [components]);
 
-  const handleDragStart = (e: React.DragEvent, component: any) => {
+  const handleDragStart = (e: React.DragEvent, component: ComponentLibraryItem) => {
     // Create a WokwiComponent object from the component library item
-    const wokwiComponent: WokwiComponent = {
-      id: crypto.randomUUID(),
-      type: component.type,
-      attributes: {},
-      top: 0,
-      left: 0,
-      pins: [],
-      // Include the SVG path from the component
-      svgPath: component.svgPath,
-      isOriginal: component.isOriginal
-    };
+    const wokwiComponent: WokwiComponent = convertLibraryItemToWokwiComponent(component);
     
     console.log(`Drag start for component: ${component.name} (${component.type})`);
     console.log(`SVG path included: ${component.svgPath ? 'Yes' : 'No'}`);

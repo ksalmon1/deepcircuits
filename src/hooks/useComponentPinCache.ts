@@ -2,6 +2,7 @@
 import { useCallback, useEffect } from 'react';
 import { WokwiPin } from '@/integrations/wokwi/WokwiIntegration';
 import { useComponentLibrary } from '@/hooks/useComponentLibrary';
+import { ComponentLibraryItem } from '@/services/componentLibrary/types';
 
 // Create a module-level cache that persists between hook instances
 const pinCache: Record<string, WokwiPin[]> = {};
@@ -23,7 +24,7 @@ export function useComponentPinCache() {
     if (Array.isArray(libraryComponents) && componentsDetailsMap && Object.keys(componentsDetailsMap).length > 0) {
       console.log('Loading pin data from componentsDetailsMap:', Object.keys(componentsDetailsMap).length);
       
-      libraryComponents.forEach(component => {
+      libraryComponents.forEach((component: ComponentLibraryItem) => {
         if (component.id && componentsDetailsMap[component.id]) {
           const details = componentsDetailsMap[component.id];
           if (details && details.pins && Array.isArray(details.pins) && details.pins.length > 0) {
@@ -42,7 +43,7 @@ export function useComponentPinCache() {
     } else if (Array.isArray(libraryComponents) && libraryComponents.length > 0) {
       console.log('Loading pin data from library components:', libraryComponents.length);
       
-      libraryComponents.forEach(component => {
+      libraryComponents.forEach((component: ComponentLibraryItem) => {
         if (component.pins && Array.isArray(component.pins) && component.pins.length > 0) {
           console.log(`Found pins for ${component.name} (${component.type}):`, component.pins);
           pinCache[component.type] = component.pins.map(pin => ({

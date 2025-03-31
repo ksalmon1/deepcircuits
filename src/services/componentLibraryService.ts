@@ -1,22 +1,14 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { WokwiComponent } from '@/integrations/wokwi/WokwiIntegration';
+import { ComponentLibraryItem } from '@/services/componentLibrary/types';
+import { WokwiComponent, WokwiPin } from '@/integrations/wokwi/WokwiIntegration';
 
-// Type definition for Component Library Item
-export interface ComponentLibraryItem extends WokwiComponent {
-  name: string;
-  category: string;
-  description?: string;
-  enabled: boolean;
-  isOriginal: boolean;
-  createdAt?: string;
-  updatedAt?: string;
-}
+export { ComponentLibraryItem };
 
-export async function getComponents(): Promise<WokwiComponent[]> {
+export async function getComponents(): Promise<ComponentLibraryItem[]> {
   try {
     const { data, error } = await supabase
-      .from('component_library')  // Changed from 'components' to 'component_library'
+      .from('component_library')
       .select('*')
       .order('name', { ascending: true });
 
@@ -48,10 +40,10 @@ export async function getComponents(): Promise<WokwiComponent[]> {
 // Alias function for backward compatibility
 export const getAllComponents = getComponents;
 
-export async function getComponentById(id: string): Promise<WokwiComponent | null> {
+export async function getComponentById(id: string): Promise<ComponentLibraryItem | null> {
   try {
     const { data, error } = await supabase
-      .from('component_library')  // Changed from 'components' to 'component_library'
+      .from('component_library')
       .select('*')
       .eq('id', id)
       .single();
@@ -86,10 +78,10 @@ export async function getComponentById(id: string): Promise<WokwiComponent | nul
   }
 }
 
-export async function searchComponents(query: string): Promise<WokwiComponent[]> {
+export async function searchComponents(query: string): Promise<ComponentLibraryItem[]> {
   try {
     const { data, error } = await supabase
-      .from('component_library')  // Changed from 'components' to 'component_library'
+      .from('component_library')
       .select('*')
       .ilike('name', `%${query}%`)
       .limit(10);
@@ -119,7 +111,7 @@ export async function searchComponents(query: string): Promise<WokwiComponent[]>
   }
 }
 
-export async function getComponentWithDetails(id: string): Promise<WokwiComponent | null> {
+export async function getComponentWithDetails(id: string): Promise<ComponentLibraryItem | null> {
   try {
     console.log('Getting component with details for ID:', id);
 
@@ -206,8 +198,8 @@ export async function createComponent(component: ComponentLibraryItem): Promise<
         svgPath: data.svg_path,
         enabled: data.enabled,
         isOriginal: data.is_original,
-        pins: [],
-        properties: {},
+        pins: component.pins || [],
+        properties: component.properties || {},
         createdAt: data.created_at,
         updatedAt: data.updated_at
       }
@@ -262,4 +254,18 @@ export async function deleteComponent(id: string): Promise<{ success: boolean; e
     console.error('Error in deleteComponent:', error);
     return { success: false, error: 'Failed to delete component' };
   }
+}
+
+// Helper function to convert ComponentLibraryItem to WokwiComponent
+export function convertLibraryItemToWokwiComponent(item: ComponentLibraryItem): WokwiComponent {
+  return {
+    id: item.id || crypto.randomUUID(),
+    type: item.type,
+    top: 0,
+    left: 0,
+    attributes: {},
+    pins: item.pins || [],
+    svgPath: item.svgPath,
+    isOriginal: item.isOriginal
+  };
 }

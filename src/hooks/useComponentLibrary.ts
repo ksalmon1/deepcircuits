@@ -6,7 +6,7 @@ import {
   createComponent, 
   updateComponent, 
   deleteComponent,
-  ComponentLibraryItem
+  ComponentLibraryItem 
 } from '@/services/componentLibraryService';
 
 /**
