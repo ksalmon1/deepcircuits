@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useProfile } from "@/hooks/use-profile";
@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/table";
 import { ComponentLibraryItem } from "@/services/componentLibraryService";
 import { toast } from "sonner";
+import { getAllComponents } from "@/services/componentLibrary/api";
 
 const ComponentAdmin = () => {
   const { user } = useAuth();
@@ -28,8 +29,9 @@ const ComponentAdmin = () => {
   const [typeFilter, setTypeFilter] = useState("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [components, setComponents] = useState<ComponentLibraryItem[]>([]);
-  const [isLoading, setIsLoading] = useState(false); // This one is for components loading
+  const [isLoading, setIsLoading] = useState(true); // Changed to true initially
   const [uniqueCategories, setUniqueCategories] = useState<string[]>([]);
+  const [uniqueTypes, setUniqueTypes] = useState<string[]>([]);
   const [newComponent, setNewComponent] = useState<Partial<ComponentLibraryItem>>({
     name: "",
     type: "",
@@ -41,6 +43,35 @@ const ComponentAdmin = () => {
   const [isCreatingComponent, setIsCreatingComponent] = useState(false);
 
   console.log("ComponentAdmin: Rendering", { isAdmin: isAdmin ? isAdmin() : false, isLoading: isProfileLoading });
+
+  // Fetch components on component mount
+  useEffect(() => {
+    fetchComponents();
+  }, []);
+
+  // Function to fetch components
+  const fetchComponents = async () => {
+    try {
+      setIsLoading(true);
+      console.log("Fetching components...");
+      const data = await getAllComponents();
+      console.log("Fetched components:", data);
+      setComponents(data);
+      
+      // Extract unique categories and types for filters
+      const categories = [...new Set(data.map(comp => comp.category))];
+      const types = [...new Set(data.map(comp => comp.type))];
+      setUniqueCategories(categories);
+      setUniqueTypes(types);
+    } catch (error) {
+      console.error("Error fetching components:", error);
+      toast.error("Failed to load components", {
+        description: "Please try refreshing the page",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   if (isProfileLoading) {
     return (
@@ -57,6 +88,18 @@ const ComponentAdmin = () => {
     return <Navigate to="/dashboard" />;
   }
 
+  // Filter components based on search term and filters
+  const filteredComponents = components.filter(comp => {
+    const matchesSearch = comp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         comp.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         comp.type.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesCategory = categoryFilter === "all" || comp.category === categoryFilter;
+    const matchesType = typeFilter === "all" || comp.type === typeFilter;
+    
+    return matchesSearch && matchesCategory && matchesType;
+  });
+
   const handleNewComponentChange = (field: string, value: any) => {
     setNewComponent(prev => ({
       ...prev,
@@ -68,18 +111,27 @@ const ComponentAdmin = () => {
     // This would be implemented to add a component to the database
     toast.success("Component added successfully");
     setIsAddDialogOpen(false);
+    fetchComponents(); // Refresh the components list
   };
 
   const handleViewComponent = (component: ComponentLibraryItem) => {
     // View component implementation
+    console.log("Viewing component:", component);
   };
 
   const handleEditComponent = (component: ComponentLibraryItem) => {
     // Edit component implementation
+    console.log("Editing component:", component);
   };
 
   const handleDeleteComponent = (component: ComponentLibraryItem) => {
     // Delete component implementation
+    console.log("Deleting component:", component);
+  };
+
+  const handleRefresh = () => {
+    fetchComponents();
+    toast.success("Components refreshed");
   };
 
   return (
@@ -94,6 +146,7 @@ const ComponentAdmin = () => {
             <Button 
               variant="outline" 
               className="flex items-center gap-2"
+              onClick={handleRefresh}
             >
               <RefreshCw className="h-4 w-4" />
               Refresh
@@ -116,6 +169,7 @@ const ComponentAdmin = () => {
           typeFilter={typeFilter}
           onTypeFilterChange={setTypeFilter}
           uniqueCategories={uniqueCategories}
+          uniqueTypes={uniqueTypes}
         />
 
         <div className="bg-white rounded-md shadow">
@@ -131,7 +185,7 @@ const ComponentAdmin = () => {
             </TableHeader>
             <TableBody>
               <ComponentTable 
-                components={components} 
+                components={filteredComponents} 
                 isLoading={isLoading}
                 onEdit={handleEditComponent}
                 onView={handleViewComponent}
