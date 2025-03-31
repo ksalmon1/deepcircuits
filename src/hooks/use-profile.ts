@@ -27,6 +27,7 @@ export const useProfile = () => {
       setIsLoading(true);
       try {
         const { profile: userProfile, roles: userRoles } = await getUserProfileAndRoles(user.id);
+        console.log(`Roles loaded successfully: ${JSON.stringify(userRoles)}`);
         setProfile(userProfile);
         setRoles(userRoles);
         setError(null);

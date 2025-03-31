@@ -14,6 +14,8 @@ export const AdminRoute = ({ children }: AdminRouteProps) => {
   const { isAdmin, isLoading } = useProfile();
   const location = useLocation();
   
+  console.log("AdminRoute: Checking admin status", { isLoading, user: !!user, isAdmin: isAdmin ? isAdmin() : false });
+  
   // Show loading state while checking admin status
   if (isLoading) {
     return (
@@ -31,5 +33,6 @@ export const AdminRoute = ({ children }: AdminRouteProps) => {
   }
   
   // User is an admin, render children
+  console.log("AdminRoute: User is admin, rendering children");
   return <>{children}</>;
 };

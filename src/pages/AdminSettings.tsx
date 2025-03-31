@@ -1,6 +1,6 @@
 
 import React from "react";
-import { Link, Navigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useProfile } from "@/hooks/use-profile";
 import PageLayout from "@/components/layout/PageLayout";
@@ -21,6 +21,9 @@ import {
 const AdminSettings = () => {
   const { user } = useAuth();
   const { isAdmin, isLoading } = useProfile();
+  const navigate = useNavigate();
+
+  console.log("AdminSettings: Rendering", { isAdmin: isAdmin ? isAdmin() : false, isLoading });
 
   if (isLoading) {
     return (
@@ -33,6 +36,7 @@ const AdminSettings = () => {
   }
 
   if (!user || !isAdmin()) {
+    console.log("AdminSettings: Redirecting to /dashboard - Not an admin");
     return <Navigate to="/dashboard" />;
   }
 
@@ -67,6 +71,11 @@ const AdminSettings = () => {
     }
   ];
 
+  const handleModuleClick = (path: string) => {
+    console.log("Navigating to:", path);
+    navigate(path);
+  };
+
   return (
     <PageLayout>
       <div className="container py-8">
@@ -74,8 +83,12 @@ const AdminSettings = () => {
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {adminModules.map((module, index) => (
-            <Link key={index} to={module.link}>
-              <Card className="h-full hover:shadow-md transition-shadow cursor-pointer">
+            <div
+              key={index}
+              onClick={() => handleModuleClick(module.link)}
+              className="cursor-pointer"
+            >
+              <Card className="h-full hover:shadow-md transition-shadow">
                 <CardHeader className={`${module.color} text-white rounded-t-lg`}>
                   <div className="flex justify-between items-center">
                     {module.icon}
@@ -86,7 +99,7 @@ const AdminSettings = () => {
                   <CardDescription>{module.description}</CardDescription>
                 </CardContent>
               </Card>
-            </Link>
+            </div>
           ))}
         </div>
       </div>
