@@ -30,13 +30,12 @@ export async function createComponent(component: ComponentLibraryItem): Promise<
     
     // Create pins if provided
     if (component.pins && component.pins.length > 0) {
-      const pinsToInsert = component.pins.map((pin, index) => ({
+      const pinsToInsert = component.pins.map(pin => ({
         component_id: componentId,
         name: pin.name,
         x: pin.x,
         y: pin.y,
-        signals: pin.signals,
-        index
+        signals: pin.signals
       }));
       
       const { error: pinsError } = await supabase
@@ -117,13 +116,12 @@ export async function updateComponent(component: ComponentLibraryItem): Promise<
       
       // Create new pins
       if (component.pins.length > 0) {
-        const pinsToInsert = component.pins.map((pin, index) => ({
+        const pinsToInsert = component.pins.map(pin => ({
           component_id: component.id,
           name: pin.name,
           x: pin.x,
           y: pin.y,
-          signals: pin.signals,
-          index
+          signals: pin.signals
         }));
         
         const { error: pinsError } = await supabase

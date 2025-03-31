@@ -65,12 +65,18 @@ export async function getComponentWithDetails(id: string): Promise<ComponentLibr
       return null;
     }
     
+    console.log(`Mapped component data:`, {
+      id: component.id,
+      type: component.type,
+      pins: component.pins?.length || 0,
+      properties: Object.keys(component.properties || {}).length || 0
+    });
+    
     // Fetch component pins
     const { data: pinsData, error: pinsError } = await supabase
       .from('component_pins')
       .select('*')
-      .eq('component_id', id)
-      .order('index');
+      .eq('component_id', id);
       
     if (pinsError) {
       console.error(`Error fetching pins for component ${id}:`, pinsError);
@@ -89,7 +95,7 @@ export async function getComponentWithDetails(id: string): Promise<ComponentLibr
     }
     
     // Map pins and properties to component
-    return {
+    const componentWithDetails = {
       ...component,
       pins: pinsData.map(p => ({
         name: p.name,
@@ -102,6 +108,14 @@ export async function getComponentWithDetails(id: string): Promise<ComponentLibr
         return acc;
       }, {} as Record<string, any>)
     };
+
+    console.log(`Got details for ${component.name} (${component.type}):`, componentWithDetails);
+    
+    if (componentWithDetails.pins && componentWithDetails.pins.length > 0) {
+      console.log(`${component.name} has ${componentWithDetails.pins.length} pins:`, componentWithDetails.pins);
+    }
+    
+    return componentWithDetails;
   } catch (error) {
     console.error(`Unexpected error fetching component details for ID ${id}:`, error);
     throw error;
