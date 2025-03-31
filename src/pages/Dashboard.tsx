@@ -1,9 +1,10 @@
+
 import React, { useState, useMemo } from "react";
-import PageLayout from "@/components/PageLayout";
+import PageLayout from "@/components/layout/PageLayout";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Plus, Search, ArrowUpDown } from "lucide-react";
-import ProjectCard, { ProjectData } from "@/components/ProjectCard";
+import ProjectCard, { ProjectData } from "@/components/common/ProjectCard";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import DashboardAnalytics from "@/components/DashboardAnalytics";

@@ -1,6 +1,6 @@
 
 import React, { useState } from "react";
-import PageLayout from "@/components/PageLayout";
+import PageLayout from "@/components/layout/PageLayout";
 import { useAuth } from "@/context/AuthContext";
 import { Navigate } from "react-router-dom";
 import { 
