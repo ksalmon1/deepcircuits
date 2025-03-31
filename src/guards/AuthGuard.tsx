@@ -3,6 +3,7 @@ import { ReactNode, useEffect, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { useProfile } from "@/hooks/use-profile";
 import { UserRole } from "@/types/database";
 
 type AuthGuardProps = {
@@ -26,9 +27,12 @@ export const AuthGuard = ({
   requireAuth = true,
   fallbackPath,
 }: AuthGuardProps) => {
-  const { user, roles, isLoading } = useAuth();
+  const { user, isLoading: isAuthLoading } = useAuth();
+  const { roles, isLoading: isProfileLoading } = useProfile();
   const [hasVerifiedPermissions, setHasVerifiedPermissions] = useState(false);
   const location = useLocation();
+  
+  const isLoading = isAuthLoading || isProfileLoading;
 
   // Determine the appropriate fallback path
   const redirectPath = fallbackPath || (requireAuth ? "/login" : "/dashboard");

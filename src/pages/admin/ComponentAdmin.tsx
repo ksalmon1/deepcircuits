@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import PageLayout from "@/components/layout/PageLayout";
 import { useAuth } from "@/context/AuthContext";
+import { useProfile } from "@/hooks/use-profile";
 import { Navigate } from "react-router-dom";
 import { 
   Card, 
@@ -48,7 +49,8 @@ import {
  * Allows administrators to manage components in the library
  */
 const ComponentLibrary = () => {
-  const { user, isAdmin } = useAuth();
+  const { user } = useAuth();
+  const { isAdmin } = useProfile();
   const { toast } = useToast();
   
   // Filter and search state
