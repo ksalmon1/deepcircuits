@@ -1,6 +1,6 @@
 
 import React, { useEffect, memo, useRef } from 'react';
-import { Handle, Position, NodeProps, useReactFlow } from '@xyflow/react';
+import { Handle, Position, useReactFlow } from '@xyflow/react';
 import { WokwiNodeData, WokwiNodeProps } from '@/types/circuit';
 import { toast } from 'sonner';
 import { getWireColorFromSignal } from '@/utils/pinManagement';

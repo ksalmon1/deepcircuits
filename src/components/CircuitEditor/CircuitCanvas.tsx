@@ -35,7 +35,6 @@ import {
 import '@xyflow/react/dist/style.css';
 import './CircuitCanvas/circuit-canvas.css';
 
-// Import the sub-components we created
 import WokwiComponentNode from './CircuitCanvas/WokwiComponentNode';
 import CustomWireEdge from './CircuitCanvas/CustomWireEdge';
 import LoadingOverlay from './CircuitCanvas/LoadingOverlay';
@@ -48,7 +47,7 @@ interface CircuitCanvasProps {
 
 // Define the custom node types
 const nodeTypes = {
-  wokwiComponent: WokwiComponentNode as any // Type assertion needed for compatibility
+  wokwiComponent: WokwiComponentNode
 };
 
 // Define the custom edge types
@@ -133,7 +132,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     
     console.log(`Converting ${components.length} components to nodes`);
     const initialNodes = components.map(comp => {
-      // Log each component before conversion for debugging
       console.log(`Component before conversion:`, {
         id: comp.id,
         type: comp.type,
@@ -160,7 +158,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     updateSize();
     window.addEventListener('resize', updateSize);
     
-    // Call updateSize after a short delay to make sure all elements are properly rendered
     const resizeTimer = setTimeout(updateSize, 100);
     
     return () => {
@@ -171,7 +168,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
 
   // Handle node drag end - update component positions
   const onNodeDragStop = useCallback((event: React.MouseEvent, node: any) => {
-    // Update the component position when a node is dragged
     const updatedComponents = components.map(comp => {
       if (comp.id === node.id) {
         return {
@@ -237,7 +233,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
         pins = getComponentPinInfo(componentInfo.type);
       }
       
-      // Create the new component with svgPath and isOriginal values from the drag data
       const newComponent: WokwiComponent = {
         type: componentInfo.type,
         id: `comp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -245,7 +240,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
         left,
         attributes: { color: 'red' },
         pins,
-        // Ensure svgPath and isOriginal are properly passed from the drag data
         svgPath: componentInfo.svgPath,
         isOriginal: componentInfo.isOriginal
       };
@@ -270,17 +264,13 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     e.dataTransfer.dropEffect = 'copy';
   };
 
-  // Custom click handler for the pane
   const onPaneClick = useCallback((event: React.MouseEvent) => {
-    // Check if we're in connecting mode
     if (wireConnectionState.isConnecting) {
       event.preventDefault();
       event.stopPropagation();
       
-      // Get the mouse position relative to the flow container
       const reactFlowBounds = canvasRef.current?.getBoundingClientRect();
       if (reactFlowBounds && reactFlowInstance) {
-        // Get the position directly from ReactFlow's screenToFlowPosition
         const position = reactFlowInstance.screenToFlowPosition({
           x: event.clientX,
           y: event.clientY
@@ -289,14 +279,12 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
         console.log('Pane clicked at screen coordinates:', event.clientX, event.clientY);
         console.log('Converted to flow coordinates:', position);
         
-        // Pass the position to the handleCanvasClick function
         handleCanvasClick(event, position);
         return;
       }
     }
   }, [wireConnectionState.isConnecting, reactFlowInstance, handleCanvasClick]);
   
-  // Handle pin click through custom event
   useEffect(() => {
     const handlePinClick = (event: CustomEvent) => {
       const { nodeId, handleId } = event.detail;
@@ -345,7 +333,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
           snapToGrid={true}
           snapGrid={[25, 25]}
           deleteKeyCode={['Backspace', 'Delete']}
-          elementsSelectable={!wireConnectionState.isConnecting} // Disable selection when wiring
+          elementsSelectable={!wireConnectionState.isConnecting}
           style={{ width: '100%', height: '100%' }}
         >
           <Background 

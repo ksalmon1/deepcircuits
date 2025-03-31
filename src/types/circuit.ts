@@ -30,7 +30,7 @@ export interface WireEdge {
 /**
  * Props for the custom wire edge component
  */
-export interface CustomWireEdgeProps extends EdgeProps {
+export interface CustomWireEdgeProps extends Omit<EdgeProps, 'data'> {
   data?: WireData;
   onDelete?: (id: string) => void;
 }
@@ -62,11 +62,11 @@ export interface WokwiNodeData extends Record<string, unknown> {
 }
 
 /**
- * Props for the Wokwi component node that correctly extends NodeProps
+ * Props for the Wokwi component node
  */
-export interface WokwiNodeProps extends NodeProps {
+export interface WokwiNodeProps extends Omit<NodeProps, 'data'> {
   data: WokwiNodeData;
-  selected?: boolean;
+  selected: boolean;
 }
 
 /**
