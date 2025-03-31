@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import CircuitCanvasWrapper from './CircuitCanvasWrapper';
 import ComponentPanel from './ComponentPanel';
@@ -42,11 +41,8 @@ const CircuitEditorLayoutContent = () => {
   const [showSerialMonitor, setShowSerialMonitor] = useState<boolean>(false);
   const [verticalSplit, setVerticalSplit] = useState<boolean>(true);
   
-  // Load project data based on ID (mock implementation)
   useEffect(() => {
     if (projectId) {
-      // In a real app, this would fetch project data from the backend
-      // For now, we'll use mock data
       const mockProjectNames: Record<string, string> = {
         "1": "LED Blink Circuit",
         "2": "Temperature Sensor",
@@ -58,7 +54,6 @@ const CircuitEditorLayoutContent = () => {
     }
   }, [projectId]);
 
-  // Set the document title
   useEffect(() => {
     document.title = `${circuitName} - CircuitSim Editor`;
     return () => {
@@ -68,7 +63,6 @@ const CircuitEditorLayoutContent = () => {
 
   const handleSaveCircuit = () => {
     setIsSaving(true);
-    // Simulate a save operation
     setTimeout(() => {
       setIsSaving(false);
       setIsModified(false);
@@ -87,7 +81,6 @@ const CircuitEditorLayoutContent = () => {
       action: {
         label: 'Clear',
         onClick: () => {
-          // Implement the clear functionality
           handleComponentsChange([]);
           toast.success('Circuit cleared');
         },
@@ -121,8 +114,6 @@ const CircuitEditorLayoutContent = () => {
 
   const handleCompileCode = async (codeToCompile: string) => {
     console.log('Compiling code:', codeToCompile);
-    // In a real app, this would send the code to a backend API
-    // For now, we'll just show a toast message and update serial output
     toast.success('Code compiled and uploaded to simulated microcontroller');
   };
 
@@ -131,14 +122,12 @@ const CircuitEditorLayoutContent = () => {
     setIsModified(true);
   };
 
-  // Update isModified when circuit components change
   useEffect(() => {
     if (components.length > 0) {
       setIsModified(true);
     }
   }, [components]);
 
-  // Mock function to simulate circuit changes
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsModified(true);
@@ -147,21 +136,18 @@ const CircuitEditorLayoutContent = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  // Toggle layout orientation
   const toggleOrientation = () => {
     setVerticalSplit(!verticalSplit);
   };
 
   const handleComponentSelect = (component: CircuitComponent) => {
     console.log('Component selected:', component);
-    // In a real implementation, this would add the component to the canvas
     handleComponentsChange([...components, component]);
     selectComponent(component);
   };
 
   return (
     <div className="h-full flex flex-col">
-      {/* Top toolbar */}
       <div className="bg-white border-b p-2 flex items-center justify-between">
         <div className="flex items-center">
           <Button 
@@ -246,19 +232,14 @@ const CircuitEditorLayoutContent = () => {
         </div>
       </div>
 
-      {/* Main content area */}
       <div className="flex-1 flex">
-        {/* Left panel - Component palette */}
         <div className="w-64 border-r bg-gray-50 p-4 overflow-y-auto">
           <ComponentPanel onComponentSelect={handleComponentSelect} />
         </div>
 
-        {/* Main area with circuit canvas and optional editors */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Main content with dynamic layout based on which editors are open */}
           {(showCodeEditor || showSerialMonitor) ? (
             <div className={`flex-1 flex ${verticalSplit ? 'flex-row' : 'flex-col'} overflow-hidden`}>
-              {/* Circuit canvas - always shown but with dynamic size */}
               <div className={`${verticalSplit ? 
                 (showCodeEditor && showSerialMonitor ? 'w-1/2' : 'w-2/3') : 
                 (showCodeEditor && showSerialMonitor ? 'h-1/2' : 'h-2/3')
@@ -269,7 +250,6 @@ const CircuitEditorLayoutContent = () => {
                 />
               </div>
               
-              {/* Right/bottom panel with code editor and/or serial monitor */}
               <div className={`${verticalSplit ? 
                 (showCodeEditor && showSerialMonitor ? 'w-1/2' : 'w-1/3') : 
                 (showCodeEditor && showSerialMonitor ? 'h-1/2' : 'h-1/3')
@@ -314,7 +294,6 @@ const CircuitEditorLayoutContent = () => {
               </div>
             </div>
           ) : (
-            // If no editors are open, show only the circuit canvas
             <div className="flex-1 overflow-hidden">
               <CircuitCanvasWrapper 
                 components={components} 
