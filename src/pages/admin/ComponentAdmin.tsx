@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import PageLayout from "@/components/PageLayout";
 import { useAuth } from "@/context/AuthContext";
@@ -451,14 +452,20 @@ const ComponentLibrary = () => {
 
         {/* Edit Component Dialog */}
         <EditComponentDialog 
-          component={selectedComponent}
-          open={isEditDialogOpen}
-          onClose={() => setIsEditDialogOpen(false)}
-          onSaved={() => {
-            // Invalidate queries to refresh data
-            queryClient.invalidateQueries({ queryKey: ['components'] });
-            queryClient.invalidateQueries({ queryKey: ['componentsDetails'] });
-          }}
+          isOpen={isEditDialogOpen}
+          onOpenChange={setIsEditDialogOpen}
+          selectedComponent={selectedComponent}
+          editedComponent={editedComponent}
+          isLoadingComponentDetails={isLoadingComponentDetails}
+          componentDetailsError={componentDetailsError}
+          wokwiReady={wokwiReady}
+          activeTab={activeTab}
+          onActiveTabChange={setActiveTab}
+          onSaveComponent={handleSaveComponent}
+          isUpdatingComponent={isUpdatingComponent}
+          updateComponentProperty={updateComponentProperty}
+          updateComponentProperties={updateComponentProperties}
+          updatePinConfiguration={updatePinConfiguration}
         />
 
         {/* View Component Dialog */}

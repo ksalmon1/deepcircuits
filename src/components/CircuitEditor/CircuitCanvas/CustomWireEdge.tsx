@@ -15,11 +15,9 @@ const generatePath = (
   let path = `M ${sourceX},${sourceY}`;
   
   // Add each routing point as a line segment
-  if (routingPoints && Array.isArray(routingPoints)) {
-    routingPoints.forEach(point => {
-      path += ` L ${point.x},${point.y}`;
-    });
-  }
+  routingPoints.forEach(point => {
+    path += ` L ${point.x},${point.y}`;
+  });
   
   // If we're in connecting mode and have a cursor position, use that as the final point
   // Otherwise use the target coordinates
@@ -164,7 +162,7 @@ function CustomWireEdge({
       />
       
       {/* Only show routing points for permanent wires */}
-      {!isTemporary && Array.isArray(routingPoints) && routingPoints.map((point, index) => (
+      {!isTemporary && routingPoints.map((point, index) => (
         <circle
           key={`${id}-point-${index}`}
           cx={point.x}

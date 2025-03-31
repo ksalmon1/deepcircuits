@@ -181,14 +181,48 @@ export const updateComponent = async (component: ComponentLibraryItem): Promise<
   }
 
   try {
-    console.log('Updating component:', component);
+    console.log('Updating component ID:', component.id);
     
+    // First, get the current component data to check if type is changing
+    const { data: currentComponent, error: fetchError } = await supabase
+      .from('component_library')
+      .select('type')
+      .eq('id', component.id)
+      .single();
+    
+    if (fetchError) {
+      console.error('Error fetching current component data:', fetchError);
+      throw fetchError;
+    }
+    
+    const isChangingType = currentComponent.type !== component.type;
+    
+    if (isChangingType) {
+      console.log('Type is changing from', currentComponent.type, 'to', component.type);
+      
+      // Check if the new type already exists in another component
+      const { data: existingComponents, error: checkError } = await supabase
+        .from('component_library')
+        .select('id')
+        .eq('type', component.type)
+        .neq('id', component.id);
+      
+      if (checkError) {
+        console.error('Error checking for existing components with same type:', checkError);
+        throw checkError;
+      }
+      
+      if (existingComponents && existingComponents.length > 0) {
+        throw new Error(`Cannot change type to ${component.type} as it already exists in another component`);
+      }
+    }
+
     // Update component basic info
     const { error: componentError } = await supabase
       .from('component_library')
       .update({
         name: component.name,
-        type: component.type,  // Now including type in the update
+        type: component.type,
         category: component.category,
         description: component.description,
         svg_path: component.svgPath,
@@ -202,7 +236,7 @@ export const updateComponent = async (component: ComponentLibraryItem): Promise<
       throw componentError;
     }
 
-    console.log('Component basic info updated successfully');
+    console.log('Basic component info updated successfully');
 
     // Update pins if provided
     if (component.pins) {
