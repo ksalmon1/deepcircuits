@@ -1,692 +1,192 @@
 
-import React, { useState } from "react";
-import PageLayout from "@/components/layout/PageLayout";
-import { useAuth } from "@/context/AuthContext";
+import React from "react";
 import { Navigate } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
 import { useProfile } from "@/hooks/use-profile";
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle,
-  CardFooter
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import PageLayout from "@/components/layout/PageLayout";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { 
-  Cog, 
-  Save, 
-  Bell, 
-  Monitor, 
-  Upload, 
-  Mail, 
-  Shield, 
-  Database, 
-  DownloadCloud
-} from "lucide-react";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-import { 
-  Form, 
-  FormControl, 
-  FormDescription, 
-  FormField, 
-  FormItem, 
-  FormLabel, 
-  FormMessage 
-} from "@/components/ui/form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import * as z from "zod";
-import { useToast } from "@/hooks/use-toast";
-import { Separator } from "@/components/ui/separator";
-
-const generalSettingsSchema = z.object({
-  siteName: z.string().min(3, "Site name must be at least 3 characters"),
-  logoUrl: z.string().url("Must be a valid URL").or(z.string().length(0)),
-  maintenanceMode: z.boolean(),
-  debugMode: z.boolean(),
-  defaultTheme: z.enum(["light", "dark", "system"]),
-});
-
-const notificationSettingsSchema = z.object({
-  emailNotifications: z.boolean(),
-  adminAlerts: z.boolean(),
-  errorReports: z.boolean(),
-  notificationEmail: z.string().email("Must be a valid email"),
-});
-
-const securitySettingsSchema = z.object({
-  loginAttempts: z.number().min(1).max(10),
-  sessionTimeout: z.number().min(5).max(240),
-  allowRegistration: z.boolean(),
-  enforceStrongPasswords: z.boolean(),
-  requireEmailVerification: z.boolean(),
-});
-
-const backupSettingsSchema = z.object({
-  autoBackup: z.boolean(),
-  backupFrequency: z.enum(["daily", "weekly", "monthly"]),
-  backupRetention: z.number().min(1).max(90),
-  backupLocation: z.string().min(3),
-});
+import { toast } from "sonner";
 
 const SystemSettings = () => {
   const { user } = useAuth();
-  const { isAdmin } = useProfile();
-  const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState("general");
+  const { isAdmin, isLoading } = useProfile();
 
-  if (!user) {
-    return <Navigate to="/login" />;
+  if (isLoading) {
+    return (
+      <PageLayout>
+        <div className="container py-8">
+          <h1 className="text-3xl font-bold mb-6">Loading System Settings...</h1>
+        </div>
+      </PageLayout>
+    );
   }
 
-  if (!isAdmin()) {
+  if (!user || !isAdmin()) {
+    console.log("SystemSettings: Redirecting to /dashboard - Not an admin");
     return <Navigate to="/dashboard" />;
   }
 
-  // General Settings Form
-  const generalForm = useForm({
-    resolver: zodResolver(generalSettingsSchema),
-    defaultValues: {
-      siteName: "DeepCircuits",
-      logoUrl: "",
-      maintenanceMode: false,
-      debugMode: true,
-      defaultTheme: "light",
-    },
-  });
-
-  // Notification Settings Form
-  const notificationForm = useForm({
-    resolver: zodResolver(notificationSettingsSchema),
-    defaultValues: {
-      emailNotifications: true,
-      adminAlerts: true,
-      errorReports: true,
-      notificationEmail: "admin@circuitsim.com",
-    },
-  });
-
-  // Security Settings Form
-  const securityForm = useForm({
-    resolver: zodResolver(securitySettingsSchema),
-    defaultValues: {
-      loginAttempts: 5,
-      sessionTimeout: 60,
-      allowRegistration: true,
-      enforceStrongPasswords: true,
-      requireEmailVerification: true,
-    },
-  });
-
-  // Backup Settings Form
-  const backupForm = useForm({
-    resolver: zodResolver(backupSettingsSchema),
-    defaultValues: {
-      autoBackup: true,
-      backupFrequency: "daily",
-      backupRetention: 7,
-      backupLocation: "cloud-storage",
-    },
-  });
-
-  const onSubmitGeneral = (data) => {
-    console.log("General settings:", data);
-    toast({
-      title: "Settings Updated",
-      description: "General settings have been saved successfully.",
-    });
-  };
-
-  const onSubmitNotifications = (data) => {
-    console.log("Notification settings:", data);
-    toast({
-      title: "Settings Updated",
-      description: "Notification settings have been saved successfully.",
-    });
-  };
-
-  const onSubmitSecurity = (data) => {
-    console.log("Security settings:", data);
-    toast({
-      title: "Settings Updated",
-      description: "Security settings have been saved successfully.",
-    });
-  };
-
-  const onSubmitBackup = (data) => {
-    console.log("Backup settings:", data);
-    toast({
-      title: "Settings Updated",
-      description: "Backup settings have been saved successfully.",
-    });
-  };
-
-  const triggerManualBackup = () => {
-    toast({
-      title: "Backup Started",
-      description: "Manual backup has been initiated. This may take a few minutes.",
-    });
+  const handleSaveSettings = () => {
+    toast.success("Settings saved successfully");
   };
 
   return (
     <PageLayout>
-      <div className="container py-12">
-        <div className="mb-8 flex items-center gap-3">
-          <Cog className="h-8 w-8 text-primary" />
+      <div className="container py-8">
+        <div className="mb-8">
           <h1 className="text-3xl font-bold">System Settings</h1>
+          <p className="text-gray-500 mt-2">Configure application-wide settings</p>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Global Configuration</CardTitle>
-            <CardDescription>
-              Configure system-wide settings for the DeepCircuits application
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="mb-6 grid grid-cols-4 w-full">
-                <TabsTrigger value="general" className="flex items-center justify-center gap-2">
-                  <Monitor className="h-4 w-4" />
-                  <span>General</span>
-                </TabsTrigger>
-                <TabsTrigger value="notifications" className="flex items-center justify-center gap-2">
-                  <Bell className="h-4 w-4" />
-                  <span>Notifications</span>
-                </TabsTrigger>
-                <TabsTrigger value="security" className="flex items-center justify-center gap-2">
-                  <Shield className="h-4 w-4" />
-                  <span>Security</span>
-                </TabsTrigger>
-                <TabsTrigger value="backup" className="flex items-center justify-center gap-2">
-                  <Database className="h-4 w-4" />
-                  <span>Backup</span>
-                </TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="general">
-                <Form {...generalForm}>
-                  <form onSubmit={generalForm.handleSubmit(onSubmitGeneral)} className="space-y-6">
-                    <FormField
-                      control={generalForm.control}
-                      name="siteName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Site Name</FormLabel>
-                          <FormControl>
-                            <Input {...field} />
-                          </FormControl>
-                          <FormDescription>
-                            The name of your application shown to users
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={generalForm.control}
-                      name="logoUrl"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Logo URL</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="https://example.com/logo.png" />
-                          </FormControl>
-                          <FormDescription>
-                            URL to your application logo (leave empty to use the default)
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={generalForm.control}
-                      name="defaultTheme"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Default Theme</FormLabel>
-                          <Select 
-                            onValueChange={field.onChange} 
-                            defaultValue={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select a theme" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="light">Light</SelectItem>
-                              <SelectItem value="dark">Dark</SelectItem>
-                              <SelectItem value="system">System</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormDescription>
-                            Default theme for new users
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <div className="flex flex-col gap-4">
-                      <FormField
-                        control={generalForm.control}
-                        name="maintenanceMode"
-                        render={({ field }) => (
-                          <FormItem className="flex items-center justify-between rounded-lg border p-4">
-                            <div className="space-y-0.5">
-                              <FormLabel className="text-base">Maintenance Mode</FormLabel>
-                              <FormDescription>
-                                Disable user access during maintenance periods
-                              </FormDescription>
-                            </div>
-                            <FormControl>
-                              <Switch
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={generalForm.control}
-                        name="debugMode"
-                        render={({ field }) => (
-                          <FormItem className="flex items-center justify-between rounded-lg border p-4">
-                            <div className="space-y-0.5">
-                              <FormLabel className="text-base">Debug Mode</FormLabel>
-                              <FormDescription>
-                                Enable detailed logging and error messages
-                              </FormDescription>
-                            </div>
-                            <FormControl>
-                              <Switch
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                    
-                    <Button type="submit" className="flex gap-2">
-                      <Save className="h-4 w-4" />
-                      Save General Settings
-                    </Button>
-                  </form>
-                </Form>
-              </TabsContent>
-              
-              <TabsContent value="notifications">
-                <Form {...notificationForm}>
-                  <form onSubmit={notificationForm.handleSubmit(onSubmitNotifications)} className="space-y-6">
-                    <FormField
-                      control={notificationForm.control}
-                      name="notificationEmail"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Notification Email</FormLabel>
-                          <FormControl>
-                            <Input {...field} type="email" />
-                          </FormControl>
-                          <FormDescription>
-                            Email address for admin notifications
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <div className="flex flex-col gap-4">
-                      <FormField
-                        control={notificationForm.control}
-                        name="emailNotifications"
-                        render={({ field }) => (
-                          <FormItem className="flex items-center justify-between rounded-lg border p-4">
-                            <div className="space-y-0.5">
-                              <FormLabel className="text-base">Email Notifications</FormLabel>
-                              <FormDescription>
-                                Send notification emails to users
-                              </FormDescription>
-                            </div>
-                            <FormControl>
-                              <Switch
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={notificationForm.control}
-                        name="adminAlerts"
-                        render={({ field }) => (
-                          <FormItem className="flex items-center justify-between rounded-lg border p-4">
-                            <div className="space-y-0.5">
-                              <FormLabel className="text-base">Admin Alerts</FormLabel>
-                              <FormDescription>
-                                Send alerts to admins for important events
-                              </FormDescription>
-                            </div>
-                            <FormControl>
-                              <Switch
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={notificationForm.control}
-                        name="errorReports"
-                        render={({ field }) => (
-                          <FormItem className="flex items-center justify-between rounded-lg border p-4">
-                            <div className="space-y-0.5">
-                              <FormLabel className="text-base">Error Reports</FormLabel>
-                              <FormDescription>
-                                Send error reports to administrators
-                              </FormDescription>
-                            </div>
-                            <FormControl>
-                              <Switch
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                    
-                    <Button type="submit" className="flex gap-2">
-                      <Save className="h-4 w-4" />
-                      Save Notification Settings
-                    </Button>
-                  </form>
-                </Form>
-              </TabsContent>
-              
-              <TabsContent value="security">
-                <Form {...securityForm}>
-                  <form onSubmit={securityForm.handleSubmit(onSubmitSecurity)} className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <FormField
-                        control={securityForm.control}
-                        name="loginAttempts"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Max Login Attempts</FormLabel>
-                            <FormControl>
-                              <Input 
-                                type="number" 
-                                min={1} 
-                                max={10} 
-                                {...field} 
-                                onChange={e => field.onChange(Number(e.target.value))}
-                              />
-                            </FormControl>
-                            <FormDescription>
-                              Maximum failed login attempts before timeout
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={securityForm.control}
-                        name="sessionTimeout"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Session Timeout (minutes)</FormLabel>
-                            <FormControl>
-                              <Input 
-                                type="number" 
-                                min={5} 
-                                max={240} 
-                                {...field} 
-                                onChange={e => field.onChange(Number(e.target.value))}
-                              />
-                            </FormControl>
-                            <FormDescription>
-                              How long until user sessions expire
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                    
-                    <div className="flex flex-col gap-4">
-                      <FormField
-                        control={securityForm.control}
-                        name="allowRegistration"
-                        render={({ field }) => (
-                          <FormItem className="flex items-center justify-between rounded-lg border p-4">
-                            <div className="space-y-0.5">
-                              <FormLabel className="text-base">Allow Registration</FormLabel>
-                              <FormDescription>
-                                Allow new users to register accounts
-                              </FormDescription>
-                            </div>
-                            <FormControl>
-                              <Switch
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={securityForm.control}
-                        name="enforceStrongPasswords"
-                        render={({ field }) => (
-                          <FormItem className="flex items-center justify-between rounded-lg border p-4">
-                            <div className="space-y-0.5">
-                              <FormLabel className="text-base">Enforce Strong Passwords</FormLabel>
-                              <FormDescription>
-                                Require complex passwords meeting security standards
-                              </FormDescription>
-                            </div>
-                            <FormControl>
-                              <Switch
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={securityForm.control}
-                        name="requireEmailVerification"
-                        render={({ field }) => (
-                          <FormItem className="flex items-center justify-between rounded-lg border p-4">
-                            <div className="space-y-0.5">
-                              <FormLabel className="text-base">Require Email Verification</FormLabel>
-                              <FormDescription>
-                                Users must verify email before accessing the platform
-                              </FormDescription>
-                            </div>
-                            <FormControl>
-                              <Switch
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                    
-                    <Button type="submit" className="flex gap-2">
-                      <Save className="h-4 w-4" />
-                      Save Security Settings
-                    </Button>
-                  </form>
-                </Form>
-              </TabsContent>
-              
-              <TabsContent value="backup">
-                <Form {...backupForm}>
-                  <form onSubmit={backupForm.handleSubmit(onSubmitBackup)} className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <FormField
-                        control={backupForm.control}
-                        name="backupFrequency"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Backup Frequency</FormLabel>
-                            <Select 
-                              onValueChange={field.onChange} 
-                              defaultValue={field.value}
-                            >
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select frequency" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="daily">Daily</SelectItem>
-                                <SelectItem value="weekly">Weekly</SelectItem>
-                                <SelectItem value="monthly">Monthly</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormDescription>
-                              How often automatic backups should run
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={backupForm.control}
-                        name="backupRetention"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Backup Retention (days)</FormLabel>
-                            <FormControl>
-                              <Input 
-                                type="number" 
-                                min={1} 
-                                max={90} 
-                                {...field} 
-                                onChange={e => field.onChange(Number(e.target.value))}
-                              />
-                            </FormControl>
-                            <FormDescription>
-                              How long to keep backups before deletion
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={backupForm.control}
-                        name="backupLocation"
-                        render={({ field }) => (
-                          <FormItem className="md:col-span-2">
-                            <FormLabel>Backup Location</FormLabel>
-                            <FormControl>
-                              <Input {...field} />
-                            </FormControl>
-                            <FormDescription>
-                              Storage location for backups (path or cloud identifier)
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                    
-                    <FormField
-                      control={backupForm.control}
-                      name="autoBackup"
-                      render={({ field }) => (
-                        <FormItem className="flex items-center justify-between rounded-lg border p-4">
-                          <div className="space-y-0.5">
-                            <FormLabel className="text-base">Automatic Backups</FormLabel>
-                            <FormDescription>
-                              Run backups automatically on schedule
-                            </FormDescription>
-                          </div>
-                          <FormControl>
-                            <Switch
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <div className="flex flex-col gap-2">
-                      <Separator className="my-4" />
-                      <h3 className="text-lg font-medium">Manual Backup</h3>
-                      <p className="text-sm text-muted-foreground mb-4">
-                        Initiate an immediate backup of all system data
-                      </p>
-                      <div className="flex gap-4">
-                        <Button 
-                          type="button" 
-                          variant="outline" 
-                          className="flex gap-2"
-                          onClick={triggerManualBackup}
-                        >
-                          <Upload className="h-4 w-4" />
-                          Start Backup Now
-                        </Button>
-                        <Button 
-                          type="button" 
-                          variant="outline" 
-                          className="flex gap-2"
-                        >
-                          <DownloadCloud className="h-4 w-4" />
-                          Download Latest Backup
-                        </Button>
-                      </div>
-                    </div>
-                    
-                    <Button type="submit" className="flex gap-2">
-                      <Save className="h-4 w-4" />
-                      Save Backup Settings
-                    </Button>
-                  </form>
-                </Form>
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
+        <Tabs defaultValue="general" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="general">General</TabsTrigger>
+            <TabsTrigger value="security">Security</TabsTrigger>
+            <TabsTrigger value="integration">Integrations</TabsTrigger>
+            <TabsTrigger value="advanced">Advanced</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="general">
+            <Card>
+              <CardHeader>
+                <CardTitle>General Settings</CardTitle>
+                <CardDescription>
+                  Manage application-wide settings and defaults
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="site-name">Application Name</Label>
+                  <Input id="site-name" defaultValue="DeepCircuits" />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="support-email">Support Email</Label>
+                  <Input id="support-email" type="email" defaultValue="support@deepcircuits.com" />
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label htmlFor="maintenance-mode" className="block">Maintenance Mode</Label>
+                    <p className="text-sm text-muted-foreground">Temporarily disable access to the application</p>
+                  </div>
+                  <Switch id="maintenance-mode" />
+                </div>
+                
+                <Button onClick={handleSaveSettings}>Save Settings</Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="security">
+            <Card>
+              <CardHeader>
+                <CardTitle>Security Settings</CardTitle>
+                <CardDescription>
+                  Configure authentication and security options
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label htmlFor="require-email-verification" className="block">Require Email Verification</Label>
+                    <p className="text-sm text-muted-foreground">Users must verify their email before accessing the app</p>
+                  </div>
+                  <Switch id="require-email-verification" defaultChecked />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="session-timeout">Session Timeout (minutes)</Label>
+                  <Input id="session-timeout" type="number" defaultValue="60" />
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label htmlFor="allow-registration" className="block">Allow New Registrations</Label>
+                    <p className="text-sm text-muted-foreground">Enable or disable new user registration</p>
+                  </div>
+                  <Switch id="allow-registration" defaultChecked />
+                </div>
+                
+                <Button onClick={handleSaveSettings}>Save Settings</Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="integration">
+            <Card>
+              <CardHeader>
+                <CardTitle>Integrations</CardTitle>
+                <CardDescription>
+                  Configure third-party integrations
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="wokwi-api-key">Wokwi API Key</Label>
+                  <Input id="wokwi-api-key" type="password" defaultValue="••••••••••••••••" />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="github-client-id">GitHub Client ID</Label>
+                  <Input id="github-client-id" />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="github-client-secret">GitHub Client Secret</Label>
+                  <Input id="github-client-secret" type="password" />
+                </div>
+                
+                <Button onClick={handleSaveSettings}>Save Settings</Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="advanced">
+            <Card>
+              <CardHeader>
+                <CardTitle>Advanced Settings</CardTitle>
+                <CardDescription>
+                  Configure advanced system settings
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="cache-ttl">Cache TTL (seconds)</Label>
+                  <Input id="cache-ttl" type="number" defaultValue="3600" />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="log-level">Log Level</Label>
+                  <select
+                    id="log-level"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <option>Error</option>
+                    <option>Warning</option>
+                    <option selected>Info</option>
+                    <option>Debug</option>
+                  </select>
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label htmlFor="debug-mode" className="block">Debug Mode</Label>
+                    <p className="text-sm text-muted-foreground">Enable additional debugging features</p>
+                  </div>
+                  <Switch id="debug-mode" />
+                </div>
+                
+                <Button onClick={handleSaveSettings}>Save Settings</Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </PageLayout>
   );

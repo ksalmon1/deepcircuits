@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Link } from "react-router-dom";
-import { Shield, Users, Cog, Database } from "lucide-react";
+import { Shield, Users, Cog, Database, Cpu } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
 const AdminLinks: React.FC = () => {
@@ -26,9 +26,15 @@ const AdminLinks: React.FC = () => {
           </Link>
         </div>
         <div className="flex items-center gap-2">
-          <Database className="h-4 w-4" />
+          <Cpu className="h-4 w-4" />
           <Link to="/admin/components" className="text-sm text-primary hover:underline">
             Component Library
+          </Link>
+        </div>
+        <div className="flex items-center gap-2">
+          <Database className="h-4 w-4" />
+          <Link to="/admin/database" className="text-sm text-primary hover:underline">
+            Database Backups
           </Link>
         </div>
       </div>
