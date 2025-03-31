@@ -24,6 +24,7 @@ export const getEdgeParams = (sourceX: number, sourceY: number, targetX: number,
 
 /**
  * Converts a Wokwi component to an XY Flow node
+ * @deprecated Use wokwiComponentToNode from componentConversion.ts instead
  */
 export const componentToNode = (component: WokwiComponent): Node => {
   // Create node data with explicit WokwiNodeData properties

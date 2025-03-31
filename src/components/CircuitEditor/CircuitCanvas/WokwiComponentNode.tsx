@@ -3,7 +3,8 @@ import React, { useEffect, memo, useRef } from 'react';
 import { Handle, Position, useReactFlow } from '@xyflow/react';
 import { WokwiNodeData, WokwiNodeProps } from '@/types/circuit';
 import { toast } from 'sonner';
-import { getWireColorFromSignal } from '@/utils/pinManagement';
+import { getSignalColor } from '@/utils/pinUtils';
+import { setupSvgElement, renderSvgContent } from '@/utils/svgUtils';
 
 // Use the WokwiNodeProps interface that correctly extends NodeProps
 const WokwiComponentNode = ({ 
@@ -40,21 +41,7 @@ const WokwiComponentNode = ({
 
         if (svgPath && svgPath.trim().startsWith('<svg')) {
           console.log(`Rendering SVG for component ${id}`);
-          
-          containerRef.current.innerHTML = svgPath.trim();
-          
-          const svgElement = containerRef.current.querySelector('svg');
-          if (svgElement) {
-            if (!svgElement.hasAttribute('width')) {
-              svgElement.setAttribute('width', '100%');
-            }
-            if (!svgElement.hasAttribute('height')) {
-              svgElement.setAttribute('height', '100%');
-            }
-            svgElement.setAttribute('preserveAspectRatio', 'xMidYMid meet');
-          } else {
-            console.warn(`SVG element not found in svgPath for component ${id}`);
-          }
+          renderSvgContent(containerRef.current, svgPath.trim());
         } else {
           console.log(`Rendering Wokwi element: ${type}`);
           
@@ -128,12 +115,6 @@ const WokwiComponentNode = ({
     }
   }, [id]);
 
-  const getSignalColor = (signals: string[] = []) => {
-    if (!signals || signals.length === 0) return '#4BC0C0';
-    
-    return getWireColorFromSignal(signals[0]);
-  };
-
   const handlePinClick = (event: React.MouseEvent<Element, MouseEvent>, pinIndex: number) => {
     console.log(`Pin ${pinIndex} clicked on component ${id}`);
     
@@ -152,7 +133,7 @@ const WokwiComponentNode = ({
       
       <div style={pinContainerStyle}>
         {pins && pins.map((pin, index) => {
-          const pinColor = getSignalColor(pin.signals);
+          const pinColor = getSignalColor(pin.signals && pin.signals.length > 0 ? pin.signals[0] : '');
           
           const handleStyle: React.CSSProperties = {
             top: `${pin.y}px`,

@@ -1,39 +1,6 @@
 
 import { ComponentRenderer } from './registry';
-
-// Helper function to set up SVG element properties
-function setupSvgElement(svgElement: SVGElement | null): void {
-  if (svgElement) {
-    // Ensure the SVG is responsive
-    if (!svgElement.hasAttribute('width')) {
-      svgElement.setAttribute('width', '100%');
-    }
-    if (!svgElement.hasAttribute('height')) {
-      svgElement.setAttribute('height', '100%');
-    }
-    svgElement.setAttribute('preserveAspectRatio', 'xMidYMid meet');
-  }
-}
-
-// Helper function to load SVG from a URL
-function loadSvgFromPath(element: HTMLElement, svgPath: string): Promise<void> {
-  return fetch(svgPath)
-    .then(response => {
-      if (!response.ok) {
-        throw new Error(`Failed to load SVG: ${response.status} ${response.statusText}`);
-      }
-      return response.text();
-    })
-    .then(svgContent => {
-      element.innerHTML = svgContent;
-      setupSvgElement(element.querySelector('svg'));
-    })
-    .catch(error => {
-      console.error('Error loading SVG:', error);
-      element.innerHTML = `<div class="error">Failed to load SVG: ${error.message}</div>`;
-      throw error; // Re-throw to allow caller to handle
-    });
-}
+import { setupSvgElement, loadSvgFromPath } from '@/utils/svgUtils';
 
 // Helper function to get SVG content for predefined types
 function getSvgContentForType(componentType: string): string | null {

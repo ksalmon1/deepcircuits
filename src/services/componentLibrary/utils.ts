@@ -1,9 +1,18 @@
 
+/**
+ * @deprecated Use functions from componentConversion.ts instead
+ */
+
 import { ComponentLibraryItem } from "@/types/component";
 import { CircuitComponent } from "@/types/component";
+import { 
+  libraryItemToCircuitComponent, 
+  circuitComponentToNode 
+} from '@/utils/componentConversion';
 
 /**
  * Maps a database component record to our application model
+ * @deprecated Use mapComponentFromDb from ../converters.ts instead
  */
 export const mapComponentFromDb = (dbComponent: any): ComponentLibraryItem => {
   console.log(`Mapping component from DB: ${dbComponent.name}, type=${dbComponent.type}, svgPath=${dbComponent.svg_path ? 'exists' : 'missing'}`);
@@ -24,35 +33,12 @@ export const mapComponentFromDb = (dbComponent: any): ComponentLibraryItem => {
 
 /**
  * Convert a library item to a circuit component
+ * @deprecated Use libraryItemToCircuitComponent from componentConversion.ts instead
  */
-export const convertLibraryItemToCircuitComponent = (item: ComponentLibraryItem): CircuitComponent => {
-  return {
-    id: item.id || crypto.randomUUID(),
-    type: item.type,
-    top: 0,
-    left: 0,
-    attributes: {},
-    pins: item.pins || [],
-    svgPath: item.svgPath,
-    isOriginal: item.isOriginal
-  };
-};
+export const convertLibraryItemToCircuitComponent = libraryItemToCircuitComponent;
 
 /**
  * Convert a circuit component to a node for the React Flow canvas
+ * @deprecated Use circuitComponentToNode from componentConversion.ts instead
  */
-export const componentToNode = (component: CircuitComponent) => {
-  return {
-    id: component.id,
-    type: 'wokwiComponent',
-    position: { x: component.left, y: component.top },
-    data: {
-      type: component.type,
-      attributes: component.attributes || {},
-      pins: component.pins || [],
-      svgPath: component.svgPath,
-      isOriginal: component.isOriginal,
-    },
-    draggable: true,
-  };
-};
+export const componentToNode = circuitComponentToNode;

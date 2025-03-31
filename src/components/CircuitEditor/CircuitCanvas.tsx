@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 import { useComponentLibrary } from '@/hooks/useComponentLibrary';
 import { useCanvasNavigation } from '@/hooks/useCanvasNavigation';
 import { useWireRouting } from '@/hooks/useWireRouting';
-import { componentToNode } from './CircuitCanvas/utils';
+import { wokwiComponentToNode } from '@/utils/componentConversion';
 import { useWokwiLoader } from '@/hooks/useWokwiLoader';
 import { useComponentPinCache } from '@/hooks/useComponentPinCache';
 import {
@@ -139,7 +139,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
         svgPathLength: comp.svgPath?.length || 0,
       });
       
-      return componentToNode(comp);
+      return wokwiComponentToNode(comp);
     });
     
     setReactFlowNodes(initialNodes);
