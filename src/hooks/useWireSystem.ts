@@ -6,9 +6,9 @@ import {
   getWireColorFromSignal, 
   getPinSignalType, 
   createWireEdge, 
-  isValidConnection, 
   calculateWireRoutingPoints 
 } from '@/utils/wireUtils';
+import { isValidConnection } from '@/domain/connectionRules';
 import { toast } from 'sonner';
 import { WireData, WireEdge } from '@/types/circuit';
 import { PinConnection } from '@/types/pin';

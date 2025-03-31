@@ -1,7 +1,9 @@
+
 import { useCallback, useState, useEffect } from 'react';
 import { Connection, useReactFlow, Edge, Position, XYPosition } from '@xyflow/react';
 import { WireData, WireEdge, WireConnectionState } from '@/types/circuit';
-import { getPinSignalType, getWireColorFromSignal, isValidConnection, createWireId } from '@/utils/wireUtils';
+import { getPinSignalType, getWireColorFromSignal, createWireId } from '@/utils/wireUtils';
+import { isValidConnection } from '@/domain/connectionRules';
 import { CircuitComponent } from '@/types/component';
 import { toast } from 'sonner';
 

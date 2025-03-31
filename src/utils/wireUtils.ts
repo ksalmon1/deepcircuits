@@ -1,8 +1,11 @@
-
 import { Edge } from '@xyflow/react';
 import { CircuitComponent } from '@/types/component';
 import { WireData } from '@/types/circuit';
-import { findComponentById, getPinByIndex, canPinsConnect } from './pinManagement';
+import { findComponentById, getPinByIndex } from './pinManagement';
+import { isValidConnection } from '@/domain/connectionRules';
+
+// Re-export the domain function for backward compatibility
+export { isValidConnection };
 
 /**
  * Get the signal type of a pin
@@ -46,38 +49,6 @@ export function getWireColorFromSignal(signalType: string): string {
  */
 export function createWireId(): string {
   return `wire-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-}
-
-/**
- * Check if a connection is valid between components
- */
-export function isValidConnection(
-  components: CircuitComponent[],
-  sourceId: string,
-  sourcePinIndex: number,
-  targetId: string,
-  targetPinIndex: number
-): boolean {
-  // Prevent self-connections
-  if (sourceId === targetId) {
-    return false;
-  }
-  
-  const sourceComponent = findComponentById(components, sourceId);
-  const targetComponent = findComponentById(components, targetId);
-  
-  if (!sourceComponent || !targetComponent) {
-    return false;
-  }
-  
-  const sourcePin = getPinByIndex(sourceComponent, sourcePinIndex);
-  const targetPin = getPinByIndex(targetComponent, targetPinIndex);
-  
-  if (!sourcePin || !targetPin) {
-    return false;
-  }
-  
-  return canPinsConnect(sourcePin, targetPin);
 }
 
 /**
