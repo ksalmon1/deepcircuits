@@ -30,8 +30,6 @@ const descriptors = [
 
 // Generate a unique username for new users
 export const generateUniqueUsername = (): string => {
-  // According to the documentation, we need to use uniqueUsernameGenerator 
-  // function with dictionaries passed as configuration
   return uniqueUsernameGenerator({
     dictionaries: [descriptors, circuitTerms],
     separator: "-",
@@ -40,12 +38,57 @@ export const generateUniqueUsername = (): string => {
   });
 };
 
+/**
+ * Fetches user profile and roles for a given user ID
+ * @param userId The user ID to fetch data for
+ * @returns Object containing profile and roles
+ */
+export const getUserProfileAndRoles = async (userId: string): Promise<{
+  profile: Profile | null;
+  roles: UserRole[];
+}> => {
+  try {
+    console.log("Fetching profile and roles for user:", userId);
+    
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+
+    if (profileError) {
+      console.error("Error fetching profile:", profileError);
+      return { profile: null, roles: [] };
+    }
+
+    console.log("Profile loaded successfully");
+
+    const { data: roleData, error: roleError } = await supabase
+      .rpc('get_user_roles', { user_uuid: userId });
+    
+    if (roleError) {
+      console.error("Error fetching roles:", roleError);
+      return { profile: profileData as Profile, roles: [] };
+    }
+
+    const roleArray = Array.isArray(roleData) ? roleData : [];
+    console.log("Roles loaded successfully:", roleArray);
+    
+    return { 
+      profile: profileData as Profile, 
+      roles: roleArray as UserRole[] 
+    };
+  } catch (error: any) {
+    console.error("User data fetch error:", error);
+    return { profile: null, roles: [] };
+  }
+};
+
 // Get all users (using public schema instead of admin API)
 export const getAllUsers = async (): Promise<UserWithProfile[]> => {
   try {
     console.log("Fetching user data from profiles and user_roles tables");
     
-    // Get all profiles from the profiles table
     const { data: profiles, error: profilesError } = await supabase
       .from('profiles')
       .select('*');
@@ -55,7 +98,6 @@ export const getAllUsers = async (): Promise<UserWithProfile[]> => {
       throw profilesError;
     }
 
-    // Get all user roles from the user_roles table
     const { data: userRoles, error: rolesError } = await supabase
       .from('user_roles')
       .select('*');
@@ -65,7 +107,6 @@ export const getAllUsers = async (): Promise<UserWithProfile[]> => {
       throw rolesError;
     }
 
-    // Map profiles with their roles
     const users = profiles.map((profile) => {
       const roleRecord = userRoles?.find((r) => r.user_id === profile.id) || null;
       
@@ -89,14 +130,13 @@ export const getAllUsers = async (): Promise<UserWithProfile[]> => {
 // Get user by ID
 export const getUserById = async (userId: string): Promise<UserWithProfile | null> => {
   try {
-    // Get user profile
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', userId)
       .single();
       
-    if (profileError && profileError.code !== 'PGRST116') { // Not found is okay
+    if (profileError && profileError.code !== 'PGRST116') {
       throw profileError;
     }
 
@@ -104,14 +144,13 @@ export const getUserById = async (userId: string): Promise<UserWithProfile | nul
       return null;
     }
 
-    // Get user role
     const { data: roleData, error: roleError } = await supabase
       .from('user_roles')
       .select('role')
       .eq('user_id', userId)
       .single();
       
-    if (roleError && roleError.code !== 'PGRST116') { // Not found is okay
+    if (roleError && roleError.code !== 'PGRST116') {
       throw roleError;
     }
     
@@ -149,7 +188,6 @@ export const updateUserProfile = async (
       throw error;
     }
 
-    // Ensure the status is correctly typed as UserStatus
     const typedProfile: Profile = {
       ...profile,
       status: profile.status as UserStatus
@@ -165,19 +203,17 @@ export const updateUserProfile = async (
 // Update user role
 export const updateUserRole = async (userId: string, role: UserRole): Promise<void> => {
   try {
-    // First check if user has a role record
     const { data: existingRole, error: checkError } = await supabase
       .from('user_roles')
       .select('*')
       .eq('user_id', userId)
       .single();
       
-    if (checkError && checkError.code !== 'PGRST116') { // Not found is okay
+    if (checkError && checkError.code !== 'PGRST116') {
       throw checkError;
     }
 
     if (existingRole) {
-      // Update existing role
       const { error } = await supabase
         .from('user_roles')
         .update({ role })
@@ -188,7 +224,6 @@ export const updateUserRole = async (userId: string, role: UserRole): Promise<vo
         throw error;
       }
     } else {
-      // Insert new role
       const { error } = await supabase
         .from('user_roles')
         .insert({ user_id: userId, role });

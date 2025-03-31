@@ -2,6 +2,7 @@
 import React, { useState, useMemo } from "react";
 import PageLayout from "@/components/layout/PageLayout";
 import { useAuth } from "@/context/AuthContext";
+import { useProfile } from "@/hooks/use-profile";
 import { Button } from "@/components/ui/button";
 import { Plus, Search, ArrowUpDown } from "lucide-react";
 import ProjectCard, { ProjectData } from "@/components/common/ProjectCard";
@@ -54,7 +55,8 @@ const sampleProjects: ProjectData[] = [
 type SortOption = "name-asc" | "name-desc" | "date-asc" | "date-desc";
 
 const Dashboard = () => {
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
+  const { profile } = useProfile();
   const navigate = useNavigate();
   const [projects, setProjects] = useState<ProjectData[]>(sampleProjects);
   const [searchQuery, setSearchQuery] = useState("");

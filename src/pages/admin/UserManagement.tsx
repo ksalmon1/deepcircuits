@@ -1,7 +1,7 @@
-
 import React, { useState } from "react";
 import PageLayout from "@/components/layout/PageLayout";
 import { useAuth } from "@/context/AuthContext";
+import { useProfile } from "@/hooks/use-profile";
 import { Navigate } from "react-router-dom";
 import { 
   Card, 
@@ -73,7 +73,8 @@ const userEditFormSchema = z.object({
 type UserEditFormValues = z.infer<typeof userEditFormSchema>;
 
 const UserManagement = () => {
-  const { user, isAdmin } = useAuth();
+  const { user } = useAuth();
+  const { isAdmin } = useProfile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -111,13 +112,11 @@ const UserManagement = () => {
   const updateUserMutation = useMutation({
     mutationFn: async (userData: UserEditFormValues & { id: string }) => {
       try {
-        // Update profile first
         await updateUserProfile(userData.id, { 
           display_name: userData.name,
           status: userData.status as UserStatus
         });
         
-        // Then update role
         await updateUserRole(userData.id, userData.role as UserRole);
         
         return userData.id;

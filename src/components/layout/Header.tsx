@@ -1,9 +1,11 @@
+
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { CircuitBoard, Menu, User, X, Settings, Shield, LogOut } from "lucide-react";
 import { useState } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/context/AuthContext";
+import { useProfile } from "@/hooks/use-profile";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { MainNavigation } from "@/components/layout/MainNavigation";
 import {
@@ -17,7 +19,8 @@ import {
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const isMobile = useIsMobile();
-  const { user, signOut, isAdmin } = useAuth();
+  const { user, signOut } = useAuth();
+  const { isAdmin } = useProfile();
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
   const closeMenu = () => setIsMenuOpen(false);

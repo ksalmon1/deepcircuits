@@ -2,6 +2,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
+import { useProfile } from "@/hooks/use-profile";
 import { Navigate } from "react-router-dom";
 import PageLayout from "@/components/layout/PageLayout";
 import { 
@@ -20,7 +21,8 @@ import {
 } from "lucide-react";
 
 const AdminSettings = () => {
-  const { user, isAdmin } = useAuth();
+  const { user } = useAuth();
+  const { isAdmin } = useProfile();
 
   if (!user) {
     return <Navigate to="/login" />;

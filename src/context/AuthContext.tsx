@@ -1,23 +1,15 @@
+
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { Session, User, Provider } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
-import { Profile, UserRole } from "@/types/database";
 import { useToast } from "@/hooks/use-toast";
 import { generateUniqueUsername } from "@/services/userService";
 
 type AuthContextType = {
   session: Session | null;
   user: User | null;
-  profile: Profile | null;
-  roles: UserRole[];
   isLoading: boolean;
-  isAdmin: () => boolean;
-  hasRole: (role: UserRole) => boolean;
-  updateProfile: (updates: Partial<Profile>) => Promise<{
-    success: boolean;
-    error?: any;
-  }>;
   signUp: (email: string, password: string, username?: string) => Promise<{
     error: any | null;
     data: any | null;
@@ -39,52 +31,9 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [roles, setRoles] = useState<UserRole[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
-
-  const fetchUserData = async (userId: string) => {
-    try {
-      console.log("Fetching profile and roles for user:", userId);
-      
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-
-      if (profileError) {
-        console.error("Error fetching profile:", profileError);
-        throw profileError;
-      }
-
-      setProfile(profileData as Profile);
-      console.log("Profile loaded successfully");
-
-      const { data: roleData, error: roleError } = await supabase
-        .rpc('get_user_roles', { user_uuid: userId });
-      
-      if (roleError) {
-        console.error("Error fetching roles:", roleError);
-        setRoles([]);
-      } else {
-        const roleArray = Array.isArray(roleData) ? roleData : [];
-        console.log("Roles loaded successfully:", roleArray);
-        setRoles(roleArray as UserRole[]);
-      }
-    } catch (error: any) {
-      console.error("User data fetch error:", error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error.message || "Failed to fetch user data",
-      });
-      setProfile(null);
-      setRoles([]);
-    }
-  };
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -93,11 +42,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setSession(session);
         setUser(session?.user ?? null);
         
-        if (session?.user) {
-          fetchUserData(session.user.id);
-        } else {
-          setProfile(null);
-          setRoles([]);
+        if (!session?.user) {
           setIsLoading(false);
         }
       }
@@ -107,9 +52,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setSession(session);
       setUser(session?.user ?? null);
       
-      if (session?.user) {
-        fetchUserData(session.user.id);
-      } else {
+      if (!session?.user) {
         setIsLoading(false);
       }
     });
@@ -117,112 +60,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return () => {
       subscription.unsubscribe();
     };
-  }, [toast]);
+  }, []);
 
   useEffect(() => {
-    if (user && profile) {
+    if (user) {
       setIsLoading(false);
     }
-  }, [user, profile]);
-
-  const updateProfile = async (updates: Partial<Profile>) => {
-    if (!user) {
-      console.error("User must be logged in to update profile");
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "You must be logged in to update your profile",
-      });
-      return { 
-        success: false, 
-        error: new Error("User must be logged in to update profile") 
-      };
-    }
-
-    try {
-      console.log("Updating profile with data:", updates);
-      console.log("Current user ID:", user.id);
-      
-      // Generate the SQL query for debugging
-      const query = supabase
-        .from('profiles')
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', user.id);
-
-      console.log("Query being executed:", {
-        table: 'profiles',
-        updates: {
-          ...updates,
-          updated_at: new Date().toISOString()
-        },
-        filter: `id = ${user.id}`
-      });
-      
-      const { data, error } = await query.select();
-      
-      if (error) {
-        console.error("Supabase update error:", error);
-        console.error("Error code:", error.code);
-        console.error("Error message:", error.message);
-        console.error("Error details:", error.details);
-        
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: error.message || "Failed to update profile",
-        });
-        
-        return { 
-          success: false, 
-          error 
-        };
-      }
-
-      console.log("Profile updated successfully. Response data:", data);
-      
-      // If data was returned, update the profile state
-      if (data && data.length > 0) {
-        setProfile(data[0] as Profile);
-        console.log("Profile state updated with returned data");
-      } else {
-        // If no data was returned but the update was successful
-        // Update the profile state with the changes
-        setProfile(prevProfile => {
-          if (!prevProfile) {
-            console.warn("No existing profile to update");
-            return null;
-          }
-          
-          const updatedProfile = { ...prevProfile, ...updates };
-          console.log("Profile state updated manually:", updatedProfile);
-          return updatedProfile as Profile;
-        });
-      }
-
-      toast({
-        title: "Profile updated",
-        description: "Your profile has been updated successfully",
-      });
-      
-      return { success: true };
-    } catch (error: any) {
-      console.error("Error updating profile:", error);
-      
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error.message || "Failed to update profile",
-      });
-      
-      return { 
-        success: false, 
-        error 
-      };
-    }
-  };
+  }, [user]);
 
   const signUp = async (email: string, password: string, username?: string) => {
     setIsLoading(true);
@@ -282,19 +126,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return response;
   };
 
-  const hasRole = (role: UserRole) => roles.includes(role);
-
-  const isAdmin = () => hasRole('admin');
-
   const value = {
     session,
     user,
-    profile,
-    roles,
     isLoading,
-    isAdmin,
-    hasRole,
-    updateProfile,
     signUp,
     signIn,
     signInWithProvider,
