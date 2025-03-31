@@ -1,3 +1,4 @@
+
 import React, { useEffect, memo, useRef, useContext } from 'react';
 import { Handle, Position, NodeProps, useReactFlow } from '@xyflow/react';
 import { WokwiNodeData } from '@/types/circuit';
@@ -67,6 +68,11 @@ const WokwiComponentNode = ({
           const customIntegration = await import('@/integrations/custom/CustomComponents');
           
           if (type && customIntegration.isCustomComponent(type)) {
+            // For custom components, first try to use SVG path, otherwise fallback to custom component rendering
+            if (svgPath) {
+              elementContainer.setAttribute('data-svg-path', svgPath);
+              console.log(`Using SVG path for custom component ${type}`);
+            }
             await customIntegration.renderCustomComponent(type, elementId, attributes);
           } else if (type) {
             await integration.renderWokwiElement(type, elementId, attributes);
