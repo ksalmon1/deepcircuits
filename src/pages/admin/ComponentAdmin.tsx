@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -26,7 +25,7 @@ import { useComponentLibrary } from "@/hooks/useComponentLibrary";
 
 const ComponentAdmin = () => {
   const { user } = useAuth();
-  const { isAdmin, isLoading: isProfileLoading } = useProfile();
+  const { isLoading: isProfileLoading } = useProfile();
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
@@ -36,7 +35,6 @@ const ComponentAdmin = () => {
   const [uniqueCategories, setUniqueCategories] = useState<string[]>([]);
   const [uniqueTypes, setUniqueTypes] = useState<string[]>([]);
   
-  // Add state for new component
   const [newComponent, setNewComponent] = useState<Partial<ComponentLibraryItem>>({
     name: "",
     type: "",
@@ -46,7 +44,6 @@ const ComponentAdmin = () => {
     isOriginal: false
   });
   
-  // Add state for view and edit dialogs
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedComponent, setSelectedComponent] = useState<ComponentLibraryItem | null>(null);
@@ -56,17 +53,15 @@ const ComponentAdmin = () => {
   const [wokwiReady, setWokwiReady] = useState(false);
   const [activeTab, setActiveTab] = useState("details");
   
-  // Getting useful hooks and mutations from useComponentLibrary
   const { 
     updateComponent,
     isUpdatingComponent,
     updateComponentError
   } = useComponentLibrary();
 
-  console.log("ComponentAdmin: Rendering", { isAdmin: isAdmin ? isAdmin() : false, isLoading: isProfileLoading });
+  console.log("ComponentAdmin: Rendering", { isLoading: isProfileLoading });
 
   useEffect(() => {
-    // Set wokwiReady after a short delay to simulate loading
     const timer = setTimeout(() => {
       setWokwiReady(true);
     }, 1000);
@@ -74,12 +69,10 @@ const ComponentAdmin = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  // Fetch components on component mount
   useEffect(() => {
     fetchComponents();
   }, []);
 
-  // Function to fetch components
   const fetchComponents = async () => {
     try {
       setIsLoading(true);
@@ -88,7 +81,6 @@ const ComponentAdmin = () => {
       console.log("Fetched components:", data);
       setComponents(data);
       
-      // Extract unique categories and types for filters
       const categories = [...new Set(data.map(comp => comp.category))];
       const types = [...new Set(data.map(comp => comp.type))];
       setUniqueCategories(categories);
@@ -113,12 +105,11 @@ const ComponentAdmin = () => {
     );
   }
 
-  if (!user || !isAdmin()) {
-    console.log("ComponentAdmin: Redirecting to /dashboard - Not an admin");
+  if (!user) {
+    console.log("ComponentAdmin: Redirecting to /dashboard - Not logged in");
     return <Navigate to="/dashboard" />;
   }
 
-  // Filter components based on search term and filters
   const filteredComponents = components.filter(comp => {
     const matchesSearch = comp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          comp.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -138,10 +129,9 @@ const ComponentAdmin = () => {
   };
 
   const handleAddComponent = async () => {
-    // This would be implemented to add a component to the database
     toast.success("Component added successfully");
     setIsAddDialogOpen(false);
-    fetchComponents(); // Refresh the components list
+    fetchComponents();
   };
 
   const handleViewComponent = async (component: ComponentLibraryItem) => {
@@ -171,7 +161,6 @@ const ComponentAdmin = () => {
   };
 
   const handleDeleteComponent = (component: ComponentLibraryItem) => {
-    // Delete component implementation
     console.log("Deleting component:", component);
   };
 
@@ -226,7 +215,7 @@ const ComponentAdmin = () => {
       await updateComponent(editedComponent);
       toast.success("Component updated successfully");
       setIsEditDialogOpen(false);
-      fetchComponents(); // Refresh the list
+      fetchComponents();
     } catch (error) {
       console.error("Error updating component:", error);
       toast.error("Failed to update component", {
@@ -312,7 +301,6 @@ const ComponentAdmin = () => {
           isCreatingComponent={false}
         />
 
-        {/* Add View Dialog */}
         {selectedComponent && (
           <ViewComponentDialog
             isOpen={isViewDialogOpen}
@@ -321,7 +309,6 @@ const ComponentAdmin = () => {
           />
         )}
 
-        {/* Add Edit Dialog */}
         {selectedComponent && (
           <EditComponentDialog
             isOpen={isEditDialogOpen}

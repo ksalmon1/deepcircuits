@@ -20,10 +20,10 @@ import {
 
 const AdminSettings = () => {
   const { user } = useAuth();
-  const { isAdmin, isLoading } = useProfile();
+  const { isLoading } = useProfile();
   const navigate = useNavigate();
 
-  console.log("AdminSettings: Rendering", { isAdmin: isAdmin ? isAdmin() : false, isLoading });
+  console.log("AdminSettings: Rendering", { isLoading });
 
   if (isLoading) {
     return (
@@ -35,8 +35,8 @@ const AdminSettings = () => {
     );
   }
 
-  if (!user || !isAdmin()) {
-    console.log("AdminSettings: Redirecting to /dashboard - Not an admin");
+  if (!user) {
+    console.log("AdminSettings: Redirecting to /dashboard - Not logged in");
     return <Navigate to="/dashboard" />;
   }
 
