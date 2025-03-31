@@ -1,4 +1,3 @@
-
 import { useAuth } from "@/context/AuthContext";
 import { Profile } from "@/types/database";
 import { getUserProfileAndRoles } from "@/services/userService";
@@ -40,7 +39,7 @@ export const useProfile = () => {
     };
 
     fetchProfileData();
-  }, [user]);
+  }, [user?.id]);
 
   /**
    * Check if the user has a specific role
