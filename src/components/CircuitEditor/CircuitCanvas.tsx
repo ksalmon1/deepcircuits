@@ -36,7 +36,7 @@ import '@xyflow/react/dist/style.css';
 import './CircuitCanvas/circuit-canvas.css';
 
 import WokwiComponentNode from './CircuitCanvas/WokwiComponentNode';
-import CustomWireEdge from './CircuitCanvas/CustomWireEdge';
+import InteractiveEdge, { ConnectionLine } from './CircuitCanvas/CustomWireEdge';
 import LoadingOverlay from './CircuitCanvas/LoadingOverlay';
 import { useCircuitCanvasState } from '@/hooks/useCircuitCanvasState';
 
@@ -52,7 +52,7 @@ const nodeTypes = {
 
 // Define the custom edge types
 const edgeTypes: EdgeTypes = {
-  customWire: CustomWireEdge
+  customWire: InteractiveEdge
 };
 
 const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) => {
@@ -330,7 +330,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
           onDragOver={handleDragOver}
           onNodeDragStop={onNodeDragStop}
           connectionMode={ConnectionMode.Loose}
-          connectionLineComponent={CustomWireEdge}
+          connectionLineComponent={ConnectionLine}
           connectionLineStyle={connectionLineStyle}
           onPaneClick={onPaneClick}
           minZoom={0.5}
