@@ -125,6 +125,12 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     isLoadingDetails 
   } = useComponentLibrary();
 
+  // Define connection line style for the dragging wire
+  const connectionLineStyle = {
+    stroke: '#9b87f5', // Purple color for connection line
+    strokeWidth: 2,
+  };
+
   // Convert components to nodes
   useEffect(() => {
     if (!components || components.length === 0) return;
@@ -325,10 +331,9 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
           onDragOver={handleDragOver}
           onNodeDragStop={onNodeDragStop}
           connectionMode={ConnectionMode.Loose}
-          connectionLineStyle={{
-            stroke: '#9b87f5',
-            strokeWidth: 2
-          }}
+          connectionLineComponent={CustomWireEdge}
+          connectionLineType="customWire"
+          connectionLineStyle={connectionLineStyle}
           onPaneClick={onPaneClick}
           minZoom={0.5}
           maxZoom={4}

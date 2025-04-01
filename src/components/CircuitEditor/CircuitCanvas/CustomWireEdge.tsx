@@ -1,3 +1,4 @@
+
 import React, { memo, useState, useCallback } from 'react';
 import { CustomWireEdgeProps, WireData } from '@/types/circuit';
 import { useReactFlow } from '@xyflow/react';
@@ -76,7 +77,7 @@ const generateOrthogonalPath = (
 };
 
 function CustomWireEdge({
-  id,
+  id = 'connection-line', // Default id for connection line usage
   source,
   target,
   sourceX,
@@ -93,15 +94,17 @@ function CustomWireEdge({
   const [draggingPointIndex, setDraggingPointIndex] = useState<number | null>(null);
   const { setEdges } = useReactFlow();
   
+  // Extract routing points from data, if available
   const routingPoints = data?.routingPoints || [];
   const cursorPosition = data?.cursorPosition;
   
-  const handleEdgeClick = (event: React.MouseEvent) => {
-    if (event.detail === 2 && onDelete) {
+  // Only attach edge click handler if we have an onDelete function
+  const handleEdgeClick = onDelete ? (event: React.MouseEvent) => {
+    if (event.detail === 2) {
       event.stopPropagation();
       onDelete(id);
     }
-  };
+  } : undefined;
   
   const handlePointMouseDown = useCallback((event: React.MouseEvent, index: number) => {
     event.stopPropagation();
@@ -109,7 +112,7 @@ function CustomWireEdge({
   }, []);
   
   const handlePointDrag = useCallback((event: React.MouseEvent<Element, MouseEvent>) => {
-    if (draggingPointIndex === null) return;
+    if (draggingPointIndex === null || !id) return;
     
     const reactFlowBounds = document.querySelector('.react-flow')?.getBoundingClientRect();
     if (!reactFlowBounds) return;
@@ -123,29 +126,32 @@ function CustomWireEdge({
     const mouseX = event.clientX - left;
     const mouseY = event.clientY - top;
     
-    setEdges(edges => {
-      return edges.map(edge => {
-        if (edge.id === id) {
-          const currentRoutingPoints = edge.data?.routingPoints;
-          const newRoutingPoints = Array.isArray(currentRoutingPoints) 
-            ? [...currentRoutingPoints]
-            : [];
-          
-          if (draggingPointIndex >= 0 && draggingPointIndex < newRoutingPoints.length) {
-            newRoutingPoints[draggingPointIndex] = { x: mouseX, y: mouseY };
-          }
-          
-          return {
-            ...edge,
-            data: {
-              ...edge.data,
-              routingPoints: newRoutingPoints
+    // Only update edges if this is a regular edge (not a connection line)
+    if (id !== 'connection-line') {
+      setEdges(edges => {
+        return edges.map(edge => {
+          if (edge.id === id) {
+            const currentRoutingPoints = edge.data?.routingPoints;
+            const newRoutingPoints = Array.isArray(currentRoutingPoints) 
+              ? [...currentRoutingPoints]
+              : [];
+            
+            if (draggingPointIndex >= 0 && draggingPointIndex < newRoutingPoints.length) {
+              newRoutingPoints[draggingPointIndex] = { x: mouseX, y: mouseY };
             }
-          };
-        }
-        return edge;
+            
+            return {
+              ...edge,
+              data: {
+                ...edge.data,
+                routingPoints: newRoutingPoints
+              }
+            };
+          }
+          return edge;
+        });
       });
-    });
+    }
   }, [draggingPointIndex, id, setEdges]);
   
   const handlePointMouseUp = useCallback(() => {
@@ -197,7 +203,9 @@ function CustomWireEdge({
     cursorPosition
   );
   
-  const isTemporary = id.startsWith('temp-wire-');
+  // Determine if this is a temporary connection line or a permanent edge
+  const isConnectionLine = id === 'connection-line';
+  const isTemporary = isConnectionLine || (id && id.startsWith('temp-wire-'));
   const pointerEvents = isTemporary ? 'none' : 'auto';
   
   const isActiveOrSelected = draggingPointIndex !== null || selected;
@@ -205,24 +213,20 @@ function CustomWireEdge({
   // Apply the stroke width based on selection state
   const strokeWidth = isActiveOrSelected ? 3 : (style.strokeWidth || 2);
   
-  // For debugging: Log the style props
-  console.log(`Wire ${id} style:`, style);
-  console.log(`Wire ${id} data:`, data);
-  
   return (
     <>
       <path
         id={id}
-        className="react-flow__edge-path custom-wire-path"
+        className={`react-flow__edge-path custom-wire-path ${isConnectionLine ? 'connection-line' : ''}`}
         d={path}
-        stroke={style.stroke}
+        stroke={style.stroke || '#9b87f5'}
         strokeWidth={strokeWidth}
         fill="none"
         onClick={handleEdgeClick}
         style={{ pointerEvents }}
       />
       
-      {/* Only show routing points when the wire is selected */}
+      {/* Only show routing points when the wire is a permanent edge and is selected */}
       {!isTemporary && selected && Array.isArray(routingPoints) && routingPoints.map((point, index) => {
         const x = isNaN(point.x) ? 0 : point.x;
         const y = isNaN(point.y) ? 0 : point.y;
@@ -233,7 +237,7 @@ function CustomWireEdge({
             cx={x}
             cy={y}
             r={5}
-            fill={style.stroke}
+            fill={style.stroke || '#9b87f5'}
             stroke="#ffffff"
             strokeWidth={1.5}
             opacity={1}
@@ -245,12 +249,12 @@ function CustomWireEdge({
         );
       })}
       
-      {cursorPosition && (
+      {cursorPosition && !isConnectionLine && (
         <circle
           cx={isNaN(cursorPosition.x) ? 0 : cursorPosition.x}
           cy={isNaN(cursorPosition.y) ? 0 : cursorPosition.y}
           r={5}
-          fill={style.stroke}
+          fill={style.stroke || '#9b87f5'}
           stroke="#ffffff"
           strokeWidth={1.5}
           className="cursor-point"
