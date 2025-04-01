@@ -66,7 +66,7 @@ const generateOrthogonalPath = (
 /**
  * Simple connection line component for when wires are being dragged
  */
-const ConnectionLine = ({
+export const ConnectionLine = ({
   fromX,
   fromY,
   toX,

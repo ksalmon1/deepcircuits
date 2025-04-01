@@ -1,4 +1,5 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+
+import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { 
   isWokwiLoaded, 
   forceLoadWokwiElements, 
@@ -31,6 +32,7 @@ import {
   EdgeTypes,
   NodeTypes,
   ReactFlowProvider,
+  Connection
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import './CircuitCanvas/circuit-canvas.css';
@@ -39,6 +41,7 @@ import WokwiComponentNode from './CircuitCanvas/WokwiComponentNode';
 import InteractiveEdge, { ConnectionLine } from './CircuitCanvas/CustomWireEdge';
 import LoadingOverlay from './CircuitCanvas/LoadingOverlay';
 import { useCircuitCanvasState } from '@/hooks/useCircuitCanvasState';
+import { createWireEdge } from '@/utils/wireUtils';
 
 interface CircuitCanvasProps {
   components: WokwiComponent[];
@@ -50,15 +53,15 @@ const nodeTypes = {
   wokwiComponent: WokwiComponentNode
 };
 
-// Define the custom edge types
-const edgeTypes: EdgeTypes = {
-  customWire: InteractiveEdge
-};
-
 const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) => {
   // Refs
   const canvasRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  
+  // Define the custom edge types with useMemo inside the component
+  const edgeTypes = useMemo<EdgeTypes>(() => ({
+    customWire: InteractiveEdge
+  }), []);
   
   // Custom hooks
   const { isReady, loadingError, handleRetry } = useWokwiLoader();
@@ -124,11 +127,32 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     isLoadingDetails 
   } = useComponentLibrary();
 
-  // Define connection line style for the dragging wire
-  const connectionLineStyle = {
-    stroke: '#9b87f5', // Default purple color
-    strokeWidth: 2,
-  };
+  // Handle connection (wire creation) between nodes
+  const onConnect = useCallback((connection: Connection) => {
+    if (!connection.source || !connection.target || !connection.sourceHandle || !connection.targetHandle) {
+      return;
+    }
+
+    // Extract pin indices from handle IDs
+    const sourcePinIndex = parseInt(connection.sourceHandle.split('-')[1]);
+    const targetPinIndex = parseInt(connection.targetHandle.split('-')[1]);
+    
+    if (isNaN(sourcePinIndex) || isNaN(targetPinIndex)) {
+      console.error('Invalid pin indices:', connection.sourceHandle, connection.targetHandle);
+      return;
+    }
+
+    // Create the wire edge with the appropriate color based on signal type
+    const newEdge = createWireEdge(
+      components, 
+      connection.source, 
+      sourcePinIndex, 
+      connection.target, 
+      targetPinIndex
+    );
+    
+    setReactFlowEdges(edges => [...edges, newEdge]);
+  }, [components, setReactFlowEdges]);
 
   // Convert components to nodes
   useEffect(() => {
@@ -331,7 +355,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
           onNodeDragStop={onNodeDragStop}
           connectionMode={ConnectionMode.Loose}
           connectionLineComponent={ConnectionLine}
-          connectionLineStyle={connectionLineStyle}
+          onConnect={onConnect}
           onPaneClick={onPaneClick}
           minZoom={0.5}
           maxZoom={4}

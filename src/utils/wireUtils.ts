@@ -29,6 +29,8 @@ export function getPinSignalType(
  * Get wire color based on signal type
  */
 export function getWireColorFromSignal(signalType: string): string {
+  if (!signalType) return '#9b87f5'; // Default color if no signal
+  
   const signalColorMap: Record<string, string> = {
     'power': '#ea384c', // Bright red for power
     'ground': '#000000e6', // Black for ground
