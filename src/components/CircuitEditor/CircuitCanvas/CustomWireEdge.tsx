@@ -1,7 +1,7 @@
 
 import React, { memo, useState, useCallback } from 'react';
 import { CustomWireEdgeProps, WireData } from '@/types/circuit';
-import { useReactFlow } from '@xyflow/react';
+import { useReactFlow, ConnectionLineComponentProps } from '@xyflow/react';
 
 /**
  * Generates an orthogonal path with only horizontal and vertical segments
@@ -76,23 +76,42 @@ const generateOrthogonalPath = (
   return path;
 };
 
-function CustomWireEdge({
-  id = 'connection-line', // Default id for connection line usage
-  source,
-  target,
-  sourceX,
-  sourceY,
-  targetX,
-  targetY,
-  sourcePosition,
-  targetPosition,
-  style = {},
-  data,
-  selected,
-  onDelete
-}: CustomWireEdgeProps) {
+// Define a unified component that can work as both an edge and a connection line
+function CustomWireEdge(props: CustomWireEdgeProps | ConnectionLineComponentProps) {
+  // Determine if this is a connection line (during dragging) or a regular edge
+  const isConnectionLine = 'fromNode' in props || !('id' in props) || props.id === 'connection-line';
+  
+  // Extract relevant props based on the component usage
+  const {
+    sourceX = 0,
+    sourceY = 0,
+    targetX = 0,
+    targetY = 0,
+    sourcePosition,
+    targetPosition,
+    style = {},
+  } = props;
+  
+  // For regular edge functionality (not connection line)
   const [draggingPointIndex, setDraggingPointIndex] = useState<number | null>(null);
   const { setEdges } = useReactFlow();
+  
+  // Handle regular edge props if this is not a connection line
+  let id: string = 'connection-line';
+  let data: WireData | undefined;
+  let selected: boolean = false;
+  let onDelete: ((id: string) => void) | undefined;
+  let source: string = '';
+  let target: string = '';
+  
+  if (!isConnectionLine && 'id' in props) {
+    id = props.id;
+    data = (props as CustomWireEdgeProps).data;
+    selected = (props as CustomWireEdgeProps).selected || false;
+    onDelete = (props as CustomWireEdgeProps).onDelete;
+    source = (props as CustomWireEdgeProps).source || '';
+    target = (props as CustomWireEdgeProps).target || '';
+  }
   
   // Extract routing points from data, if available
   const routingPoints = data?.routingPoints || [];
@@ -204,7 +223,6 @@ function CustomWireEdge({
   );
   
   // Determine if this is a temporary connection line or a permanent edge
-  const isConnectionLine = id === 'connection-line';
   const isTemporary = isConnectionLine || (id && id.startsWith('temp-wire-'));
   const pointerEvents = isTemporary ? 'none' : 'auto';
   
@@ -265,4 +283,5 @@ function CustomWireEdge({
   );
 }
 
+// Export the component as both a regular component and a ConnectionLineComponent
 export default memo(CustomWireEdge);

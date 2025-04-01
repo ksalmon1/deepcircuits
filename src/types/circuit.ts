@@ -1,5 +1,5 @@
 
-import { NodeProps, EdgeProps, Node, Edge } from '@xyflow/react';
+import { NodeProps, EdgeProps, Node, Edge, ConnectionLineComponentProps } from '@xyflow/react';
 import { ComponentPin } from './pin';
 
 /**
@@ -44,7 +44,6 @@ export interface WireConnectionState {
   sourceHandleId?: string;
   sourcePinIndex?: number;
   routingPoints: Array<{ x: number; y: number }>;
-  temporaryEdgeId?: string;
 }
 
 /**

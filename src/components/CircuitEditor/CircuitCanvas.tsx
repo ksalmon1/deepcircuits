@@ -332,7 +332,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
           onNodeDragStop={onNodeDragStop}
           connectionMode={ConnectionMode.Loose}
           connectionLineComponent={CustomWireEdge}
-          connectionLineType="customWire"
           connectionLineStyle={connectionLineStyle}
           onPaneClick={onPaneClick}
           minZoom={0.5}
