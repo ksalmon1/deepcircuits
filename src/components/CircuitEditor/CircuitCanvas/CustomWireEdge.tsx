@@ -1,3 +1,4 @@
+
 import React, { memo, useState, useCallback } from 'react';
 import { CustomWireEdgeProps, WireData } from '@/types/circuit';
 import { useReactFlow, ConnectionLineComponentProps } from '@xyflow/react';
@@ -70,7 +71,7 @@ function CustomWireEdge(props: CustomWireEdgeProps | ConnectionLineComponentProp
   let targetY = 0;
   let sourcePosition = null;
   let targetPosition = null;
-  let style: { stroke?: string; strokeWidth?: number } = {};
+  let styleProps: { stroke?: string; strokeWidth?: number } = {};
   
   if (isConnectionLine) {
     const connectionProps = props as ConnectionLineComponentProps;
@@ -78,7 +79,17 @@ function CustomWireEdge(props: CustomWireEdgeProps | ConnectionLineComponentProp
     sourceY = connectionProps.fromY || 0;
     targetX = connectionProps.toX || 0;
     targetY = connectionProps.toY || 0;
-    style = connectionProps.connectionLineStyle || { stroke: '#9b87f5', strokeWidth: 2 };
+    
+    // Extract style properties safely
+    if (connectionProps.connectionLineStyle) {
+      const lineStyle = connectionProps.connectionLineStyle;
+      styleProps = {
+        stroke: typeof lineStyle.stroke === 'string' ? lineStyle.stroke : '#9b87f5',
+        strokeWidth: typeof lineStyle.strokeWidth === 'number' ? lineStyle.strokeWidth : 2
+      };
+    } else {
+      styleProps = { stroke: '#9b87f5', strokeWidth: 2 };
+    }
   } else {
     const edgeProps = props as CustomWireEdgeProps;
     sourceX = edgeProps.sourceX || 0;
@@ -87,7 +98,17 @@ function CustomWireEdge(props: CustomWireEdgeProps | ConnectionLineComponentProp
     targetY = edgeProps.targetY || 0;
     sourcePosition = edgeProps.sourcePosition;
     targetPosition = edgeProps.targetPosition;
-    style = edgeProps.style || { stroke: '#9b87f5', strokeWidth: 2 };
+    
+    // Extract style properties safely
+    if (edgeProps.style) {
+      const edgeStyle = edgeProps.style;
+      styleProps = {
+        stroke: typeof edgeStyle.stroke === 'string' ? edgeStyle.stroke : '#9b87f5',
+        strokeWidth: typeof edgeStyle.strokeWidth === 'number' ? edgeStyle.strokeWidth : 2
+      };
+    } else {
+      styleProps = { stroke: '#9b87f5', strokeWidth: 2 };
+    }
   }
   
   const [draggingPointIndex, setDraggingPointIndex] = useState<number | null>(null);
@@ -219,7 +240,7 @@ function CustomWireEdge(props: CustomWireEdgeProps | ConnectionLineComponentProp
   
   const isActiveOrSelected = draggingPointIndex !== null || selected;
   
-  const strokeWidth = isActiveOrSelected ? 3 : (style.strokeWidth || 2);
+  const strokeWidth = isActiveOrSelected ? 3 : (styleProps.strokeWidth || 2);
   
   return (
     <>
@@ -227,7 +248,7 @@ function CustomWireEdge(props: CustomWireEdgeProps | ConnectionLineComponentProp
         id={id}
         className={`react-flow__edge-path custom-wire-path ${isConnectionLine ? 'connection-line' : ''}`}
         d={path}
-        stroke={style.stroke || '#9b87f5'}
+        stroke={styleProps.stroke || '#9b87f5'}
         strokeWidth={strokeWidth}
         fill="none"
         onClick={handleEdgeClick}
@@ -244,7 +265,7 @@ function CustomWireEdge(props: CustomWireEdgeProps | ConnectionLineComponentProp
             cx={x}
             cy={y}
             r={5}
-            fill={style.stroke || '#9b87f5'}
+            fill={styleProps.stroke || '#9b87f5'}
             stroke="#ffffff"
             strokeWidth={1.5}
             opacity={1}
@@ -261,7 +282,7 @@ function CustomWireEdge(props: CustomWireEdgeProps | ConnectionLineComponentProp
           cx={isNaN(cursorPosition.x) ? 0 : cursorPosition.x}
           cy={isNaN(cursorPosition.y) ? 0 : cursorPosition.y}
           r={5}
-          fill={style.stroke || '#9b87f5'}
+          fill={styleProps.stroke || '#9b87f5'}
           stroke="#ffffff"
           strokeWidth={1.5}
           className="cursor-point"

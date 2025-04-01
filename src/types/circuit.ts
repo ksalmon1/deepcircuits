@@ -33,6 +33,10 @@ export interface WireEdge {
 export interface CustomWireEdgeProps extends Omit<EdgeProps, 'data'> {
   data?: WireData;
   onDelete?: (id: string) => void;
+  style?: {
+    stroke?: string;
+    strokeWidth?: number;
+  };
 }
 
 /**
