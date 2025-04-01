@@ -96,7 +96,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     handleCanvasClick,
     handleHandleClick,
     deleteWire,
-    connectionLineStyle,
   } = useWireRouting(components);
   
   // React Flow state
@@ -327,7 +326,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
           onNodeDragStop={onNodeDragStop}
           connectionMode={ConnectionMode.Loose}
           connectionLineComponent={null}
-          connectionLineStyle={connectionLineStyle}
           onPaneClick={onPaneClick}
           minZoom={0.5}
           maxZoom={4}
