@@ -1,5 +1,4 @@
-
-import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { 
   isWokwiLoaded, 
   forceLoadWokwiElements, 
@@ -32,9 +31,6 @@ import {
   EdgeTypes,
   NodeTypes,
   ReactFlowProvider,
-  MiniMap,
-  Connection,
-  addEdge
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import './CircuitCanvas/circuit-canvas.css';
@@ -43,8 +39,6 @@ import WokwiComponentNode from './CircuitCanvas/WokwiComponentNode';
 import InteractiveEdge, { ConnectionLine } from './CircuitCanvas/CustomWireEdge';
 import LoadingOverlay from './CircuitCanvas/LoadingOverlay';
 import { useCircuitCanvasState } from '@/hooks/useCircuitCanvasState';
-import { WokwiComponentData, WokwiPinData } from '@/types/wokwi';
-import { getWireColorFromSignal } from '@/utils/wireUtils'; // Adjust path as needed
 
 interface CircuitCanvasProps {
   components: WokwiComponent[];
@@ -56,19 +50,15 @@ const nodeTypes = {
   wokwiComponent: WokwiComponentNode
 };
 
+// Define the custom edge types
+const edgeTypes: EdgeTypes = {
+  customWire: InteractiveEdge
+};
+
 const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) => {
   // Refs
   const canvasRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  
-  // Define the custom edge types (moved inside the component)
-  const edgeTypes = useMemo(
-    () => ({
-      // Use InteractiveEdge for customWire type
-      customWire: InteractiveEdge,
-    }),
-    []
-  );
   
   // Custom hooks
   const { isReady, loadingError, handleRetry } = useWokwiLoader();
@@ -111,25 +101,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
   const [reactFlowNodes, setReactFlowNodes, onNodesChange] = useNodesState([]);
   const [reactFlowEdges, setReactFlowEdges, onEdgesChange] = useEdgesState([]);
   
-  // Add onConnect handler for ReactFlow
-  const onConnect = useCallback(
-    (connection: Connection) => {
-      console.log('Connection created:', connection);
-      setReactFlowEdges((eds) => addEdge(
-        {
-          ...connection,
-          type: 'customWire',
-          data: { 
-            color: getWireColorFromSignal('digital'),
-            routingPoints: []
-          }
-        }, 
-        eds
-      ));
-    },
-    [setReactFlowEdges]
-  );
-  
   const {
     zoom,
     offset,
@@ -152,6 +123,12 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     isLoadingComponents, 
     isLoadingDetails 
   } = useComponentLibrary();
+
+  // Define connection line style for the dragging wire
+  const connectionLineStyle = {
+    stroke: '#9b87f5', // Default purple color
+    strokeWidth: 2,
+  };
 
   // Convert components to nodes
   useEffect(() => {
@@ -346,7 +323,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
           edges={reactFlowEdges}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
           onInit={setReactFlowInstance}
@@ -355,16 +331,25 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
           onNodeDragStop={onNodeDragStop}
           connectionMode={ConnectionMode.Loose}
           connectionLineComponent={ConnectionLine}
-          fitView
-          className="bg-background"
-          deleteKeyCode={['Backspace', 'Delete']}
-          minZoom={0.1}
+          connectionLineStyle={connectionLineStyle}
+          onPaneClick={onPaneClick}
+          minZoom={0.5}
           maxZoom={4}
-          proOptions={{ hideAttribution: true }}
+          defaultViewport={{ x: 0, y: 0, zoom: 1 }}
+          fitView
+          snapToGrid={true}
+          snapGrid={[25, 25]}
+          deleteKeyCode={['Backspace', 'Delete']}
+          elementsSelectable={!wireConnectionState.isConnecting}
+          style={{ width: '100%', height: '100%' }}
         >
-          <Background />
-          <Controls />
-          <MiniMap />
+          <Background 
+            variant={BackgroundVariant.Dots} 
+            gap={25} 
+            size={1} 
+            color="#e2e8f0" 
+          />
+          <Controls position="bottom-right" showInteractive={false} />
         </ReactFlow>
       </div>
     </div>
