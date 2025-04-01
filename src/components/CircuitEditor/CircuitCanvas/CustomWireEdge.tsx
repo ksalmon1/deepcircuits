@@ -204,12 +204,8 @@ function CustomWireEdge({
   
   const isActiveOrSelected = draggingPointIndex !== null || selected;
   
-  // Use the provided style (which includes the stroke color) or fall back to default color
-  const edgeStyle = {
-    ...style,
-    stroke: style.stroke || edgeColor,
-    strokeWidth: isActiveOrSelected ? 3 : (style.strokeWidth || 2)
-  };
+  // Apply the stroke width based on selection state
+  const strokeWidth = isActiveOrSelected ? 3 : (style.strokeWidth || 2);
   
   return (
     <>
@@ -217,8 +213,8 @@ function CustomWireEdge({
         id={id}
         className="react-flow__edge-path custom-wire-path"
         d={path}
-        stroke={edgeStyle.stroke}
-        strokeWidth={edgeStyle.strokeWidth}
+        stroke={style.stroke || edgeColor}
+        strokeWidth={strokeWidth}
         fill="none"
         onClick={handleEdgeClick}
         style={{ pointerEvents }}
@@ -235,7 +231,7 @@ function CustomWireEdge({
             cx={x}
             cy={y}
             r={5}
-            fill={edgeColor}
+            fill={style.stroke || edgeColor}
             stroke="#ffffff"
             strokeWidth={1.5}
             opacity={1}
@@ -252,7 +248,7 @@ function CustomWireEdge({
           cx={isNaN(cursorPosition.x) ? 0 : cursorPosition.x}
           cy={isNaN(cursorPosition.y) ? 0 : cursorPosition.y}
           r={5}
-          fill={edgeColor}
+          fill={style.stroke || edgeColor}
           stroke="#ffffff"
           strokeWidth={1.5}
           className="cursor-point"
