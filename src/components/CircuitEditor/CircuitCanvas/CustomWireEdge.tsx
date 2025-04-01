@@ -1,3 +1,4 @@
+
 import React, { memo, useState, useCallback } from 'react';
 import { CustomWireEdgeProps, WireData } from '@/types/circuit';
 import { useReactFlow } from '@xyflow/react';
@@ -205,13 +206,17 @@ function CustomWireEdge({
   // Apply the stroke width based on selection state
   const strokeWidth = isActiveOrSelected ? 3 : (style.strokeWidth || 2);
   
+  // For debugging: Log the style props
+  console.log(`Wire ${id} style:`, style);
+  console.log(`Wire ${id} data:`, data);
+  
   return (
     <>
       <path
         id={id}
         className="react-flow__edge-path custom-wire-path"
         d={path}
-        stroke={style.stroke}
+        stroke="#00FF00" /* DEBUGGING: Force bright green color */
         strokeWidth={strokeWidth}
         fill="none"
         onClick={handleEdgeClick}
@@ -229,7 +234,7 @@ function CustomWireEdge({
             cx={x}
             cy={y}
             r={5}
-            fill={style.stroke}
+            fill="#00FF00" /* DEBUGGING: Force bright green color */
             stroke="#ffffff"
             strokeWidth={1.5}
             opacity={1}
@@ -246,7 +251,7 @@ function CustomWireEdge({
           cx={isNaN(cursorPosition.x) ? 0 : cursorPosition.x}
           cy={isNaN(cursorPosition.y) ? 0 : cursorPosition.y}
           r={5}
-          fill={style.stroke}
+          fill="#00FF00" /* DEBUGGING: Force bright green color */
           stroke="#ffffff"
           strokeWidth={1.5}
           className="cursor-point"
