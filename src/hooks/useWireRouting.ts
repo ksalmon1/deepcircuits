@@ -1,3 +1,4 @@
+
 import { useCallback, useState, useEffect } from 'react';
 import { Connection, useReactFlow, Edge, Position, XYPosition } from '@xyflow/react';
 import { WireData, WireEdge, WireConnectionState } from '@/types/circuit';
@@ -13,8 +14,6 @@ export const useWireRouting = (components: CircuitComponent[]) => {
     isConnecting: false,
     routingPoints: [],
   });
-  const [temporaryEdge, setTemporaryEdge] = useState<Edge<WireData> | null>(null);
-  const [mousePosition, setMousePosition] = useState<XYPosition>({ x: 0, y: 0 });
 
   /**
    * Cancel the current wire connection
@@ -24,98 +23,14 @@ export const useWireRouting = (components: CircuitComponent[]) => {
     
     console.log('Cancelling wire connection');
     
-    // Remove temporary edge if it exists
-    if (wireConnectionState.temporaryEdgeId) {
-      setEdges(edges => edges.filter(edge => edge.id !== wireConnectionState.temporaryEdgeId));
-    }
-    
     // Reset connection state
     setWireConnectionState({
       isConnecting: false,
       routingPoints: []
     });
     
-    setTemporaryEdge(null);
-    
     return true;
-  }, [wireConnectionState, setEdges]);
-
-  /**
-   * Update the temporary edge to follow the mouse cursor
-   */
-  const updateTemporaryEdge = useCallback((mousePos: XYPosition) => {
-    if (!wireConnectionState.isConnecting || !wireConnectionState.temporaryEdgeId) return;
-    
-    setEdges(edges => edges.map(edge => {
-      if (edge.id === wireConnectionState.temporaryEdgeId) {
-        return {
-          ...edge,
-          targetPosition: Position.Left,
-          data: {
-            ...edge.data,
-            cursorPosition: mousePos
-          }
-        };
-      }
-      return edge;
-    }));
-  }, [wireConnectionState, setEdges]);
-
-  /**
-   * Track mouse movement when a wire connection is in progress
-   */
-  useEffect(() => {
-    if (!wireConnectionState.isConnecting) return;
-    
-    const handleMouseMove = (event: MouseEvent) => {
-      const reactFlowBounds = document.querySelector('.react-flow')?.getBoundingClientRect();
-      if (reactFlowBounds) {
-        const viewport = getViewport();
-        const mousePos = convertToCanvasCoordinates(event, reactFlowBounds, viewport);
-        setMousePosition(mousePos);
-        updateTemporaryEdge(mousePos);
-      }
-    };
-    
-    window.addEventListener('mousemove', handleMouseMove);
-    
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-    };
-  }, [wireConnectionState.isConnecting, getViewport, updateTemporaryEdge]);
-  
-  /**
-   * Create a temporary edge for wire routing
-   */
-  const createTemporaryEdge = useCallback((
-    nodeId: string, 
-    handleId: string, 
-    pinIndex: number, 
-    initialMousePos: XYPosition
-  ): Edge<WireData> => {
-    const signal = getPinSignalType(components, nodeId, pinIndex);
-    const wireColor = getWireColorFromSignal(signal || '');
-    
-    return {
-      id: `temp-wire-${Date.now()}`,
-      source: nodeId,
-      target: nodeId, // Temporary target is the same as source
-      sourceHandle: handleId,
-      targetHandle: null as any,
-      type: 'customWire',
-      data: {
-        color: wireColor,
-        sourcePinIndex: pinIndex,
-        targetPinIndex: -1,
-        routingPoints: [],
-        cursorPosition: initialMousePos
-      } as WireData,
-      style: {
-        stroke: wireColor,
-        strokeWidth: 2
-      }
-    };
-  }, [components]);
+  }, [wireConnectionState]);
 
   /**
    * Get initial mouse position in canvas coordinates
@@ -143,7 +58,6 @@ export const useWireRouting = (components: CircuitComponent[]) => {
     if (!initialMousePos) return false;
     
     const pinIndex = parseInt(handleId.split('-')[1]);
-    const tempEdgeId = `temp-wire-${Date.now()}`;
     
     // Set connection state
     setWireConnectionState({
@@ -151,25 +65,17 @@ export const useWireRouting = (components: CircuitComponent[]) => {
       sourceNodeId: nodeId,
       sourceHandleId: handleId,
       sourcePinIndex: pinIndex,
-      routingPoints: [],
-      temporaryEdgeId: tempEdgeId
+      routingPoints: []
     });
     
-    // Create and add temporary edge
-    const newTempEdge = createTemporaryEdge(nodeId, handleId, pinIndex, initialMousePos);
-    
-    setTemporaryEdge(newTempEdge);
-    setEdges((eds) => [...eds, newTempEdge] as Edge[]);
-    setMousePosition(initialMousePos);
-    
     return true;
-  }, [getInitialMousePosition, createTemporaryEdge, setEdges]);
+  }, [getInitialMousePosition]);
   
   /**
    * Add a routing point at the specified position
    */
   const addRoutingPoint = useCallback((point: XYPosition) => {
-    if (!wireConnectionState.isConnecting || !wireConnectionState.temporaryEdgeId) return false;
+    if (!wireConnectionState.isConnecting) return false;
     
     console.log('Adding routing point at:', point);
     
@@ -180,21 +86,8 @@ export const useWireRouting = (components: CircuitComponent[]) => {
       routingPoints: newRoutingPoints
     }));
     
-    setEdges(edges => edges.map(edge => {
-      if (edge.id === wireConnectionState.temporaryEdgeId) {
-        return {
-          ...edge,
-          data: {
-            ...edge.data,
-            routingPoints: newRoutingPoints
-          }
-        };
-      }
-      return edge;
-    }));
-    
     return true;
-  }, [wireConnectionState, setEdges]);
+  }, [wireConnectionState]);
 
   /**
    * Check if connection between source and target is valid
@@ -303,19 +196,14 @@ export const useWireRouting = (components: CircuitComponent[]) => {
       wireConnectionState.routingPoints
     );
     
-    // Replace temporary edge with permanent edge
-    setEdges(edges => {
-      const filteredEdges = edges.filter(edge => edge.id !== wireConnectionState.temporaryEdgeId);
-      return [...filteredEdges, newEdge] as Edge[];
-    });
+    // Add the permanent edge
+    setEdges(edges => [...edges, newEdge] as Edge[]);
     
     // Reset connection state
     setWireConnectionState({
       isConnecting: false,
       routingPoints: []
     });
-    
-    setTemporaryEdge(null);
     
     toast.success('Connection created', {
       description: 'Wire connected successfully',
@@ -378,11 +266,9 @@ export const useWireRouting = (components: CircuitComponent[]) => {
     });
   }, [setEdges]);
 
-  // Return the same interface to maintain compatibility with consumers
+  // Return the hook interface with removed properties
   return {
     wireConnectionState,
-    temporaryEdge,
-    mousePosition,
     startWireConnection,
     addRoutingPoint,
     completeWireConnection,
@@ -390,7 +276,6 @@ export const useWireRouting = (components: CircuitComponent[]) => {
     handleCanvasClick,
     handleHandleClick,
     deleteWire,
-    connectionLineStyle: { stroke: '#9b87f5', strokeWidth: 2 },
   };
 };
 
