@@ -1,0 +1,33 @@
+/* src/components/CircuitEditor/CircuitCanvas/CircuitComponentNode.css */
+
+/* Ensure the SVG wrapper and SVG itself don't add unexpected space */
+.component-svg-wrapper {
+    display: inline-block; /* Or block, depending on desired layout */
+    line-height: 0; /* Prevent extra space */
+  }
+  
+  .component-svg-wrapper svg {
+    display: block; /* Prevent extra space below inline SVGs */
+    overflow: visible; /* Allow stroke to exceed original bounds */
+  }
+  
+  /* Outline style for selected components */
+  /* Target common shape elements, excluding groups and defs */
+  .circuit-component-node.selected .component-svg-wrapper svg *:not(g):not(defs):not(title):not(desc) {
+    stroke: #3b82f6; /* Blue outline - adjust color as needed */
+    stroke-width: 2px; /* Adjust thickness as needed */
+    stroke-linecap: round; /* Optional: for smoother line ends */
+    stroke-linejoin: round; /* Optional: for smoother line joins */
+    /* Prevent fill from being overridden if not set explicitly in SVG */
+    fill: inherit;
+    /* Ensure vector-effect is non-scaling-stroke if you scale nodes */
+    /* vector-effect: non-scaling-stroke; */
+  }
+  
+  /* Fallback text style (if needed) */
+  .circuit-component-node:not(:has(.component-svg-wrapper)) {
+    /* Styles for when only text is displayed */
+    background-color: white;
+    border: 1px dashed #ccc;
+    padding: 5px; /* Add padding back for text-only */
+  }

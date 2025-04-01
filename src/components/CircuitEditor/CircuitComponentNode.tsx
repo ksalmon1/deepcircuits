@@ -1,7 +1,9 @@
 import React, { memo } from 'react';
-import { Handle, NodeProps } from '@xyflow/react';
+import { Handle, NodeProps, Position } from '@xyflow/react';
 import { CircuitComponent } from '@/types/component';
 import { ComponentPin } from '@/types/pin';
+import clsx from 'clsx';
+import './CircuitCanvas/CircuitComponentNode.css';
 
 // Remove registry and placeholder imports
 /*
@@ -27,19 +29,13 @@ interface CustomNodeProps extends NodeProps {
 const CircuitComponentNode: React.FC<CustomNodeProps> = ({ id, data, selected }) => {
   const handleSize = 8;
 
-  // Basic styling
+  // Basic styling - remove the border, background, radius as it interferes with outline
   const nodeStyle: React.CSSProperties = {
-    border: selected ? '2px solid #9b87f5' : '1px solid #ccc',
-    // Remove padding to align handle coordinates with visual element origin
-    // padding: '10px', 
-    borderRadius: '5px',
-    background: 'white',
-    // Let the content (SVG/Text) determine alignment if needed
-    // textAlign: 'center',
-    fontSize: '10px', // Keep font size for fallback text
-    position: 'relative', 
-    // Add line-height to prevent container collapse if only text is shown
-    lineHeight: '0', // Helps when only image is present
+    padding: '0', // Ensure no padding interferes with SVG positioning
+    fontSize: '10px',
+    position: 'relative',
+    lineHeight: '0', // Helps when only image/SVG is present
+    overflow: 'visible', // Allow SVG stroke to go outside bounds if needed
   };
 
   // Function to calculate handle style using pin.x and pin.y
@@ -62,61 +58,50 @@ const CircuitComponentNode: React.FC<CustomNodeProps> = ({ id, data, selected })
     };
   };
 
-  // Render the component's visual representation based ONLY on svgPath
+  // Render the component's visual representation
   const renderComponentVisual = () => {
-    // Remove check for componentRegistry
-    /* 
-    const CustomComponent = componentRegistry[data.type];
-    if (CustomComponent) {
-      try {
-          return <CustomComponent {...data} />;
-      } catch (error) {
-          console.error(`Error rendering custom component <${data.type}>:`, error);
-          return <div>{data.name || data.type} (Render Error)</div>;
-      }
-    }
-    */
-    
-    // Render ONLY based on svgPath or fallback to text
     if (data.svgPath) {
-      let imageSrc = data.svgPath;
-      if (typeof imageSrc === 'string' && imageSrc.trim().startsWith('<svg')) {
-        try {
-          const base64Svg = btoa(imageSrc);
-          imageSrc = `data:image/svg+xml;base64,${base64Svg}`;
-        } catch (error) {
-          console.error("Error encoding SVG to Base64:", error);
-          return <div>{data.name || data.type} (SVG Error)</div>;
-        }
+      const svgString = data.svgPath;
+      if (typeof svgString === 'string' && svgString.trim().startsWith('<svg')) {
+        // Render raw SVG inline using dangerouslySetInnerHTML
+        // Add a wrapper div to help with styling/positioning if needed
+        return (
+          <div
+            className="component-svg-wrapper"
+            dangerouslySetInnerHTML={{ __html: svgString }}
+          />
+        );
+      } else {
+        // If svgPath is a URL, render as image (outline might not work well)
+        console.warn(`Component ${data.name} uses an image URL, outline selection may not apply.`);
+        return (
+          <img
+            src={svgString} // It's a URL here
+            alt={data.name || data.type}
+            style={{ display: 'block', maxWidth: '100%', height: 'auto' }}
+          />
+        );
       }
-      
-      return (
-        <img 
-          src={imageSrc}
-          alt={data.name || data.type} 
-          style={{ display: 'block', maxWidth: '100%', height: 'auto' }}
-          onError={(e) => {
-            console.error("Error loading image:", imageSrc, e);
-          }}
-        />
-      );
     } else {
       // Fallback to simple text label
       return (
-        // Add padding ONLY for text fallback for better appearance
-        <div style={{ padding: '5px' }}>{data.name || data.type}</div>
+        <div style={{ padding: '5px', background: 'white', border: '1px dashed #ccc' }}>
+          {data.name || data.type}
+        </div>
       );
     }
   };
 
   return (
-    <div style={nodeStyle}>
+    // Add conditional class based on selection state
+    <div style={nodeStyle} className={clsx('circuit-component-node', { 'selected': selected })}>
       {renderComponentVisual()}
       {/* Conditionally render handles based on data.hideHandles */}
       {!data.hideHandles && data.pins && data.pins.map((pin, index) => (
         <Handle
           key={pin.name || `pin-${index}`}
-          type="source" 
+          type="source" // Use "source" to match editor functionality
+          position={Position.Top} // Position doesn't visually matter due to style override
           id={`pin-${index}`}
           style={getHandleStyle(pin)}
           isConnectable={true}
@@ -126,4 +111,4 @@ const CircuitComponentNode: React.FC<CustomNodeProps> = ({ id, data, selected })
   );
 };
 
-export default memo(CircuitComponentNode); // Renamed export 
+export default memo(CircuitComponentNode); 

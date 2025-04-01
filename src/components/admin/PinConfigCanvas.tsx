@@ -49,6 +49,7 @@ const PinConfigCanvasInternal: React.FC<PinConfigCanvasProps> = ({
   const componentNodeId = 'component-node';
   const [nodes, setNodes] = useState<Node[]>([])
   const reactFlowInstance = useReactFlow();
+  const pinNodeSize = 8; // Define the size used in PinNode styling
 
   // Generate nodes whenever the component or pins change
   useEffect(() => {
@@ -68,8 +69,8 @@ const PinConfigCanvasInternal: React.FC<PinConfigCanvasProps> = ({
       id: `pin-${index}`,
       type: 'pin',
       position: {
-        x: componentNodePosition.x + pin.x,
-        y: componentNodePosition.y + pin.y,
+        x: componentNodePosition.x + pin.x - (pinNodeSize / 2),
+        y: componentNodePosition.y + pin.y - (pinNodeSize / 2),
       },
       data: { pin, pinIndex: index },
       draggable: true,
@@ -77,7 +78,7 @@ const PinConfigCanvasInternal: React.FC<PinConfigCanvasProps> = ({
       zIndex: 10,
     }));
 
-    console.log("Setting nodes:", [componentNode, ...pinNodes]);
+    console.log("Setting nodes (with offset):", [componentNode, ...pinNodes]);
     setNodes([componentNode, ...pinNodes]);
 
     // Fit view after nodes are set initially or when component/pins change significantly
@@ -111,11 +112,11 @@ const PinConfigCanvasInternal: React.FC<PinConfigCanvasProps> = ({
           const pinIndex = parseInt(pinIndexStr, 10);
 
           if (!isNaN(pinIndex)) {
-            // Calculate relative position based on the final absolute position
-            const relativeX = change.position.x - componentPos.x;
-            const relativeY = change.position.y - componentPos.y;
+            // Calculate relative position of the *center* by adding back the half-size offset
+            const relativeX = (change.position.x + (pinNodeSize / 2)) - componentPos.x;
+            const relativeY = (change.position.y + (pinNodeSize / 2)) - componentPos.y;
 
-            console.log(`PinNode ${pinIndex} DRAG END. Absolute:`, change.position, `Relative: { x: ${relativeX}, y: ${relativeY} }`);
+            console.log(`PinNode ${pinIndex} DRAG END. Node Pos:`, change.position, `Reported Center Relative: { x: ${relativeX}, y: ${relativeY} }`);
 
             // Call the parent update function ONLY on drag end
             onPinUpdate(pinIndex, { x: Math.round(relativeX), y: Math.round(relativeY) });

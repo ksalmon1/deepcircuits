@@ -14,7 +14,6 @@ const pinNodeStyle: React.CSSProperties = {
   height: '8px', // Match handleSize
   backgroundColor: '#555', // Match handle background
   borderRadius: '50%',
-  // border: '1px solid white', // Remove border
   cursor: 'grab', // Keep cursor for draggable node
   // boxShadow: '0 1px 3px rgba(0,0,0,0.2)', // Remove shadow
   // Center the node origin visually
