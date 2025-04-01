@@ -1,4 +1,3 @@
-
 import { useCallback, useState, useEffect } from 'react';
 import { Connection, useReactFlow, Edge, Position, XYPosition } from '@xyflow/react';
 import { WireData, WireEdge, WireConnectionState } from '@/types/circuit';
@@ -110,7 +109,11 @@ export const useWireRouting = (components: CircuitComponent[]) => {
         targetPinIndex: -1,
         routingPoints: [],
         cursorPosition: initialMousePos
-      } as WireData
+      } as WireData,
+      style: {
+        stroke: wireColor,
+        strokeWidth: 2
+      }
     };
   }, [components]);
 
@@ -252,7 +255,12 @@ export const useWireRouting = (components: CircuitComponent[]) => {
         sourcePinIndex: sourcePinIndex,
         targetPinIndex: targetPinIndex,
         routingPoints: routingPoints,
-      } as WireData
+      } as WireData,
+      style: {
+        stroke: wireColor,
+        strokeWidth: 2
+      },
+      animated: signal === 'clock' || signal === 'data'
     };
   }, [components]);
 

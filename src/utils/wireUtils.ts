@@ -30,8 +30,8 @@ export function getPinSignalType(
  */
 export function getWireColorFromSignal(signalType: string): string {
   const signalColorMap: Record<string, string> = {
-    'power': '#ff0000',
-    'ground': '#000000',
+    'power': '#ea384c', // Bright red for power
+    'ground': '#000000e6', // Black for ground
     'analog': '#4BC0C0',
     'digital': '#9b87f5',
     'clock': '#ffcc00',

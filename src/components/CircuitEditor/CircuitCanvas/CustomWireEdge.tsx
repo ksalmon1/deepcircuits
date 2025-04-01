@@ -189,7 +189,7 @@ function CustomWireEdge({
   const finalTargetX = cursorPosition && (safeSourceX === safeTargetX) ? cursorPosition.x : safeTargetX;
   const finalTargetY = cursorPosition && (safeSourceY === safeTargetY) ? cursorPosition.y : safeTargetY;
   
-  // Use orthogonal path generation instead of bezier or smooth step
+  // Use orthogonal path generation
   const path = generateOrthogonalPath(
     safeSourceX, 
     safeSourceY, 
@@ -204,14 +204,21 @@ function CustomWireEdge({
   
   const isActiveOrSelected = draggingPointIndex !== null || selected;
   
+  // Use the provided style (which includes the stroke color) or fall back to default color
+  const edgeStyle = {
+    ...style,
+    stroke: style.stroke || edgeColor,
+    strokeWidth: isActiveOrSelected ? 3 : (style.strokeWidth || 2)
+  };
+  
   return (
     <>
       <path
         id={id}
         className="react-flow__edge-path custom-wire-path"
         d={path}
-        stroke={edgeColor}
-        strokeWidth={isActiveOrSelected ? 3 : 2}
+        stroke={edgeStyle.stroke}
+        strokeWidth={edgeStyle.strokeWidth}
         fill="none"
         onClick={handleEdgeClick}
         style={{ pointerEvents }}
