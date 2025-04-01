@@ -1,4 +1,3 @@
-
 import React, { memo, useState, useCallback } from 'react';
 import { CustomWireEdgeProps, WireData, WokwiNodeData } from '@/types/circuit';
 import { useReactFlow, ConnectionLineComponentProps } from '@xyflow/react';
@@ -310,7 +309,6 @@ const InteractiveEdge = ({
  * Universal wire edge component that handles both connection lines and interactive edges
  */
 function CustomWireEdge(props: CustomWireEdgeProps | ConnectionLineComponentProps) {
-  // Determine if this is a connection line or an edge
   const isConnectionLine = 'fromX' in props || !('id' in props) || props.id === 'connection-line';
   
   if (isConnectionLine) {
@@ -319,9 +317,6 @@ function CustomWireEdge(props: CustomWireEdgeProps | ConnectionLineComponentProp
     return <InteractiveEdge {...(props as CustomWireEdgeProps)} />;
   }
 }
-
-// Export the connection line component separately
-export { ConnectionLine };
 
 // Default export the main edge component
 export default memo(CustomWireEdge);
