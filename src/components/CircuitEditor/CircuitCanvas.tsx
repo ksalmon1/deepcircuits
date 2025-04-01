@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { 
   isWokwiLoaded, 
@@ -54,19 +55,19 @@ const nodeTypes = {
   wokwiComponent: WokwiComponentNode
 };
 
-// Define the custom edge types
-const edgeTypes = useMemo(
-  () => ({
-    // Use InteractiveEdge for customWire type
-    customWire: InteractiveEdge,
-  }),
-  []
-);
-
 const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) => {
   // Refs
   const canvasRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  
+  // Define the custom edge types (moved inside the component)
+  const edgeTypes = useMemo(
+    () => ({
+      // Use InteractiveEdge for customWire type
+      customWire: InteractiveEdge,
+    }),
+    []
+  );
   
   // Custom hooks
   const { isReady, loadingError, handleRetry } = useWokwiLoader();
