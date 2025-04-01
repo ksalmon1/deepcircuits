@@ -1,6 +1,7 @@
 import React, { memo, useState, useCallback } from 'react';
-import { CustomWireEdgeProps, WireData } from '@/types/circuit';
-import { useReactFlow, ConnectionLineComponentProps } from '@xyflow/react';
+import { CustomWireEdgeProps, WireData, WokwiNodeData } from '@/types/circuit';
+import { useReactFlow, ConnectionLineComponentProps, Node } from '@xyflow/react';
+import { getPinSignalType, getWireColorFromSignal } from '@/utils/wireUtils';
 
 /**
  * Generates an orthogonal path with only horizontal and vertical segments
@@ -69,8 +70,32 @@ const ConnectionLine = ({
   fromY,
   toX,
   toY,
-  connectionLineStyle = {}
+  connectionLineStyle = {},
+  sourceNode,
+  sourceHandleId
 }: ConnectionLineComponentProps) => {
+  let wireColor = connectionLineStyle.stroke || '#9b87f5'; // Default color
+
+  if (sourceNode && sourceHandleId) {
+    try {
+      const pinIndex = parseInt(sourceHandleId.split('-')[1]);
+      if (!isNaN(pinIndex)) {
+        const nodeData = sourceNode.data as WokwiNodeData;
+        const pin = nodeData?.pins?.[pinIndex];
+        
+        if (pin && pin.signals && pin.signals.length > 0) {
+          const signal = pin.signals[0];
+          wireColor = getWireColorFromSignal(signal);
+        } else {
+          console.warn(`ConnectionLine: Could not find signal for pin ${pinIndex} on node ${sourceNode.id}`);
+        }
+      }
+    } catch (error) {
+      console.error("Error calculating connection line color:", error);
+      // Keep default color on error
+    }
+  }
+
   const path = generateOrthogonalPath(
     fromX || 0,
     fromY || 0,
@@ -83,7 +108,7 @@ const ConnectionLine = ({
       className="react-flow__edge-path react-flow__connection-line"
       d={path}
       fill="none"
-      stroke={connectionLineStyle.stroke || '#9b87f5'}
+      stroke={wireColor}
       strokeWidth={connectionLineStyle.strokeWidth || 2}
       style={{ pointerEvents: 'none' }}
     />
