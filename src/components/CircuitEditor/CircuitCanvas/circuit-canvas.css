@@ -168,3 +168,15 @@
 .custom-wire-path {
   cursor: pointer;
 }
+
+/* Force stroke color for temporary wire paths */
+.react-flow__edge[id^="temp-wire-"] .react-flow__edge-path {
+  stroke: var(--edge-color, #9b87f5) !important; /* Use a variable or fallback */
+}
+
+/* Attempt to remove bezier curve smoothing if possible via CSS (might not work) */
+.react-flow__edge[id^="temp-wire-"] .react-flow__edge-path {
+  /* If ReactFlow uses specific CSS for smoothing, try overriding it here */
+  /* Example: shape-rendering: crispEdges; */
+  /* This might not be sufficient to force orthogonal rendering */
+}
