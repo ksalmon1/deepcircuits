@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { 
   isWokwiLoaded, 
@@ -327,6 +326,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
           onDragOver={handleDragOver}
           onNodeDragStop={onNodeDragStop}
           connectionMode={ConnectionMode.Loose}
+          connectionLineComponent={null}
           connectionLineStyle={connectionLineStyle}
           onPaneClick={onPaneClick}
           minZoom={0.5}
