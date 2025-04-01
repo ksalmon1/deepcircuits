@@ -31,7 +31,6 @@ import {
   EdgeTypes,
   NodeTypes,
   ReactFlowProvider,
-  ConnectionLineType
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import './CircuitCanvas/circuit-canvas.css';

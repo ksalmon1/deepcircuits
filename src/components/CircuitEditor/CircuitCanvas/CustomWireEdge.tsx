@@ -1,3 +1,4 @@
+
 import React, { memo, useState, useCallback } from 'react';
 import { CustomWireEdgeProps, WireData } from '@/types/circuit';
 import { useReactFlow, ConnectionLineComponentProps } from '@xyflow/react';
@@ -61,72 +62,53 @@ const generateOrthogonalPath = (
   return path;
 };
 
-function CustomWireEdge(props: CustomWireEdgeProps | ConnectionLineComponentProps) {
-  const isConnectionLine = 'fromNode' in props || !('id' in props) || props.id === 'connection-line';
-  
-  let sourceX = 0;
-  let sourceY = 0;
-  let targetX = 0;
-  let targetY = 0;
-  let sourcePosition = null;
-  let targetPosition = null;
-  let wireColor = '#9b87f5';
-  let strokeWidth = 2;
-  
-  if (isConnectionLine) {
-    const connectionProps = props as ConnectionLineComponentProps;
-    sourceX = connectionProps.fromX || 0;
-    sourceY = connectionProps.fromY || 0;
-    targetX = connectionProps.toX || 0;
-    targetY = connectionProps.toY || 0;
-    
-    if (connectionProps.connectionLineStyle) {
-      if (typeof connectionProps.connectionLineStyle.stroke === 'string') {
-        wireColor = connectionProps.connectionLineStyle.stroke;
-      }
-      if (typeof connectionProps.connectionLineStyle.strokeWidth === 'number') {
-        strokeWidth = connectionProps.connectionLineStyle.strokeWidth;
-      }
-    }
-  } else {
-    const edgeProps = props as CustomWireEdgeProps;
-    sourceX = edgeProps.sourceX || 0;
-    sourceY = edgeProps.sourceY || 0;
-    targetX = edgeProps.targetX || 0;
-    targetY = edgeProps.targetY || 0;
-    sourcePosition = edgeProps.sourcePosition;
-    targetPosition = edgeProps.targetPosition;
-    
-    if (edgeProps.style) {
-      if (typeof edgeProps.style.stroke === 'string') {
-        wireColor = edgeProps.style.stroke;
-      }
-      if (edgeProps.style.strokeWidth !== undefined) {
-        const width = edgeProps.style.strokeWidth;
-        strokeWidth = typeof width === 'number' ? width : parseFloat(width);
-        if (isNaN(strokeWidth)) strokeWidth = 2;
-      }
-    }
-  }
-  
+/**
+ * Simple connection line component for when wires are being dragged
+ */
+const ConnectionLine = ({
+  fromX,
+  fromY,
+  toX,
+  toY,
+  connectionLineStyle = {}
+}: ConnectionLineComponentProps) => {
+  const path = generateOrthogonalPath(
+    fromX || 0,
+    fromY || 0,
+    toX || 0,
+    toY || 0
+  );
+
+  return (
+    <path
+      className="react-flow__edge-path react-flow__connection-line"
+      d={path}
+      fill="none"
+      stroke={connectionLineStyle.stroke || '#9b87f5'}
+      strokeWidth={connectionLineStyle.strokeWidth || 2}
+      style={{ pointerEvents: 'none' }}
+    />
+  );
+};
+
+/**
+ * Interactive edge component for when wires are placed
+ */
+const InteractiveEdge = ({
+  id,
+  sourceX,
+  sourceY,
+  targetX,
+  targetY,
+  sourcePosition,
+  targetPosition,
+  style = {},
+  data,
+  selected,
+  onDelete
+}: CustomWireEdgeProps) => {
   const [draggingPointIndex, setDraggingPointIndex] = useState<number | null>(null);
   const { setEdges } = useReactFlow();
-  
-  let id: string = 'connection-line';
-  let data: WireData | undefined;
-  let selected: boolean = false;
-  let onDelete: ((id: string) => void) | undefined;
-  let source: string = '';
-  let target: string = '';
-  
-  if (!isConnectionLine && 'id' in props) {
-    id = props.id;
-    data = (props as CustomWireEdgeProps).data;
-    selected = (props as CustomWireEdgeProps).selected || false;
-    onDelete = (props as CustomWireEdgeProps).onDelete;
-    source = (props as CustomWireEdgeProps).source || '';
-    target = (props as CustomWireEdgeProps).target || '';
-  }
   
   const routingPoints = data?.routingPoints || [];
   const cursorPosition = data?.cursorPosition;
@@ -233,20 +215,20 @@ function CustomWireEdge(props: CustomWireEdgeProps | ConnectionLineComponentProp
     cursorPosition
   );
   
-  const isTemporary = isConnectionLine || (id && id.startsWith('temp-wire-'));
+  const isTemporary = id === 'connection-line' || (id && id.startsWith('temp-wire-'));
   const pointerEvents = isTemporary ? 'none' : 'auto';
   
   const isActiveOrSelected = draggingPointIndex !== null || selected;
   
-  const activeStrokeWidth = isActiveOrSelected ? 3 : strokeWidth;
+  const activeStrokeWidth = isActiveOrSelected ? 3 : (style.strokeWidth as number || 2);
   
   return (
     <>
       <path
         id={id}
-        className={`react-flow__edge-path custom-wire-path ${isConnectionLine ? 'connection-line' : ''}`}
+        className={`react-flow__edge-path custom-wire-path ${isTemporary ? 'connection-line' : ''}`}
         d={path}
-        stroke={wireColor}
+        stroke={style.stroke || data?.color || '#9b87f5'}
         strokeWidth={activeStrokeWidth}
         fill="none"
         onClick={handleEdgeClick}
@@ -263,7 +245,7 @@ function CustomWireEdge(props: CustomWireEdgeProps | ConnectionLineComponentProp
             cx={x}
             cy={y}
             r={5}
-            fill={wireColor}
+            fill={style.stroke || data?.color || '#9b87f5'}
             stroke="#ffffff"
             strokeWidth={1.5}
             opacity={1}
@@ -275,12 +257,12 @@ function CustomWireEdge(props: CustomWireEdgeProps | ConnectionLineComponentProp
         );
       })}
       
-      {cursorPosition && !isConnectionLine && (
+      {cursorPosition && !isTemporary && (
         <circle
           cx={isNaN(cursorPosition.x) ? 0 : cursorPosition.x}
           cy={isNaN(cursorPosition.y) ? 0 : cursorPosition.y}
           r={5}
-          fill={wireColor}
+          fill={style.stroke || data?.color || '#9b87f5'}
           stroke="#ffffff"
           strokeWidth={1.5}
           className="cursor-point"
@@ -289,6 +271,20 @@ function CustomWireEdge(props: CustomWireEdgeProps | ConnectionLineComponentProp
       )}
     </>
   );
+};
+
+/**
+ * Universal wire edge component that handles both connection lines and interactive edges
+ */
+function CustomWireEdge(props: CustomWireEdgeProps | ConnectionLineComponentProps) {
+  // Determine if this is a connection line or an edge
+  const isConnectionLine = 'fromX' in props || !('id' in props) || props.id === 'connection-line';
+  
+  if (isConnectionLine) {
+    return <ConnectionLine {...(props as ConnectionLineComponentProps)} />;
+  } else {
+    return <InteractiveEdge {...(props as CustomWireEdgeProps)} />;
+  }
 }
 
 export default memo(CustomWireEdge);
