@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { 
   isWokwiLoaded, 
   forceLoadWokwiElements, 
@@ -31,6 +31,7 @@ import {
   EdgeTypes,
   NodeTypes,
   ReactFlowProvider,
+  MiniMap,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import './CircuitCanvas/circuit-canvas.css';
@@ -39,6 +40,9 @@ import WokwiComponentNode from './CircuitCanvas/WokwiComponentNode';
 import InteractiveEdge, { ConnectionLine } from './CircuitCanvas/CustomWireEdge';
 import LoadingOverlay from './CircuitCanvas/LoadingOverlay';
 import { useCircuitCanvasState } from '@/hooks/useCircuitCanvasState';
+import { WokwiComponentData, WokwiPinData } from '@/types/wokwi';
+import { useCircuitStore } from '@/store/circuitStore'; // Adjust path as needed
+import { getWireColorFromSignal } from '@/utils/wireUtils'; // Adjust path as needed
 
 interface CircuitCanvasProps {
   components: WokwiComponent[];
@@ -51,9 +55,13 @@ const nodeTypes = {
 };
 
 // Define the custom edge types
-const edgeTypes: EdgeTypes = {
-  customWire: InteractiveEdge
-};
+const edgeTypes = useMemo(
+  () => ({
+    // Use InteractiveEdge for customWire type
+    customWire: InteractiveEdge,
+  }),
+  []
+);
 
 const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) => {
   // Refs
@@ -123,12 +131,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
     isLoadingComponents, 
     isLoadingDetails 
   } = useComponentLibrary();
-
-  // Define connection line style for the dragging wire
-  const connectionLineStyle = {
-    stroke: '#9b87f5', // Default purple color
-    strokeWidth: 2,
-  };
 
   // Convert components to nodes
   useEffect(() => {
@@ -323,6 +325,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
           edges={reactFlowEdges}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
+          onConnect={onConnect}
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
           onInit={setReactFlowInstance}
@@ -331,25 +334,16 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
           onNodeDragStop={onNodeDragStop}
           connectionMode={ConnectionMode.Loose}
           connectionLineComponent={ConnectionLine}
-          connectionLineStyle={connectionLineStyle}
-          onPaneClick={onPaneClick}
-          minZoom={0.5}
-          maxZoom={4}
-          defaultViewport={{ x: 0, y: 0, zoom: 1 }}
           fitView
-          snapToGrid={true}
-          snapGrid={[25, 25]}
+          className="bg-background"
           deleteKeyCode={['Backspace', 'Delete']}
-          elementsSelectable={!wireConnectionState.isConnecting}
-          style={{ width: '100%', height: '100%' }}
+          minZoom={0.1}
+          maxZoom={4}
+          proOptions={{ hideAttribution: true }}
         >
-          <Background 
-            variant={BackgroundVariant.Dots} 
-            gap={25} 
-            size={1} 
-            color="#e2e8f0" 
-          />
-          <Controls position="bottom-right" showInteractive={false} />
+          <Background />
+          <Controls />
+          <MiniMap />
         </ReactFlow>
       </div>
     </div>
