@@ -82,15 +82,33 @@ function CustomWireEdge(props: CustomWireEdgeProps | ConnectionLineComponentProp
   const isConnectionLine = 'fromNode' in props || !('id' in props) || props.id === 'connection-line';
   
   // Extract relevant props based on the component usage
-  const {
-    sourceX = 0,
-    sourceY = 0,
-    targetX = 0,
-    targetY = 0,
-    sourcePosition,
-    targetPosition,
-    style = {},
-  } = props;
+  let sourceX = 0;
+  let sourceY = 0;
+  let targetX = 0;
+  let targetY = 0;
+  let sourcePosition = null;
+  let targetPosition = null;
+  let style = {};
+  
+  if (isConnectionLine) {
+    // Connection line props
+    const connectionProps = props as ConnectionLineComponentProps;
+    sourceX = connectionProps.fromX || 0;
+    sourceY = connectionProps.fromY || 0;
+    targetX = connectionProps.toX || 0;
+    targetY = connectionProps.toY || 0;
+    style = connectionProps.connectionLineStyle || {};
+  } else {
+    // Regular edge props
+    const edgeProps = props as CustomWireEdgeProps;
+    sourceX = edgeProps.sourceX || 0;
+    sourceY = edgeProps.sourceY || 0;
+    targetX = edgeProps.targetX || 0;
+    targetY = edgeProps.targetY || 0;
+    sourcePosition = edgeProps.sourcePosition;
+    targetPosition = edgeProps.targetPosition;
+    style = edgeProps.style || {};
+  }
   
   // For regular edge functionality (not connection line)
   const [draggingPointIndex, setDraggingPointIndex] = useState<number | null>(null);

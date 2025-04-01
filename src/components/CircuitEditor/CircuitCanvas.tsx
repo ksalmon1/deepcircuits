@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { 
   isWokwiLoaded, 
@@ -22,7 +21,6 @@ import {
   Panel,
   useReactFlow,
   BackgroundVariant,
-  ReactFlowProvider,
   ReactFlowInstance,
   ConnectionMode,
   OnNodesChange,
