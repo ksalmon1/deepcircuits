@@ -78,18 +78,26 @@ const ConnectionLine = ({
   let wireColor = connectionLineStyle.stroke || '#9b87f5'; // Default color
 
   if (fromNode && fromHandle?.id) {
+    console.log('ConnectionLine Props:', { fromNodeId: fromNode.id, fromHandleId: fromHandle.id }); // Log incoming props
     try {
       const pinIndex = parseInt(fromHandle.id.split('-')[1]);
+      console.log('Parsed pinIndex:', pinIndex); // Log parsed index
       if (!isNaN(pinIndex)) {
         const nodeData = fromNode.data as WokwiNodeData;
+        console.log('Source nodeData:', JSON.stringify(nodeData, null, 2)); // Log node data
         const pin = nodeData?.pins?.[pinIndex];
+        console.log(`Data for pin ${pinIndex}:`, pin); // Log the specific pin data
         
         if (pin && pin.signals && pin.signals.length > 0) {
           const signal = pin.signals[0];
+          console.log(`Found signal for pin ${pinIndex}:`, signal); // Log the found signal
           wireColor = getWireColorFromSignal(signal);
+          console.log(`Calculated wireColor:`, wireColor); // Log the calculated color
         } else {
           console.warn(`ConnectionLine: Could not find signal for pin ${pinIndex} on node ${fromNode.id}`);
         }
+      } else {
+        console.warn(`ConnectionLine: Could not parse pin index from handle ID ${fromHandle.id}`); // Add log here too
       }
     } catch (error) {
       console.error("Error calculating connection line color:", error);
