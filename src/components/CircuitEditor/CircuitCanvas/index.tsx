@@ -1,8 +1,7 @@
-
-import WokwiComponentNode from './WokwiComponentNode';
+import CircuitComponentNode from './CircuitComponentNode';
 import { componentToNode } from './utils';
 
 export {
-  WokwiComponentNode,
+  CircuitComponentNode,
   componentToNode
 };

@@ -1,4 +1,3 @@
-
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from "react-router-dom"
@@ -6,7 +5,7 @@ import App from './App.tsx'
 import './index.css'
 import './styles/tailwind.css'
 import './styles/component-preview.css'
-import './styles/circuit-canvas.css'
+// import './styles/circuit-canvas.css' // Removed as the file was deleted
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

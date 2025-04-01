@@ -1,10 +1,7 @@
-
 import React, { useEffect, memo, useRef, useState, useCallback } from 'react';
 import { ComponentPin } from '@/types/pin';
 import { usePinEditor } from '@/hooks/usePinEditor';
 import { useCanvasNavigation } from '@/hooks/useCanvasNavigation';
-import { isWokwiLoaded, forceLoadWokwiElements } from '@/integrations/wokwi/WokwiIntegration';
-import { renderWokwiComponentPreview } from '@/utils/componentPreviewUtils';
 import { isPointNearPin } from '@/utils/pinUtils';
 import { AppError, logError, PinError } from '@/utils/errorHandling';
 import { toast } from 'sonner';
@@ -15,6 +12,8 @@ import PinList from './PinList';
 import ReferenceGrid from './ReferenceGrid';
 import { CoordinateSystemInfo, ControlsInfo } from './InfoPanels';
 import ErrorBoundary from '../ErrorBoundary';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Input } from '@/components/ui/input';
 
 interface PinEditorProps {
   pins: ComponentPin[];
@@ -101,87 +100,6 @@ const PinEditor: React.FC<PinEditorProps> = ({
     setEditingPinNameValue
   } = usePinEditor(pinData, handlePinChanges, readonly);
 
-  // Load Wokwi component
-  useEffect(() => {
-    const loadWokwi = async () => {
-      try {
-        if (!isWokwiLoaded()) {
-          await forceLoadWokwiElements();
-        }
-        
-        if (componentType && previewRef.current) {
-          console.log("Rendering component preview for:", componentType);
-          
-          previewRef.current.innerHTML = '';
-          
-          const wrapper = document.createElement('div');
-          wrapper.style.position = 'relative';
-          wrapper.style.width = '100%';
-          wrapper.style.height = '100%';
-          previewRef.current.appendChild(wrapper);
-          
-          await renderWokwiComponentPreview(componentType, wrapper);
-          setComponentLoaded(true);
-          setLoadError(null);
-          
-          setTimeout(() => {
-            const element = wrapper.firstElementChild?.firstElementChild;
-            if (element instanceof HTMLElement) {
-              setComponentElement(element);
-              console.log("Component element found and positioned at top-left (0,0)");
-            } else {
-              setLoadError(new PinError(`Component element not found for ${componentType}`, 'COMPONENT_ELEMENT_NOT_FOUND'));
-            }
-          }, 200);
-        }
-      } catch (error) {
-        console.error('Error loading component preview:', error);
-        setLoadError(
-          error instanceof Error 
-            ? error 
-            : new PinError(`Failed to load component preview for ${componentType}`, 'COMPONENT_PREVIEW_LOAD_ERROR')
-        );
-        toast.error('Failed to load component preview', {
-          description: error instanceof Error ? error.message : 'Unknown error',
-        });
-      }
-    };
-    
-    loadWokwi();
-  }, [componentType]);
-  
-  // Handle load retry
-  const handleRetry = useCallback(() => {
-    setLoadError(null);
-    if (componentType && previewRef.current) {
-      previewRef.current.innerHTML = '';
-      const loadPromise = renderWokwiComponentPreview(componentType, previewRef.current);
-      toast.promise(loadPromise, {
-        loading: 'Reloading component preview...',
-        success: 'Component preview reloaded successfully!',
-        error: 'Failed to reload component preview',
-      });
-      
-      loadPromise
-        .then(() => {
-          setComponentLoaded(true);
-          setTimeout(() => {
-            const element = previewRef.current?.firstElementChild?.firstElementChild;
-            if (element instanceof HTMLElement) {
-              setComponentElement(element);
-            }
-          }, 200);
-        })
-        .catch((error) => {
-          setLoadError(
-            error instanceof Error 
-              ? error 
-              : new PinError(`Failed to reload component preview for ${componentType}`, 'COMPONENT_PREVIEW_RELOAD_ERROR')
-          );
-        });
-    }
-  }, [componentType]);
-  
   // Canvas interaction handlers
   const handleCanvasMouseDown = (e: React.MouseEvent) => {
     if (readonly) return;
@@ -275,24 +193,11 @@ Calculated pin position relative to component origin: (${canvasX}, ${canvasY})`;
     };
   }, [setZoom]);
   
-  // Render error state if component failed to load
-  if (loadError) {
-    return (
-      <div className="flex flex-col h-full border-2 border-red-300 rounded-md p-4 bg-red-50">
-        <div className="text-red-600 mb-4">
-          <h3 className="font-medium text-lg">Failed to load component preview</h3>
-          <p className="mt-2">{loadError.message}</p>
-        </div>
-        <Button 
-          variant="outline" 
-          className="mt-auto self-start" 
-          onClick={handleRetry}
-        >
-          Retry Loading
-        </Button>
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (loadError) {
+      toast({ title: 'Error rendering preview', description: loadError.message, variant: 'destructive' });
+    }
+  }, [loadError, toast]);
   
   return (
     <div className={`flex flex-col h-full ${className}`} style={{ minHeight: '400px' }}>

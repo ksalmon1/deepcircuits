@@ -1,7 +1,6 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { ComponentLibraryItem, ComponentMetadata } from '@/types/component';
-import { WokwiPin } from '@/integrations/wokwi/WokwiIntegration';
+import { ComponentPin } from '@/types/pin';
 
 /**
  * Fetch all components from the library
@@ -284,7 +283,7 @@ export async function deleteComponent(id: string): Promise<void> {
 }
 
 // Helper functions for component pins
-async function insertPins(componentId: string, pins: WokwiPin[]): Promise<void> {
+async function insertPins(componentId: string, pins: ComponentPin[]): Promise<void> {
   try {
     if (!pins || pins.length === 0) {
       return;
@@ -312,7 +311,7 @@ async function insertPins(componentId: string, pins: WokwiPin[]): Promise<void> 
   }
 }
 
-async function updatePins(componentId: string, pins: WokwiPin[]): Promise<void> {
+async function updatePins(componentId: string, pins: ComponentPin[]): Promise<void> {
   try {
     // Delete existing pins
     const { error: deleteError } = await supabase

@@ -1,17 +1,18 @@
-
 import React, { useEffect, useState } from 'react';
 import { CircuitComponent } from '@/types/component';
 import { useComponentLibrary } from '@/hooks/useComponentLibrary';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ComponentLibraryItem } from '@/types/component';
 import { convertLibraryItemToCircuitComponent } from '@/services/componentLibrary/utils';
+import { useCircuitEditor } from '@/context/CircuitEditorContext';
 
 export interface ComponentPanelProps {
-  onComponentSelect: (component: CircuitComponent) => void;
+  // onComponentSelect: (component: CircuitComponent) => void; // No longer needed?
 }
 
-const ComponentPanel: React.FC<ComponentPanelProps> = ({ onComponentSelect }) => {
+const ComponentPanel: React.FC<ComponentPanelProps> = (/*{ onComponentSelect }*/) => {
   const { components, isLoadingComponents, componentsDetailsMap } = useComponentLibrary();
+  const { setDraggingComponentType } = useCircuitEditor();
   const [categorizedComponents, setCategorizedComponents] = useState<Record<string, ComponentLibraryItem[]>>({});
   
   useEffect(() => {
@@ -34,14 +35,14 @@ const ComponentPanel: React.FC<ComponentPanelProps> = ({ onComponentSelect }) =>
   }, [components]);
 
   const handleDragStart = (e: React.DragEvent, component: ComponentLibraryItem) => {
-    // Create a CircuitComponent from the component library item
-    const circuitComponent: CircuitComponent = convertLibraryItemToCircuitComponent(component);
-    
     console.log(`Drag start for component: ${component.name} (${component.type})`);
-    console.log(`SVG path included: ${component.svgPath ? 'Yes' : 'No'}`);
-    
-    e.dataTransfer.setData('component', JSON.stringify(circuitComponent));
-    e.dataTransfer.effectAllowed = 'copy';
+    e.dataTransfer.effectAllowed = 'copy'; 
+    setDraggingComponentType(component.type);
+  };
+
+  const handleDragEnd = () => {
+    console.log("Drag end");
+    setDraggingComponentType(null);
   };
 
   if (isLoadingComponents) {
@@ -79,6 +80,7 @@ const ComponentPanel: React.FC<ComponentPanelProps> = ({ onComponentSelect }) =>
                   className="bg-white border rounded p-2 cursor-grab hover:bg-blue-50 hover:border-blue-300 transition-colors"
                   draggable
                   onDragStart={(e) => handleDragStart(e, component)}
+                  onDragEnd={handleDragEnd}
                 >
                   <div className="text-sm font-medium">{component.name}</div>
                 </div>

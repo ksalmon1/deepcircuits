@@ -1,10 +1,10 @@
-
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>DeepCircuits - Interactive Circuit Simulator</title>
+    <title>CircuitSim</title>
     <meta name="description" content="Lovable Generated Project" />
     <meta name="author" content="Lovable" />
 
@@ -17,20 +17,22 @@
     <meta name="twitter:site" content="@lovable_dev" />
     <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
     
-    <!-- Wokwi elements styles -->
     <style>
-      /* Base styles for Wokwi elements */
-      wokwi-led, wokwi-resistor, wokwi-arduino-uno, wokwi-pushbutton, 
-      wokwi-slide-switch, wokwi-capacitor, wokwi-battery {
-        display: inline-block;
+      /* Basic reset */
+      body, html {
+        margin: 0;
+        padding: 0;
+        font-family: sans-serif;
+        background-color: #f8f9fa; /* Light grey background */
       }
+
+      /* Removed Wokwi styles */
+
     </style>
   </head>
 
   <body>
     <div id="root"></div>
-    <!-- IMPORTANT: DO NOT REMOVE THIS SCRIPT TAG OR THIS VERY COMMENT! -->
-    <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

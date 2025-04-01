@@ -1,389 +1,346 @@
-
-import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
-import { 
-  isWokwiLoaded, 
-  forceLoadWokwiElements, 
-  WokwiComponent,
-  getComponentPinInfo 
-} from '@/integrations/wokwi/WokwiIntegration';
-import { toast } from 'sonner';
-import { useComponentLibrary } from '@/hooks/useComponentLibrary';
-import { useCanvasNavigation } from '@/hooks/useCanvasNavigation';
-import { useWireRouting } from '@/hooks/useWireRouting';
-import { wokwiComponentToNode } from '@/utils/componentConversion';
-import { useWokwiLoader } from '@/hooks/useWokwiLoader';
-import { useComponentPinCache } from '@/hooks/useComponentPinCache';
+import React, { useState, useCallback, useEffect, useRef, DragEvent } from 'react';
 import {
+  ReactFlowProvider,
   ReactFlow,
-  Controls,
   Background,
+  Controls,
   useNodesState,
   useEdgesState,
-  Panel,
-  useReactFlow,
+  Node,
+  Edge,
   BackgroundVariant,
-  ReactFlowInstance,
   ConnectionMode,
   OnNodesChange,
   OnEdgesChange,
   OnConnect,
-  Node,
   XYPosition,
-  EdgeTypes,
   NodeTypes,
-  ReactFlowProvider,
-  Connection
+  EdgeTypes,
+  ReactFlowInstance,
+  Connection,
+  addEdge,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import './CircuitCanvas/circuit-canvas.css';
 
-import WokwiComponentNode from './CircuitCanvas/WokwiComponentNode';
-import InteractiveEdge, { ConnectionLine } from './CircuitCanvas/CustomWireEdge';
-import LoadingOverlay from './CircuitCanvas/LoadingOverlay';
-import { useCircuitCanvasState } from '@/hooks/useCircuitCanvasState';
-import { createWireEdge } from '@/utils/wireUtils';
+// Import actual types
+import { CircuitComponent } from '@/types/component';
+import { WireEdge, WireData } from '@/types/circuit';
+import { getPinSignalType, getWireColorFromSignal, createWireId } from '@/utils/wireUtils';
+import { findComponentById, getPinByIndex } from '@/utils/pinManagement';
 
+// Import validation function
+import { isValidConnection } from '@/domain/connectionRules';
+// Import toast for user feedback
+import { toast } from 'sonner';
+
+// Import the custom node component (exported as CircuitComponentNode)
+import CircuitComponentNode from './CircuitComponentNode';
+
+// Import the custom edge component
+import CustomWireEdge from './CustomWireEdge';
+
+// Import DynamicConnectionLine
+import DynamicConnectionLine from './DynamicConnectionLine';
+
+// Import the component library hook
+import { useComponentLibrary } from '@/hooks/useComponentLibrary';
+
+// Import the circuit editor context with correct path
+import { useCircuitEditor } from '@/context/CircuitEditorContext';
+
+// Define props using actual types
 interface CircuitCanvasProps {
-  components: WokwiComponent[];
-  onComponentsChange: (components: WokwiComponent[]) => void;
+  circuitComponents: CircuitComponent[];
+  wireConnections: WireEdge[];
+  onComponentsChange: (components: CircuitComponent[]) => void;
+  onWiresChange: (wires: WireEdge[]) => void;
+  // Add any other necessary props (e.g., selectedComponentId, onSelect)
 }
 
-// Define the custom node types
-const nodeTypes = {
-  wokwiComponent: WokwiComponentNode
+// --- Define Custom Node Types ---
+const nodeTypes: NodeTypes = {
+  circuitComponent: CircuitComponentNode,
+};
+// ------------------------------
+
+// --- Define Custom Edge Types ---
+const edgeTypes: EdgeTypes = {
+  customWire: CustomWireEdge, // Map the type name to the component
+};
+// ------------------------------
+
+// Utility function - Update type to 'circuitComponent'
+const circuitComponentToNode = (comp: CircuitComponent): Node => {
+  return {
+    id: comp.id,
+    type: 'circuitComponent', // Use the new custom node type
+    position: { x: comp.left, y: comp.top }, // Use left/top for position
+    data: { ...comp }, // Pass component data to the node
+  } as Node;
 };
 
-const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) => {
-  // Refs
-  const canvasRef = useRef<HTMLDivElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  
-  // Define the custom edge types with useMemo inside the component
-  const edgeTypes = useMemo<EdgeTypes>(() => ({
-    customWire: InteractiveEdge
-  }), []);
-  
-  // Custom hooks
-  const { isReady, loadingError, handleRetry } = useWokwiLoader();
-  const { pinCache } = useComponentPinCache();
-  
-  // Directly use the useCircuitCanvasState hook
-  const {
-    canvasSize,
-    setCanvasSize,
-    nodes,
-    setNodes,
-    edges,
-    setEdges,
-    reactFlowInstance,
-    setReactFlowInstance,
-    hoveredComponent,
-    setHoveredComponent,
-    visiblePins,
-    setVisiblePins,
-    hoveredPin,
-    setHoveredPin,
-    renderedComponents,
-    setRenderedComponents,
-    draggingComponent,
-    setDraggingComponent,
-    dragOffset,
-    setDragOffset,
-    handleRetry: retryLoading
-  } = useCircuitCanvasState(components);
-  
-  // Initialize wire routing system
-  const { 
-    wireConnectionState,
-    handleCanvasClick,
-    handleHandleClick,
-    deleteWire,
-  } = useWireRouting(components);
-  
-  // React Flow state
-  const [reactFlowNodes, setReactFlowNodes, onNodesChange] = useNodesState([]);
-  const [reactFlowEdges, setReactFlowEdges, onEdgesChange] = useEdgesState([]);
-  
-  const {
-    zoom,
-    offset,
-    panMode,
-    isDraggingCanvas,
-    handleZoomIn,
-    handleZoomOut,
-    togglePanMode,
-    startPan,
-    pan,
-    endPan,
-    handleWheel,
-    updateCanvasDimensions,
-    screenToCanvasCoordinates
-  } = useCanvasNavigation(1);
-  
-  const { 
-    components: libraryComponents, 
-    componentsDetailsMap, 
-    isLoadingComponents, 
-    isLoadingDetails 
-  } = useComponentLibrary();
+// Utility function - Update type to 'customWire' and remove basic style
+const wireEdgeToFlowEdge = (wire: WireEdge): Edge => {
+  return {
+    id: wire.id,
+    source: wire.source,
+    target: wire.target,
+    sourceHandle: wire.sourceHandle,
+    targetHandle: wire.targetHandle,
+    type: 'customWire', // Use the custom edge type
+    data: { ...wire.data }, // Pass wire data to the edge data
+    // style: { stroke: wire.data.color, strokeWidth: 2 }, // Remove basic style, CustomWireEdge handles it
+    // animated: wire.data.signal === 'clock' || wire.data.signal === 'data', // Remove animation, CustomWireEdge handles it
+  } as Edge;
+};
 
-  // Handle connection (wire creation) between nodes
-  const onConnect = useCallback((connection: Connection) => {
-    if (!connection.source || !connection.target || !connection.sourceHandle || !connection.targetHandle) {
-      return;
-    }
+// Need a utility to create unique IDs for components
+const createComponentId = (type: string): string => {
+  return `${type}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+};
 
-    // Extract pin indices from handle IDs
-    const sourcePinIndex = parseInt(connection.sourceHandle.split('-')[1]);
-    const targetPinIndex = parseInt(connection.targetHandle.split('-')[1]);
-    
-    if (isNaN(sourcePinIndex) || isNaN(targetPinIndex)) {
-      console.error('Invalid pin indices:', connection.sourceHandle, connection.targetHandle);
-      return;
-    }
+const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
+  circuitComponents,
+  wireConnections,
+  onComponentsChange,
+  onWiresChange,
+}) => {
+  // Remove the wrapper ref again
+  // const reactFlowWrapper = useRef<HTMLDivElement>(null);
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
 
-    // Create the wire edge with the appropriate color based on signal type
-    const newEdge = createWireEdge(
-      components, 
-      connection.source, 
-      sourcePinIndex, 
-      connection.target, 
-      targetPinIndex
-    );
-    
-    setReactFlowEdges(edges => [...edges, newEdge]);
-  }, [components, setReactFlowEdges]);
+  // Get component library data
+  const { components: libraryComponents, componentsDetailsMap } = useComponentLibrary();
+  // Get dragging state from context
+  const { draggingComponentType } = useCircuitEditor();
 
-  // Convert components to nodes
+  // Convert circuitComponents to React Flow nodes using the utility function
   useEffect(() => {
-    if (!components || components.length === 0) return;
-    
-    console.log(`Converting ${components.length} components to nodes`);
-    const initialNodes = components.map(comp => {
-      console.log(`Component before conversion:`, {
-        id: comp.id,
-        type: comp.type,
-        hasSvgPath: !!comp.svgPath,
-        svgPathLength: comp.svgPath?.length || 0,
-      });
-      
-      return wokwiComponentToNode(comp);
-    });
-    
-    setReactFlowNodes(initialNodes);
-  }, [components, setReactFlowNodes]);
-  
-  // Update canvas dimensions when window size changes
+    const flowNodes = circuitComponents.map(circuitComponentToNode);
+    setNodes(flowNodes);
+  }, [circuitComponents, setNodes]);
+
+  // Convert wireConnections (WireEdge[]) to React Flow edges using the utility function
   useEffect(() => {
-    const updateSize = () => {
-      if (containerRef.current) {
-        const { width, height } = containerRef.current.getBoundingClientRect();
-        setCanvasSize({ width, height });
-        updateCanvasDimensions(width, height);
-      }
-    };
-    
-    updateSize();
-    window.addEventListener('resize', updateSize);
-    
-    const resizeTimer = setTimeout(updateSize, 100);
-    
-    return () => {
-      window.removeEventListener('resize', updateSize);
-      clearTimeout(resizeTimer);
-    };
-  }, [updateCanvasDimensions, setCanvasSize]);
+    const flowEdges = wireConnections.map(wireEdgeToFlowEdge);
+    setEdges(flowEdges);
+  }, [wireConnections, setEdges]);
 
-  // Handle node drag end - update component positions
-  const onNodeDragStop = useCallback((event: React.MouseEvent, node: any) => {
-    const updatedComponents = components.map(comp => {
-      if (comp.id === node.id) {
-        return {
-          ...comp,
-          left: node.position.x,
-          top: node.position.y
-        };
-      }
-      return comp;
-    });
-    
-    onComponentsChange(updatedComponents);
-  }, [components, onComponentsChange]);
+  // --- Interaction Handlers ---
 
-  // Listen for handle-click events from WokwiComponentNode
-  useEffect(() => {
-    const handlePinClick = (event: CustomEvent) => {
-      const { nodeId, handleId } = event.detail;
-      handleHandleClick(nodeId, handleId);
-    };
-    
-    document.addEventListener('handle-click', handlePinClick as EventListener);
-    
-    return () => {
-      document.removeEventListener('handle-click', handlePinClick as EventListener);
-    };
-  }, [handleHandleClick]);
+  const onConnect: OnConnect = useCallback((connection: Connection) => {
+      console.log('Attempting connection:', connection);
 
-  // Handle drop to create new component
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    
-    try {
-      const componentData = e.dataTransfer.getData('component');
-      if (!componentData) return;
-      
-      // Parse the component data
-      const componentInfo = JSON.parse(componentData);
-      console.log('Dropped component data:', componentInfo);
-      
-      const rect = canvasRef.current?.getBoundingClientRect();
-      if (!rect) return;
-      
-      const position = reactFlowInstance?.screenToFlowPosition({
-        x: e.clientX,
-        y: e.clientY
-      }) || { x: 0, y: 0 };
-      
-      const gridSize = 25;
-      const left = Math.floor(position.x / gridSize) * gridSize;
-      const top = Math.floor(position.y / gridSize) * gridSize;
-      
-      const libraryComponent = libraryComponents?.find(c => c.type === componentInfo.type);
-      
-      let pins;
-      if (libraryComponent?.id && componentsDetailsMap && componentsDetailsMap[libraryComponent.id]) {
-        const details = componentsDetailsMap[libraryComponent.id];
-        if (details && details.pins && details.pins.length > 0) {
-          pins = details.pins.map((pin: any) => ({
-            name: pin.name,
-            x: Number(pin.x),
-            y: Number(pin.y),
-            signals: pin.signals || []
-          }));
-        }
-      }
-      
-      if (!pins && libraryComponent?.pins) {
-        pins = libraryComponent.pins.map(pin => ({
-          name: pin.name,
-          x: Number(pin.x),
-          y: Number(pin.y),
-          signals: pin.signals || []
-        }));
-      }
-      
-      if (!pins) {
-        pins = getComponentPinInfo(componentInfo.type);
-      }
-      
-      const newComponent: WokwiComponent = {
-        type: componentInfo.type,
-        id: `comp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        top,
-        left,
-        attributes: { color: 'red' },
-        pins,
-        svgPath: componentInfo.svgPath,
-        isOriginal: componentInfo.isOriginal
-      };
-      
-      console.log('Created new component:', newComponent);
-      
-      const updatedComponents = [...components, newComponent];
-      onComponentsChange(updatedComponents);
-      
-      toast.success(`Added ${componentInfo.name || componentInfo.type}`, {
-        description: `Component placed at position (${left}, ${top})`,
-        duration: 2000,
-      });
-    } catch (error) {
-      console.error('Error adding component:', error);
-      toast.error('Failed to add component');
-    }
-  };
-
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'copy';
-  };
-
-  const onPaneClick = useCallback((event: React.MouseEvent) => {
-    if (wireConnectionState.isConnecting) {
-      event.preventDefault();
-      event.stopPropagation();
-      
-      const reactFlowBounds = canvasRef.current?.getBoundingClientRect();
-      if (reactFlowBounds && reactFlowInstance) {
-        const position = reactFlowInstance.screenToFlowPosition({
-          x: event.clientX,
-          y: event.clientY
-        });
-        
-        console.log('Pane clicked at screen coordinates:', event.clientX, event.clientY);
-        console.log('Converted to flow coordinates:', position);
-        
-        handleCanvasClick(event, position);
+      // Basic validation: Ensure source and target handles/nodes are present
+      if (!connection.source || !connection.target || !connection.sourceHandle || !connection.targetHandle) {
+        console.error('Connection information incomplete:', connection);
         return;
       }
+      
+      // Extract pin indices from handle IDs (assuming format 'pin-index')
+      const sourcePinIndex = parseInt(connection.sourceHandle.split('-')[1]);
+      const targetPinIndex = parseInt(connection.targetHandle.split('-')[1]);
+
+      if (isNaN(sourcePinIndex) || isNaN(targetPinIndex)) {
+        console.error("Could not parse pin indices from handles:", connection.sourceHandle, connection.targetHandle);
+        return;
+      }
+
+      // --- Add Connection Validation ---
+      if (!isValidConnection(circuitComponents, connection.source, sourcePinIndex, connection.target, targetPinIndex)) {
+        toast.error('Invalid Connection', {
+          description: 'These pins cannot be connected.',
+          duration: 2000,
+        });
+        return; // Prevent connection creation
+      }
+      // ---------------------------------
+
+      // Determine signal type and color from source pin
+      const signal = getPinSignalType(circuitComponents, connection.source, sourcePinIndex);
+      const color = getWireColorFromSignal(signal || '');
+      
+      // Create the new WireEdge object 
+      const newWire: WireEdge = {
+        id: createWireId(),
+        source: connection.source,
+        target: connection.target,
+        sourceHandle: connection.sourceHandle,
+        targetHandle: connection.targetHandle,
+        type: 'customWire',
+        data: {
+          color: color,
+          sourcePinIndex: sourcePinIndex,
+          targetPinIndex: targetPinIndex,
+          signal: signal || undefined,
+        } as WireData,
+      };
+
+      console.log('Creating new WireEdge:', newWire);
+      // Update the external state via the callback prop
+      onWiresChange([...wireConnections, newWire]);
+
+    },
+    [circuitComponents, wireConnections, onWiresChange] // Add dependencies
+  );
+
+  const onNodeDragStop = useCallback((event: React.MouseEvent, node: Node) => {
+      console.log('Node drag stop:', node);
+      // Find the corresponding component and update its position (left/top)
+      const updatedComponents = circuitComponents.map(comp =>
+        comp.id === node.id ? { ...comp, left: node.position.x, top: node.position.y } : comp
+      );
+      onComponentsChange(updatedComponents);
+    },
+    [circuitComponents, onComponentsChange]
+  );
+
+  // --- React Flow Drag and Drop Handlers ---
+  const onDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = 'copy'; 
     }
-  }, [wireConnectionState.isConnecting, reactFlowInstance, handleCanvasClick]);
+    // Removed log
+    // console.log("ReactFlow onDragOver firing");
+  }, []);
+
+  const onDrop = useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      console.log("--- ReactFlow onDrop event fired ---");
+
+      // Use component type from context state
+      const componentType = draggingComponentType;
+
+      if (!reactFlowInstance) {
+        console.error("React Flow instance not available for drop.");
+        return;
+      }
+      
+      // Remove dataTransfer check
+      /*
+      if (!event.dataTransfer) {
+        console.error("No dataTransfer object found on drop event.");
+        return;
+      }
+      const componentType = event.dataTransfer.getData('application/reactflow');
+      */
+
+      // Check if a component type was being dragged (from context)
+      if (!componentType) {
+        console.warn("No component type was being dragged (check context state).");
+        return;
+      }
+
+      // Find component details from the library
+      const libraryComponentDef = libraryComponents?.find(comp => comp.type === componentType);
+      let componentDetails = null;
+      if (libraryComponentDef && libraryComponentDef.id && componentsDetailsMap) {
+        componentDetails = componentsDetailsMap[libraryComponentDef.id];
+      }
+
+      if (!componentDetails) {
+        console.error(`Component definition not found for type: ${componentType}`);
+        toast.error("Component not found", { description: `Could not find details for type: ${componentType}` });
+        return;
+      }
+      // Log the details fetched from the library
+      console.log('Component details fetched:', componentDetails); 
+      // -------------------------------------------------
+      
+      // Position calculation
+      const position = reactFlowInstance.screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY,
+      });
+
+      // Component creation
+      const newComponent: CircuitComponent = {
+        id: createComponentId(componentType),
+        type: componentType,
+        left: position.x,
+        top: position.y,
+        attributes: componentDetails.properties || {}, 
+        pins: componentDetails.pins || [], 
+        svgPath: componentDetails.svgPath || null,
+        isOriginal: componentDetails.isOriginal,
+      };
+
+      console.log('ReactFlow drop: creating component with details:', newComponent);
+      onComponentsChange([...circuitComponents, newComponent]);
+    },
+    // Update dependencies to include draggingComponentType
+    [reactFlowInstance, circuitComponents, onComponentsChange, libraryComponents, componentsDetailsMap, draggingComponentType]
+  );
+  // ----------------------------------------------------
+
+  // TODO: Implement deletion logic (onNodesDelete, onEdgesDelete or key listeners)
+  const onNodesDelete = useCallback(
+    (deletedNodes: Node[]) => {
+      console.log('Nodes deleted:', deletedNodes);
+      const deletedNodeIds = new Set(deletedNodes.map(n => n.id));
+      // Remove components corresponding to deleted nodes
+      const remainingComponents = circuitComponents.filter(comp => !deletedNodeIds.has(comp.id));
+      // Also remove wires connected to deleted nodes
+      const remainingWires = wireConnections.filter(wire => 
+        !deletedNodeIds.has(wire.source) && !deletedNodeIds.has(wire.target)
+      );
+      onComponentsChange(remainingComponents);
+      onWiresChange(remainingWires);
+    },
+    [circuitComponents, wireConnections, onComponentsChange, onWiresChange]
+  );
+
+  const onEdgesDelete = useCallback(
+    (deletedEdges: Edge[]) => {
+      console.log('Edges deleted:', deletedEdges);
+      const deletedEdgeIds = new Set(deletedEdges.map(e => e.id));
+      // Remove wires corresponding to deleted edges
+      const remainingWires = wireConnections.filter(wire => !deletedEdgeIds.has(wire.id));
+      onWiresChange(remainingWires);
+    },
+    [wireConnections, onWiresChange]
+  );
+
+  // ---------------------------------------------
 
   return (
-    <div className="h-full w-full bg-white relative flex flex-col overflow-hidden">
-      <LoadingOverlay 
-        isReady={isReady} 
-        loadingError={loadingError} 
-        onRetry={handleRetry} 
-      />
-      
-      <div 
-        ref={containerRef}
-        className="h-full w-full overflow-hidden"
-        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+    // Remove ref from wrapper div
+    <div 
+      style={{ height: '100%', width: '100%' }} 
+      // ref={reactFlowWrapper} 
+    >
+      {/* Restore ReactFlow rendering */}
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onConnect={onConnect}
+        onNodeDragStop={onNodeDragStop}
+        onInit={setReactFlowInstance}
+        onNodesDelete={onNodesDelete}
+        onEdgesDelete={onEdgesDelete}
+        nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
+        connectionLineComponent={DynamicConnectionLine}
+        connectionMode={ConnectionMode.Loose}
+        fitView
+        fitViewOptions={{ padding: 0.2 }}
+        deleteKeyCode={['Backspace', 'Delete']}
+        // Re-add ReactFlow specific handlers
+        onDrop={onDrop}
+        onDragOver={onDragOver}
       >
-        <ReactFlow
-          ref={canvasRef}
-          nodes={reactFlowNodes}
-          edges={reactFlowEdges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          nodeTypes={nodeTypes}
-          edgeTypes={edgeTypes}
-          onInit={setReactFlowInstance}
-          onDrop={handleDrop}
-          onDragOver={handleDragOver}
-          onNodeDragStop={onNodeDragStop}
-          connectionMode={ConnectionMode.Loose}
-          connectionLineComponent={ConnectionLine}
-          onConnect={onConnect}
-          onPaneClick={onPaneClick}
-          minZoom={0.5}
-          maxZoom={4}
-          defaultViewport={{ x: 0, y: 0, zoom: 1 }}
-          fitView
-          snapToGrid={true}
-          snapGrid={[25, 25]}
-          deleteKeyCode={['Backspace', 'Delete']}
-          elementsSelectable={!wireConnectionState.isConnecting}
-          style={{ width: '100%', height: '100%' }}
-        >
-          <Background 
-            variant={BackgroundVariant.Dots} 
-            gap={25} 
-            size={1} 
-            color="#e2e8f0" 
-          />
-          <Controls position="bottom-right" showInteractive={false} />
-        </ReactFlow>
-      </div>
+        <Controls />
+        <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
+      </ReactFlow>
     </div>
   );
 };
 
-export default function CircuitCanvasWithProvider({ components, onComponentsChange }: CircuitCanvasProps) {
-  return (
-    <ReactFlowProvider>
-      <CircuitCanvas components={components} onComponentsChange={onComponentsChange} />
-    </ReactFlowProvider>
-  );
-}
+// Export the inner component directly
+export default CircuitCanvasInner; 

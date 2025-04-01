@@ -1,7 +1,6 @@
-
-import { useCallback } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { Connection, useReactFlow, addEdge, Edge } from '@xyflow/react';
-import { WokwiComponent } from '@/integrations/wokwi/WokwiIntegration';
+import { CircuitComponent } from '@/types/component';
 import { 
   getWireColorFromSignal, 
   getPinSignalType, 
@@ -14,13 +13,16 @@ import { WireData, WireEdge } from '@/types/circuit';
 import { PinConnection } from '@/types/pin';
 import { AppError, ComponentError, withErrorHandling } from '@/utils/errorHandling';
 import { useCircuitEditor } from '@/context/CircuitEditorContext';
+import { Wire } from '@/types/wire';
 
 /**
  * Enhanced hook for managing wire connections between components
  */
-export function useWireSystem(components: WokwiComponent[]) {
+export function useWireSystem(components: CircuitComponent[]) {
   const { setEdges, getNodes } = useReactFlow();
   const { addConnection } = useCircuitEditor();
+  const [wires, setWires] = useState<Wire[]>([]);
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   
   // Core connect pins function without try/catch
   const coreConnectPins = (

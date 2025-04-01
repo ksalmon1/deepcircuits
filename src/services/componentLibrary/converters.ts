@@ -1,7 +1,6 @@
-
 import { ComponentLibraryItem, CircuitComponent } from "@/types/component";
 import { Node } from "@xyflow/react";
-import { WokwiNodeData } from "@/types/circuit";
+import { CircuitNodeData } from "@/types/circuit";
 import { ComponentPin } from "@/types/pin";
 
 /**
@@ -52,7 +51,7 @@ export const convertLibraryItemToCircuitComponent = (item: ComponentLibraryItem)
 export const componentToNode = (component: CircuitComponent): Node => {
   return {
     id: component.id,
-    type: 'wokwiComponent',
+    type: 'circuitComponent',
     position: { x: component.left, y: component.top },
     data: {
       type: component.type,
@@ -66,7 +65,7 @@ export const componentToNode = (component: CircuitComponent): Node => {
       })) : [],
       svgPath: component.svgPath,
       isOriginal: component.isOriginal,
-    } as WokwiNodeData,
+    } as CircuitNodeData,
     draggable: true,
   };
 };
@@ -75,7 +74,7 @@ export const componentToNode = (component: CircuitComponent): Node => {
  * Convert a React Flow node back to a circuit component
  */
 export const nodeToCircuitComponent = (node: Node): CircuitComponent => {
-  const nodeData = node.data as WokwiNodeData;
+  const nodeData = node.data as CircuitNodeData;
   
   return {
     id: node.id,

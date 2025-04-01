@@ -1,4 +1,3 @@
-
 import { NodeProps, EdgeProps, Node, Edge, ConnectionLineComponentProps } from '@xyflow/react';
 import { ComponentPin } from './pin';
 
@@ -50,25 +49,23 @@ export interface WireConnectionState {
 }
 
 /**
- * Data for wokwi component nodes
+ * Data for circuit component nodes
  */
-export interface WokwiNodeData extends Record<string, unknown> {
-  type: string;
+export interface CircuitNodeData extends Record<string, unknown> {
   label: string;
-  pins?: ComponentPin[];
-  svgPath?: string | null;
+  type: string;
+  attributes: Record<string, any>;
+  pins: ComponentPin[];
+  svgPath?: string;
   isOriginal?: boolean;
-  isLoading?: boolean;
-  showWires?: boolean;
-  attributes?: Record<string, any>;
+  // Add any other relevant data needed by the node component
 }
 
 /**
- * Props for the Wokwi component node
+ * Props for the circuit component node
  */
-export interface WokwiNodeProps extends Omit<NodeProps, 'data'> {
-  data: WokwiNodeData;
-  selected: boolean;
+export interface CircuitNodeProps extends Omit<NodeProps, 'data'> {
+  data: CircuitNodeData;
 }
 
 /**

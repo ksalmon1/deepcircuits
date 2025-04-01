@@ -1,4 +1,3 @@
-
 /**
  * Utility functions for working with component library
  */
@@ -8,7 +7,6 @@
  */
 export const getDisplayNameFromType = (type: string): string => {
   return type
-    .replace('wokwi-', '')
     .split('-')
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
@@ -65,22 +63,7 @@ export const getCategoryFromType = (type: string): string => {
  * Gets default properties for a specific component type
  */
 export const getDefaultPropertiesForType = (type: string): Record<string, any> => {
-  const defaults: Record<string, Record<string, any>> = {
-    'wokwi-led': { color: 'red', brightness: 1 },
-    'wokwi-resistor': { resistance: '220', tolerance: '5%' },
-    'wokwi-capacitor': { capacitance: '10uF' },
-    'wokwi-pushbutton': { color: 'red' },
-    'wokwi-servo': { angle: 90 },
-    'wokwi-potentiometer': { value: 50 },
-    'wokwi-slide-switch': { value: false },
-    'wokwi-buzzer': { frequency: 440 },
-    'wokwi-rgb-led': { color: '#ff0000' },
-    'wokwi-lcd1602': { text: 'Hello World!' },
-    'wokwi-7segment': { digits: '0' },
-    'wokwi-dht22': { temperature: 25, humidity: 50 },
-  };
-  
-  return defaults[type] || {};
+  return {};
 };
 
 // Signal types for pins

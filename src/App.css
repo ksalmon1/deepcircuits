@@ -1,9 +1,14 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-.component-grid {
-  background-size: 10px 10px;
-  background-image:
-    linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
+@layer base {
+  :root {
+    background-size: 10px 10px;
+    background-image:
+      linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
+  }
 }
 
 .pin-marker {
@@ -37,7 +42,3 @@
 }
 
 /* Function to get signal colors */
-wokwi-show-pins {
-  display: inline-block;
-  position: relative;
-}

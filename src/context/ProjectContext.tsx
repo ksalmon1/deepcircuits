@@ -1,29 +1,50 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import { CircuitComponent } from '@/types/component';
-import { PinConnection } from '@/types/pin';
+import { WireEdge } from '@/types/circuit';
 import { toast } from 'sonner';
 import { ComponentError, withErrorHandling } from '@/utils/errorHandling';
 import { useError } from './ErrorContext';
 
-interface ProjectContextType {
+// Define the shape of the state managed by history
+interface ProjectState {
   components: CircuitComponent[];
-  setComponents: React.Dispatch<React.SetStateAction<CircuitComponent[]>>;
-  handleComponentsChange: (updatedComponents: CircuitComponent[]) => void;
-  
-  connections: PinConnection[];
-  setConnections: React.Dispatch<React.SetStateAction<PinConnection[]>>;
-  addConnection: (connection: PinConnection) => void;
-  removeConnection: (connectionId: string) => void;
-  
+  wires: WireEdge[];
   code: string;
-  setCode: React.Dispatch<React.SetStateAction<string>>;
-  
-  saveProject: () => void;
-  undoLastAction: () => void;
-  exportProject: () => void;
-  importProject: () => void;
-  
+}
+
+interface ProjectContextType {
+  // Provide current state values
+  components: CircuitComponent[];
+  wires: WireEdge[]; 
+  code: string;
+
+  // Drag state
+  draggingComponentType: string | null;
+
+  // Remove direct setters
+  // setComponents: React.Dispatch<React.SetStateAction<CircuitComponent[]>>;
+  // setWires: React.Dispatch<React.SetStateAction<WireEdge[]>>;
+  // setCode: React.Dispatch<React.SetStateAction<string>>;
+
+  // Action handlers
+  handleComponentsChange: (updatedComponents: CircuitComponent[]) => void;
+  handleWiresChange: (updatedWires: WireEdge[]) => void;
+  updateCode: (newCode: string) => void; // New handler for code changes
   handleUpdateComponentAttributes: (componentId: string, attributes: Record<string, any>) => void;
+  
+  // Drag actions
+  setDraggingComponentType: (type: string | null) => void;
+  
+  // History actions
+  undoLastAction: () => void;
+  redoLastAction: () => void; // Add redo
+  canUndo: boolean; // Add flags for UI
+  canRedo: boolean; // Add flags for UI
+
+  // Other actions
+  saveProject: () => void;
+  exportProject: () => void;
+  importProject: (projectData: ProjectState) => void; // Update import signature
 }
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
@@ -43,193 +64,166 @@ void loop() {
   delay(1000);
 }`;
 
+// Initial state for the history
+const initialProjectState: ProjectState = {
+  components: [],
+  wires: [],
+  code: initialCode,
+};
+
 interface ProjectProviderProps {
   children: ReactNode;
 }
 
 export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) => {
-  const [components, setComponents] = useState<CircuitComponent[]>([]);
-  const [connections, setConnections] = useState<PinConnection[]>([]);
-  const [code, setCode] = useState<string>(initialCode);
-  
+  const [history, setHistory] = useState<ProjectState[]>([initialProjectState]);
+  const [currentHistoryIndex, setCurrentHistoryIndex] = useState<number>(0);
+  const [draggingComponentType, setDraggingComponentTypeState] = useState<string | null>(null);
   const { setError } = useError();
-  
+
+  // Get current state from history
+  const currentState = history[currentHistoryIndex];
+
+  // Helper to add a new state to history
+  const pushHistory = (newState: ProjectState) => {
+    // Clear future states if we are undoing/redoing
+    const newHistory = history.slice(0, currentHistoryIndex + 1);
+    setHistory([...newHistory, newState]);
+    setCurrentHistoryIndex(newHistory.length);
+  };
+
+  // --- Core Action Handlers (Update history) ---
   const coreHandleComponentsChange = (updatedComponents: CircuitComponent[]) => {
-    setComponents(updatedComponents);
+    const newState: ProjectState = { ...currentState, components: updatedComponents };
+    pushHistory(newState);
   };
   
-  const coreAddConnection = (connection: PinConnection) => {
-    if (!connection.sourceId || !connection.targetId) {
-      throw new ComponentError('Invalid connection: missing source or target ID', 'INVALID_CONNECTION');
-    }
-    
-    setConnections(prev => [...prev, connection]);
+  const coreHandleWiresChange = (updatedWires: WireEdge[]) => {
+    const newState: ProjectState = { ...currentState, wires: updatedWires };
+    pushHistory(newState);
   };
-  
-  const coreRemoveConnection = (connectionId: string) => {
-    setConnections(prev => prev.filter(conn => 
-      `${conn.sourceId}-${conn.sourcePinIndex}-${conn.targetId}-${conn.targetPinIndex}` !== connectionId
-    ));
+
+  const coreUpdateCode = (newCode: string) => {
+    const newState: ProjectState = { ...currentState, code: newCode };
+    pushHistory(newState);
   };
   
   const coreUpdateComponentAttributes = (componentId: string, attributes: Record<string, any>) => {
-    if (!componentId) {
-      throw new ComponentError('Invalid component ID', 'INVALID_COMPONENT_ID');
-    }
+    if (!componentId) throw new ComponentError('Invalid component ID', 'INVALID_COMPONENT_ID');
+    if (!attributes || typeof attributes !== 'object') throw new ComponentError('Invalid attributes', 'INVALID_ATTRIBUTES');
     
-    if (!attributes || typeof attributes !== 'object') {
-      throw new ComponentError('Invalid attributes', 'INVALID_ATTRIBUTES');
-    }
-    
-    setComponents((prevComponents) =>
-      prevComponents.map((component) =>
-        component.id === componentId
-          ? { ...component, attributes: { ...component.attributes, ...attributes } }
-          : component
-      )
+    const updatedComponents = currentState.components.map((component) =>
+      component.id === componentId
+        ? { ...component, attributes: { ...component.attributes, ...attributes } }
+        : component
     );
+    const newState: ProjectState = { ...currentState, components: updatedComponents };
+    pushHistory(newState);
   };
-  
-  const coreSaveProject = () => {
-    toast.success('Project saved successfully!');
+
+  // --- Core Drag Action ---
+  const coreSetDraggingComponentType = (type: string | null) => {
+    setDraggingComponentTypeState(type);
   };
-  
+
+  // --- Core History Actions ---
   const coreUndoLastAction = () => {
-    toast.error('Undo not available.');
+    if (currentHistoryIndex > 0) {
+      setCurrentHistoryIndex(currentHistoryIndex - 1);
+    } else {
+      toast.info('Nothing to undo');
+    }
+  };
+
+  const coreRedoLastAction = () => {
+    if (currentHistoryIndex < history.length - 1) {
+      setCurrentHistoryIndex(currentHistoryIndex + 1);
+    } else {
+      toast.info('Nothing to redo');
+    }
+  };
+
+  // --- Other Core Actions ---
+  const coreSaveProject = () => {
+    // Save currentState.components, currentState.wires, currentState.code
+    console.log("Saving Project State:", currentState);
+    toast.success('Project saved successfully!'); // Placeholder
   };
   
   const coreExportProject = () => {
-    const projectData = {
-      components,
-      code
-    };
-    
+    const projectData = currentState; // Export the current state
     const dataStr = JSON.stringify(projectData, null, 2);
     const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-    
     const exportFileDefaultName = 'circuit-project.json';
-    
     const linkElement = document.createElement('a');
     linkElement.setAttribute('href', dataUri);
     linkElement.setAttribute('download', exportFileDefaultName);
     linkElement.click();
-    
     toast.success('Project exported successfully!');
   };
   
-  const coreImportProject = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json';
-    
-    input.onchange = (e: Event) => {
-      const target = e.target as HTMLInputElement;
-      if (target?.files && target.files[0]) {
-        const file = target.files[0];
-        const reader = new FileReader();
-        
-        reader.onload = (e) => {
-          try {
-            const result = e.target?.result as string;
-            const projectData = JSON.parse(result);
-            
-            if (projectData.components && Array.isArray(projectData.components)) {
-              setComponents(projectData.components);
-            }
-            
-            if (projectData.code && typeof projectData.code === 'string') {
-              setCode(projectData.code);
-            }
-            
-            toast.success('Project imported successfully!');
-          } catch (error) {
-            setError(
-              new ComponentError(
-                'Failed to parse imported project: ' + (error instanceof Error ? error.message : String(error)), 
-                'PROJECT_PARSE_ERROR'
-              ),
-              'importProject.parse'
-            );
-          }
-        };
-        
-        reader.onerror = () => {
-          setError(
-            new ComponentError('Failed to read the file', 'FILE_READ_ERROR'),
-            'importProject.read'
-          );
-        };
-        
-        reader.readAsText(file);
-      }
+  // Updated Import Logic
+  const coreImportProject = (projectData: ProjectState) => {
+    // Validate imported data structure (basic checks)
+    if (!projectData || typeof projectData !== 'object') {
+        throw new ComponentError('Invalid project data format', 'PROJECT_PARSE_ERROR');
+    }
+    const validatedState: ProjectState = {
+        components: Array.isArray(projectData.components) ? projectData.components : [],
+        wires: Array.isArray(projectData.wires) ? projectData.wires : [], // Import wires
+        code: typeof projectData.code === 'string' ? projectData.code : initialCode,
     };
-    
-    input.click();
+    // Reset history with the imported state
+    setHistory([validatedState]);
+    setCurrentHistoryIndex(0);
+    toast.success('Project imported successfully!');
   };
   
-  const handleComponentsChange = withErrorHandling(
-    coreHandleComponentsChange,
-    'handleComponentsChange',
-    setError
-  );
+  // --- Wrap core functions with error handling ---
+  const handleComponentsChange = withErrorHandling(coreHandleComponentsChange, 'handleComponentsChange', setError);
+  const handleWiresChange = withErrorHandling(coreHandleWiresChange, 'handleWiresChange', setError);
+  const updateCode = withErrorHandling(coreUpdateCode, 'updateCode', setError);
+  const handleUpdateComponentAttributes = withErrorHandling(coreUpdateComponentAttributes, 'handleUpdateComponentAttributes', setError);
+  const setDraggingComponentType = withErrorHandling(coreSetDraggingComponentType, 'setDraggingComponentType', setError);
+  const saveProject = withErrorHandling(coreSaveProject, 'saveProject', setError);
+  const undoLastAction = withErrorHandling(coreUndoLastAction, 'undoLastAction', setError);
+  const redoLastAction = withErrorHandling(coreRedoLastAction, 'redoLastAction', setError); // Wrap redo
+  const exportProject = withErrorHandling(coreExportProject, 'exportProject', setError);
+  const importProject = withErrorHandling(coreImportProject, 'importProject', setError);
   
-  const addConnection = withErrorHandling(
-    coreAddConnection,
-    'addConnection',
-    setError
-  );
-  
-  const removeConnection = withErrorHandling(
-    coreRemoveConnection,
-    'removeConnection',
-    setError
-  );
-  
-  const handleUpdateComponentAttributes = withErrorHandling(
-    coreUpdateComponentAttributes,
-    'handleUpdateComponentAttributes',
-    setError
-  );
-  
-  const saveProject = withErrorHandling(
-    coreSaveProject,
-    'saveProject',
-    setError
-  );
-  
-  const undoLastAction = withErrorHandling(
-    coreUndoLastAction,
-    'undoLastAction',
-    setError
-  );
-  
-  const exportProject = withErrorHandling(
-    coreExportProject,
-    'exportProject',
-    setError
-  );
-  
-  const importProject = withErrorHandling(
-    coreImportProject,
-    'importProject',
-    setError
-  );
-  
+  // --- Calculate derived state ---
+  const canUndo = currentHistoryIndex > 0;
+  const canRedo = currentHistoryIndex < history.length - 1;
+
+  // --- Provide Context Value ---
   const value = {
-    components,
-    setComponents,
+    // Current state values
+    components: currentState.components,
+    wires: currentState.wires,
+    code: currentState.code,
+
+    // Drag state
+    draggingComponentType,
+
+    // Action handlers
     handleComponentsChange,
-    connections,
-    setConnections,
-    addConnection,
-    removeConnection,
-    code,
-    setCode,
-    saveProject,
+    handleWiresChange,
+    updateCode,
+    handleUpdateComponentAttributes,
+
+    // Drag actions
+    setDraggingComponentType,
+
+    // History actions
     undoLastAction,
+    redoLastAction,
+    canUndo,
+    canRedo,
+
+    // Other actions
+    saveProject,
     exportProject,
     importProject,
-    handleUpdateComponentAttributes
   };
   
   return (

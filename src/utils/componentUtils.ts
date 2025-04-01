@@ -1,4 +1,3 @@
-
 import { CircuitComponent, ComponentLibraryItem } from '@/types/component';
 import { ComponentPin } from '@/types/pin';
 import componentRegistry from '@/integrations/components/registry';
@@ -25,7 +24,7 @@ export function getComponentDisplayName(component: CircuitComponent | ComponentL
   }
   
   // For circuit components without a name, use the type
-  return component.type.replace(/^wokwi-/, '').replace(/-/g, ' ');
+  return component.type.replace(/-/g, ' ');
 }
 
 /**

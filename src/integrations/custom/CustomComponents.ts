@@ -1,5 +1,4 @@
-
-import { WokwiPin } from '@/integrations/wokwi/WokwiIntegration';
+import { ComponentPin } from "@/types/pin";
 
 // Interface for our custom component properties
 export interface CustomComponentConfig {
@@ -8,7 +7,7 @@ export interface CustomComponentConfig {
   description: string;
   category: string;
   svgPath: string;
-  pins: WokwiPin[];
+  pins: ComponentPin[];
   properties?: Record<string, any>;
 }
 

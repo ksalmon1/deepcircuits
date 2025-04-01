@@ -50,7 +50,6 @@ const ComponentAdmin = () => {
   const [editedComponent, setEditedComponent] = useState<ComponentLibraryItem | null>(null);
   const [isLoadingComponentDetails, setIsLoadingComponentDetails] = useState(false);
   const [componentDetailsError, setComponentDetailsError] = useState<Error | null>(null);
-  const [wokwiReady, setWokwiReady] = useState(false);
   const [activeTab, setActiveTab] = useState("details");
   
   const { 
@@ -60,14 +59,6 @@ const ComponentAdmin = () => {
   } = useComponentLibrary();
 
   console.log("ComponentAdmin: Rendering", { isLoading: isProfileLoading });
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setWokwiReady(true);
-    }, 1000);
-    
-    return () => clearTimeout(timer);
-  }, []);
 
   useEffect(() => {
     fetchComponents();
@@ -201,6 +192,7 @@ const ComponentAdmin = () => {
     
     setEditedComponent(prev => {
       if (!prev) return prev;
+      console.log("ComponentAdmin: Updating pins. Old:", prev.pins, "New:", pinConfig);
       return {
         ...prev,
         pins: pinConfig
@@ -215,6 +207,7 @@ const ComponentAdmin = () => {
       await updateComponent(editedComponent);
       toast.success("Component updated successfully");
       setIsEditDialogOpen(false);
+      setEditedComponent(null);
       fetchComponents();
     } catch (error) {
       console.error("Error updating component:", error);
@@ -315,16 +308,14 @@ const ComponentAdmin = () => {
             onOpenChange={setIsEditDialogOpen}
             selectedComponent={selectedComponent}
             editedComponent={editedComponent}
-            isLoadingComponentDetails={isLoadingComponentDetails}
-            componentDetailsError={componentDetailsError}
-            wokwiReady={wokwiReady}
-            activeTab={activeTab}
-            onActiveTabChange={setActiveTab}
-            onSaveComponent={handleSaveComponent}
-            isUpdatingComponent={isUpdatingComponent}
+            isLoadingDetails={isLoadingComponentDetails}
+            detailsError={componentDetailsError}
+            onSave={handleSaveComponent}
+            onPinUpdate={updatePinConfiguration}
+            onPropertyUpdate={updateComponentProperties}
             updateComponentProperty={updateComponentProperty}
-            updateComponentProperties={updateComponentProperties}
-            updatePinConfiguration={updatePinConfiguration}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
           />
         )}
       </div>

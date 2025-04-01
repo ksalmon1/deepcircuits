@@ -1,5 +1,4 @@
-
-import { WokwiPin } from "@/integrations/wokwi/WokwiIntegration";
+import { ComponentPin } from "@/types/pin";
 
 export interface ComponentProperty {
   key: string;
@@ -15,15 +14,10 @@ export interface ComponentLibraryItem {
   svgPath?: string;
   enabled: boolean;
   isOriginal: boolean;
-  pins?: WokwiPin[];
+  pins?: ComponentPin[];
   properties?: Record<string, any>;
   createdAt?: string;
   updatedAt?: string;
 }
 
-// Extended WokwiComponent interface to match what's being used in the app
-export interface ExtendedWokwiComponent extends ComponentLibraryItem {
-  top: number;
-  left: number;
-  attributes: Record<string, any>;
-}
+// Keep any other types that might exist below...

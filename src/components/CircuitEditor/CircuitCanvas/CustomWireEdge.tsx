@@ -1,7 +1,8 @@
 import React, { memo, useState, useCallback } from 'react';
-import { CustomWireEdgeProps, WireData, WokwiNodeData } from '@/types/circuit';
+import { CustomWireEdgeProps, WireData, CircuitNodeData } from '@/types/circuit';
 import { useReactFlow, ConnectionLineComponentProps } from '@xyflow/react';
 import { getWireColorFromSignal } from '@/utils/wireUtils';
+import { ComponentPin } from '@/types/pin';
 
 /**
  * Generates an orthogonal path with only horizontal and vertical segments
@@ -82,7 +83,7 @@ export const ConnectionLine = ({
       const pinIndex = parseInt(fromHandle.id.split('-')[1]);
       console.log('Parsed pinIndex:', pinIndex); // Log parsed index
       if (!isNaN(pinIndex)) {
-        const nodeData = fromNode.data as WokwiNodeData;
+        const nodeData = fromNode.data as CircuitNodeData;
         console.log('Source nodeData:', JSON.stringify(nodeData, null, 2)); // Log node data
         const pin = nodeData?.pins?.[pinIndex];
         console.log(`Data for pin ${pinIndex}:`, pin); // Log the specific pin data

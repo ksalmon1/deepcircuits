@@ -1,10 +1,7 @@
-
-import componentRegistry from './registry';
-import { wokwiRenderer } from './wokwiRenderer';
+import { componentRegistry } from './ComponentRegistry';
 import { svgRenderer } from './svgRenderer';
 
-// Register all renderers
-componentRegistry.registerRenderer(wokwiRenderer);
+// Register renderers
 componentRegistry.registerRenderer(svgRenderer);
 
 // Export the registry

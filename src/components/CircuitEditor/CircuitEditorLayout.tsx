@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import CircuitCanvasWrapper from './CircuitCanvasWrapper';
+import { ReactFlowProvider } from '@xyflow/react';
+import CircuitCanvas from './CircuitCanvas';
 import ComponentPanel from './ComponentPanel';
 import CodeEditor from './CodeEditor';
 import SerialMonitor from './SerialMonitor';
@@ -11,6 +12,7 @@ import {
 import { toast } from 'sonner';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { CircuitComponent } from '@/types/component';
+import { WireConnection } from '@/types/circuit';
 import { CircuitEditorProvider, useCircuitEditor } from '@/context/CircuitEditorContext';
 
 /**
@@ -24,14 +26,20 @@ const CircuitEditorLayoutContent = () => {
   
   const {
     components, 
+    wires, 
     code, 
-    setCode, 
-    isSimulationRunning,
-    serialOutput,
+    handleWiresChange, 
     handleComponentsChange,
+    updateCode,
+    undoLastAction,
+    redoLastAction,
     selectComponent,
     toggleSimulation,
-    saveProject
+    saveProject,
+    canUndo,
+    canRedo,
+    isSimulationRunning,
+    serialOutput,
   } = useCircuitEditor();
   
   const [circuitName, setCircuitName] = useState<string>('Untitled Circuit');
@@ -77,11 +85,12 @@ const CircuitEditorLayoutContent = () => {
 
   const handleClearCircuit = () => {
     toast.warning('Clear circuit?', {
-      description: 'This will remove all components from the canvas',
+      description: 'This will remove all components and wires from the canvas',
       action: {
         label: 'Clear',
         onClick: () => {
           handleComponentsChange([]);
+          handleWiresChange([]);
           toast.success('Circuit cleared');
         },
       },
@@ -118,8 +127,7 @@ const CircuitEditorLayoutContent = () => {
   };
 
   const handleCodeChange = (newCode: string) => {
-    setCode(newCode);
-    setIsModified(true);
+    updateCode(newCode);
   };
 
   useEffect(() => {
@@ -201,15 +209,29 @@ const CircuitEditorLayoutContent = () => {
               <SplitSquareVertical className="h-4 w-4" />
             }
           </Button>
-          <Button variant="outline" size="sm" onClick={handleClearCircuit}>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={handleClearCircuit}
+          >
             <Trash2 className="mr-1 h-4 w-4" />
             Clear
           </Button>
-          <Button variant="outline" size="sm" onClick={() => {}}>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={undoLastAction} 
+            disabled={!canUndo}
+          >
             <Undo className="mr-1 h-4 w-4" />
             Undo
           </Button>
-          <Button variant="outline" size="sm" onClick={() => {}}>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={redoLastAction} 
+            disabled={!canRedo}
+          >
             <Redo className="mr-1 h-4 w-4" />
             Redo
           </Button>
@@ -232,77 +254,83 @@ const CircuitEditorLayoutContent = () => {
         </div>
       </div>
 
-      <div className="flex-1 flex">
-        <div className="w-64 border-r bg-gray-50 p-4 overflow-y-auto">
-          <ComponentPanel onComponentSelect={handleComponentSelect} />
-        </div>
+      <ReactFlowProvider>
+        <div className="flex-1 flex">
+          <div className="w-64 border-r bg-gray-50 p-4 overflow-y-auto">
+            <ComponentPanel onComponentSelect={handleComponentSelect} />
+          </div>
 
-        <div className="flex-1 flex flex-col overflow-hidden">
-          {(showCodeEditor || showSerialMonitor) ? (
-            <div className={`flex-1 flex ${verticalSplit ? 'flex-row' : 'flex-col'} overflow-hidden`}>
-              <div className={`${verticalSplit ? 
-                (showCodeEditor && showSerialMonitor ? 'w-1/2' : 'w-2/3') : 
-                (showCodeEditor && showSerialMonitor ? 'h-1/2' : 'h-2/3')
-              } overflow-hidden`}>
-                <CircuitCanvasWrapper 
-                  components={components} 
-                  onComponentsChange={handleComponentsChange}
-                />
-              </div>
-              
-              <div className={`${verticalSplit ? 
-                (showCodeEditor && showSerialMonitor ? 'w-1/2' : 'w-1/3') : 
-                (showCodeEditor && showSerialMonitor ? 'h-1/2' : 'h-1/3')
-              } border-l overflow-hidden flex ${verticalSplit ? 'flex-col' : 'flex-row'}`}>
-                {showCodeEditor && showSerialMonitor ? (
-                  <>
-                    <div className={`${verticalSplit ? 'h-1/2' : 'w-1/2'} overflow-hidden`}>
-                      <CodeEditor 
-                        code={code} 
-                        onChange={handleCodeChange} 
-                        onCompile={handleCompileCode} 
-                      />
-                    </div>
-                    <div className={`${verticalSplit ? 'h-1/2 border-t' : 'w-1/2 border-l'} overflow-hidden`}>
-                      <SerialMonitor 
-                        isSimulationRunning={isSimulationRunning} 
-                        serialOutput={serialOutput} 
-                      />
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    {showCodeEditor && (
-                      <div className="flex-1 overflow-hidden">
+          <div className="flex-1 flex flex-col overflow-hidden">
+            {(showCodeEditor || showSerialMonitor) ? (
+              <div className={`flex-1 flex ${verticalSplit ? 'flex-row' : 'flex-col'} overflow-hidden`}>
+                <div className={`${verticalSplit ? 
+                  (showCodeEditor && showSerialMonitor ? 'w-1/2' : 'w-2/3') : 
+                  (showCodeEditor && showSerialMonitor ? 'h-1/2' : 'h-2/3')
+                } overflow-hidden`}>
+                  <CircuitCanvas 
+                    circuitComponents={components} 
+                    wireConnections={wires}
+                    onComponentsChange={handleComponentsChange}
+                    onWiresChange={handleWiresChange}
+                  />
+                </div>
+                
+                <div className={`${verticalSplit ? 
+                  (showCodeEditor && showSerialMonitor ? 'w-1/2' : 'w-1/3') : 
+                  (showCodeEditor && showSerialMonitor ? 'h-1/2' : 'h-1/3')
+                } border-l overflow-hidden flex ${verticalSplit ? 'flex-col' : 'flex-row'}`}>
+                  {showCodeEditor && showSerialMonitor ? (
+                    <>
+                      <div className={`${verticalSplit ? 'h-1/2' : 'w-1/2'} overflow-hidden`}>
                         <CodeEditor 
                           code={code} 
-                          onChange={handleCodeChange} 
+                          onCodeChange={handleCodeChange} 
                           onCompile={handleCompileCode} 
                         />
                       </div>
-                    )}
-                    {showSerialMonitor && (
-                      <div className="flex-1 overflow-hidden">
+                      <div className={`${verticalSplit ? 'h-1/2 border-t' : 'w-1/2 border-l'} overflow-hidden`}>
                         <SerialMonitor 
                           isSimulationRunning={isSimulationRunning} 
                           serialOutput={serialOutput} 
                         />
                       </div>
-                    )}
-                  </>
-                )}
+                    </>
+                  ) : (
+                    <>
+                      {showCodeEditor && (
+                        <div className="flex-1 overflow-hidden">
+                          <CodeEditor 
+                            code={code} 
+                            onCodeChange={handleCodeChange} 
+                            onCompile={handleCompileCode} 
+                          />
+                        </div>
+                      )}
+                      {showSerialMonitor && (
+                        <div className="flex-1 overflow-hidden">
+                          <SerialMonitor 
+                            isSimulationRunning={isSimulationRunning} 
+                            serialOutput={serialOutput} 
+                          />
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
               </div>
-            </div>
-          ) : (
-            <div className="flex-1 overflow-hidden">
-              <CircuitCanvasWrapper 
-                components={components} 
-                onComponentsChange={handleComponentsChange} 
-              />
-            </div>
-          )}
+            ) : (
+              <div className="flex-1 overflow-hidden">
+                <CircuitCanvas 
+                  circuitComponents={components} 
+                  wireConnections={wires}
+                  onComponentsChange={handleComponentsChange}
+                  onWiresChange={handleWiresChange}
+                />
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      </ReactFlowProvider>
     </div>
   );
 };

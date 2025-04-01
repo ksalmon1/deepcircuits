@@ -1,11 +1,10 @@
-
+import { ComponentPin } from "@/types/pin";
 import { useCallback, useEffect } from 'react';
-import { WokwiPin } from '@/integrations/wokwi/WokwiIntegration';
 import { useComponentLibrary } from '@/hooks/useComponentLibrary';
 import { ComponentLibraryItem } from '@/services/componentLibrary/types';
 
-// Create a module-level cache that persists between hook instances
-const pinCache: Record<string, WokwiPin[]> = {};
+// In-memory cache for pin configurations
+const pinCache: Record<string, ComponentPin[]> = {};
 
 /**
  * Custom hook to manage a cache of component pins
