@@ -35,14 +35,16 @@ const ComponentAdmin = () => {
   const [uniqueCategories, setUniqueCategories] = useState<string[]>([]);
   const [uniqueTypes, setUniqueTypes] = useState<string[]>([]);
   
-  const [newComponent, setNewComponent] = useState<Partial<ComponentLibraryItem>>({
+  const initialNewComponentState: Partial<ComponentLibraryItem> = {
     name: "",
     type: "",
     category: "",
     description: "",
     enabled: true,
-    isOriginal: false
-  });
+    isOriginal: false // Assuming new components added via UI are not "original"
+  };
+  
+  const [newComponent, setNewComponent] = useState<Partial<ComponentLibraryItem>>(initialNewComponentState);
   
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -53,6 +55,9 @@ const ComponentAdmin = () => {
   const [activeTab, setActiveTab] = useState("details");
   
   const { 
+    createComponent,
+    isCreatingComponent,
+    createComponentError,
     updateComponent,
     isUpdatingComponent,
     updateComponentError
@@ -120,9 +125,39 @@ const ComponentAdmin = () => {
   };
 
   const handleAddComponent = async () => {
-    toast.success("Component added successfully");
-    setIsAddDialogOpen(false);
-    fetchComponents();
+    if (!newComponent.name || !newComponent.type || !newComponent.category) {
+      toast.error("Please fill in all required fields (Name, Type, Category).");
+      return;
+    }
+    
+    try {
+      // Assuming createComponent expects a full ComponentLibraryItem, 
+      // ensure all required fields are present, possibly setting defaults
+      const componentToAdd: ComponentLibraryItem = {
+        ...initialNewComponentState, // Start with defaults
+        ...newComponent,             // Overlay user input
+        name: newComponent.name,      // Ensure required fields are explicitly set
+        type: newComponent.type,
+        category: newComponent.category,
+        id: '', // API should handle ID generation
+        // Add any other non-optional fields expected by ComponentLibraryItem or createComponent
+        pins: [], // Default to empty pins array if applicable
+        properties: {}, // Default to empty properties object if applicable
+        svgPath: '', // Default SVG path if applicable
+        dimensions: { width: 100, height: 50 }, // Default dimensions if applicable
+      };
+
+      await createComponent(componentToAdd);
+      toast.success("Component added successfully");
+      setIsAddDialogOpen(false);
+      setNewComponent(initialNewComponentState); // Reset form state
+      fetchComponents(); // Refresh the list
+    } catch (error) {
+      console.error("Error creating component:", error);
+      toast.error("Failed to add component", {
+        description: error instanceof Error ? error.message : String(createComponentError) || "Unknown error",
+      });
+    }
   };
 
   const handleViewComponent = async (component: ComponentLibraryItem) => {
@@ -278,20 +313,13 @@ const ComponentAdmin = () => {
           </Table>
         </div>
 
-        <AddComponentDialog 
-          isOpen={isAddDialogOpen} 
+        <AddComponentDialog
+          isOpen={isAddDialogOpen}
           onOpenChange={setIsAddDialogOpen}
-          newComponent={{
-            name: "",
-            type: "",
-            category: "",
-            description: "",
-            enabled: true,
-            isOriginal: false
-          }}
+          newComponent={newComponent}
           onNewComponentChange={handleNewComponentChange}
           onAddComponent={handleAddComponent}
-          isCreatingComponent={false}
+          isCreatingComponent={isCreatingComponent}
         />
 
         {selectedComponent && (
