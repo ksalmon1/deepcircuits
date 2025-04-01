@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { 
   isWokwiLoaded, 
@@ -92,7 +93,6 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
   // Initialize wire routing system
   const { 
     wireConnectionState,
-    temporaryEdge,
     handleCanvasClick,
     handleHandleClick,
     deleteWire,
@@ -325,7 +325,10 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
           onDragOver={handleDragOver}
           onNodeDragStop={onNodeDragStop}
           connectionMode={ConnectionMode.Loose}
-          connectionLineComponent={null}
+          connectionLineStyle={{
+            stroke: '#9b87f5',
+            strokeWidth: 2
+          }}
           onPaneClick={onPaneClick}
           minZoom={0.5}
           maxZoom={4}
