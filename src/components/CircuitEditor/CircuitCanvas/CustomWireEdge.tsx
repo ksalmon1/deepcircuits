@@ -1,4 +1,3 @@
-
 import React, { memo, useState, useCallback } from 'react';
 import { CustomWireEdgeProps, WireData } from '@/types/circuit';
 import { useReactFlow, ConnectionLineComponentProps } from '@xyflow/react';
@@ -71,7 +70,8 @@ function CustomWireEdge(props: CustomWireEdgeProps | ConnectionLineComponentProp
   let targetY = 0;
   let sourcePosition = null;
   let targetPosition = null;
-  let styleProps: { stroke?: string; strokeWidth?: number } = {};
+  let wireColor = '#9b87f5';
+  let strokeWidth = 2;
   
   if (isConnectionLine) {
     const connectionProps = props as ConnectionLineComponentProps;
@@ -80,15 +80,13 @@ function CustomWireEdge(props: CustomWireEdgeProps | ConnectionLineComponentProp
     targetX = connectionProps.toX || 0;
     targetY = connectionProps.toY || 0;
     
-    // Extract style properties safely
     if (connectionProps.connectionLineStyle) {
-      const lineStyle = connectionProps.connectionLineStyle;
-      styleProps = {
-        stroke: typeof lineStyle.stroke === 'string' ? lineStyle.stroke : '#9b87f5',
-        strokeWidth: typeof lineStyle.strokeWidth === 'number' ? lineStyle.strokeWidth : 2
-      };
-    } else {
-      styleProps = { stroke: '#9b87f5', strokeWidth: 2 };
+      if (typeof connectionProps.connectionLineStyle.stroke === 'string') {
+        wireColor = connectionProps.connectionLineStyle.stroke;
+      }
+      if (typeof connectionProps.connectionLineStyle.strokeWidth === 'number') {
+        strokeWidth = connectionProps.connectionLineStyle.strokeWidth;
+      }
     }
   } else {
     const edgeProps = props as CustomWireEdgeProps;
@@ -99,15 +97,15 @@ function CustomWireEdge(props: CustomWireEdgeProps | ConnectionLineComponentProp
     sourcePosition = edgeProps.sourcePosition;
     targetPosition = edgeProps.targetPosition;
     
-    // Extract style properties safely
     if (edgeProps.style) {
-      const edgeStyle = edgeProps.style;
-      styleProps = {
-        stroke: typeof edgeStyle.stroke === 'string' ? edgeStyle.stroke : '#9b87f5',
-        strokeWidth: typeof edgeStyle.strokeWidth === 'number' ? edgeStyle.strokeWidth : 2
-      };
-    } else {
-      styleProps = { stroke: '#9b87f5', strokeWidth: 2 };
+      if (typeof edgeProps.style.stroke === 'string') {
+        wireColor = edgeProps.style.stroke;
+      }
+      if (edgeProps.style.strokeWidth !== undefined) {
+        const width = edgeProps.style.strokeWidth;
+        strokeWidth = typeof width === 'number' ? width : parseFloat(width);
+        if (isNaN(strokeWidth)) strokeWidth = 2;
+      }
     }
   }
   
@@ -240,7 +238,7 @@ function CustomWireEdge(props: CustomWireEdgeProps | ConnectionLineComponentProp
   
   const isActiveOrSelected = draggingPointIndex !== null || selected;
   
-  const strokeWidth = isActiveOrSelected ? 3 : (styleProps.strokeWidth || 2);
+  const activeStrokeWidth = isActiveOrSelected ? 3 : strokeWidth;
   
   return (
     <>
@@ -248,8 +246,8 @@ function CustomWireEdge(props: CustomWireEdgeProps | ConnectionLineComponentProp
         id={id}
         className={`react-flow__edge-path custom-wire-path ${isConnectionLine ? 'connection-line' : ''}`}
         d={path}
-        stroke={styleProps.stroke || '#9b87f5'}
-        strokeWidth={strokeWidth}
+        stroke={wireColor}
+        strokeWidth={activeStrokeWidth}
         fill="none"
         onClick={handleEdgeClick}
         style={{ pointerEvents }}
@@ -265,7 +263,7 @@ function CustomWireEdge(props: CustomWireEdgeProps | ConnectionLineComponentProp
             cx={x}
             cy={y}
             r={5}
-            fill={styleProps.stroke || '#9b87f5'}
+            fill={wireColor}
             stroke="#ffffff"
             strokeWidth={1.5}
             opacity={1}
@@ -282,7 +280,7 @@ function CustomWireEdge(props: CustomWireEdgeProps | ConnectionLineComponentProp
           cx={isNaN(cursorPosition.x) ? 0 : cursorPosition.x}
           cy={isNaN(cursorPosition.y) ? 0 : cursorPosition.y}
           r={5}
-          fill={styleProps.stroke || '#9b87f5'}
+          fill={wireColor}
           stroke="#ffffff"
           strokeWidth={1.5}
           className="cursor-point"

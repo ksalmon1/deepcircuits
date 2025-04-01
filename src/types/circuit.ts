@@ -29,14 +29,13 @@ export interface WireEdge {
 
 /**
  * Props for the custom wire edge component
+ * Updated to match React Flow's flexible style type
  */
 export interface CustomWireEdgeProps extends Omit<EdgeProps, 'data'> {
   data?: WireData;
   onDelete?: (id: string) => void;
-  style?: {
-    stroke?: string;
-    strokeWidth?: number;
-  };
+  // Allow for more flexible style types to match React Flow's expectations
+  style?: Record<string, any>;
 }
 
 /**
