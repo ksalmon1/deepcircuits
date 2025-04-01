@@ -1,4 +1,3 @@
-
 import React, { memo, useState, useCallback } from 'react';
 import { CustomWireEdgeProps, WireData } from '@/types/circuit';
 import { useReactFlow, ConnectionLineComponentProps } from '@xyflow/react';
@@ -287,4 +286,8 @@ function CustomWireEdge(props: CustomWireEdgeProps | ConnectionLineComponentProp
   }
 }
 
+// Export the connection line component separately
+export { ConnectionLine };
+
+// Default export the main edge component
 export default memo(CustomWireEdge);
