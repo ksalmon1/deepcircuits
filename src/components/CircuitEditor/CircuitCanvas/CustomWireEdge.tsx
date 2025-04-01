@@ -1,7 +1,8 @@
+
 import React, { memo, useState, useCallback } from 'react';
 import { CustomWireEdgeProps, WireData, WokwiNodeData } from '@/types/circuit';
-import { useReactFlow, ConnectionLineComponentProps, Node } from '@xyflow/react';
-import { getPinSignalType, getWireColorFromSignal } from '@/utils/wireUtils';
+import { useReactFlow, ConnectionLineComponentProps } from '@xyflow/react';
+import { getWireColorFromSignal } from '@/utils/wireUtils';
 
 /**
  * Generates an orthogonal path with only horizontal and vertical segments
@@ -71,23 +72,23 @@ const ConnectionLine = ({
   toX,
   toY,
   connectionLineStyle = {},
-  sourceNode,
-  sourceHandleId
+  fromNode,
+  fromHandle
 }: ConnectionLineComponentProps) => {
   let wireColor = connectionLineStyle.stroke || '#9b87f5'; // Default color
 
-  if (sourceNode && sourceHandleId) {
+  if (fromNode && fromHandle?.id) {
     try {
-      const pinIndex = parseInt(sourceHandleId.split('-')[1]);
+      const pinIndex = parseInt(fromHandle.id.split('-')[1]);
       if (!isNaN(pinIndex)) {
-        const nodeData = sourceNode.data as WokwiNodeData;
+        const nodeData = fromNode.data as WokwiNodeData;
         const pin = nodeData?.pins?.[pinIndex];
         
         if (pin && pin.signals && pin.signals.length > 0) {
           const signal = pin.signals[0];
           wireColor = getWireColorFromSignal(signal);
         } else {
-          console.warn(`ConnectionLine: Could not find signal for pin ${pinIndex} on node ${sourceNode.id}`);
+          console.warn(`ConnectionLine: Could not find signal for pin ${pinIndex} on node ${fromNode.id}`);
         }
       }
     } catch (error) {
