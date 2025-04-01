@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { 
   isWokwiLoaded, 
@@ -29,7 +30,8 @@ import {
   Node,
   XYPosition,
   EdgeTypes,
-  NodeTypes
+  NodeTypes,
+  ReactFlowProvider
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import './CircuitCanvas/circuit-canvas.css';

@@ -1,4 +1,3 @@
-
 import React, { memo, useState, useCallback } from 'react';
 import { CustomWireEdgeProps, WireData } from '@/types/circuit';
 import { useReactFlow, ConnectionLineComponentProps } from '@xyflow/react';
@@ -20,10 +19,8 @@ const generateOrthogonalPath = (
   const safeTargetX = isNaN(targetX) ? 0 : targetX;
   const safeTargetY = isNaN(targetY) ? 0 : targetY;
   
-  // Create an array of fixed points (source + routing points)
   const fixedPoints = [{ x: safeSourceX, y: safeSourceY }];
   
-  // Add all routing points
   if (Array.isArray(routingPoints)) {
     routingPoints.forEach(point => {
       const x = isNaN(point.x) ? 0 : point.x;
@@ -32,7 +29,6 @@ const generateOrthogonalPath = (
     });
   }
   
-  // Determine the final endpoint (cursor or target)
   const finalEndPoint = cursorPosition && typeof cursorPosition === 'object'
     ? { 
         x: isNaN(cursorPosition.x) ? 0 : cursorPosition.x,
@@ -40,66 +36,50 @@ const generateOrthogonalPath = (
       }
     : { x: safeTargetX, y: safeTargetY };
   
-  // Start the path at the first point
   let path = `M ${fixedPoints[0].x},${fixedPoints[0].y}`;
   
-  // Generate orthogonal segments between fixed points only
   for (let i = 0; i < fixedPoints.length - 1; i++) {
     const current = fixedPoints[i];
     const next = fixedPoints[i + 1];
     
-    // Create an L-shaped route between current and next points
-    // For odd-numbered segments, go horizontal first, then vertical
-    // For even-numbered segments, go vertical first, then horizontal
     if (i % 2 === 0) {
-      // Horizontal first, then vertical
-      path += ` L ${next.x},${current.y}`; // Horizontal segment
-      path += ` L ${next.x},${next.y}`;    // Vertical segment
+      path += ` L ${next.x},${current.y}`;
+      path += ` L ${next.x},${next.y}`;
     } else {
-      // Vertical first, then horizontal
-      path += ` L ${current.x},${next.y}`; // Vertical segment
-      path += ` L ${next.x},${next.y}`;    // Horizontal segment
+      path += ` L ${current.x},${next.y}`;
+      path += ` L ${next.x},${next.y}`;
     }
   }
   
-  // Handle the final segment to the cursor/target separately
-  // This ensures smooth cursor tracking without visual glitches
   const lastFixedPoint = fixedPoints[fixedPoints.length - 1];
   
-  // Only add the final segment if it's different from the last fixed point
   if (lastFixedPoint.x !== finalEndPoint.x || lastFixedPoint.y !== finalEndPoint.y) {
-    // Always draw horizontal line first, then vertical for consistent cursor tracking
-    path += ` L ${finalEndPoint.x},${lastFixedPoint.y}`; // Horizontal segment to cursor/target x
-    path += ` L ${finalEndPoint.x},${finalEndPoint.y}`;  // Vertical segment to cursor/target y
+    path += ` L ${finalEndPoint.x},${lastFixedPoint.y}`;
+    path += ` L ${finalEndPoint.x},${finalEndPoint.y}`;
   }
   
   return path;
 };
 
-// Define a unified component that can work as both an edge and a connection line
 function CustomWireEdge(props: CustomWireEdgeProps | ConnectionLineComponentProps) {
-  // Determine if this is a connection line (during dragging) or a regular edge
   const isConnectionLine = 'fromNode' in props || !('id' in props) || props.id === 'connection-line';
   
-  // Extract relevant props based on the component usage
   let sourceX = 0;
   let sourceY = 0;
   let targetX = 0;
   let targetY = 0;
   let sourcePosition = null;
   let targetPosition = null;
-  let style = {};
+  let style: { stroke?: string; strokeWidth?: number } = {};
   
   if (isConnectionLine) {
-    // Connection line props
     const connectionProps = props as ConnectionLineComponentProps;
     sourceX = connectionProps.fromX || 0;
     sourceY = connectionProps.fromY || 0;
     targetX = connectionProps.toX || 0;
     targetY = connectionProps.toY || 0;
-    style = connectionProps.connectionLineStyle || {};
+    style = connectionProps.connectionLineStyle || { stroke: '#9b87f5', strokeWidth: 2 };
   } else {
-    // Regular edge props
     const edgeProps = props as CustomWireEdgeProps;
     sourceX = edgeProps.sourceX || 0;
     sourceY = edgeProps.sourceY || 0;
@@ -107,14 +87,12 @@ function CustomWireEdge(props: CustomWireEdgeProps | ConnectionLineComponentProp
     targetY = edgeProps.targetY || 0;
     sourcePosition = edgeProps.sourcePosition;
     targetPosition = edgeProps.targetPosition;
-    style = edgeProps.style || {};
+    style = edgeProps.style || { stroke: '#9b87f5', strokeWidth: 2 };
   }
   
-  // For regular edge functionality (not connection line)
   const [draggingPointIndex, setDraggingPointIndex] = useState<number | null>(null);
   const { setEdges } = useReactFlow();
   
-  // Handle regular edge props if this is not a connection line
   let id: string = 'connection-line';
   let data: WireData | undefined;
   let selected: boolean = false;
@@ -131,11 +109,9 @@ function CustomWireEdge(props: CustomWireEdgeProps | ConnectionLineComponentProp
     target = (props as CustomWireEdgeProps).target || '';
   }
   
-  // Extract routing points from data, if available
   const routingPoints = data?.routingPoints || [];
   const cursorPosition = data?.cursorPosition;
   
-  // Only attach edge click handler if we have an onDelete function
   const handleEdgeClick = onDelete ? (event: React.MouseEvent) => {
     if (event.detail === 2) {
       event.stopPropagation();
@@ -163,7 +139,6 @@ function CustomWireEdge(props: CustomWireEdgeProps | ConnectionLineComponentProp
     const mouseX = event.clientX - left;
     const mouseY = event.clientY - top;
     
-    // Only update edges if this is a regular edge (not a connection line)
     if (id !== 'connection-line') {
       setEdges(edges => {
         return edges.map(edge => {
@@ -230,7 +205,6 @@ function CustomWireEdge(props: CustomWireEdgeProps | ConnectionLineComponentProp
   const finalTargetX = cursorPosition && (safeSourceX === safeTargetX) ? cursorPosition.x : safeTargetX;
   const finalTargetY = cursorPosition && (safeSourceY === safeTargetY) ? cursorPosition.y : safeTargetY;
   
-  // Use orthogonal path generation
   const path = generateOrthogonalPath(
     safeSourceX, 
     safeSourceY, 
@@ -240,13 +214,11 @@ function CustomWireEdge(props: CustomWireEdgeProps | ConnectionLineComponentProp
     cursorPosition
   );
   
-  // Determine if this is a temporary connection line or a permanent edge
   const isTemporary = isConnectionLine || (id && id.startsWith('temp-wire-'));
   const pointerEvents = isTemporary ? 'none' : 'auto';
   
   const isActiveOrSelected = draggingPointIndex !== null || selected;
   
-  // Apply the stroke width based on selection state
   const strokeWidth = isActiveOrSelected ? 3 : (style.strokeWidth || 2);
   
   return (
@@ -262,7 +234,6 @@ function CustomWireEdge(props: CustomWireEdgeProps | ConnectionLineComponentProp
         style={{ pointerEvents }}
       />
       
-      {/* Only show routing points when the wire is a permanent edge and is selected */}
       {!isTemporary && selected && Array.isArray(routingPoints) && routingPoints.map((point, index) => {
         const x = isNaN(point.x) ? 0 : point.x;
         const y = isNaN(point.y) ? 0 : point.y;
@@ -301,5 +272,4 @@ function CustomWireEdge(props: CustomWireEdgeProps | ConnectionLineComponentProp
   );
 }
 
-// Export the component as both a regular component and a ConnectionLineComponent
 export default memo(CustomWireEdge);
