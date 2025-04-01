@@ -1,4 +1,3 @@
-
 import React, { memo, useState, useCallback } from 'react';
 import { CustomWireEdgeProps, WireData } from '@/types/circuit';
 import { useReactFlow } from '@xyflow/react';
@@ -95,7 +94,6 @@ function CustomWireEdge({
   const { setEdges } = useReactFlow();
   
   const routingPoints = data?.routingPoints || [];
-  const edgeColor = data?.color || '#9b87f5';
   const cursorPosition = data?.cursorPosition;
   
   const handleEdgeClick = (event: React.MouseEvent) => {
@@ -213,7 +211,7 @@ function CustomWireEdge({
         id={id}
         className="react-flow__edge-path custom-wire-path"
         d={path}
-        stroke={style.stroke || edgeColor}
+        stroke={style.stroke}
         strokeWidth={strokeWidth}
         fill="none"
         onClick={handleEdgeClick}
@@ -231,7 +229,7 @@ function CustomWireEdge({
             cx={x}
             cy={y}
             r={5}
-            fill={style.stroke || edgeColor}
+            fill={style.stroke}
             stroke="#ffffff"
             strokeWidth={1.5}
             opacity={1}
@@ -248,7 +246,7 @@ function CustomWireEdge({
           cx={isNaN(cursorPosition.x) ? 0 : cursorPosition.x}
           cy={isNaN(cursorPosition.y) ? 0 : cursorPosition.y}
           r={5}
-          fill={style.stroke || edgeColor}
+          fill={style.stroke}
           stroke="#ffffff"
           strokeWidth={1.5}
           className="cursor-point"
