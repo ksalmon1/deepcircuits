@@ -30,7 +30,8 @@ import {
   XYPosition,
   EdgeTypes,
   NodeTypes,
-  ReactFlowProvider
+  ReactFlowProvider,
+  ConnectionLineType
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import './CircuitCanvas/circuit-canvas.css';
@@ -331,7 +332,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
           onNodeDragStop={onNodeDragStop}
           connectionMode={ConnectionMode.Loose}
           connectionLineComponent={CustomWireEdge}
-          connectionLineType="customWire"
+          connectionLineType={ConnectionLineType.Bezier}
           connectionLineStyle={connectionLineStyle}
           onPaneClick={onPaneClick}
           minZoom={0.5}
