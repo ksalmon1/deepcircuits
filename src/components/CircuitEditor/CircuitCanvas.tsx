@@ -33,6 +33,8 @@ import {
   NodeTypes,
   ReactFlowProvider,
   MiniMap,
+  Connection,
+  addEdge
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import './CircuitCanvas/circuit-canvas.css';
@@ -42,7 +44,6 @@ import InteractiveEdge, { ConnectionLine } from './CircuitCanvas/CustomWireEdge'
 import LoadingOverlay from './CircuitCanvas/LoadingOverlay';
 import { useCircuitCanvasState } from '@/hooks/useCircuitCanvasState';
 import { WokwiComponentData, WokwiPinData } from '@/types/wokwi';
-import { useCircuitStore } from '@/store/circuitStore'; // Adjust path as needed
 import { getWireColorFromSignal } from '@/utils/wireUtils'; // Adjust path as needed
 
 interface CircuitCanvasProps {
@@ -109,6 +110,25 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
   // React Flow state
   const [reactFlowNodes, setReactFlowNodes, onNodesChange] = useNodesState([]);
   const [reactFlowEdges, setReactFlowEdges, onEdgesChange] = useEdgesState([]);
+  
+  // Add onConnect handler for ReactFlow
+  const onConnect = useCallback(
+    (connection: Connection) => {
+      console.log('Connection created:', connection);
+      setReactFlowEdges((eds) => addEdge(
+        {
+          ...connection,
+          type: 'customWire',
+          data: { 
+            color: getWireColorFromSignal('digital'),
+            routingPoints: []
+          }
+        }, 
+        eds
+      ));
+    },
+    [setReactFlowEdges]
+  );
   
   const {
     zoom,
