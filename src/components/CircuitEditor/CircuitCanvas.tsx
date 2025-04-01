@@ -126,7 +126,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
 
   // Define connection line style for the dragging wire
   const connectionLineStyle = {
-    stroke: '#9b87f5', // Purple color for connection line
+    stroke: '#9b87f5', // Default purple color
     strokeWidth: 2,
   };
 
@@ -331,6 +331,7 @@ const CircuitCanvas = ({ components, onComponentsChange }: CircuitCanvasProps) =
           onNodeDragStop={onNodeDragStop}
           connectionMode={ConnectionMode.Loose}
           connectionLineComponent={CustomWireEdge}
+          connectionLineType="customWire"
           connectionLineStyle={connectionLineStyle}
           onPaneClick={onPaneClick}
           minZoom={0.5}
