@@ -107,7 +107,7 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
 }) => {
   // Remove the wrapper ref again
   // const reactFlowWrapper = useRef<HTMLDivElement>(null);
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [nodes, setNodes, onNodesChangeInternal] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
 
@@ -129,6 +129,29 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
   }, [wireConnections, setEdges]);
 
   // --- Interaction Handlers ---
+
+  // Custom handler for node changes to intercept deletions
+  const handleNodesChange: OnNodesChange = useCallback(
+    (changes) => {
+      // Apply changes to React Flow's internal state first
+      onNodesChangeInternal(changes);
+
+      // Check for node removals
+      const removedNodeIds = changes
+        .filter(change => change.type === 'remove')
+        .map(change => change.id);
+
+      if (removedNodeIds.length > 0) {
+        console.log('Nodes removed:', removedNodeIds);
+        // Update the parent component's state
+        const updatedComponents = circuitComponents.filter(
+          comp => !removedNodeIds.includes(comp.id)
+        );
+        onComponentsChange(updatedComponents);
+      }
+    },
+    [onNodesChangeInternal, circuitComponents, onComponentsChange] // Add dependencies
+  );
 
   const onConnect: OnConnect = useCallback((connection: Connection) => {
       console.log('Attempting connection:', connection);
@@ -314,30 +337,32 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
       // ref={reactFlowWrapper} 
     >
       {/* Restore ReactFlow rendering */}
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
-        onNodeDragStop={onNodeDragStop}
-        onInit={setReactFlowInstance}
-        onNodesDelete={onNodesDelete}
-        onEdgesDelete={onEdgesDelete}
-        nodeTypes={nodeTypes}
-        edgeTypes={edgeTypes}
-        connectionLineComponent={DynamicConnectionLine}
-        connectionMode={ConnectionMode.Loose}
-        fitView
-        fitViewOptions={{ padding: 0.2 }}
-        deleteKeyCode={['Backspace', 'Delete']}
-        // Re-add ReactFlow specific handlers
-        onDrop={onDrop}
-        onDragOver={onDragOver}
-      >
-        <Controls />
-        <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
-      </ReactFlow>
+      <ReactFlowProvider>
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={handleNodesChange}
+          onEdgesChange={onEdgesChange}
+          onConnect={onConnect}
+          onNodeDragStop={onNodeDragStop}
+          onInit={setReactFlowInstance}
+          onNodesDelete={onNodesDelete}
+          onEdgesDelete={onEdgesDelete}
+          nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
+          connectionLineComponent={DynamicConnectionLine}
+          connectionMode={ConnectionMode.Loose}
+          fitView
+          fitViewOptions={{ padding: 0.2 }}
+          deleteKeyCode={['Backspace', 'Delete']}
+          // Re-add ReactFlow specific handlers
+          onDrop={onDrop}
+          onDragOver={onDragOver}
+        >
+          <Controls />
+          <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
+        </ReactFlow>
+      </ReactFlowProvider>
     </div>
   );
 };
