@@ -1,323 +1,187 @@
-import React, { memo, useState, useCallback } from 'react';
-import { CustomWireEdgeProps, WireData, CircuitNodeData } from '@/types/circuit';
-import { useReactFlow, ConnectionLineComponentProps } from '@xyflow/react';
+import React, { memo, useEffect } from 'react';
+import { EdgeProps, Position, EdgeLabelRenderer, useReactFlow, ConnectionLineComponentProps } from '@xyflow/react';
 import { getWireColorFromSignal } from '@/utils/wireUtils';
-import { ComponentPin } from '@/types/pin';
+import SparkCursorEffect from './SparkCursorEffect'; // Import the spark effect
+import { useCircuitEditor } from '@/context/CircuitEditorContext'; // Import context hook
 
 /**
- * Generates an orthogonal path with only horizontal and vertical segments
- * connecting the source, routing points, and target
+ * Calculates an SVG path string for a Manhattan-style edge.
  */
-const generateOrthogonalPath = (
-  sourceX: number,
-  sourceY: number,
-  targetX: number,
-  targetY: number,
-  routingPoints: Array<{ x: number, y: number }> = [],
-  cursorPosition?: { x: number, y: number }
-): string => {
-  const safeSourceX = isNaN(sourceX) ? 0 : sourceX;
-  const safeSourceY = isNaN(sourceY) ? 0 : sourceY;
-  const safeTargetX = isNaN(targetX) ? 0 : targetX;
-  const safeTargetY = isNaN(targetY) ? 0 : targetY;
+const getManhattanPath = ({
+  sourceX,
+  sourceY,
+  targetX,
+  targetY,
+  sourcePosition = Position.Right,
+  targetPosition = Position.Left,
+}: {
+  sourceX: number;
+  sourceY: number;
+  targetX: number;
+  targetY: number;
+  sourcePosition?: Position;
+  targetPosition?: Position;
+}): string => {
+  // --- Add safety checks for coordinates ---
+  const sX = typeof sourceX === 'number' && !isNaN(sourceX) ? sourceX : 0;
+  const sY = typeof sourceY === 'number' && !isNaN(sourceY) ? sourceY : 0;
+  const tX = typeof targetX === 'number' && !isNaN(targetX) ? targetX : 0;
+  const tY = typeof targetY === 'number' && !isNaN(targetY) ? targetY : 0;
+  // ---------------------------------------
   
-  const fixedPoints = [{ x: safeSourceX, y: safeSourceY }];
+  let path = ''; // Initialize path string
   
-  if (Array.isArray(routingPoints)) {
-    routingPoints.forEach(point => {
-      const x = isNaN(point.x) ? 0 : point.x;
-      const y = isNaN(point.y) ? 0 : point.y;
-      fixedPoints.push({ x, y });
-    });
+  const dx = Math.abs(tX - sX);
+  const dy = Math.abs(tY - sY);
+
+  // Determine the middle point for the main bend
+  let midX: number, midY: number;
+
+  // Simplified strategy: prioritize horizontal or vertical segment first based on source position
+  // This creates a basic 2-segment or 3-segment path
+  switch (sourcePosition) {
+    case Position.Left:
+    case Position.Right:
+      // Horizontal first
+      midX = sX + (tX - sX) / 2;
+      midY = sY;
+      path = `M ${Number(sX)},${Number(sY)} H ${Number(midX)} V ${Number(tY)} H ${Number(tX)}`;
+      break;
+    case Position.Top:
+    case Position.Bottom:
+      // Vertical first
+      midX = sX;
+      midY = sY + (tY - sY) / 2;
+      path = `M ${Number(sX)},${Number(sY)} V ${Number(midY)} H ${Number(tX)} V ${Number(tY)}`;
+      break;
+    default:
+      // Fallback for unexpected positions (straight line)
+      path = `M ${Number(sX)},${Number(sY)} L ${Number(tX)},${Number(tY)}`;
+      break;
   }
   
-  const finalEndPoint = cursorPosition && typeof cursorPosition === 'object'
-    ? { 
-        x: isNaN(cursorPosition.x) ? 0 : cursorPosition.x,
-        y: isNaN(cursorPosition.y) ? 0 : cursorPosition.y 
-      }
-    : { x: safeTargetX, y: safeTargetY };
+  // --- Add Logging ---
+  /*
+  console.log('getManhattanPath called with:', {
+      sourceX, sourceY, targetX, targetY, sX, sY, tX, tY, sourcePosition, targetPosition
+  });
+  console.log('Generated path:', String(path));
+  */
+  // -------------------
   
-  let path = `M ${fixedPoints[0].x},${fixedPoints[0].y}`;
-  
-  for (let i = 0; i < fixedPoints.length - 1; i++) {
-    const current = fixedPoints[i];
-    const next = fixedPoints[i + 1];
-    
-    if (i % 2 === 0) {
-      path += ` L ${next.x},${current.y}`;
-      path += ` L ${next.x},${next.y}`;
-    } else {
-      path += ` L ${current.x},${next.y}`;
-      path += ` L ${next.x},${next.y}`;
-    }
-  }
-  
-  const lastFixedPoint = fixedPoints[fixedPoints.length - 1];
-  
-  if (lastFixedPoint.x !== finalEndPoint.x || lastFixedPoint.y !== finalEndPoint.y) {
-    path += ` L ${finalEndPoint.x},${lastFixedPoint.y}`;
-    path += ` L ${finalEndPoint.x},${finalEndPoint.y}`;
-  }
-  
-  return path;
+  return String(path);
 };
 
-/**
- * Simple connection line component for when wires are being dragged
- */
-export const ConnectionLine = ({
+// --- Dedicated Connection Line Component ---
+export const ManhattanConnectionLine: React.FC<ConnectionLineComponentProps> = ({
   fromX,
   fromY,
   toX,
   toY,
-  connectionLineStyle = {},
-  fromNode,
-  fromHandle
-}: ConnectionLineComponentProps) => {
-  let wireColor = connectionLineStyle.stroke || '#9b87f5'; // Default color
+  fromHandle // We can use fromHandle?.position later if needed
+}) => {
+  // Get setter from context
+  const { setConnectionLineEnd } = useCircuitEditor();
 
-  if (fromNode && fromHandle?.id) {
-    console.log('ConnectionLine Props:', { fromNodeId: fromNode.id, fromHandleId: fromHandle.id }); // Log incoming props
-    try {
-      const pinIndex = parseInt(fromHandle.id.split('-')[1]);
-      console.log('Parsed pinIndex:', pinIndex); // Log parsed index
-      if (!isNaN(pinIndex)) {
-        const nodeData = fromNode.data as CircuitNodeData;
-        console.log('Source nodeData:', JSON.stringify(nodeData, null, 2)); // Log node data
-        const pin = nodeData?.pins?.[pinIndex];
-        console.log(`Data for pin ${pinIndex}:`, pin); // Log the specific pin data
-        
-        if (pin && pin.signals && pin.signals.length > 0) {
-          const signal = pin.signals[0];
-          console.log(`Found signal for pin ${pinIndex}:`, signal); // Log the found signal
-          wireColor = getWireColorFromSignal(signal);
-          console.log(`Calculated wireColor:`, wireColor); // Log the calculated color
-        } else {
-          console.warn(`ConnectionLine: Could not find signal for pin ${pinIndex} on node ${fromNode.id}`);
-        }
-      } else {
-        console.warn(`ConnectionLine: Could not parse pin index from handle ID ${fromHandle.id}`); // Add log here too
-      }
-    } catch (error) {
-      console.error("Error calculating connection line color:", error);
-      // Keep default color on error
+  // Update context with the current end position
+  useEffect(() => {
+    if (setConnectionLineEnd) {
+      setConnectionLineEnd({ x: toX, y: toY });
     }
-  }
+    // Cleanup on unmount
+    return () => {
+      if (setConnectionLineEnd) {
+        setConnectionLineEnd(null);
+      }
+    };
+  }, [toX, toY, setConnectionLineEnd]);
 
-  const path = generateOrthogonalPath(
-    fromX || 0,
-    fromY || 0,
-    toX || 0,
-    toY || 0
-  );
+  // Log received props for connection line
+  console.log('ManhattanConnectionLine Render:', { fromX, fromY, toX, toY });
+  
+  const path = getManhattanPath({
+    sourceX: fromX, // Use fromX/fromY as source
+    sourceY: fromY,
+    targetX: toX,   // Use toX/toY as target
+    targetY: toY,
+    // Positions might need adjustment based on fromHandle if available
+    sourcePosition: fromHandle?.position, 
+    // Target position is unknown during drag, let default handle it
+  });
+
+  // Determine color based on source handle if possible (simplified for now)
+  const wireColor = '#888'; // Default connection line color
 
   return (
+    // Only return the path now
     <path
-      className="react-flow__edge-path react-flow__connection-line"
-      d={path}
       fill="none"
       stroke={wireColor}
-      strokeWidth={connectionLineStyle.strokeWidth || 2}
-      style={{ pointerEvents: 'none' }}
+      strokeWidth={2}
+      className="react-flow__connection-line"
+      d={path}
     />
   );
 };
+// -----------------------------------------
 
-/**
- * Interactive edge component for when wires are placed
- */
-const InteractiveEdge = ({
+// Basic Custom Edge Component (Temporary Reset)
+const CustomWireEdge: React.FC<EdgeProps> = ({
   id,
   sourceX,
   sourceY,
   targetX,
   targetY,
-  sourcePosition,
-  targetPosition,
+  sourcePosition = Position.Right,
+  targetPosition = Position.Left,
   style = {},
   data,
   selected,
-  onDelete
-}: CustomWireEdgeProps) => {
-  const [draggingPointIndex, setDraggingPointIndex] = useState<number | null>(null);
-  const { setEdges } = useReactFlow();
+}) => {
+  // --- Log received props --- 
+  /*
+  console.log(`CustomWireEdge Render [${id}]:`, { 
+    sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition 
+  });
+  */
+  // --------------------------
   
-  const routingPoints = data?.routingPoints || [];
-  const cursorPosition = data?.cursorPosition;
-  
-  const handleEdgeClick = onDelete ? (event: React.MouseEvent) => {
-    if (event.detail === 2) {
-      event.stopPropagation();
-      onDelete(id);
-    }
-  } : undefined;
-  
-  const handlePointMouseDown = useCallback((event: React.MouseEvent, index: number) => {
+  const { deleteElements } = useReactFlow();
+
+  // Calculate the path using the new Manhattan helper
+  const edgePath = getManhattanPath({
+    sourceX,
+    sourceY,
+    targetX,
+    targetY,
+    sourcePosition,
+    targetPosition,
+  });
+
+  // Determine wire color from data if available
+  const signal = typeof data?.signal === 'string' ? data.signal : ''; // Ensure signal is a string
+  const wireColor = signal ? getWireColorFromSignal(signal) : (style.stroke || '#555'); // Pass guaranteed string
+  const strokeWidth = selected ? 3 : (style.strokeWidth as number || 2);
+
+  // Double-click handler to delete the edge
+  const handleDoubleClick = (event: React.MouseEvent) => {
     event.stopPropagation();
-    setDraggingPointIndex(index);
-  }, []);
-  
-  const handlePointDrag = useCallback((event: React.MouseEvent<Element, MouseEvent>) => {
-    if (draggingPointIndex === null || !id) return;
-    
-    const reactFlowBounds = document.querySelector('.react-flow')?.getBoundingClientRect();
-    if (!reactFlowBounds) return;
-    
-    const reactFlow = document.querySelector('.react-flow__renderer');
-    if (!reactFlow) return;
-    
-    const reactFlowRect = reactFlow.getBoundingClientRect();
-    
-    const { left, top } = reactFlowRect;
-    const mouseX = event.clientX - left;
-    const mouseY = event.clientY - top;
-    
-    if (id !== 'connection-line') {
-      setEdges(edges => {
-        return edges.map(edge => {
-          if (edge.id === id) {
-            const currentRoutingPoints = edge.data?.routingPoints;
-            const newRoutingPoints = Array.isArray(currentRoutingPoints) 
-              ? [...currentRoutingPoints]
-              : [];
-            
-            if (draggingPointIndex >= 0 && draggingPointIndex < newRoutingPoints.length) {
-              newRoutingPoints[draggingPointIndex] = { x: mouseX, y: mouseY };
-            }
-            
-            return {
-              ...edge,
-              data: {
-                ...edge.data,
-                routingPoints: newRoutingPoints
-              }
-            };
-          }
-          return edge;
-        });
-      });
-    }
-  }, [draggingPointIndex, id, setEdges]);
-  
-  const handlePointMouseUp = useCallback(() => {
-    setDraggingPointIndex(null);
-  }, []);
-  
-  React.useEffect(() => {
-    if (draggingPointIndex !== null) {
-      const handleGlobalMouseMove = (e: MouseEvent) => {
-        const reactEvent = {
-          clientX: e.clientX,
-          clientY: e.clientY,
-          stopPropagation: () => {},
-          preventDefault: () => {}
-        } as React.MouseEvent<Element, MouseEvent>;
-        
-        handlePointDrag(reactEvent);
-      };
-      
-      const handleGlobalMouseUp = () => {
-        handlePointMouseUp();
-      };
-      
-      window.addEventListener('mousemove', handleGlobalMouseMove);
-      window.addEventListener('mouseup', handleGlobalMouseUp);
-      
-      return () => {
-        window.removeEventListener('mousemove', handleGlobalMouseMove);
-        window.removeEventListener('mouseup', handleGlobalMouseUp);
-      };
-    }
-  }, [draggingPointIndex, handlePointDrag, handlePointMouseUp]);
-  
-  const safeSourceX = isNaN(sourceX) ? 0 : sourceX;
-  const safeSourceY = isNaN(sourceY) ? 0 : sourceY;
-  const safeTargetX = isNaN(targetX) ? 0 : targetX;
-  const safeTargetY = isNaN(targetY) ? 0 : targetY;
-  
-  const finalTargetX = cursorPosition && (safeSourceX === safeTargetX) ? cursorPosition.x : safeTargetX;
-  const finalTargetY = cursorPosition && (safeSourceY === safeTargetY) ? cursorPosition.y : safeTargetY;
-  
-  const path = generateOrthogonalPath(
-    safeSourceX, 
-    safeSourceY, 
-    finalTargetX, 
-    finalTargetY, 
-    routingPoints, 
-    cursorPosition
-  );
-  
-  const isTemporary = id === 'connection-line' || (id && id.startsWith('temp-wire-'));
-  const pointerEvents = isTemporary ? 'none' : 'auto';
-  
-  const isActiveOrSelected = draggingPointIndex !== null || selected;
-  
-  const activeStrokeWidth = isActiveOrSelected ? 3 : (style.strokeWidth as number || 2);
-  
+    console.log("Edge double clicked, deleting:", id);
+    deleteElements({ edges: [{ id }] });
+  };
+
   return (
     <>
       <path
         id={id}
-        className={`react-flow__edge-path custom-wire-path ${isTemporary ? 'connection-line' : ''}`}
-        d={path}
-        stroke={style.stroke || data?.color || '#9b87f5'}
-        strokeWidth={activeStrokeWidth}
-        fill="none"
-        onClick={handleEdgeClick}
-        style={{ pointerEvents }}
+        style={{ ...style, stroke: wireColor, strokeWidth }}
+        className="react-flow__edge-path"
+        d={edgePath}
+        onDoubleClick={handleDoubleClick} // Add delete handler
       />
-      
-      {!isTemporary && selected && Array.isArray(routingPoints) && routingPoints.map((point, index) => {
-        const x = isNaN(point.x) ? 0 : point.x;
-        const y = isNaN(point.y) ? 0 : point.y;
-        
-        return (
-          <circle
-            key={`${id}-point-${index}`}
-            cx={x}
-            cy={y}
-            r={5}
-            fill={style.stroke || data?.color || '#9b87f5'}
-            stroke="#ffffff"
-            strokeWidth={1.5}
-            opacity={1}
-            className="routing-point"
-            onMouseDown={(e) => handlePointMouseDown(e, index)}
-            cursor="move"
-            style={{ pointerEvents: 'all' }}
-          />
-        );
-      })}
-      
-      {cursorPosition && !isTemporary && (
-        <circle
-          cx={isNaN(cursorPosition.x) ? 0 : cursorPosition.x}
-          cy={isNaN(cursorPosition.y) ? 0 : cursorPosition.y}
-          r={5}
-          fill={style.stroke || data?.color || '#9b87f5'}
-          stroke="#ffffff"
-          strokeWidth={1.5}
-          className="cursor-point"
-          style={{ opacity: 0.7, pointerEvents: 'none' }}
-        />
-      )}
+      {/* Optional: Add EdgeLabelRenderer here if needed */}
     </>
   );
 };
 
-/**
- * Universal wire edge component that handles both connection lines and interactive edges
- */
-function CustomWireEdge(props: CustomWireEdgeProps | ConnectionLineComponentProps) {
-  const isConnectionLine = 'fromX' in props || !('id' in props) || props.id === 'connection-line';
-  
-  if (isConnectionLine) {
-    return <ConnectionLine {...(props as ConnectionLineComponentProps)} />;
-  } else {
-    return <InteractiveEdge {...(props as CustomWireEdgeProps)} />;
-  }
-}
-
-// Default export the main edge component
 export default memo(CustomWireEdge);

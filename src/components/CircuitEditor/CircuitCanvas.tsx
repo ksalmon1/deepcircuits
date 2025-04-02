@@ -19,8 +19,10 @@ import {
   ReactFlowInstance,
   Connection,
   addEdge,
+  useReactFlow,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import clsx from 'clsx';
 
 // Import actual types
 import { CircuitComponent } from '@/types/component';
@@ -36,11 +38,9 @@ import { toast } from 'sonner';
 // Import the custom node component (exported as CircuitComponentNode)
 import CircuitComponentNode from './CircuitComponentNode';
 
-// Import the custom edge component
-import CustomWireEdge from './CustomWireEdge';
-
-// Import DynamicConnectionLine
-import DynamicConnectionLine from './DynamicConnectionLine';
+// Import the custom edge component AND the new connection line
+import CustomWireEdge, { ManhattanConnectionLine } from './CircuitCanvas/CustomWireEdge';
+import SparkCursorEffect from './CircuitCanvas/SparkCursorEffect'; // Import Spark effect
 
 // Import the component library hook
 import { useComponentLibrary } from '@/hooks/useComponentLibrary';
@@ -99,22 +99,109 @@ const createComponentId = (type: string): string => {
   return `${type}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 };
 
+// --- Inner Component to Consume React Flow Context ---
+interface FlowContentProps {
+  nodes: Node[];
+  edges: Edge[];
+  nodeTypes: NodeTypes;
+  edgeTypes: EdgeTypes;
+  handleNodesChange: OnNodesChange;
+  onEdgesChange: OnEdgesChange;
+  onConnect: OnConnect;
+  onNodeDragStop: (event: React.MouseEvent, node: Node) => void;
+  onConnectStart: (event: React.MouseEvent, params: { nodeId?: string, handleId?: string }) => void;
+  onConnectEnd: (event: MouseEvent | TouchEvent) => void;
+  onNodesDelete: (deletedNodes: Node[]) => void;
+  onEdgesDelete: (deletedEdges: Edge[]) => void;
+  onDrop: (event: React.DragEvent<HTMLDivElement>) => void;
+  onDragOver: (event: React.DragOver<HTMLDivElement>) => void;
+  isConnecting: boolean;
+  connectionLineEnd: { x: number, y: number } | null;
+  canvasRef: React.RefObject<HTMLDivElement>;
+}
+
+const FlowContent: React.FC<FlowContentProps> = ({
+  nodes,
+  edges,
+  nodeTypes,
+  edgeTypes,
+  handleNodesChange,
+  onEdgesChange,
+  onConnect,
+  onNodeDragStop,
+  onConnectStart,
+  onConnectEnd,
+  onNodesDelete,
+  onEdgesDelete,
+  onDrop,
+  onDragOver,
+  isConnecting,
+  connectionLineEnd,
+  canvasRef,
+}) => {
+  // Use the hook HERE, within the provider's context
+  const { project } = useReactFlow();
+
+  // We might need to pass the project function back up or adjust onDrop logic
+  // For now, let's focus on rendering the spark correctly.
+
+  return (
+    <>
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={handleNodesChange}
+        onEdgesChange={onEdgesChange}
+        onConnect={onConnect}
+        onNodeDragStop={onNodeDragStop}
+        onConnectStart={onConnectStart}
+        onConnectEnd={onConnectEnd}
+        onNodesDelete={onNodesDelete}
+        onEdgesDelete={onEdgesDelete}
+        nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
+        connectionLineComponent={ManhattanConnectionLine}
+        connectionMode={ConnectionMode.Loose}
+        fitView
+        fitViewOptions={{ padding: 0.2 }}
+        deleteKeyCode={['Backspace', 'Delete']}
+        onDrop={onDrop}
+        onDragOver={onDragOver}
+      >
+        <Controls />
+        <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
+      </ReactFlow>
+
+      {/* Conditionally render Spark Effect using transformed coordinates */} 
+      {isConnecting && connectionLineEnd && project && canvasRef.current && (() => {
+        const screenPos = project({ x: connectionLineEnd.x, y: connectionLineEnd.y });
+        const canvasRect = canvasRef.current.getBoundingClientRect();
+        const relativePos = {
+          x: screenPos.x - canvasRect.left,
+          y: screenPos.y - canvasRect.top
+        };
+        return <SparkCursorEffect x={relativePos.x} y={relativePos.y} />;
+      })()}
+    </>
+  );
+};
+// -----------------------------------------------------
+
 const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
   circuitComponents,
   wireConnections,
   onComponentsChange,
   onWiresChange,
 }) => {
-  // Remove the wrapper ref again
-  // const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [nodes, setNodes, onNodesChangeInternal] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
-  const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
+  const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 }); // State for cursor position
+  const canvasRef = useRef<HTMLDivElement>(null); // Ref for the canvas container
 
   // Get component library data
   const { components: libraryComponents, componentsDetailsMap } = useComponentLibrary();
-  // Get dragging state from context
-  const { draggingComponentType } = useCircuitEditor();
+  // Get state from context
+  const { isConnecting, setIsConnecting, draggingComponentType, connectionLineEnd } = useCircuitEditor(); // Add connectionLineEnd
 
   // Convert circuitComponents to React Flow nodes using the utility function
   useEffect(() => {
@@ -220,6 +307,18 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
     [circuitComponents, onComponentsChange]
   );
 
+  // --- Connection Start/End Handlers ---
+  const onConnectStart = useCallback((event: React.MouseEvent, params: { nodeId?: string, handleId?: string }) => {
+    console.log('Connection started', params);
+    setIsConnecting(true);
+  }, [setIsConnecting]);
+
+  const onConnectEnd = useCallback((event: MouseEvent | TouchEvent) => {
+    console.log('Connection ended');
+    setIsConnecting(false);
+  }, [setIsConnecting]);
+  // -------------------------------------
+
   // --- React Flow Drag and Drop Handlers ---
   const onDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -237,19 +336,35 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
 
       // Use component type from context state
       const componentType = draggingComponentType;
-
-      if (!reactFlowInstance) {
-        console.error("React Flow instance not available for drop.");
-        return;
-      }
       
-      // Remove dataTransfer check
-      /*
-      if (!event.dataTransfer) {
-        console.error("No dataTransfer object found on drop event.");
+      // === PROBLEM: 'project' is not available here anymore ===
+      // We need to rethink how to get the projected position
+      // Option 1: Pass project back up via a callback (complex)
+      // Option 2: Calculate drop position differently (e.g., using canvasRef and event coords)
+      
+      // Let's try Option 2 for simplicity first
+      if (!canvasRef.current) {
+        console.error("Canvas ref not available for drop.");
         return;
       }
-      const componentType = event.dataTransfer.getData('application/reactflow');
+      const canvasRect = canvasRef.current.getBoundingClientRect();
+      const position = {
+          x: event.clientX - canvasRect.left,
+          y: event.clientY - canvasRect.top,
+      };
+      // We might need to adjust for React Flow's internal zoom/pan later if this isn't accurate
+      console.log("Calculated drop position relative to canvas:", position);
+
+      /* Original code using project:
+      if (!project) {
+        console.error("Project function not available for drop.");
+        return;
+      }
+      const flowPosition = project(event.clientX, event.clientY);
+      const position = {
+          x: flowPosition.x,
+          y: flowPosition.y,
+      };
       */
 
       // Check if a component type was being dragged (from context)
@@ -274,12 +389,6 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
       console.log('Component details fetched:', componentDetails); 
       // -------------------------------------------------
       
-      // Position calculation
-      const position = reactFlowInstance.screenToFlowPosition({
-        x: event.clientX,
-        y: event.clientY,
-      });
-
       // Component creation
       const newComponent: CircuitComponent = {
         id: createComponentId(componentType),
@@ -295,8 +404,8 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
       console.log('ReactFlow drop: creating component with details:', newComponent);
       onComponentsChange([...circuitComponents, newComponent]);
     },
-    // Update dependencies to include draggingComponentType
-    [reactFlowInstance, circuitComponents, onComponentsChange, libraryComponents, componentsDetailsMap, draggingComponentType]
+    // Update dependencies: remove project, add canvasRef if needed by new calculation
+    [circuitComponents, onComponentsChange, libraryComponents, componentsDetailsMap, draggingComponentType, canvasRef]
   );
   // ----------------------------------------------------
 
@@ -328,40 +437,47 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
     [wireConnections, onWiresChange]
   );
 
-  // ---------------------------------------------
+  // --- Track Mouse Position During Connection ---
+  const handleMouseMove = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
+    if (isConnecting && canvasRef.current) {
+      const rect = canvasRef.current.getBoundingClientRect();
+      setCursorPosition({
+        x: event.clientX - rect.left,
+        y: event.clientY - rect.top
+      });
+    }
+  }, [isConnecting]);
+  // -----------------------------------------
 
   return (
-    // Remove ref from wrapper div
+    // Keep div as the outermost element
     <div 
+      ref={canvasRef} 
+      className={clsx("flex-grow h-full w-full relative circuit-canvas-container", { 'connecting': isConnecting })}
       style={{ height: '100%', width: '100%' }} 
-      // ref={reactFlowWrapper} 
+      onMouseMove={handleMouseMove} 
     >
-      {/* Restore ReactFlow rendering */}
+      {/* Provider wraps the new FlowContent component */}
       <ReactFlowProvider>
-        <ReactFlow
+        <FlowContent 
           nodes={nodes}
           edges={edges}
-          onNodesChange={handleNodesChange}
+          nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
+          handleNodesChange={handleNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           onNodeDragStop={onNodeDragStop}
-          onInit={setReactFlowInstance}
+          onConnectStart={onConnectStart}
+          onConnectEnd={onConnectEnd}
           onNodesDelete={onNodesDelete}
           onEdgesDelete={onEdgesDelete}
-          nodeTypes={nodeTypes}
-          edgeTypes={edgeTypes}
-          connectionLineComponent={DynamicConnectionLine}
-          connectionMode={ConnectionMode.Loose}
-          fitView
-          fitViewOptions={{ padding: 0.2 }}
-          deleteKeyCode={['Backspace', 'Delete']}
-          // Re-add ReactFlow specific handlers
           onDrop={onDrop}
           onDragOver={onDragOver}
-        >
-          <Controls />
-          <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
-        </ReactFlow>
+          isConnecting={isConnecting}
+          connectionLineEnd={connectionLineEnd}
+          canvasRef={canvasRef}
+        />
       </ReactFlowProvider>
     </div>
   );

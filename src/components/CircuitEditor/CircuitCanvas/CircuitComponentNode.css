@@ -19,7 +19,7 @@
     stroke-linecap: round; /* Optional: for smoother line ends */
     stroke-linejoin: round; /* Optional: for smoother line joins */
     /* Prevent fill from being overridden if not set explicitly in SVG */
-    fill: inherit;
+    fill: none; /* Remove fill color on selection */
     /* Ensure vector-effect is non-scaling-stroke if you scale nodes */
     /* vector-effect: non-scaling-stroke; */
   }

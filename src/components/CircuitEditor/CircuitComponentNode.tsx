@@ -1,9 +1,11 @@
-import React, { memo } from 'react';
-import { Handle, NodeProps, Position } from '@xyflow/react';
+import React, { memo, useContext, useCallback } from 'react';
+import { Handle, NodeProps, Position, useNodes } from '@xyflow/react';
 import { CircuitComponent } from '@/types/component';
 import { ComponentPin } from '@/types/pin';
 import clsx from 'clsx';
 import './CircuitCanvas/CircuitComponentNode.css';
+import { useCircuitEditor, CircuitEditorContextType } from '@/context/CircuitEditorContext';
+import { isValidConnection } from '@/domain/connectionRules';
 
 // Remove registry and placeholder imports
 /*
@@ -18,6 +20,12 @@ const componentRegistry: Record<string, React.ComponentType<any>> = {
 */
 // ---------------------------------------------------
 
+// Interface for Highlighted Pin
+interface HighlightedPin {
+  nodeId: string;
+  pinIndex: number;
+}
+
 // Define the props specifically for this node type
 interface CustomNodeProps extends NodeProps {
   // Expecting CircuitComponent data, potentially extended 
@@ -25,9 +33,49 @@ interface CustomNodeProps extends NodeProps {
   data: CircuitComponent & { hideHandles?: boolean }; 
 }
 
-// Rename for clarity?
-const CircuitComponentNode: React.FC<CustomNodeProps> = ({ id, data, selected }) => {
+const CircuitComponentNode: React.FC<CustomNodeProps> = ({ id: sourceNodeId, data, selected }) => {
   const handleSize = 8;
+  // Get context for highlighting
+  const { highlightedPins, setHighlightedPins } = useCircuitEditor();
+  // Get all current nodes on the canvas
+  const nodes = useNodes<CircuitComponent>();
+
+  // --- Pin Hover Handlers ---
+  const handlePinMouseEnter = useCallback((sourcePinIndex: number) => {
+    if (!setHighlightedPins) return;
+
+    const validTargets: HighlightedPin[] = [];
+    // Iterate through all nodes on the canvas
+    nodes.forEach(targetNode => {
+      // Skip self
+      if (targetNode.id === sourceNodeId) return;
+
+      // Ensure target node has pin data
+      if (targetNode.data?.pins && Array.isArray(targetNode.data.pins)) {
+        targetNode.data.pins.forEach((_, targetPinIndex) => {
+          // Check connection validity using the domain rule
+          if (isValidConnection(nodes.map(n => n.data), sourceNodeId, sourcePinIndex, targetNode.id, targetPinIndex)) {
+            validTargets.push({ nodeId: targetNode.id, pinIndex: targetPinIndex });
+          }
+        });
+      }
+    });
+    
+    // Add the source pin itself to the highlighted list for visual feedback
+    const selfPin: HighlightedPin = { nodeId: sourceNodeId, pinIndex: sourcePinIndex };
+    
+    console.log('Highlighting pins:', [selfPin, ...validTargets]); // Debug log
+    setHighlightedPins([selfPin, ...validTargets]); // Update context
+
+  }, [nodes, sourceNodeId, setHighlightedPins]);
+
+  const handlePinMouseLeave = useCallback(() => {
+    if (setHighlightedPins) {
+      // console.log('Clearing pin highlights'); // Debug log
+      setHighlightedPins(null); // Clear highlights
+    }
+  }, [setHighlightedPins]);
+  // -----------------------
 
   // Basic styling - remove the border, background, radius as it interferes with outline
   const nodeStyle: React.CSSProperties = {
@@ -46,15 +94,16 @@ const CircuitComponentNode: React.FC<CustomNodeProps> = ({ id, data, selected })
     const offsetY = handleSize / 2;
 
     return {
-      position: 'absolute', // Use absolute positioning
-      left: `${pin.x - offsetX}px`, // Set left based on pin.x
-      top: `${pin.y - offsetY}px`,  // Set top based on pin.y
-      background: '#555',
+      position: 'absolute',
+      left: `${pin.x - offsetX}px`,
+      top: `${pin.y - offsetY}px`,
+      background: '#555', // Restore background color
       width: `${handleSize}px`,
       height: `${handleSize}px`,
       borderRadius: '50%',
-      // Add border for visibility if needed
-      // border: '1px solid white',
+      zIndex: 10, 
+      cursor: 'crosshair',
+      border: 'none' // Ensure no default border interferes
     };
   };
 
@@ -97,16 +146,27 @@ const CircuitComponentNode: React.FC<CustomNodeProps> = ({ id, data, selected })
     <div style={nodeStyle} className={clsx('circuit-component-node', { 'selected': selected })}>
       {renderComponentVisual()}
       {/* Conditionally render handles based on data.hideHandles */}
-      {!data.hideHandles && data.pins && data.pins.map((pin, index) => (
-        <Handle
-          key={pin.name || `pin-${index}`}
-          type="source" // Use "source" to match editor functionality
-          position={Position.Top} // Position doesn't visually matter due to style override
-          id={`pin-${index}`}
-          style={getHandleStyle(pin)}
-          isConnectable={true}
-        />
-      ))}
+      {!data.hideHandles && data.pins && data.pins.map((pin, index) => {
+        // Check if this pin should be highlighted
+        const isHighlighted = highlightedPins?.some(hp => hp.nodeId === sourceNodeId && hp.pinIndex === index);
+        // Check if this pin is a valid target for a potential connection
+        const isValidTarget = highlightedPins?.some(hp => hp.nodeId === sourceNodeId && hp.pinIndex === index && hp.nodeId !== highlightedPins[0]?.nodeId);
+
+        return (
+          // Apply handlers and class directly to Handle
+          <Handle
+            key={pin.name || `pin-${index}`}
+            type="source" 
+            position={Position.Top} // Position doesn't visually matter due to style override
+            id={`pin-${index}`}
+            style={getHandleStyle(pin)} // Apply style directly
+            className={clsx('circuit-pin-handle', { 'pin-highlighted': isHighlighted })} // Apply class directly
+            onMouseEnter={() => handlePinMouseEnter(index)} // Attach hover handlers
+            onMouseLeave={handlePinMouseLeave}
+            isConnectable={true}
+          />
+        );
+      })}
     </div>
   );
 };
