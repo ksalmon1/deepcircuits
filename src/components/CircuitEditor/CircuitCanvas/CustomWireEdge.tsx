@@ -1,8 +1,6 @@
-import React, { memo, useEffect } from 'react';
+import React, { memo } from 'react';
 import { EdgeProps, Position, EdgeLabelRenderer, useReactFlow, ConnectionLineComponentProps } from '@xyflow/react';
 import { getWireColorFromSignal } from '@/utils/wireUtils';
-import SparkCursorEffect from './SparkCursorEffect'; // Import the spark effect
-import { useCircuitEditor } from '@/context/CircuitEditorContext'; // Import context hook
 
 /**
  * Calculates an SVG path string for a Manhattan-style edge.
@@ -80,24 +78,8 @@ export const ManhattanConnectionLine: React.FC<ConnectionLineComponentProps> = (
   toY,
   fromHandle // We can use fromHandle?.position later if needed
 }) => {
-  // Get setter from context
-  const { setConnectionLineEnd } = useCircuitEditor();
-
-  // Update context with the current end position
-  useEffect(() => {
-    if (setConnectionLineEnd) {
-      setConnectionLineEnd({ x: toX, y: toY });
-    }
-    // Cleanup on unmount
-    return () => {
-      if (setConnectionLineEnd) {
-        setConnectionLineEnd(null);
-      }
-    };
-  }, [toX, toY, setConnectionLineEnd]);
-
   // Log received props for connection line
-  console.log('ManhattanConnectionLine Render:', { fromX, fromY, toX, toY });
+  // console.log('ManhattanConnectionLine Render:', { fromX, fromY, toX, toY });
   
   const path = getManhattanPath({
     sourceX: fromX, // Use fromX/fromY as source
@@ -113,7 +95,6 @@ export const ManhattanConnectionLine: React.FC<ConnectionLineComponentProps> = (
   const wireColor = '#888'; // Default connection line color
 
   return (
-    // Only return the path now
     <path
       fill="none"
       stroke={wireColor}

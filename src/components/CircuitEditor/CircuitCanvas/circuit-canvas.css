@@ -1,3 +1,4 @@
+
 /* Pin styles */
 .pin-marker {
   width: 12px;
@@ -179,11 +180,3 @@
   /* Example: shape-rendering: crispEdges; */
   /* This might not be sufficient to force orthogonal rendering */
 }
-
-/* Hide default cursor when dragging a connection */
-/* Target the inner pane for higher specificity */
-/*
-.circuit-canvas-container.connecting .react-flow__pane {
-  cursor: none !important; 
-}
-*/

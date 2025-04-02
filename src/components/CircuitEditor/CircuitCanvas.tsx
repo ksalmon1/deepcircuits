@@ -21,7 +21,6 @@ import {
   addEdge,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import clsx from 'clsx';
 
 // Import actual types
 import { CircuitComponent } from '@/types/component';
@@ -39,7 +38,6 @@ import CircuitComponentNode from './CircuitComponentNode';
 
 // Import the custom edge component AND the new connection line
 import CustomWireEdge, { ManhattanConnectionLine } from './CircuitCanvas/CustomWireEdge';
-import SparkCursorEffect from './CircuitCanvas/SparkCursorEffect'; // Import Spark effect
 
 // Import the component library hook
 import { useComponentLibrary } from '@/hooks/useComponentLibrary';
@@ -109,13 +107,11 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
   const [nodes, setNodes, onNodesChangeInternal] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
-  const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 }); // State for cursor position
-  const canvasRef = useRef<HTMLDivElement>(null); // Ref for the canvas container
 
   // Get component library data
   const { components: libraryComponents, componentsDetailsMap } = useComponentLibrary();
-  // Get state from context
-  const { isConnecting, setIsConnecting, draggingComponentType, connectionLineEnd } = useCircuitEditor(); // Add connectionLineEnd
+  // Get dragging state from context
+  const { draggingComponentType } = useCircuitEditor();
 
   // Convert circuitComponents to React Flow nodes using the utility function
   useEffect(() => {
@@ -221,18 +217,6 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
     [circuitComponents, onComponentsChange]
   );
 
-  // --- Connection Start/End Handlers ---
-  const onConnectStart = useCallback((event: React.MouseEvent, params: { nodeId?: string, handleId?: string }) => {
-    console.log('Connection started', params);
-    setIsConnecting(true);
-  }, [setIsConnecting]);
-
-  const onConnectEnd = useCallback((event: MouseEvent | TouchEvent) => {
-    console.log('Connection ended');
-    setIsConnecting(false);
-  }, [setIsConnecting]);
-  // -------------------------------------
-
   // --- React Flow Drag and Drop Handlers ---
   const onDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -309,7 +293,7 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
       onComponentsChange([...circuitComponents, newComponent]);
     },
     // Update dependencies to include draggingComponentType
-    [reactFlowInstance, circuitComponents, onComponentsChange, libraryComponents, componentsDetailsMap, draggingComponentType] // Add draggingComponentType back
+    [reactFlowInstance, circuitComponents, onComponentsChange, libraryComponents, componentsDetailsMap, draggingComponentType]
   );
   // ----------------------------------------------------
 
@@ -341,25 +325,15 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
     [wireConnections, onWiresChange]
   );
 
-  // --- Track Mouse Position During Connection ---
-  const handleMouseMove = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
-    if (isConnecting && canvasRef.current) {
-      const rect = canvasRef.current.getBoundingClientRect();
-      setCursorPosition({
-        x: event.clientX - rect.left,
-        y: event.clientY - rect.top
-      });
-    }
-  }, [isConnecting]);
-  // -----------------------------------------
+  // ---------------------------------------------
 
   return (
+    // Remove ref from wrapper div
     <div 
-      ref={canvasRef} // Add ref to the container
-      className={clsx("flex-grow h-full w-full relative circuit-canvas-container", { 'connecting': isConnecting })}
       style={{ height: '100%', width: '100%' }} 
-      onMouseMove={handleMouseMove} // Add mouse move handler
+      // ref={reactFlowWrapper} 
     >
+      {/* Restore ReactFlow rendering */}
       <ReactFlowProvider>
         <ReactFlow
           nodes={nodes}
@@ -368,8 +342,6 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           onNodeDragStop={onNodeDragStop}
-          onConnectStart={onConnectStart}
-          onConnectEnd={onConnectEnd}
           onInit={setReactFlowInstance}
           onNodesDelete={onNodesDelete}
           onEdgesDelete={onEdgesDelete}
@@ -388,13 +360,6 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
           <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
         </ReactFlow>
       </ReactFlowProvider>
-      
-      {/* Conditionally render Spark Effect using connectionLineEnd if available */} 
-      {isConnecting && connectionLineEnd && 
-        <SparkCursorEffect x={connectionLineEnd.x} y={connectionLineEnd.y} />}
-      {/* Fallback might not be strictly needed if context updates correctly */}
-      {/* {isConnecting && !connectionLineEnd && 
-        <SparkCursorEffect x={cursorPosition.x} y={cursorPosition.y} />} */}
     </div>
   );
 };

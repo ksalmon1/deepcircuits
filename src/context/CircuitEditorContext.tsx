@@ -11,10 +11,6 @@ interface CircuitEditorContextType {
   setDraggingComponentType: (type: string | null) => void;
   highlightedPins: { nodeId: string, pinIndex: number }[] | null;
   setHighlightedPins: (pins: { nodeId: string, pinIndex: number }[] | null) => void;
-  isConnecting: boolean;
-  setIsConnecting: (connecting: boolean) => void;
-  connectionLineEnd: { x: number, y: number } | null;
-  setConnectionLineEnd: (pos: { x: number, y: number } | null) => void;
 }
 
 // Create the context with a default undefined value
@@ -28,8 +24,6 @@ interface CircuitEditorProviderProps {
 export const CircuitEditorProvider: React.FC<CircuitEditorProviderProps> = ({ children }) => {
   const [draggingComponentType, setDraggingComponentType] = useState<string | null>(null);
   const [highlightedPins, setHighlightedPins] = useState<{ nodeId: string, pinIndex: number }[] | null>(null);
-  const [isConnecting, setIsConnecting] = useState<boolean>(false);
-  const [connectionLineEnd, setConnectionLineEnd] = useState<{ x: number, y: number } | null>(null);
 
   // Consolidate state and functions into the context value
   const contextValue: CircuitEditorContextType = {
@@ -37,10 +31,6 @@ export const CircuitEditorProvider: React.FC<CircuitEditorProviderProps> = ({ ch
     setDraggingComponentType,
     highlightedPins,
     setHighlightedPins,
-    isConnecting,
-    setIsConnecting,
-    connectionLineEnd,
-    setConnectionLineEnd,
   };
 
   return (
