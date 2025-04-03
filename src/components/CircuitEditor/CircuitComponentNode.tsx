@@ -6,6 +6,19 @@ import clsx from 'clsx';
 import './CircuitCanvas/CircuitComponentNode.css';
 import { useCircuitEditor, CircuitEditorContextType } from '@/context/CircuitEditorContext';
 import { isValidConnection } from '@/domain/connectionRules';
+import { ComponentLibraryItem } from '@/types/component';
+
+/**
+ * A node component that represents a circuit component in the editor.
+ * 
+ * @requires ErrorProvider - Required for error handling through useCircuitEditor
+ * @requires ProjectProvider - Required for project state through useCircuitEditor
+ * @requires CircuitEditorProvider - Required for editor state and actions
+ * 
+ * This component must be used within the necessary providers, either:
+ * 1. Inside CircuitEditorPage which provides all required contexts
+ * 2. Wrapped with withCircuitProviders HOC
+ */
 
 // Remove registry and placeholder imports
 /*

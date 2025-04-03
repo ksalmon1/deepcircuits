@@ -4,6 +4,15 @@ import { ConnectionLineComponentProps, useNodesData } from '@xyflow/react';
 import { useProject } from '@/context/ProjectContext'; 
 import { getPinSignalType, getWireColorFromSignal } from '@/utils/wireUtils'; 
 
+/**
+ * A component that renders the dynamic connection line while dragging connections.
+ * 
+ * @requires ProjectProvider - Required for accessing component data through useProject
+ * 
+ * This component must be used within the necessary providers, either:
+ * 1. Inside CircuitEditorPage which provides all required contexts
+ * 2. Wrapped with withCircuitProviders HOC
+ */
 const DynamicConnectionLine: React.FC<ConnectionLineComponentProps> = ({
   fromNode,
   fromHandle,

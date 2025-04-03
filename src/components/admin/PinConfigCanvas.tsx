@@ -17,6 +17,9 @@ import '@xyflow/react/dist/style.css';
 
 import { ComponentLibraryItem } from '@/types/component';
 import { ComponentPin } from '@/types/pin';
+import { ErrorProvider } from '@/context/ErrorContext';
+import { ProjectProvider } from '@/context/ProjectContext';
+import { CircuitEditorProvider } from '@/context/CircuitEditorContext';
 
 // Import the node used in the main canvas for visual consistency
 import CircuitComponentNode from '@/components/CircuitEditor/CircuitComponentNode';
@@ -157,11 +160,17 @@ const PinConfigCanvasInternal: React.FC<PinConfigCanvasProps> = ({
   );
 };
 
-// Wrap with ReactFlowProvider
+// Wrap with all necessary providers
 const PinConfigCanvas: React.FC<PinConfigCanvasProps> = (props) => (
-  <ReactFlowProvider>
-    <PinConfigCanvasInternal {...props} />
-  </ReactFlowProvider>
+  <ErrorProvider>
+    <ProjectProvider>
+      <CircuitEditorProvider>
+        <ReactFlowProvider>
+          <PinConfigCanvasInternal {...props} />
+        </ReactFlowProvider>
+      </CircuitEditorProvider>
+    </ProjectProvider>
+  </ErrorProvider>
 );
 
 export default PinConfigCanvas; 

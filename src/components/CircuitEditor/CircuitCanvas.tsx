@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef, DragEvent } from 'react';
+import React, { useState, useCallback, useEffect, useRef, DragEvent, useMemo } from 'react';
 import {
   ReactFlowProvider,
   ReactFlow,
@@ -45,6 +45,35 @@ import { useComponentLibrary } from '@/hooks/useComponentLibrary';
 // Import the circuit editor context with correct path
 import { useCircuitEditor } from '@/context/CircuitEditorContext';
 
+/**
+ * The main canvas component for the circuit editor.
+ * 
+ * @requires ErrorProvider - Required for error handling through useCircuitEditor
+ * @requires ProjectProvider - Required for project state through useCircuitEditor
+ * @requires CircuitEditorProvider - Required for editor state and actions
+ * 
+ * This component must be used within the necessary providers, either:
+ * 1. Inside CircuitEditorPage which provides all required contexts
+ * 2. Wrapped with withCircuitProviders HOC
+ * 
+ * @example
+ * // Inside CircuitEditorPage:
+ * <CircuitCanvas {...props} />
+ * 
+ * // Standalone usage:
+ * const WrappedCircuitCanvas = withCircuitProviders(CircuitCanvas);
+ * <WrappedCircuitCanvas {...props} />
+ */
+
+// Move nodeTypes and edgeTypes outside the component and memoize them
+const nodeTypes = {
+  circuitComponent: CircuitComponentNode,
+} as const;
+
+const edgeTypes = {
+  customWire: CustomWireEdge,
+} as const;
+
 // Define props using actual types
 interface CircuitCanvasProps {
   circuitComponents: CircuitComponent[];
@@ -53,18 +82,6 @@ interface CircuitCanvasProps {
   onWiresChange: (wires: WireEdge[]) => void;
   // Add any other necessary props (e.g., selectedComponentId, onSelect)
 }
-
-// --- Define Custom Node Types ---
-const nodeTypes: NodeTypes = {
-  circuitComponent: CircuitComponentNode,
-};
-// ------------------------------
-
-// --- Define Custom Edge Types ---
-const edgeTypes: EdgeTypes = {
-  customWire: CustomWireEdge, // Map the type name to the component
-};
-// ------------------------------
 
 // Utility function - Update type to 'circuitComponent'
 const circuitComponentToNode = (comp: CircuitComponent): Node => {

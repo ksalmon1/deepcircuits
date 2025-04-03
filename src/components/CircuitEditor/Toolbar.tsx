@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { 
@@ -71,8 +70,14 @@ const Toolbar: React.FC<ToolbarProps> = ({
 };
 
 /**
- * Context-aware version of Toolbar
- * This will eventually replace the prop-based version
+ * Context-aware toolbar component for the circuit editor.
+ * 
+ * @requires ProjectProvider - Required for project actions through useProject
+ * @requires CircuitEditorProvider - Required for simulation state through useSimulation
+ * 
+ * This component must be used within the necessary providers, either:
+ * 1. Inside CircuitEditorPage which provides all required contexts
+ * 2. Wrapped with withCircuitProviders HOC
  */
 export const ContextToolbar = () => {
   const { 

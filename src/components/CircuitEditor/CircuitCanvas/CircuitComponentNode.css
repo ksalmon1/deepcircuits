@@ -31,3 +31,10 @@
     border: 1px dashed #ccc;
     padding: 5px; /* Add padding back for text-only */
   }
+
+  /* Styles for pin highlighting */
+/* Target e handle directly */
+.react-flow__handle.circuit-pin-handle.pin-highlighted {
+  background-color: #3b82f6 !important; /* Use same blue as selection outline */
+  border: 1px solid white !important; /* Add a border for contrast, override default */
+}
