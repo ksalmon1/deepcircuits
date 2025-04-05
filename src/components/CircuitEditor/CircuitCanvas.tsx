@@ -13,6 +13,8 @@ import {
   OnNodesChange,
   OnEdgesChange,
   OnConnect,
+  OnNodeClick,
+  OnPaneClick,
   XYPosition,
   NodeTypes,
   EdgeTypes,
@@ -101,10 +103,11 @@ const wireEdgeToFlowEdge = (wire: WireEdge): Edge => {
     target: wire.target,
     sourceHandle: wire.sourceHandle,
     targetHandle: wire.targetHandle,
-    type: 'customWire', // Use the custom edge type
-    data: { ...wire.data }, // Pass wire data to the edge data
-    // style: { stroke: wire.data.color, strokeWidth: 2 }, // Remove basic style, CustomWireEdge handles it
-    // animated: wire.data.signal === 'clock' || wire.data.signal === 'data', // Remove animation, CustomWireEdge handles it
+    // Restore custom type and data
+    type: 'customWire',
+    data: { ...wire.data },
+    // Remove basic styling
+    // style: { stroke: '#555', strokeWidth: 2 },
   } as Edge;
 };
 
@@ -127,8 +130,8 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
 
   // Get component library data
   const { components: libraryComponents, componentsDetailsMap } = useComponentLibrary();
-  // Get dragging state from context
-  const { draggingComponentType } = useCircuitEditor();
+  // Get context state/functions
+  const { draggingComponentType, selectComponent } = useCircuitEditor();
 
   // Convert circuitComponents to React Flow nodes using the utility function
   useEffect(() => {
@@ -168,7 +171,8 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
   );
 
   const onConnect: OnConnect = useCallback((connection: Connection) => {
-      console.log('Attempting connection:', connection);
+      console.log('!!! onConnect CALLED !!!', connection);
+      console.log('Attempting connection (Raw):', connection);
 
       // Basic validation: Ensure source and target handles/nodes are present
       if (!connection.source || !connection.target || !connection.sourceHandle || !connection.targetHandle) {
@@ -233,6 +237,23 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
     },
     [circuitComponents, onComponentsChange]
   );
+
+  // --- React Flow Selection Handlers ---
+  const handleNodeClick: OnNodeClick = useCallback((event, node) => {
+    console.log('Node clicked:', node);
+    // Ensure node.data exists and is a CircuitComponent before selecting
+    if (node.data && typeof node.data === 'object' && 'id' in node.data) {
+      selectComponent(node.data as CircuitComponent);
+    } else {
+      console.warn('Clicked node data is not a valid CircuitComponent:', node.data);
+      selectComponent(null); // Clear selection if data is invalid
+    }
+  }, [selectComponent]);
+
+  const handlePaneClick: OnPaneClick = useCallback(() => {
+    console.log('Pane clicked, clearing selection.');
+    selectComponent(null);
+  }, [selectComponent]);
 
   // --- React Flow Drag and Drop Handlers ---
   const onDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => {
@@ -346,10 +367,7 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
 
   return (
     // Remove ref from wrapper div
-    <div 
-      style={{ height: '100%', width: '100%' }} 
-      // ref={reactFlowWrapper} 
-    >
+    <div className="flex-grow h-full relative" /* Removed ref={reactFlowWrapper} */ >
       {/* Restore ReactFlow rendering */}
       <ReactFlowProvider>
         <ReactFlow
@@ -362,14 +380,18 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
           onInit={setReactFlowInstance}
           onNodesDelete={onNodesDelete}
           onEdgesDelete={onEdgesDelete}
+          onNodeClick={handleNodeClick}
+          onPaneClick={handlePaneClick}
           nodeTypes={nodeTypes}
+          // Restore edgeTypes
           edgeTypes={edgeTypes}
+          // Restore custom connection line
           connectionLineComponent={ManhattanConnectionLine}
           connectionMode={ConnectionMode.Loose}
           fitView
-          fitViewOptions={{ padding: 0.2 }}
+          className="circuit-canvas"
+          proOptions={{ hideAttribution: true }}
           deleteKeyCode={['Backspace', 'Delete']}
-          // Re-add ReactFlow specific handlers
           onDrop={onDrop}
           onDragOver={onDragOver}
         >

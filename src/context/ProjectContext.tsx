@@ -31,6 +31,7 @@ interface ProjectContextType {
   handleWiresChange: (updatedWires: WireEdge[]) => void;
   updateCode: (newCode: string) => void; // New handler for code changes
   handleUpdateComponentAttributes: (componentId: string, attributes: Record<string, any>) => void;
+  rotateComponent: (componentId: string, angleIncrement?: number) => void;
   
   // Drag actions
   setDraggingComponentType: (type: string | null) => void;
@@ -121,6 +122,34 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
     pushHistory(newState);
   };
 
+  // Add core rotation function
+  const coreRotateComponent = (componentId: string, angleIncrement: number = 90) => {
+    if (!componentId) throw new ComponentError('Invalid component ID for rotation', 'INVALID_COMPONENT_ID');
+
+    const updatedComponents = currentState.components.map((component) => {
+      if (component.id === componentId) {
+        const currentRotation = component.rotation || 0;
+        // Ensure rotation stays within 0-359 degrees
+        let newRotation = (currentRotation + angleIncrement) % 360;
+        if (newRotation < 0) {
+          newRotation += 360; // Handle negative results from modulo
+        }
+        return { ...component, rotation: newRotation };
+      }
+      return component;
+    });
+
+    // Only push history if a component was actually rotated
+    if (JSON.stringify(updatedComponents) !== JSON.stringify(currentState.components)) {
+        const newState: ProjectState = { ...currentState, components: updatedComponents };
+        pushHistory(newState);
+    } else {
+        console.warn(`Component with ID ${componentId} not found for rotation.`);
+        // Optionally add a toast message here if the component wasn't found
+        // toast.error(`Component with ID ${componentId} not found.`);
+    }
+  };
+
   // --- Core Drag Action ---
   const coreSetDraggingComponentType = (type: string | null) => {
     setDraggingComponentTypeState(type);
@@ -184,6 +213,7 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
   const handleWiresChange = withErrorHandling(coreHandleWiresChange, 'handleWiresChange', setError);
   const updateCode = withErrorHandling(coreUpdateCode, 'updateCode', setError);
   const handleUpdateComponentAttributes = withErrorHandling(coreUpdateComponentAttributes, 'handleUpdateComponentAttributes', setError);
+  const rotateComponent = withErrorHandling(coreRotateComponent, 'rotateComponent', setError);
   const setDraggingComponentType = withErrorHandling(coreSetDraggingComponentType, 'setDraggingComponentType', setError);
   const saveProject = withErrorHandling(coreSaveProject, 'saveProject', setError);
   const undoLastAction = withErrorHandling(coreUndoLastAction, 'undoLastAction', setError);
@@ -210,6 +240,7 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
     handleWiresChange,
     updateCode,
     handleUpdateComponentAttributes,
+    rotateComponent,
 
     // Drag actions
     setDraggingComponentType,

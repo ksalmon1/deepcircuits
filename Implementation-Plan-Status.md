@@ -114,7 +114,7 @@
   - ✅ Implement drop handlers
   - ✅ Add component repositioning (drag already placed components)
   - ⏳ Add grid snapping
-  - ❌ Enable component rotation
+  - ✅ Enable component rotation
   - ❌ Add component resizing
 
 ### 3.4 Wiring System

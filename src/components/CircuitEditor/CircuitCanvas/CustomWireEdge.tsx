@@ -106,7 +106,7 @@ export const ManhattanConnectionLine: React.FC<ConnectionLineComponentProps> = (
 };
 // -----------------------------------------
 
-// Basic Custom Edge Component (Temporary Reset)
+// Basic Custom Edge Component
 const CustomWireEdge: React.FC<EdgeProps> = ({
   id,
   sourceX,
@@ -115,21 +115,19 @@ const CustomWireEdge: React.FC<EdgeProps> = ({
   targetY,
   sourcePosition = Position.Right,
   targetPosition = Position.Left,
-  style = {},
+  style = {}, // Keep incoming style
   data,
   selected,
 }) => {
   // --- Log received props --- 
-  /*
   console.log(`CustomWireEdge Render [${id}]:`, { 
-    sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition 
+    sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, data, selected 
   });
-  */
   // --------------------------
   
   const { deleteElements } = useReactFlow();
 
-  // Calculate the path using the new Manhattan helper
+  // Calculate the path
   const edgePath = getManhattanPath({
     sourceX,
     sourceY,
@@ -138,11 +136,25 @@ const CustomWireEdge: React.FC<EdgeProps> = ({
     sourcePosition,
     targetPosition,
   });
+  // Add log for calculated path
+  console.log(`CustomWireEdge Path [${id}]:`, edgePath);
 
-  // Determine wire color from data if available
-  const signal = typeof data?.signal === 'string' ? data.signal : ''; // Ensure signal is a string
-  const wireColor = signal ? getWireColorFromSignal(signal) : (style.stroke || '#555'); // Pass guaranteed string
-  const strokeWidth = selected ? 3 : (style.strokeWidth as number || 2);
+  // --- Robust Style Calculation --- 
+  // Determine base properties
+  const signal = typeof data?.signal === 'string' ? data.signal : '';
+  const baseColor = signal ? getWireColorFromSignal(signal) : '#555'; // Default color
+  const baseStrokeWidth = 2;
+
+  // Determine final style, prioritizing selection and specific calculations
+  const finalStyle: React.CSSProperties = {
+    // Start with incoming style, but filter out stroke/strokeWidth to avoid override
+    ...Object.fromEntries(Object.entries(style).filter(([key]) => key !== 'stroke' && key !== 'strokeWidth')),
+    // Use baseColor derived from signal
+    stroke: baseColor,
+    strokeWidth: selected ? 3 : baseStrokeWidth, // Use base width, override if selected
+    fill: 'none', // Ensure fill is none
+  };
+  // --- End Robust Style Calculation --- 
 
   // Double-click handler to delete the edge
   const handleDoubleClick = (event: React.MouseEvent) => {
@@ -155,10 +167,11 @@ const CustomWireEdge: React.FC<EdgeProps> = ({
     <>
       <path
         id={id}
-        style={{ ...style, stroke: wireColor, strokeWidth }}
+        // Apply the explicitly calculated finalStyle
+        style={finalStyle}
         className="react-flow__edge-path"
         d={edgePath}
-        onDoubleClick={handleDoubleClick} // Add delete handler
+        onDoubleClick={handleDoubleClick}
       />
       {/* Optional: Add EdgeLabelRenderer here if needed */}
     </>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ReactFlowProvider } from '@xyflow/react';
 import CircuitCanvas from './CircuitCanvas';
 import ComponentPanel from './ComponentPanel';
@@ -7,7 +7,8 @@ import SerialMonitor from './SerialMonitor';
 import { Button } from '@/components/ui/button';
 import { 
   Play, Save, Undo, Redo, Trash2, ArrowLeft, 
-  Code, MonitorUp, SplitSquareVertical, SplitSquareHorizontal 
+  Code, MonitorUp, SplitSquareVertical, SplitSquareHorizontal,
+  RotateCw
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
@@ -40,6 +41,8 @@ const CircuitEditorLayoutContent = () => {
     canRedo,
     isSimulationRunning,
     serialOutput,
+    selectedComponent,
+    rotateComponent,
   } = useCircuitEditor();
   
   const [circuitName, setCircuitName] = useState<string>('Untitled Circuit');
@@ -154,6 +157,12 @@ const CircuitEditorLayoutContent = () => {
     selectComponent(component);
   };
 
+  const handleRotateSelectedComponent = useCallback(() => {
+    if (selectedComponent) {
+      rotateComponent(selectedComponent.id);
+    }
+  }, [selectedComponent, rotateComponent]);
+
   return (
     <div className="h-full flex flex-col">
       <div className="bg-white border-b p-2 flex items-center justify-between">
@@ -216,6 +225,16 @@ const CircuitEditorLayoutContent = () => {
           >
             <Trash2 className="mr-1 h-4 w-4" />
             Clear
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={handleRotateSelectedComponent}
+            disabled={!selectedComponent}
+            title={selectedComponent ? "Rotate Selected Component (R)" : "Select a component to rotate"}
+          >
+            <RotateCw className="mr-1 h-4 w-4" />
+            Rotate
           </Button>
           <Button 
             variant="outline" 
