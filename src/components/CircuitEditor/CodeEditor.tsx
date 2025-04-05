@@ -1,24 +1,29 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Play, Save, Clock } from 'lucide-react';
+import Editor from '@monaco-editor/react';
 
 interface CodeEditorProps {
   code: string;
-  onChange: (code: string) => void;
+  onChange: (value: string | undefined) => void;
   onCompile?: (code: string) => Promise<void>;
 }
 
 const CodeEditor: React.FC<CodeEditorProps> = ({ code, onChange, onCompile }) => {
   const [isCompiling, setIsCompiling] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [currentCode, setCurrentCode] = useState(code);
+
+  useEffect(() => {
+    setCurrentCode(code);
+  }, [code]);
 
   const handleCompile = async () => {
-    if (!onCompile) return;
-    
+    if (!onCompile || !currentCode) return;
+
     setIsCompiling(true);
     try {
-      await onCompile(code);
+      await onCompile(currentCode);
     } catch (error) {
       console.error('Compilation error:', error);
     } finally {
@@ -27,14 +32,19 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ code, onChange, onCompile }) =>
   };
 
   const handleSave = () => {
-    // In a real app, this would save to the backend
     setLastSaved(new Date());
+  };
+
+  const handleEditorChange = (value: string | undefined) => {
+    const newCode = value || '';
+    setCurrentCode(newCode);
+    onChange(newCode);
   };
 
   return (
     <div className="h-full flex flex-col bg-gray-50">
       <div className="p-2 border-b bg-white flex justify-between items-center">
-        <h3 className="font-medium">Arduino Code</h3>
+        <h3 className="font-medium">Arduino Code (C++)</h3>
         <div className="flex gap-2">
           {lastSaved && (
             <div className="text-xs text-gray-500 flex items-center">
@@ -54,7 +64,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ code, onChange, onCompile }) =>
             <Button 
               size="sm"
               onClick={handleCompile}
-              disabled={isCompiling}
+              disabled={isCompiling || !currentCode}
             >
               <Play className="h-4 w-4 mr-1" />
               {isCompiling ? 'Compiling...' : 'Compile & Run'}
@@ -64,11 +74,18 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ code, onChange, onCompile }) =>
       </div>
       
       <div className="flex-1 overflow-hidden">
-        <textarea 
-          value={code}
-          onChange={(e) => onChange(e.target.value)}
-          className="w-full h-full p-4 font-mono text-sm border-none bg-gray-900 text-gray-100 focus:outline-none resize-none"
-          spellCheck={false}
+        <Editor
+          height="100%"
+          language="cpp"
+          theme="vs-dark"
+          value={currentCode}
+          onChange={handleEditorChange}
+          options={{
+            minimap: { enabled: true },
+            fontSize: 14,
+            scrollBeyondLastLine: false,
+            wordWrap: 'on',
+          }}
         />
       </div>
     </div>
