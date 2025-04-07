@@ -33,6 +33,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { getProjectById } from '@/integrations/supabase/projectsApi';
 
 // Define styles for the resize handle
 const resizeHandleStyle = "w-[1px] bg-border hover:bg-primary transition-colors duration-200 ease-in-out";
@@ -66,15 +67,18 @@ const CircuitEditorLayoutContent = () => {
     selectedComponent,
     rotateComponent,
     clearCircuitState,
+    initializeProjectState,
   } = useCircuitEditor();
   
-  const [circuitName, setCircuitName] = useState<string>('Untitled Circuit');
+  const [circuitName, setCircuitName] = useState<string>('Loading Project...');
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [isModified, setIsModified] = useState<boolean>(false);
   const [showCodeEditor, setShowCodeEditor] = useState<boolean>(false);
   const [showSerialMonitor, setShowSerialMonitor] = useState<boolean>(false);
   const [verticalSplit, setVerticalSplit] = useState<boolean>(true);
   const [isClearConfirmOpen, setIsClearConfirmOpen] = useState<boolean>(false);
+  const [isLoadingProject, setIsLoadingProject] = useState<boolean>(true);
+  const loadedProjectIdRef = useRef<string | null>(null); // Ref to track loaded ID
   
   // State to store panel sizes - Adjust mainLayout default
   const [mainLayout, setMainLayout] = useState<number[]>([73, 27]); // Canvas 73%, Editor/Monitor 27%
@@ -102,17 +106,73 @@ const CircuitEditorLayoutContent = () => {
   };
 
   useEffect(() => {
-    if (projectId) {
-      const mockProjectNames: Record<string, string> = {
-        "1": "LED Blink Circuit",
-        "2": "Temperature Sensor",
-      };
-      
-      if (projectId in mockProjectNames) {
-        setCircuitName(mockProjectNames[projectId]);
-      }
+    // Prevent re-fetch/re-init if the current projectId is already loaded
+    if (projectId && loadedProjectIdRef.current === projectId) {
+        console.log(`Project ${projectId} is already loaded. Skipping fetch.`);
+        // If we are skipping because it's loaded, ensure loading is false.
+        if (isLoadingProject) setIsLoadingProject(false);
+        return; 
     }
-  }, [projectId]);
+
+    // If we reach here, we intend to load this projectId.
+    // Set the ref *immediately* to prevent StrictMode double-run race condition.
+    if (projectId) {
+        loadedProjectIdRef.current = projectId; // Set ref BEFORE async fetch
+        setIsLoadingProject(true);
+        console.log(`Attempting to load project with ID: ${projectId}`);
+        getProjectById(projectId)
+          .then(projectData => {
+              // Check if the component is still mounted and processing the *correct* ID
+              // This check might be redundant now but adds safety
+              if (loadedProjectIdRef.current !== projectId) {
+                  console.log("Stale fetch result ignored for", projectId);
+                  return; 
+              }
+              if (projectData) {
+                console.log("Project data fetched:", projectData);
+                initializeProjectState({
+                  components: projectData.components ?? [],
+                  wires: projectData.wires ?? [],
+                  code: projectData.code ?? '',
+                });
+                setCircuitName(projectData.name || 'Untitled Circuit');
+                setIsModified(false);
+                // No need to set ref here, already set
+              } else {
+                console.warn(`Project with ID ${projectId} not found in database.`);
+                toast.error("Project not found");
+                setCircuitName('Project Not Found');
+                // Clear the state if project not found?
+                clearCircuitState(); 
+                // No need to set ref here, already set
+              }
+          })
+          .catch(error => {
+               if (loadedProjectIdRef.current !== projectId) {
+                  console.log("Stale fetch error ignored for", projectId);
+                  return; 
+              }
+              console.error("Error loading project:", error);
+              toast.error(`Failed to load project: ${error.message}`);
+              setCircuitName('Error Loading Project');
+              // No need to set ref here, already set
+          })
+          .finally(() => {
+              // Only set loading false if we are still concerned with this projectId
+              if (loadedProjectIdRef.current === projectId) {
+                 setIsLoadingProject(false);
+              }
+          });
+    } else {
+      // Handle case where there is no projectId
+      console.warn("No projectId provided in URL for loading.");
+      setCircuitName('New Circuit');
+      setIsLoadingProject(false);
+      clearCircuitState(); 
+      loadedProjectIdRef.current = null; // Reset ref if no project ID
+    }
+    // Dependency array should only include external values that trigger a re-fetch/re-init
+  }, [projectId, initializeProjectState, clearCircuitState]); // Removed isLoadingProject
 
   useEffect(() => {
     document.title = `${circuitName} - DeepCircuits Editor`;
@@ -121,13 +181,27 @@ const CircuitEditorLayoutContent = () => {
     };
   }, [circuitName]);
 
-  const handleSaveCircuit = () => {
+  const handleSaveCircuit = async () => {
+    if (!projectId) {
+        toast.error('Cannot save: Project ID is missing.');
+        console.error("Save attempt failed: No Project ID found in URL params.");
+        return;
+    }
+    if (!circuitName) {
+        toast.error('Cannot save: Project Name is missing.');
+        console.error("Save attempt failed: circuitName state is empty.");
+        return;
+    }
+    
     setIsSaving(true);
-    setTimeout(() => {
-      setIsSaving(false);
+    try {
+      await saveProject(projectId, circuitName);
       setIsModified(false);
-      saveProject();
-    }, 800);
+    } catch (error) {
+      console.error("Save operation failed in layout:", error); 
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleSimulate = () => {
@@ -147,7 +221,7 @@ const CircuitEditorLayoutContent = () => {
         action: {
           label: 'Save & Exit',
           onClick: () => {
-            saveProject();
+            handleSaveCircuit();
             navigate('/dashboard');
           },
         },
@@ -253,6 +327,14 @@ const CircuitEditorLayoutContent = () => {
     // console.log("--- performClear finished ---");
     // toast.success('Circuit cleared');
   };
+
+  if (isLoadingProject) {
+    return (
+        <div className="flex h-screen items-center justify-center">
+          <p>Loading project...</p>
+        </div>
+    );
+  }
 
   return (
     <div className="h-full flex flex-col">

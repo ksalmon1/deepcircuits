@@ -62,7 +62,7 @@ const Dashboard = () => {
   const [filterType, setFilterType] = useState<string>("all");
 
   const handleCreateProject = () => {
-    const newProjectId = `proj-${Date.now()}`;
+    const newProjectId = crypto.randomUUID();
     const newProject: ProjectData = {
       id: newProjectId,
       name: "New Project",
@@ -71,8 +71,8 @@ const Dashboard = () => {
     };
     
     setProjects([...projects, newProject]);
-    toast.success("Project created successfully", {
-      description: `"${newProject.name}" has been created.`,
+    toast.success("New project initialized", {
+      description: `Navigating to editor...`,
     });
     navigate(`/circuit-editor/${newProjectId}`);
   };
@@ -132,7 +132,7 @@ const Dashboard = () => {
             This is your dashboard where you'll manage your circuit projects.
           </p>
         </div>
-
+      
         <div className="mb-6 flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold">Your Projects</h2>

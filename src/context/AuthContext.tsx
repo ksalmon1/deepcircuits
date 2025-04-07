@@ -82,7 +82,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     if (error) {
       toast.error(error.message || "Sign-up failed. Please try again.");
     }
-
+    
     setIsLoading(false);
     return { data, error };
   };

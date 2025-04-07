@@ -1,8 +1,0 @@
-{
-  "mcpServers": {
-    "supabase": {
-      "command": "cmd",
-      "args": ["/c", "npx", "-y", "@modelcontextprotocol/server-postgres", "postgresql://postgres.wqtphbwwlejeqmhtzonp:[2PlzFqaHvAVBjp6B]@aws-0-us-west-1.pooler.supabase.com:6543/postgres"]
-    }
-  }
-}

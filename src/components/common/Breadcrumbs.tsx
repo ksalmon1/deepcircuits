@@ -68,9 +68,9 @@ export function Breadcrumbs() {
               {isLast ? (
                 <BreadcrumbPage>{title}</BreadcrumbPage>
               ) : (
-                <BreadcrumbLink asChild>
-                  <Link to={path}>{title}</Link>
-                </BreadcrumbLink>
+                  <BreadcrumbLink asChild>
+                    <Link to={path}>{title}</Link>
+                  </BreadcrumbLink>
               )}
             </BreadcrumbItem>
           );

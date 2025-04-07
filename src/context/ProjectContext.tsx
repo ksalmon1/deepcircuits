@@ -4,6 +4,8 @@ import { WireEdge } from '@/types/circuit';
 import { toast } from 'sonner';
 import { ComponentError, withErrorHandling } from '@/utils/errorHandling';
 import { useError } from './ErrorContext';
+import { useAuth } from '@/context/AuthContext';
+import { saveProjectToSupabase, getProjectById } from '@/integrations/supabase/projectsApi';
 
 // Define the shape of the state managed by history
 interface ProjectState {
@@ -50,9 +52,12 @@ interface ProjectContextType {
   clearCircuitState: () => void; // Add clear action type
 
   // Other actions
-  saveProject: () => void;
+  saveProject: (projectId: string, projectName: string) => Promise<void>;
   exportProject: () => void;
   importProject: (projectData: ProjectState) => void; // Update import signature
+
+  // Initialization action
+  initializeProjectState: (projectData: ProjectState) => void; // Added action
 }
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
@@ -94,6 +99,7 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
   const [historyState, setHistoryState] = useState<HistoryState>(initialHistoryState);
   const [draggingComponentType, setDraggingComponentTypeState] = useState<string | null>(null);
   const { setError } = useError();
+  const { user } = useAuth();
 
   // Get current project state from combined history state
   const currentState = historyState.history[historyState.currentIndex];
@@ -197,7 +203,7 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
   };
 
   // --- Refactored Core History Actions ---
-  const coreUndoLastAction = () => {
+  const coreUndoLastAction = useCallback(() => {
     setHistoryState(prev => {
       if (prev.currentIndex > 0) {
         return { ...prev, currentIndex: prev.currentIndex - 1 };
@@ -206,9 +212,9 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
         return prev;
       }
     });
-  };
+  }, []);
 
-  const coreRedoLastAction = () => {
+  const coreRedoLastAction = useCallback(() => {
      setHistoryState(prev => {
       if (prev.currentIndex < prev.history.length - 1) {
         return { ...prev, currentIndex: prev.currentIndex + 1 };
@@ -217,15 +223,68 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
         return prev;
       }
     });
-  };
+  }, []);
+
+  // --- New Core Initialization Action ---
+  const coreInitializeProjectState = useCallback((projectData: ProjectState) => {
+    console.log("Initializing project state with data:", projectData);
+    const validatedState: ProjectState = {
+        components: Array.isArray(projectData.components) ? projectData.components : [],
+        wires: Array.isArray(projectData.wires) ? projectData.wires : [],
+        code: typeof projectData.code === 'string' ? projectData.code : initialCode, // Use initialCode as fallback
+    };
+    // Reset history to only contain the loaded state
+    setHistoryState({
+        history: [validatedState],
+        currentIndex: 0,
+    });
+    toast.info("Project loaded.");
+  }, []);
 
   // --- Other Core Actions (save/export use currentState, import resets state) ---
-  const coreSaveProject = () => {
-    console.log("Saving Project State:", currentState); // currentState is derived correctly
-    toast.success('Project saved successfully!');
-  };
+  const coreSaveProject = useCallback(async (projectId: string, projectName: string) => {
+    if (!user) {
+      toast.error('You must be logged in to save a project.');
+      setError(new Error('User not authenticated for saving.'));
+      return;
+    }
+    if (!projectId || !projectName) {
+        toast.error('Project ID and Name are required to save.');
+        setError(new Error('Missing Project ID or Name for saving.'));
+        return;
+    }
+
+    const projectData = {
+        id: projectId,
+        user_id: user.id,
+        name: projectName,
+        components: currentState.components,
+        wires: currentState.wires,
+        code: currentState.code,
+        // description, thumbnail_url, is_public could be added if needed
+    };
+
+    console.log("Attempting to save Project State to Supabase:", projectData); // Log data being sent
+    // toast.info('Saving project...'); // Commented out the info toast
+
+    try {
+      const savedProject = await saveProjectToSupabase(projectData);
+      if (savedProject) {
+        toast.success('Project saved successfully!');
+        console.log('Project saved successfully:', savedProject);
+      } else {
+        // This case might occur if upsert doesn't return data or saveProjectToSupabase returns null explicitly on non-error
+        toast.warning('Project saved, but no confirmation data received.');
+         console.warn('Project save operation completed, but no data returned from API function.');
+      }
+    } catch (error: any) {
+      console.error("Error saving project:", error);
+      toast.error(`Failed to save project: ${error.message}`);
+      setError(error); // Set error state for potential global handling
+    }
+  }, [currentState, user, setError]);
   
-  const coreExportProject = () => {
+  const coreExportProject = useCallback(() => {
     const projectData = currentState; // currentState is derived correctly
     const dataStr = JSON.stringify(projectData, null, 2);
     const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
@@ -235,9 +294,9 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
     linkElement.setAttribute('download', exportFileDefaultName);
     linkElement.click();
     toast.success('Project exported successfully!');
-  };
+  }, [currentState]);
   
-  const coreImportProject = (projectData: ProjectState) => {
+  const coreImportProject = useCallback((projectData: ProjectState) => {
     if (!projectData || typeof projectData !== 'object') {
         throw new ComponentError('Invalid project data format', 'PROJECT_PARSE_ERROR');
     }
@@ -246,52 +305,85 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
         wires: Array.isArray(projectData.wires) ? projectData.wires : [],
         code: typeof projectData.code === 'string' ? projectData.code : initialCode,
     };
-    // Reset state completely
+    // Reset state completely for import
     setHistoryState({
-      history: [validatedState],
-      currentIndex: 0,
+        history: [validatedState],
+        currentIndex: 0,
     });
-    toast.success('Project imported successfully!');
-  };
+    toast.success("Project imported successfully!");
+  }, []);
   
   // --- Add Core Clear Action --- 
-  const coreClearCircuitState = () => {
-    setHistoryState(prev => {
-      const currentSt = prev.history[prev.currentIndex];
-      // Create a cleared state, preserving the current code
-      const clearedState: ProjectState = {
-        components: [],
-        wires: [],
-        code: currentSt.code, // Keep existing code
-      };
-      // Reset history to only contain the cleared state
-      return {
-        history: [clearedState],
+  const coreClearCircuitState = useCallback(() => {
+    // Reset state completely, similar to initialization but with initialProjectState
+    setHistoryState({
+        history: [initialProjectState],
         currentIndex: 0,
-      };
     });
-    toast.success('Circuit cleared and history reset');
-  };
+    toast.info("Circuit cleared.");
+  }, []);
   
-  // --- Wrap core functions with error handling (no change needed here) ---
-  const handleComponentsChange = withErrorHandling(coreHandleComponentsChange, 'handleComponentsChange', setError);
-  const handleWiresChange = withErrorHandling(coreHandleWiresChange, 'handleWiresChange', setError);
-  const updateCode = withErrorHandling(coreUpdateCode, 'updateCode', setError);
-  const handleUpdateComponentAttributes = withErrorHandling(coreUpdateComponentAttributes, 'handleUpdateComponentAttributes', setError);
-  const rotateComponent = withErrorHandling(coreRotateComponent, 'rotateComponent', setError);
-  const setDraggingComponentType = withErrorHandling(coreSetDraggingComponentType, 'setDraggingComponentType', setError);
-  const saveProject = withErrorHandling(coreSaveProject, 'saveProject', setError);
-  const undoLastAction = withErrorHandling(coreUndoLastAction, 'undoLastAction', setError);
-  const redoLastAction = withErrorHandling(coreRedoLastAction, 'redoLastAction', setError); // Wrap redo
-  const exportProject = withErrorHandling(coreExportProject, 'exportProject', setError);
-  const importProject = withErrorHandling(coreImportProject, 'importProject', setError);
-  const clearCircuitState = withErrorHandling(coreClearCircuitState, 'clearCircuitState', setError);
-  
+  // --- Wrap core functions with error handling --- 
+  // Wrap the error handlers themselves in useCallback to stabilize their references
+  const handleComponentsChange = useCallback(
+    withErrorHandling(coreHandleComponentsChange, setError, 'Failed to update components'),
+    [coreHandleComponentsChange, setError]
+  );
+  const handleWiresChange = useCallback(
+    withErrorHandling(coreHandleWiresChange, setError, 'Failed to update wires'),
+    [coreHandleWiresChange, setError]
+  );
+  const updateCode = useCallback(
+    withErrorHandling(coreUpdateCode, setError, 'Failed to update code'),
+    [coreUpdateCode, setError]
+  );
+  const handleUpdateComponentAttributes = useCallback(
+    withErrorHandling(coreUpdateComponentAttributes, setError, 'Failed to update component attributes'),
+    [coreUpdateComponentAttributes, setError]
+  );
+  const rotateComponent = useCallback(
+    withErrorHandling(coreRotateComponent, setError, 'Failed to rotate component'),
+    [coreRotateComponent, setError]
+  );
+  const setDraggingComponentType = useCallback(
+    withErrorHandling(coreSetDraggingComponentType, setError, 'Failed to set dragging component type'),
+    [coreSetDraggingComponentType, setError]
+  );
+  const saveProject = useCallback(
+    withErrorHandling(coreSaveProject, setError, 'Failed to save project'),
+    [coreSaveProject, setError] // Depends on the memoized coreSaveProject
+  );
+  const undoLastAction = useCallback(
+    withErrorHandling(coreUndoLastAction, setError, 'Failed to undo action'),
+    [coreUndoLastAction, setError]
+  );
+  const redoLastAction = useCallback(
+    withErrorHandling(coreRedoLastAction, setError, 'Failed to redo action'),
+    [coreRedoLastAction, setError]
+  );
+  const exportProject = useCallback(
+    withErrorHandling(coreExportProject, setError, 'Failed to export project'),
+    [coreExportProject, setError]
+  );
+  const importProject = useCallback(
+    withErrorHandling(coreImportProject, setError, 'Failed to import project'),
+    [coreImportProject, setError]
+  );
+  const clearCircuitState = useCallback(
+    withErrorHandling(coreClearCircuitState, setError, 'Failed to clear circuit state'),
+    [coreClearCircuitState, setError]
+  );
+  const initializeProjectState = useCallback(
+    withErrorHandling(coreInitializeProjectState, setError, 'Failed to initialize project state'),
+    [coreInitializeProjectState, setError]
+  );
+
   // --- Calculate derived state from combined state ---
   const canUndo = historyState.currentIndex > 0;
   const canRedo = historyState.currentIndex < historyState.history.length - 1;
 
   // --- Provide Context Value (derived from currentState and combined state) ---
+  // Now the functions provided here should have stable references
   const value = {
     components: currentState.components,
     wires: currentState.wires,
@@ -306,11 +398,12 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
     undoLastAction,
     redoLastAction,
     clearCircuitState,
-    canUndo, // Use derived value
-    canRedo, // Use derived value
+    canUndo,
+    canRedo,
     saveProject,
     exportProject,
     importProject,
+    initializeProjectState,
   };
   
   // Log the value being provided
