@@ -1,30 +1,27 @@
-
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { CircuitBoard, Github, Mail } from "lucide-react";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/context/AuthContext";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { Separator } from "@/components/ui/separator";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { signIn, signInWithProvider } = useAuth();
-  const { toast } = useToast();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!email || !password) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Please enter both email and password",
-      });
+      toast.error("Please enter both email and password");
       return;
     }
 
@@ -33,24 +30,13 @@ const Login = () => {
       const { error } = await signIn(email, password);
       
       if (error) {
-        toast({
-          variant: "destructive",
-          title: "Login Failed",
-          description: error.message || "Please check your credentials and try again",
-        });
+        toast.error(error.message || "Please check your credentials and try again");
       } else {
-        toast({
-          title: "Login Successful",
-          description: "Welcome back!",
-        });
+        toast.success("Login Successful");
         navigate("/dashboard");
       }
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Login Failed",
-        description: error.message || "An unexpected error occurred",
-      });
+      toast.error(error.message || "An unexpected error occurred");
     } finally {
       setIsLoading(false);
     }
@@ -60,11 +46,7 @@ const Login = () => {
     try {
       await signInWithProvider(provider);
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Login Failed",
-        description: error.message || "Failed to authenticate with social provider",
-      });
+      toast.error(error.message || "Failed to authenticate with social provider");
     }
   };
 
@@ -75,7 +57,7 @@ const Login = () => {
           <div className="mb-6 flex justify-center">
             <Link to="/" className="flex items-center gap-2">
               <CircuitBoard className="h-8 w-8 text-primary" />
-              <span className="text-2xl font-bold text-slate-900">CircuitSim</span>
+              <span className="text-2xl font-bold text-slate-900">DeepCircuits</span>
             </Link>
           </div>
           

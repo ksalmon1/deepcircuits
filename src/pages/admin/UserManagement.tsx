@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import PageLayout from "@/components/layout/PageLayout";
 import { useAuth } from "@/context/AuthContext";
@@ -43,7 +42,7 @@ import {
   Edit, 
   Loader2
 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
   getAllUsers, 
@@ -74,7 +73,6 @@ type UserEditFormValues = z.infer<typeof userEditFormSchema>;
 
 const UserManagement = () => {
   const { user } = useAuth();
-  const { toast } = useToast();
   const queryClient = useQueryClient();
   
   const [searchTerm, setSearchTerm] = useState("");
@@ -125,19 +123,12 @@ const UserManagement = () => {
       }
     },
     onSuccess: () => {
-      toast({
-        title: "User Updated",
-        description: "The user has been updated successfully.",
-      });
+      toast.success("The user has been updated successfully.");
       queryClient.invalidateQueries({ queryKey: ['users'] });
       setIsEditDialogOpen(false);
     },
     onError: (error: any) => {
-      toast({
-        variant: "destructive",
-        title: "Failed to Update User",
-        description: error.message || "An error occurred while updating the user.",
-      });
+      toast.error(error.message || "An error occurred while updating the user.");
     }
   });
 
@@ -161,6 +152,16 @@ const UserManagement = () => {
     });
   };
 
+  const handleDeleteUser = (userId: string) => {
+    console.log("Deleting user:", userId);
+    toast.success(`User ${userId} deleted successfully (simulated).`);
+  };
+  
+  const handleRoleChange = (userId: string, newRole: string) => {
+     console.log(`Changing role for user ${userId} to ${newRole}`);
+     toast.success(`User ${userId} role changed to ${newRole} (simulated).`);
+  };
+
   const filteredUsers = users.filter(user => {
     const matchesSearch = 
       (user.name?.toLowerCase().includes(searchTerm.toLowerCase()) || false);
@@ -171,11 +172,7 @@ const UserManagement = () => {
 
   if (error) {
     console.error("Error fetching users:", error);
-    toast({
-      variant: "destructive",
-      title: "Error Loading Users",
-      description: "There was a problem loading the user list. Please try again.",
-    });
+    toast.error("There was a problem loading the user list. Please try again.");
   }
 
   return (

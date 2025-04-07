@@ -21,6 +21,8 @@ import {
   ReactFlowInstance,
   Connection,
   addEdge,
+  useOnViewportChange,
+  Viewport,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
@@ -131,16 +133,41 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
   // Get component library data
   const { components: libraryComponents, componentsDetailsMap } = useComponentLibrary();
   // Get context state/functions
-  const { draggingComponentType, selectComponent } = useCircuitEditor();
+  const { draggingComponentType, selectComponent, viewport, setViewport } = useCircuitEditor();
+
+  // --- Viewport Persistence --- 
+  
+  // Use onMoveEnd to save the final viewport state to context
+  const handleMoveEnd = useCallback((event: any, vp: Viewport) => {
+    // console.log('Move ended, saving viewport:', vp); // Optional debug log
+    setViewport(vp);
+  }, [setViewport]);
+
+  // Restore viewport on mount or when instance becomes available
+  useEffect(() => {
+    if (reactFlowInstance && viewport) {
+      // console.log('Restoring viewport:', viewport); // Optional debug log
+      // Ensure we only restore if the current instance viewport doesn't match
+      // This prevents potential loops if setViewport triggers another change
+      const currentViewport = reactFlowInstance.getViewport();
+      if (currentViewport.x !== viewport.x || currentViewport.y !== viewport.y || currentViewport.zoom !== viewport.zoom) {
+           reactFlowInstance.setViewport(viewport, { duration: 0 }); // duration 0 for instant set
+      }
+    } 
+  }, [reactFlowInstance, viewport]); // Run when instance is ready or stored viewport changes
+  
+  // --- End Viewport Persistence ---
 
   // Convert circuitComponents to React Flow nodes using the utility function
   useEffect(() => {
+    console.log("CircuitCanvas: useEffect for circuitComponents running. Count:", circuitComponents.length);
     const flowNodes = circuitComponents.map(circuitComponentToNode);
     setNodes(flowNodes);
   }, [circuitComponents, setNodes]);
 
   // Convert wireConnections (WireEdge[]) to React Flow edges using the utility function
   useEffect(() => {
+    console.log("CircuitCanvas: useEffect for wireConnections running. Count:", wireConnections.length);
     const flowEdges = wireConnections.map(wireEdgeToFlowEdge);
     setEdges(flowEdges);
   }, [wireConnections, setEdges]);
@@ -365,6 +392,15 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
 
   // ---------------------------------------------
 
+  // Handle React Flow instance initialization
+  const handleInit = (instance: ReactFlowInstance) => {
+    setReactFlowInstance(instance);
+    // Only fitView on the very first init if no viewport is stored
+    if (!viewport) { 
+      instance.fitView({ duration: 0 }); 
+    }
+  };
+
   return (
     // Remove ref from wrapper div
     <div className="flex-grow h-full relative" /* Removed ref={reactFlowWrapper} */ >
@@ -377,7 +413,8 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           onNodeDragStop={onNodeDragStop}
-          onInit={setReactFlowInstance}
+          // Use handleInit instead of onInit directly to manage restore/fitView logic
+          onInit={handleInit}
           onNodesDelete={onNodesDelete}
           onEdgesDelete={onEdgesDelete}
           onNodeClick={handleNodeClick}
@@ -388,12 +425,15 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
           // Restore custom connection line
           connectionLineComponent={ManhattanConnectionLine}
           connectionMode={ConnectionMode.Loose}
-          fitView
+          // Use onMoveEnd to capture the final viewport state
+          onMoveEnd={handleMoveEnd}
           className="circuit-canvas"
           proOptions={{ hideAttribution: true }}
           deleteKeyCode={['Backspace', 'Delete']}
           onDrop={onDrop}
           onDragOver={onDragOver}
+          // Set initial viewport only if explicitly needed and not restoring
+          // defaultViewport={viewport} // Let useEffect handle restore
         >
           <Controls />
           <Background variant={BackgroundVariant.Dots} gap={12} size={1} />

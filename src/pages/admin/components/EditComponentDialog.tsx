@@ -25,7 +25,7 @@ import { AlertCircle, Cpu, AlertTriangle, Trash2, PlusCircle } from "lucide-reac
 import PinConfigCanvas from "@/components/admin/PinConfigCanvas";
 import DynamicPropertyEditor from "@/components/CircuitEditor/DynamicPropertyEditor";
 import EnhancedComponentPreview from "@/components/CircuitEditor/EnhancedComponentPreview";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -71,7 +71,6 @@ const EditComponentDialog = ({
   activeTab,
   setActiveTab
 }: EditComponentDialogProps) => {
-  const { toast } = useToast();
   const [typeChangeWarning, setTypeChangeWarning] = useState<string | null>(null);
   
   console.log("EditComponentDialog rendering with editedComponent pins:", editedComponent?.pins);

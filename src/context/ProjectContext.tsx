@@ -12,6 +12,12 @@ interface ProjectState {
   code: string;
 }
 
+// Define the shape of the combined history state
+interface HistoryState {
+  history: ProjectState[];
+  currentIndex: number;
+}
+
 interface ProjectContextType {
   // Provide current state values
   components: CircuitComponent[];
@@ -41,6 +47,7 @@ interface ProjectContextType {
   redoLastAction: () => void; // Add redo
   canUndo: boolean; // Add flags for UI
   canRedo: boolean; // Add flags for UI
+  clearCircuitState: () => void; // Add clear action type
 
   // Other actions
   saveProject: () => void;
@@ -72,115 +79,154 @@ const initialProjectState: ProjectState = {
   code: initialCode,
 };
 
+// Updated initial state for the combined history
+const initialHistoryState: HistoryState = {
+  history: [initialProjectState],
+  currentIndex: 0,
+};
+
 interface ProjectProviderProps {
   children: ReactNode;
 }
 
 export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) => {
-  const [history, setHistory] = useState<ProjectState[]>([initialProjectState]);
-  const [currentHistoryIndex, setCurrentHistoryIndex] = useState<number>(0);
+  // Use combined state for history and index
+  const [historyState, setHistoryState] = useState<HistoryState>(initialHistoryState);
   const [draggingComponentType, setDraggingComponentTypeState] = useState<string | null>(null);
   const { setError } = useError();
 
-  // Get current state from history
-  const currentState = history[currentHistoryIndex];
+  // Get current project state from combined history state
+  const currentState = historyState.history[historyState.currentIndex];
 
-  // Helper to add a new state to history
-  const pushHistory = (newState: ProjectState) => {
-    // Clear future states if we are undoing/redoing
-    const newHistory = history.slice(0, currentHistoryIndex + 1);
-    setHistory([...newHistory, newState]);
-    setCurrentHistoryIndex(newHistory.length);
-  };
-
-  // --- Core Action Handlers (Update history) ---
+  // --- Refactored Core Action Handlers (Use functional updates) ---
+  
   const coreHandleComponentsChange = (updatedComponents: CircuitComponent[]) => {
-    const newState: ProjectState = { ...currentState, components: updatedComponents };
-    pushHistory(newState);
+    setHistoryState(prev => {
+      const currentSt = prev.history[prev.currentIndex];
+      const newState = { ...currentSt, components: updatedComponents };
+      const newHistory = prev.history.slice(0, prev.currentIndex + 1);
+      return {
+        history: [...newHistory, newState],
+        currentIndex: newHistory.length,
+      };
+    });
   };
   
   const coreHandleWiresChange = (updatedWires: WireEdge[]) => {
-    const newState: ProjectState = { ...currentState, wires: updatedWires };
-    pushHistory(newState);
+    setHistoryState(prev => {
+      const currentSt = prev.history[prev.currentIndex];
+      const newState = { ...currentSt, wires: updatedWires };
+      const newHistory = prev.history.slice(0, prev.currentIndex + 1);
+      return {
+        history: [...newHistory, newState],
+        currentIndex: newHistory.length,
+      };
+    });
   };
 
   const coreUpdateCode = (newCode: string) => {
-    const newState: ProjectState = { ...currentState, code: newCode };
-    pushHistory(newState);
+    setHistoryState(prev => {
+      const currentSt = prev.history[prev.currentIndex];
+      const newState = { ...currentSt, code: newCode };
+      const newHistory = prev.history.slice(0, prev.currentIndex + 1);
+      return {
+        history: [...newHistory, newState],
+        currentIndex: newHistory.length,
+      };
+    });
   };
   
   const coreUpdateComponentAttributes = (componentId: string, attributes: Record<string, any>) => {
     if (!componentId) throw new ComponentError('Invalid component ID', 'INVALID_COMPONENT_ID');
     if (!attributes || typeof attributes !== 'object') throw new ComponentError('Invalid attributes', 'INVALID_ATTRIBUTES');
     
-    const updatedComponents = currentState.components.map((component) =>
-      component.id === componentId
-        ? { ...component, attributes: { ...component.attributes, ...attributes } }
-        : component
-    );
-    const newState: ProjectState = { ...currentState, components: updatedComponents };
-    pushHistory(newState);
+    setHistoryState(prev => {
+      const currentSt = prev.history[prev.currentIndex];
+      const updatedComponents = currentSt.components.map((component) =>
+        component.id === componentId
+          ? { ...component, attributes: { ...component.attributes, ...attributes } }
+          : component
+      );
+      // Avoid pushing history if no change occurred
+      if (JSON.stringify(updatedComponents) === JSON.stringify(currentSt.components)) {
+        return prev; // No change, return previous state
+      }
+      const newState = { ...currentSt, components: updatedComponents };
+      const newHistory = prev.history.slice(0, prev.currentIndex + 1);
+      return {
+        history: [...newHistory, newState],
+        currentIndex: newHistory.length,
+      };
+    });
   };
 
-  // Add core rotation function
   const coreRotateComponent = (componentId: string, angleIncrement: number = 90) => {
     if (!componentId) throw new ComponentError('Invalid component ID for rotation', 'INVALID_COMPONENT_ID');
 
-    const updatedComponents = currentState.components.map((component) => {
-      if (component.id === componentId) {
-        const currentRotation = component.rotation || 0;
-        // Ensure rotation stays within 0-359 degrees
-        let newRotation = (currentRotation + angleIncrement) % 360;
-        if (newRotation < 0) {
-          newRotation += 360; // Handle negative results from modulo
+    setHistoryState(prev => {
+      const currentSt = prev.history[prev.currentIndex];
+      let changed = false;
+      const updatedComponents = currentSt.components.map((component) => {
+        if (component.id === componentId) {
+          const currentRotation = component.rotation || 0;
+          let newRotation = (currentRotation + angleIncrement) % 360;
+          if (newRotation < 0) newRotation += 360;
+          if (newRotation !== currentRotation) changed = true;
+          return { ...component, rotation: newRotation };
         }
-        return { ...component, rotation: newRotation };
-      }
-      return component;
-    });
+        return component;
+      });
 
-    // Only push history if a component was actually rotated
-    if (JSON.stringify(updatedComponents) !== JSON.stringify(currentState.components)) {
-        const newState: ProjectState = { ...currentState, components: updatedComponents };
-        pushHistory(newState);
-    } else {
-        console.warn(`Component with ID ${componentId} not found for rotation.`);
-        // Optionally add a toast message here if the component wasn't found
-        // toast.error(`Component with ID ${componentId} not found.`);
-    }
+      if (!changed) {
+        console.warn(`Component with ID ${componentId} not found or rotation resulted in no change.`);
+        return prev; // No change, return previous state
+      }
+
+      const newState: ProjectState = { ...currentSt, components: updatedComponents };
+      const newHistory = prev.history.slice(0, prev.currentIndex + 1);
+       return {
+        history: [...newHistory, newState],
+        currentIndex: newHistory.length,
+      };
+    });
   };
 
-  // --- Core Drag Action ---
+  // --- Core Drag Action (remains the same) ---
   const coreSetDraggingComponentType = (type: string | null) => {
     setDraggingComponentTypeState(type);
   };
 
-  // --- Core History Actions ---
+  // --- Refactored Core History Actions ---
   const coreUndoLastAction = () => {
-    if (currentHistoryIndex > 0) {
-      setCurrentHistoryIndex(currentHistoryIndex - 1);
-    } else {
-      toast.info('Nothing to undo');
-    }
+    setHistoryState(prev => {
+      if (prev.currentIndex > 0) {
+        return { ...prev, currentIndex: prev.currentIndex - 1 };
+      } else {
+        toast.info('Nothing to undo');
+        return prev;
+      }
+    });
   };
 
   const coreRedoLastAction = () => {
-    if (currentHistoryIndex < history.length - 1) {
-      setCurrentHistoryIndex(currentHistoryIndex + 1);
-    } else {
-      toast.info('Nothing to redo');
-    }
+     setHistoryState(prev => {
+      if (prev.currentIndex < prev.history.length - 1) {
+        return { ...prev, currentIndex: prev.currentIndex + 1 };
+      } else {
+        toast.info('Nothing to redo');
+        return prev;
+      }
+    });
   };
 
-  // --- Other Core Actions ---
+  // --- Other Core Actions (save/export use currentState, import resets state) ---
   const coreSaveProject = () => {
-    // Save currentState.components, currentState.wires, currentState.code
-    console.log("Saving Project State:", currentState);
-    toast.success('Project saved successfully!'); // Placeholder
+    console.log("Saving Project State:", currentState); // currentState is derived correctly
+    toast.success('Project saved successfully!');
   };
   
   const coreExportProject = () => {
-    const projectData = currentState; // Export the current state
+    const projectData = currentState; // currentState is derived correctly
     const dataStr = JSON.stringify(projectData, null, 2);
     const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
     const exportFileDefaultName = 'circuit-project.json';
@@ -191,24 +237,43 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
     toast.success('Project exported successfully!');
   };
   
-  // Updated Import Logic
   const coreImportProject = (projectData: ProjectState) => {
-    // Validate imported data structure (basic checks)
     if (!projectData || typeof projectData !== 'object') {
         throw new ComponentError('Invalid project data format', 'PROJECT_PARSE_ERROR');
     }
     const validatedState: ProjectState = {
         components: Array.isArray(projectData.components) ? projectData.components : [],
-        wires: Array.isArray(projectData.wires) ? projectData.wires : [], // Import wires
+        wires: Array.isArray(projectData.wires) ? projectData.wires : [],
         code: typeof projectData.code === 'string' ? projectData.code : initialCode,
     };
-    // Reset history with the imported state
-    setHistory([validatedState]);
-    setCurrentHistoryIndex(0);
+    // Reset state completely
+    setHistoryState({
+      history: [validatedState],
+      currentIndex: 0,
+    });
     toast.success('Project imported successfully!');
   };
   
-  // --- Wrap core functions with error handling ---
+  // --- Add Core Clear Action --- 
+  const coreClearCircuitState = () => {
+    setHistoryState(prev => {
+      const currentSt = prev.history[prev.currentIndex];
+      // Create a cleared state, preserving the current code
+      const clearedState: ProjectState = {
+        components: [],
+        wires: [],
+        code: currentSt.code, // Keep existing code
+      };
+      // Reset history to only contain the cleared state
+      return {
+        history: [clearedState],
+        currentIndex: 0,
+      };
+    });
+    toast.success('Circuit cleared and history reset');
+  };
+  
+  // --- Wrap core functions with error handling (no change needed here) ---
   const handleComponentsChange = withErrorHandling(coreHandleComponentsChange, 'handleComponentsChange', setError);
   const handleWiresChange = withErrorHandling(coreHandleWiresChange, 'handleWiresChange', setError);
   const updateCode = withErrorHandling(coreUpdateCode, 'updateCode', setError);
@@ -220,43 +285,37 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
   const redoLastAction = withErrorHandling(coreRedoLastAction, 'redoLastAction', setError); // Wrap redo
   const exportProject = withErrorHandling(coreExportProject, 'exportProject', setError);
   const importProject = withErrorHandling(coreImportProject, 'importProject', setError);
+  const clearCircuitState = withErrorHandling(coreClearCircuitState, 'clearCircuitState', setError);
   
-  // --- Calculate derived state ---
-  const canUndo = currentHistoryIndex > 0;
-  const canRedo = currentHistoryIndex < history.length - 1;
+  // --- Calculate derived state from combined state ---
+  const canUndo = historyState.currentIndex > 0;
+  const canRedo = historyState.currentIndex < historyState.history.length - 1;
 
-  // --- Provide Context Value ---
+  // --- Provide Context Value (derived from currentState and combined state) ---
   const value = {
-    // Current state values
     components: currentState.components,
     wires: currentState.wires,
     code: currentState.code,
-
-    // Drag state
     draggingComponentType,
-
-    // Action handlers
     handleComponentsChange,
     handleWiresChange,
     updateCode,
     handleUpdateComponentAttributes,
     rotateComponent,
-
-    // Drag actions
     setDraggingComponentType,
-
-    // History actions
     undoLastAction,
     redoLastAction,
-    canUndo,
-    canRedo,
-
-    // Other actions
+    clearCircuitState,
+    canUndo, // Use derived value
+    canRedo, // Use derived value
     saveProject,
     exportProject,
     importProject,
   };
   
+  // Log the value being provided
+  console.log("ProjectContext: Providing value - Components:", currentState.components?.length, "Wires:", currentState.wires?.length);
+
   return (
     <ProjectContext.Provider value={value}>
       {children}

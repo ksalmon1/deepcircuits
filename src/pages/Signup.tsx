@@ -1,11 +1,10 @@
-
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { CircuitBoard, Github, Mail } from "lucide-react";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/context/AuthContext";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { Separator } from "@/components/ui/separator";
 import { generateUniqueUsername } from "@/services/userService";
 
@@ -15,36 +14,23 @@ const Signup = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { signUp, signInWithProvider } = useAuth();
-  const { toast } = useToast();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!email || !password || !confirmPassword) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Please fill out all fields",
-      });
+      toast.error("Please fill out all fields");
       return;
     }
 
     if (password !== confirmPassword) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Passwords do not match",
-      });
+      toast.error("Passwords do not match");
       return;
     }
 
     if (password.length < 6) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Password must be at least 6 characters long",
-      });
+      toast.error("Password must be at least 6 characters long");
       return;
     }
 
@@ -54,27 +40,16 @@ const Signup = () => {
       const username = generateUniqueUsername();
       
       // Sign up with the generated username as metadata
-      const { error, data } = await signUp(email, password, username);
+      const { error } = await signUp(email, password, username);
       
       if (error) {
-        toast({
-          variant: "destructive",
-          title: "Signup Failed",
-          description: error.message || "Please check your information and try again",
-        });
+        toast.error(error.message || "Sign-up failed. Please try again.");
       } else {
-        toast({
-          title: "Account Created",
-          description: "Please check your email to confirm your account",
-        });
+        toast.info("Sign-up successful! Please check your email for verification.");
         navigate("/login");
       }
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Signup Failed",
-        description: error.message || "An unexpected error occurred",
-      });
+      toast.error(error.message || "An unexpected error occurred");
     } finally {
       setIsLoading(false);
     }
@@ -84,11 +59,7 @@ const Signup = () => {
     try {
       await signInWithProvider(provider);
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Signup Failed",
-        description: error.message || "Failed to authenticate with social provider",
-      });
+      toast.error(error.message || "Failed to authenticate with social provider");
     }
   };
 
@@ -99,7 +70,7 @@ const Signup = () => {
           <div className="mb-6 flex justify-center">
             <Link to="/" className="flex items-center gap-2">
               <CircuitBoard className="h-8 w-8 text-primary" />
-              <span className="text-2xl font-bold text-slate-900">CircuitSim</span>
+              <span className="text-2xl font-bold text-slate-900">DeepCircuits</span>
             </Link>
           </div>
           

@@ -1,9 +1,8 @@
-
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { Session, User, Provider } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { generateUniqueUsername } from "@/services/userService";
 
 type AuthContextType = {
@@ -33,7 +32,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
-  const { toast } = useToast();
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -73,7 +71,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     
     const metadata = username ? { display_name: username } : undefined;
     
-    const response = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -81,49 +79,72 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     });
     
+    if (error) {
+      toast.error(error.message || "Sign-up failed. Please try again.");
+    }
+
     setIsLoading(false);
-    return response;
+    return { data, error };
   };
 
   const signIn = async (email: string, password: string) => {
     setIsLoading(true);
-    const response = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
+
+    if (error) {
+      toast.error(error.message || "Sign-in failed. Please check your credentials.");
+    } else {
+      toast.success("Signed in successfully!");
+    }
+
     setIsLoading(false);
-    return response;
+    return { data, error };
   };
 
   const signInWithProvider = async (provider: Provider) => {
     setIsLoading(true);
     try {
-      await supabase.auth.signInWithOAuth({
+      const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
           redirectTo: `${window.location.origin}/dashboard`,
         },
       });
-    } catch (error) {
+      if (error) throw error;
+    } catch (error: any) {
       console.error("Social login error:", error);
+      toast.error(error.message || "Social login failed. Please try again.");
       setIsLoading(false);
     }
   };
 
   const signOut = async () => {
     setIsLoading(true);
-    await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      toast.error(error.message || "Sign-out failed.");
+    } else {
+      toast.info("Signed out.");
+    }
     navigate("/login");
     setIsLoading(false);
   };
 
   const resetPassword = async (email: string) => {
     setIsLoading(true);
-    const response = await supabase.auth.resetPasswordForEmail(email, {
+    const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/reset-password`,
     });
+    if (error) {
+      toast.error(error.message || "Failed to send password reset email.");
+    } else {
+      toast.info("Password reset email sent. Please check your inbox.");
+    }
     setIsLoading(false);
-    return response;
+    return { data, error };
   };
 
   const value = {

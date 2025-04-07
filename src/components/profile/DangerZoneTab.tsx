@@ -1,24 +1,31 @@
-
-import React from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { LogOut, Trash2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface DangerZoneTabProps {
   signOut: () => Promise<void>;
 }
 
 const DangerZoneTab: React.FC<DangerZoneTabProps> = ({ signOut }) => {
-  const { toast } = useToast();
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const handleDeleteAccount = () => {
-    toast({
-      variant: "destructive",
-      title: "Delete account",
-      description: "This feature is not implemented yet.",
-    });
+    console.log("Account deletion initiated...");
+    setIsDeleteDialogOpen(false);
+    toast.success("Account deletion process started (simulated).");
   };
 
   return (
@@ -40,7 +47,7 @@ const DangerZoneTab: React.FC<DangerZoneTabProps> = ({ signOut }) => {
           <div className="flex gap-4">
             <Button 
               variant="destructive" 
-              onClick={handleDeleteAccount}
+              onClick={() => setIsDeleteDialogOpen(true)}
             >
               Delete Account
             </Button>
@@ -65,6 +72,19 @@ const DangerZoneTab: React.FC<DangerZoneTabProps> = ({ signOut }) => {
           </Button>
         </div>
       </CardContent>
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure you want to delete your account?</AlertDialogTitle>
+            <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteAccount}>Continue</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 };

@@ -1,19 +1,21 @@
-
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { CircuitBoard } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
 
 const ResetPassword = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { toast } = useToast();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   // Check for access token on load
   useEffect(() => {
@@ -38,20 +40,12 @@ const ResetPassword = () => {
     e.preventDefault();
     
     if (password !== confirmPassword) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Passwords do not match",
-      });
+      toast.error("Passwords do not match");
       return;
     }
 
     if (password.length < 6) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Password must be at least 6 characters long",
-      });
+      toast.error("Password must be at least 6 characters long");
       return;
     }
 
@@ -60,24 +54,13 @@ const ResetPassword = () => {
       const { error } = await supabase.auth.updateUser({ password });
       
       if (error) {
-        toast({
-          variant: "destructive",
-          title: "Password Reset Failed",
-          description: error.message || "Please try again",
-        });
+        toast.error(error.message || "Failed to update password. Please try again.");
       } else {
-        toast({
-          title: "Password Updated",
-          description: "Your password has been reset successfully",
-        });
+        toast.success("Password updated successfully!");
         navigate("/login");
       }
     } catch (err: any) {
-      toast({
-        variant: "destructive",
-        title: "Password Reset Failed",
-        description: err.message || "An unexpected error occurred",
-      });
+      toast.error(err.message || "An unexpected error occurred");
     } finally {
       setIsLoading(false);
     }
@@ -90,7 +73,7 @@ const ResetPassword = () => {
           <div className="mb-6 flex justify-center">
             <Link to="/" className="flex items-center gap-2">
               <CircuitBoard className="h-8 w-8 text-primary" />
-              <span className="text-2xl font-bold text-slate-900">CircuitSim</span>
+              <span className="text-2xl font-bold text-slate-900">DeepCircuits</span>
             </Link>
           </div>
           

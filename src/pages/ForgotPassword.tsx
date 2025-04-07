@@ -1,28 +1,25 @@
-
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { CircuitBoard } from "lucide-react";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/context/AuthContext";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSent, setIsSent] = useState(false);
   const { resetPassword } = useAuth();
-  const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!email) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Please enter your email address",
-      });
+      toast.error("Please enter your email address");
       return;
     }
 
@@ -31,24 +28,15 @@ const ForgotPassword = () => {
       const { error } = await resetPassword(email);
       
       if (error) {
-        toast({
-          variant: "destructive",
-          title: "Reset Failed",
-          description: error.message || "Please check your email and try again",
-        });
+        toast.error(error.message || "Please check your email and try again");
       } else {
         setIsSent(true);
-        toast({
-          title: "Email Sent",
+        toast.success("Email Sent", {
           description: "Check your email for password reset instructions",
         });
       }
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Reset Failed",
-        description: error.message || "An unexpected error occurred",
-      });
+      toast.error(error.message || "An unexpected error occurred");
     } finally {
       setIsLoading(false);
     }
@@ -61,7 +49,7 @@ const ForgotPassword = () => {
           <div className="mb-6 flex justify-center">
             <Link to="/" className="flex items-center gap-2">
               <CircuitBoard className="h-8 w-8 text-primary" />
-              <span className="text-2xl font-bold text-slate-900">CircuitSim</span>
+              <span className="text-2xl font-bold text-slate-900">DeepCircuits</span>
             </Link>
           </div>
           

@@ -110,8 +110,10 @@ const CircuitComponentNode: React.FC<CustomNodeProps> = ({
     overflow: 'visible',
     width: width ? `${width}px` : undefined,
     height: height ? `${height}px` : undefined,
-    // Apply transform HERE
+    // Restore rotation
     transform: `rotate(${rotation}deg)`,
+    // Add will-change hint for performance
+    willChange: 'transform',
     border: selected ? '1px solid blue' : 'none',
     background: 'transparent',
   };

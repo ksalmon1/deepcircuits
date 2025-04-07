@@ -8,6 +8,7 @@ import {
   BreadcrumbPage
 } from "@/components/ui/breadcrumb";
 import { Home } from "lucide-react";
+import React from "react";
 
 // Define custom breadcrumb titles for specific routes
 const routeTitles: Record<string, string> = {
@@ -56,29 +57,31 @@ export function Breadcrumbs() {
         </BreadcrumbItem>
         <BreadcrumbSeparator />
         
-        {segments.map((segment, index) => {
-          // Build the path up to this segment
+        {segments.flatMap((segment, index) => {
           const path = `/${segments.slice(0, index + 1).join('/')}`;
           const isLast = index === segments.length - 1;
-          
-          // Get the title for this segment
           const title = routeTitles[path] || 
                        (isCircuitEditor && index === 1 ? segment : segment.charAt(0).toUpperCase() + segment.slice(1));
           
-          return (
+          const breadcrumbItem = (
             <BreadcrumbItem key={path}>
               {isLast ? (
                 <BreadcrumbPage>{title}</BreadcrumbPage>
               ) : (
-                <>
-                  <BreadcrumbLink asChild>
-                    <Link to={path}>{title}</Link>
-                  </BreadcrumbLink>
-                  <BreadcrumbSeparator />
-                </>
+                <BreadcrumbLink asChild>
+                  <Link to={path}>{title}</Link>
+                </BreadcrumbLink>
               )}
             </BreadcrumbItem>
           );
+
+          // Add separator before every item except the first (index 0)
+          if (index > 0) {
+            // Need unique key for separator too
+            return [<BreadcrumbSeparator key={`sep-${index}`} />, breadcrumbItem];
+          } else {
+            return [breadcrumbItem]; // Only return the item for the first segment
+          }
         })}
       </BreadcrumbList>
     </Breadcrumb>

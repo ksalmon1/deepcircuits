@@ -1,10 +1,9 @@
-
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import HeroSection from "@/components/landing/HeroSection";
 import FeaturesSection from "@/components/landing/FeaturesSection";
 import PricingSection from "@/components/landing/PricingSection";
-import TestimonialSection from "@/components/landing/TestimonialSection";
+import { TestimonialSection } from "@/components/landing/TestimonialSection";
 import CTASection from "@/components/landing/CTASection";
 
 const Index = () => {

@@ -50,7 +50,7 @@ import {
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { Separator } from "@/components/ui/separator";
 
 const generalSettingsSchema = z.object({
@@ -85,12 +85,16 @@ const backupSettingsSchema = z.object({
 
 const SystemSettings = () => {
   const { user } = useAuth();
-  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("general");
 
   if (!user) {
     return <Navigate to="/login" />;
   }
+
+  const handleSave = (category: string, settings: any) => {
+    console.log(`Saving ${category} settings:`, settings);
+    toast.success(`${category.charAt(0).toUpperCase() + category.slice(1)} settings saved successfully!`);
+  };
 
   return (
     <PageLayout>

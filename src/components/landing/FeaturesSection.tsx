@@ -48,7 +48,7 @@ const FeaturesSection = () => {
             Powerful Features for Electronic Design
           </h2>
           <p className="mt-4 text-lg text-slate-600">
-            CircuitSim provides all the tools you need to design, test, and collaborate on electronic circuits.
+            DeepCircuits provides all the tools you need to design, test, and collaborate on electronic circuits.
           </p>
         </div>
 

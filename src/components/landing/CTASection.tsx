@@ -10,7 +10,7 @@ const CTASection = () => {
             Ready to Start Building Your Electronic Circuits?
           </h2>
           <p className="mt-4 text-lg text-white/90">
-            Join thousands of students and hobbyists who are creating amazing projects with CircuitSim.
+            Join thousands of students and hobbyists who are creating amazing projects with DeepCircuits.
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Button asChild size="lg" variant="secondary">

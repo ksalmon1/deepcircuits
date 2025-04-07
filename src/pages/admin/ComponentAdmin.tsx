@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/table";
 import { ComponentLibraryItem } from '@/types/component';
 import { toast } from "sonner";
-import { getAllComponents, getComponentWithDetails } from "@/services/componentLibrary/api";
+import { getComponentWithDetails } from "@/services/componentLibrary/api";
 import { useComponentLibrary } from "@/hooks/useComponentLibrary";
 
 const ComponentAdmin = () => {
@@ -30,8 +30,6 @@ const ComponentAdmin = () => {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [components, setComponents] = useState<ComponentLibraryItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [uniqueCategories, setUniqueCategories] = useState<string[]>([]);
   const [uniqueTypes, setUniqueTypes] = useState<string[]>([]);
   
@@ -55,43 +53,39 @@ const ComponentAdmin = () => {
   const [activeTab, setActiveTab] = useState("details");
   
   const { 
+    components = [],
+    isLoadingComponents: isLoading,
+    componentsError,
+    refetchLibrary,
     createComponent,
     isCreatingComponent,
-    createComponentError,
     updateComponent,
     isUpdatingComponent,
-    updateComponentError
   } = useComponentLibrary();
 
-  console.log("ComponentAdmin: Rendering", { isLoading: isProfileLoading });
+  console.log("ComponentAdmin: Rendering", { isLoading: isProfileLoading || isLoading });
 
   useEffect(() => {
-    fetchComponents();
-  }, []);
-
-  const fetchComponents = async () => {
-    try {
-      setIsLoading(true);
-      console.log("Fetching components...");
-      const data = await getAllComponents();
-      console.log("Fetched components:", data);
-      setComponents(data);
-      
-      const categories = [...new Set(data.map(comp => comp.category))];
-      const types = [...new Set(data.map(comp => comp.type))];
-      setUniqueCategories(categories);
-      setUniqueTypes(types);
-    } catch (error) {
-      console.error("Error fetching components:", error);
-      toast.error("Failed to load components", {
-        description: "Please try refreshing the page",
-      });
-    } finally {
-      setIsLoading(false);
+    if (components && components.length > 0) {
+      const categories = [...new Set(components.map(comp => comp.category).filter(Boolean))];
+      const types = [...new Set(components.map(comp => comp.type).filter(Boolean))];
+      setUniqueCategories(categories as string[]);
+      setUniqueTypes(types as string[]);
+    } else {
+      setUniqueCategories([]);
+      setUniqueTypes([]);
     }
-  };
+  }, [components]);
 
-  if (isProfileLoading) {
+  useEffect(() => {
+    if (componentsError) {
+      toast.error("Failed to load components", {
+        description: componentsError.message || "Please try refreshing the page",
+      });
+    }
+  }, [componentsError]);
+
+  if (isProfileLoading || isLoading) {
     return (
       <PageLayout>
         <div className="container py-8">
@@ -131,32 +125,25 @@ const ComponentAdmin = () => {
     }
     
     try {
-      // Assuming createComponent expects a full ComponentLibraryItem, 
-      // ensure all required fields are present, possibly setting defaults
       const componentToAdd: ComponentLibraryItem = {
-        ...initialNewComponentState, // Start with defaults
-        ...newComponent,             // Overlay user input
-        name: newComponent.name,      // Ensure required fields are explicitly set
+        ...(initialNewComponentState as Omit<ComponentLibraryItem, 'id'>),
+        ...newComponent,
+        id: '',
+        name: newComponent.name,
         type: newComponent.type,
         category: newComponent.category,
-        id: '', // API should handle ID generation
-        // Add any other non-optional fields expected by ComponentLibraryItem or createComponent
-        pins: [], // Default to empty pins array if applicable
-        properties: {}, // Default to empty properties object if applicable
-        svgPath: '', // Default SVG path if applicable
-        dimensions: { width: 100, height: 50 }, // Default dimensions if applicable
+        pins: newComponent.pins || [],
+        properties: newComponent.properties || {},
+        svgPath: newComponent.svgPath || '',
+        isOriginal: newComponent.isOriginal ?? false,
+        enabled: newComponent.enabled ?? true,
       };
 
       await createComponent(componentToAdd);
-      toast.success("Component added successfully");
       setIsAddDialogOpen(false);
-      setNewComponent(initialNewComponentState); // Reset form state
-      fetchComponents(); // Refresh the list
+      setNewComponent(initialNewComponentState);
     } catch (error) {
-      console.error("Error creating component:", error);
-      toast.error("Failed to add component", {
-        description: error instanceof Error ? error.message : String(createComponentError) || "Unknown error",
-      });
+      console.error("Error creating component locally (mutation might handle toast):", error);
     }
   };
 
@@ -191,8 +178,7 @@ const ComponentAdmin = () => {
   };
 
   const handleRefresh = () => {
-    fetchComponents();
-    toast.success("Components refreshed");
+    refetchLibrary();
   };
 
   const updateComponentProperty = (property: string, value: any) => {
@@ -240,15 +226,10 @@ const ComponentAdmin = () => {
     
     try {
       await updateComponent(editedComponent);
-      toast.success("Component updated successfully");
       setIsEditDialogOpen(false);
       setEditedComponent(null);
-      fetchComponents();
     } catch (error) {
-      console.error("Error updating component:", error);
-      toast.error("Failed to update component", {
-        description: error instanceof Error ? error.message : "Unknown error"
-      });
+      console.error("Error updating component locally (mutation might handle toast):", error);
     }
   };
 

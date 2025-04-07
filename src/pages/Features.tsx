@@ -1,4 +1,3 @@
-
 import PageLayout from "@/components/layout/PageLayout";
 
 const Features = () => {
@@ -7,7 +6,7 @@ const Features = () => {
       <section className="container py-16 md:py-24">
         <h1 className="text-4xl font-bold text-center mb-8">Features</h1>
         <p className="text-lg text-center text-slate-700 max-w-3xl mx-auto">
-          Discover the powerful features that make CircuitSim the ideal platform for electronics simulation and learning.
+          Discover the powerful features that make DeepCircuits the ideal platform for electronics simulation and learning.
         </p>
         
         {/* Feature content will be added in a future step */}

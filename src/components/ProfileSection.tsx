@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useProfile } from "@/hooks/use-profile";
@@ -74,8 +73,6 @@ const ProfileSection = () => {
                   </div>
                 </div>
               </div>
-
-              {isAdmin() && <AdminLinks />}
             </div>
           </div>
         </CardContent>

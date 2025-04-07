@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from "react";
 import PageLayout from "@/components/layout/PageLayout";
 import { useAuth } from "@/context/AuthContext";
@@ -8,7 +7,6 @@ import { Plus, Search, ArrowUpDown } from "lucide-react";
 import ProjectCard, { ProjectData } from "@/components/common/ProjectCard";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import DashboardAnalytics from "@/components/dashboard/DashboardAnalytics";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import {
@@ -62,13 +60,6 @@ const Dashboard = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortOption, setSortOption] = useState<SortOption>("date-desc");
   const [filterType, setFilterType] = useState<string>("all");
-
-  const analyticsData = {
-    totalProjects: projects.length,
-    activeProjects: projects.filter(p => new Date(p.updatedAt) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)).length,
-    recentlyModified: projects.filter(p => new Date(p.updatedAt) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)).length,
-    codeCompilations: 12,
-  };
 
   const handleCreateProject = () => {
     const newProjectId = `proj-${Date.now()}`;
@@ -142,13 +133,6 @@ const Dashboard = () => {
           </p>
         </div>
 
-        <DashboardAnalytics 
-          totalProjects={analyticsData.totalProjects}
-          activeProjects={analyticsData.activeProjects}
-          recentlyModified={analyticsData.recentlyModified}
-          codeCompilations={analyticsData.codeCompilations}
-        />
-      
         <div className="mb-6 flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold">Your Projects</h2>

@@ -122,16 +122,16 @@
   - ✅ Add pin connection via wiring logic
   - ✅ Create a wire rendering system
   - ✅ Implement wire mode to avoid interference with component dragging
-  - ⏳ Implement click to add a wire node to allow custom routes
+  - ❌ Implement click to add a wire node to allow custom routes
   - ⏳ Add wire selection and editing
 
 ## Phase 4: Microcontroller Simulation and Compilation
 
 ### 4.1 Code Editor
-- ✅ Implement code editor interface
+- ✅ Implement Monaco-editor interface
   - ✅ Create editor component with syntax highlighting
-  - ✅ Add code templates for different microcontrollers
-  - ✅ Implement save/load functionality
+  - ❌ Add code templates for different microcontrollers
+  - ❌ Implement save/load functionality
   - ❌ Add linting and error checking
 
 ### 4.2 Compilation Service

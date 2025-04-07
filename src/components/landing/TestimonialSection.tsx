@@ -1,64 +1,58 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
 
 const testimonials = [
   {
-    quote:
-      "CircuitSim has revolutionized how I teach electronics to my students. The real-time feedback makes learning intuitive and engaging.",
-    author: "Dr. Sarah Chen",
-    role: "Professor of Electrical Engineering",
-    avatar: "SC",
+    name: "Sarah Chen",
+    title: "High School Physics Teacher",
+    image: "/images/testimonials/sarah.jpg",
+    text: "DeepCircuits has revolutionized how I teach electronics to my students. The real-time feedback makes learning intuitive and engaging.",
   },
   {
-    quote:
-      "As a hobbyist, I've tried many circuit simulators, but CircuitSim's ease of use and powerful features make it my go-to platform for all my projects.",
-    author: "Michael Rodriguez",
-    role: "Electronics Enthusiast",
-    avatar: "MR",
+    name: "Alex Johnson",
+    title: "Electronics Hobbyist",
+    image: "/images/testimonials/alex.jpg",
+    text: "As a hobbyist, I've tried many circuit simulators, but DeepCircuits' ease of use and powerful features make it my go-to platform for all my projects.",
   },
   {
-    quote:
-      "The collaboration features in CircuitSim have been game-changing for our robotics club. We can now work together remotely on circuit designs.",
-    author: "Priya Patel",
-    role: "Student, Robotics Club Lead",
-    avatar: "PP",
+    name: "Maria Garcia",
+    title: "Robotics Club Advisor",
+    image: "/images/testimonials/maria.jpg",
+    text: "The collaboration features in DeepCircuits have been game-changing for our robotics club. We can now work together remotely on circuit designs.",
   },
+  // Add more testimonials as needed
 ];
 
-const TestimonialSection = () => {
+export function TestimonialSection() {
   return (
-    <section className="bg-neutral-50 py-16 md:py-24">
-      <div className="container">
-        <div className="mx-auto max-w-2xl text-center">
-          <h2 className="text-3xl font-bold text-slate-900 md:text-4xl">
-            What Our Users Say
-          </h2>
-          <p className="mt-4 text-lg text-slate-600">
-            Join thousands of students, educators, and hobbyists who love CircuitSim.
-          </p>
-        </div>
-
-        <div className="mt-16 grid gap-8 md:grid-cols-3">
+    <section className="py-16 bg-white">
+      <div className="container mx-auto px-4">
+        <h2 className="text-3xl font-bold text-center mb-12">
+          What Our Users Say
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {testimonials.map((testimonial, index) => (
-            <div
-              key={index}
-              className="rounded-lg border border-neutral-200 bg-white p-6 shadow-sm"
-            >
-              <p className="text-slate-600">"{testimonial.quote}"</p>
-              <div className="mt-6 flex items-center gap-4">
+            <Card key={index} className="flex flex-col">
+              <CardContent className="p-6 flex-grow">
+                <p className="text-slate-700 italic mb-6">"{testimonial.text}"</p>
+              </CardContent>
+              <CardFooter className="p-6 pt-0 border-t flex items-center gap-4">
                 <Avatar>
-                  <AvatarFallback>{testimonial.avatar}</AvatarFallback>
+                  <AvatarImage src={testimonial.image} alt={testimonial.name} />
+                  <AvatarFallback>{testimonial.name.charAt(0)}</AvatarFallback>
                 </Avatar>
                 <div>
-                  <p className="font-medium text-slate-900">{testimonial.author}</p>
-                  <p className="text-sm text-slate-600">{testimonial.role}</p>
+                  <p className="font-semibold">{testimonial.name}</p>
+                  <p className="text-sm text-slate-500">{testimonial.title}</p>
                 </div>
-              </div>
-            </div>
+              </CardFooter>
+            </Card>
           ))}
         </div>
+        <p className="mt-12 text-center text-lg text-slate-600">
+          Join thousands of students, educators, and hobbyists who love DeepCircuits.
+        </p>
       </div>
     </section>
   );
-};
-
-export default TestimonialSection;
+}

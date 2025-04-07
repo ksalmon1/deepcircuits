@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -18,7 +17,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { updateProfile } from "@/services/userService";
-import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/context/AuthContext";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const profileFormSchema = z.object({
   display_name: z
@@ -42,7 +43,7 @@ interface ProfileFormProps {
 
 const ProfileForm: React.FC<ProfileFormProps> = ({ user, profile, updateProfile: setProfileData }) => {
   const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
+  const { session } = useAuth();
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -63,49 +64,23 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ user, profile, updateProfile:
   }, [profile, user, form]);
 
   async function onSubmit(data: ProfileFormValues) {
-    setIsLoading(true);
-    console.log("Form submitted with data:", data);
+    if (!user || !session) return;
 
-    // Clear any previous form errors
-    if (form.formState.errors) {
-      form.clearErrors();
-    }
+    const updates = {
+      id: user.id,
+      username: data.display_name,
+      full_name: data.display_name,
+      website: data.avatar_url,
+      updated_at: new Date(),
+    };
 
-    // Make sure we have a valid user before attempting the update
-    if (!user) {
-      console.error("Cannot update profile: No user logged in");
-      toast({
-        title: "Error",
-        description: "You must be logged in to update your profile",
-        variant: "destructive",
-      });
-      setIsLoading(false);
-      return;
-    }
+    const { error } = await supabase.from('profiles').upsert(updates);
 
-    const result = await updateProfile(user.id, {
-      display_name: data.display_name,
-      avatar_url: data.avatar_url,
-    });
-
-    setIsLoading(false);
-    
-    if (result.success && result.data) {
-      console.log("Profile update completed successfully");
-      toast({
-        title: "Profile updated",
-        description: "Your profile has been updated successfully.",
-      });
-      
-      // Update the profile in the parent component
-      setProfileData(result.data);
+    if (error) {
+      toast.error("Failed to update profile: " + error.message);
     } else {
-      console.error("Error updating profile:", result.error);
-      toast({
-        title: "Update failed",
-        description: "There was a problem updating your profile.",
-        variant: "destructive",
-      });
+      toast.success("Profile updated successfully!");
+      setProfileData(updates as Profile);
     }
   }
 

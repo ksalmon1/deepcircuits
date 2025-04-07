@@ -1,5 +1,12 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { ReactFlowProvider } from '@xyflow/react';
+import {
+  Panel,
+  PanelGroup,
+  PanelResizeHandle,
+  PanelGroupOnLayout,
+  ImperativePanelGroupHandle
+} from "react-resizable-panels";
 import CircuitCanvas from './CircuitCanvas';
 import ComponentPanel from './ComponentPanel';
 import CodeEditor from './CodeEditor';
@@ -15,6 +22,21 @@ import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { CircuitComponent } from '@/types/component';
 import { WireConnection } from '@/types/circuit';
 import { CircuitEditorProvider, useCircuitEditor } from '@/context/CircuitEditorContext';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+
+// Define styles for the resize handle
+const resizeHandleStyle = "w-[1px] bg-border hover:bg-primary transition-colors duration-200 ease-in-out";
+const verticalResizeHandleStyle = "h-[1px] bg-border hover:bg-primary transition-colors duration-200 ease-in-out";
 
 /**
  * Circuit Editor Layout Content - uses the CircuitEditorContext
@@ -43,6 +65,7 @@ const CircuitEditorLayoutContent = () => {
     serialOutput,
     selectedComponent,
     rotateComponent,
+    clearCircuitState,
   } = useCircuitEditor();
   
   const [circuitName, setCircuitName] = useState<string>('Untitled Circuit');
@@ -51,7 +74,33 @@ const CircuitEditorLayoutContent = () => {
   const [showCodeEditor, setShowCodeEditor] = useState<boolean>(false);
   const [showSerialMonitor, setShowSerialMonitor] = useState<boolean>(false);
   const [verticalSplit, setVerticalSplit] = useState<boolean>(true);
+  const [isClearConfirmOpen, setIsClearConfirmOpen] = useState<boolean>(false);
   
+  // State to store panel sizes - Adjust mainLayout default
+  const [mainLayout, setMainLayout] = useState<number[]>([73, 27]); // Canvas 73%, Editor/Monitor 27%
+  const [editorMonitorLayout, setEditorMonitorLayout] = useState<number[]>([50, 50]);
+
+  // Add refs for PanelGroups
+  const mainPanelGroupRef = useRef<ImperativePanelGroupHandle>(null);
+  const innerPanelGroupRef = useRef<ImperativePanelGroupHandle>(null);
+
+  // Handlers to update layout state
+  const handleMainLayout: PanelGroupOnLayout = (sizes) => {
+    // Only save layout if the second panel is visible and has size
+    if (sizes.length === 2 && sizes[1] > 0) {
+      setMainLayout(sizes);
+    }
+  };
+
+  const handleEditorMonitorLayout: PanelGroupOnLayout = (sizes) => {
+    // Only save layout if both inner panels are visible and have size
+    if (showCodeEditor && showSerialMonitor && sizes.length === 2 && sizes[0] > 0 && sizes[1] > 0) {
+      setEditorMonitorLayout(sizes);
+    }
+    // Handle cases where only one panel is visible (layout will be [100])
+    // No need to save this layout as it's implicit when only one is shown
+  };
+
   useEffect(() => {
     if (projectId) {
       const mockProjectNames: Record<string, string> = {
@@ -66,9 +115,9 @@ const CircuitEditorLayoutContent = () => {
   }, [projectId]);
 
   useEffect(() => {
-    document.title = `${circuitName} - CircuitSim Editor`;
+    document.title = `${circuitName} - DeepCircuits Editor`;
     return () => {
-      document.title = 'CircuitSim - Interactive Circuit Simulator';
+      document.title = 'DeepCircuits - Interactive Circuit Simulator';
     };
   }, [circuitName]);
 
@@ -87,31 +136,19 @@ const CircuitEditorLayoutContent = () => {
   };
 
   const handleClearCircuit = () => {
-    toast.warning('Clear circuit?', {
-      description: 'This will remove all components and wires from the canvas',
-      action: {
-        label: 'Clear',
-        onClick: () => {
-          handleComponentsChange([]);
-          handleWiresChange([]);
-          toast.success('Circuit cleared');
-        },
-      },
-    });
+    setIsClearConfirmOpen(true);
   };
 
   const handleBackToDashboard = () => {
     if (isModified) {
       toast.warning('Unsaved changes', {
         description: 'You have unsaved changes. Save before leaving?',
+        duration: Infinity,
         action: {
           label: 'Save & Exit',
           onClick: () => {
-            setIsSaving(true);
-            setTimeout(() => {
-              setIsSaving(false);
-              navigate('/dashboard');
-            }, 800);
+            saveProject();
+            navigate('/dashboard');
           },
         },
         cancel: {
@@ -153,7 +190,6 @@ const CircuitEditorLayoutContent = () => {
 
   const handleComponentSelect = (component: CircuitComponent) => {
     console.log('Component selected:', component);
-    handleComponentsChange([...components, component]);
     selectComponent(component);
   };
 
@@ -162,6 +198,61 @@ const CircuitEditorLayoutContent = () => {
       rotateComponent(selectedComponent.id);
     }
   }, [selectedComponent, rotateComponent]);
+
+  // useEffect to manually trigger layout update when visibility/orientation changes
+  useEffect(() => {
+    const mainGroup = mainPanelGroupRef.current;
+    const innerGroup = innerPanelGroupRef.current;
+
+    requestAnimationFrame(() => {
+      if (mainGroup) {
+        // Determine the correct layout based on current visibility
+        const expectedMainLayout = (showCodeEditor || showSerialMonitor)
+          ? mainLayout  // Use stored layout [73, 27] if second panel is visible
+          : [100];     // Use layout [100] if only canvas is visible
+        
+        // Check if expected layout is valid before setting
+        if (expectedMainLayout && expectedMainLayout.reduce((sum, size) => sum + size, 0) > 99) { // Basic check for ~100%
+            try {
+                mainGroup.setLayout(expectedMainLayout);
+            } catch (error) {
+                // Catch potential errors during layout setting, though validation should prevent most
+                console.error("Error setting main layout:", error, "Layout:", expectedMainLayout);
+            }
+        } else {
+            console.warn("Skipping main setLayout due to potentially invalid sizes:", expectedMainLayout);
+        }
+      }
+
+      // Only set inner layout if the inner group exists AND both panels are visible
+      if (innerGroup && showCodeEditor && showSerialMonitor) {
+         // Check if expected layout is valid before setting
+         if (editorMonitorLayout && editorMonitorLayout.reduce((sum, size) => sum + size, 0) > 99) {
+            try {
+                innerGroup.setLayout(editorMonitorLayout);
+            } catch (error) {
+                console.error("Error setting inner layout:", error, "Layout:", editorMonitorLayout);
+            }
+         } else {
+             console.warn("Skipping inner setLayout due to potentially invalid sizes:", editorMonitorLayout);
+         }
+      }
+    });
+  }, [showCodeEditor, showSerialMonitor, verticalSplit, mainLayout, editorMonitorLayout]);
+
+  // Function to actually perform the clearing - use new context action
+  const performClear = () => {
+    console.log("--- performClear called ---");
+    // Call the context action which handles state update and history reset
+    clearCircuitState(); 
+    // Remove individual calls and toast (toast is now handled in context action)
+    // console.log("Clearing components...");
+    // handleComponentsChange([...[]]);
+    // console.log("Clearing wires...");
+    // handleWiresChange([...[]]);
+    // console.log("--- performClear finished ---");
+    // toast.success('Circuit cleared');
+  };
 
   return (
     <div className="h-full flex flex-col">
@@ -275,17 +366,24 @@ const CircuitEditorLayoutContent = () => {
 
       <ReactFlowProvider>
         <div className="flex-1 flex">
-          <div className="w-64 border-r bg-gray-50 p-4 overflow-y-auto">
+          <div className="w-64 border-r bg-gray-50 p-4 overflow-y-auto flex-shrink-0">
             <ComponentPanel onComponentSelect={handleComponentSelect} />
           </div>
 
           <div className="flex-1 flex flex-col overflow-hidden">
-            {(showCodeEditor || showSerialMonitor) ? (
-              <div className={`flex-1 flex ${verticalSplit ? 'flex-row' : 'flex-col'} overflow-hidden`}>
-                <div className={`${verticalSplit ? 
-                  (showCodeEditor && showSerialMonitor ? 'w-1/2' : 'w-2/3') : 
-                  (showCodeEditor && showSerialMonitor ? 'h-1/2' : 'h-2/3')
-                } overflow-hidden`}>
+            <PanelGroup
+              ref={mainPanelGroupRef}
+              direction={verticalSplit ? "horizontal" : "vertical"}
+              className="flex-1"
+              onLayout={handleMainLayout}
+            >
+              <Panel 
+                id="canvas" 
+                order={1} 
+                defaultSize={(showCodeEditor || showSerialMonitor) ? mainLayout[0] : 100} 
+                minSize={30}
+              >
+                <div className="h-full w-full overflow-hidden">
                   <CircuitCanvas 
                     circuitComponents={components} 
                     wireConnections={wires}
@@ -293,63 +391,87 @@ const CircuitEditorLayoutContent = () => {
                     onWiresChange={handleWiresChange}
                   />
                 </div>
-                
-                <div className={`${verticalSplit ? 
-                  (showCodeEditor && showSerialMonitor ? 'w-1/2' : 'w-1/3') : 
-                  (showCodeEditor && showSerialMonitor ? 'h-1/2' : 'h-1/3')
-                } border-l overflow-hidden flex ${verticalSplit ? 'flex-col' : 'flex-row'}`}>
-                  {showCodeEditor && showSerialMonitor ? (
-                    <>
-                      <div className={`${verticalSplit ? 'h-1/2' : 'w-1/2'} overflow-hidden`}>
-                        <CodeEditor 
-                          code={code} 
-                          onCodeChange={handleCodeChange} 
-                          onCompile={handleCompileCode} 
-                        />
-                      </div>
-                      <div className={`${verticalSplit ? 'h-1/2 border-t' : 'w-1/2 border-l'} overflow-hidden`}>
-                        <SerialMonitor 
-                          isSimulationRunning={isSimulationRunning} 
-                          serialOutput={serialOutput} 
-                        />
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      {showCodeEditor && (
-                        <div className="flex-1 overflow-hidden">
+              </Panel>
+
+              {(showCodeEditor || showSerialMonitor) && (
+                <PanelResizeHandle className={verticalSplit ? resizeHandleStyle : verticalResizeHandleStyle} />
+              )}
+
+              {(showCodeEditor || showSerialMonitor) && (
+                <Panel
+                  id="editor-monitor-section"
+                  order={2}
+                  defaultSize={mainLayout[1]}
+                  minSize={20}
+                  collapsible={false}
+                  collapsedSize={0}
+                >
+                  <PanelGroup
+                    ref={innerPanelGroupRef}
+                    direction={verticalSplit ? "vertical" : "horizontal"}
+                    className="h-full w-full"
+                    onLayout={handleEditorMonitorLayout}
+                  >
+                    {showCodeEditor && (
+                      <Panel
+                        id="code-editor"
+                        order={1}
+                        defaultSize={showSerialMonitor ? editorMonitorLayout[0] : 100}
+                        minSize={20}
+                      >
+                        <div className="h-full w-full overflow-hidden">
                           <CodeEditor 
                             code={code} 
-                            onCodeChange={handleCodeChange} 
+                            onChange={handleCodeChange} 
                             onCompile={handleCompileCode} 
                           />
                         </div>
-                      )}
-                      {showSerialMonitor && (
-                        <div className="flex-1 overflow-hidden">
+                      </Panel>
+                    )}
+
+                    {showCodeEditor && showSerialMonitor && (
+                      <PanelResizeHandle className={verticalSplit ? verticalResizeHandleStyle : resizeHandleStyle} />
+                    )}
+
+                    {showSerialMonitor && (
+                      <Panel
+                        id="serial-monitor"
+                        order={2}
+                        defaultSize={showCodeEditor ? editorMonitorLayout[1] : 100}
+                        minSize={20}
+                      >
+                        <div className="h-full w-full overflow-hidden">
                           <SerialMonitor 
                             isSimulationRunning={isSimulationRunning} 
                             serialOutput={serialOutput} 
                           />
                         </div>
-                      )}
-                    </>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <div className="flex-1 overflow-hidden">
-                <CircuitCanvas 
-                  circuitComponents={components} 
-                  wireConnections={wires}
-                  onComponentsChange={handleComponentsChange}
-                  onWiresChange={handleWiresChange}
-                />
-              </div>
-            )}
+                      </Panel>
+                    )}
+                  </PanelGroup>
+                </Panel>
+              )}
+            </PanelGroup>
           </div>
         </div>
       </ReactFlowProvider>
+
+      <AlertDialog open={isClearConfirmOpen} onOpenChange={setIsClearConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently remove all 
+              components and wires from your current circuit design.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={performClear}>Continue</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
     </div>
   );
 };

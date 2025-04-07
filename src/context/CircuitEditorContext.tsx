@@ -1,4 +1,5 @@
 import React, { createContext, useState, useContext, ReactNode } from 'react';
+import { Viewport } from '@xyflow/react';
 import { ErrorProvider, useError } from './ErrorContext';
 import { ProjectProvider, useProject } from './ProjectContext';
 import { SimulationProvider, useSimulation } from './SimulationContext';
@@ -11,6 +12,8 @@ interface CircuitEditorContextType {
   setDraggingComponentType: (type: string | null) => void;
   highlightedPins: { nodeId: string, pinIndex: number }[] | null;
   setHighlightedPins: (pins: { nodeId: string, pinIndex: number }[] | null) => void;
+  viewport: Viewport | undefined;
+  setViewport: (viewport: Viewport) => void;
 }
 
 // Create the context with a default undefined value
@@ -24,6 +27,7 @@ interface CircuitEditorProviderProps {
 export const CircuitEditorProvider: React.FC<CircuitEditorProviderProps> = ({ children }) => {
   const [draggingComponentType, setDraggingComponentType] = useState<string | null>(null);
   const [highlightedPins, setHighlightedPins] = useState<{ nodeId: string, pinIndex: number }[] | null>(null);
+  const [viewport, setViewport] = useState<Viewport | undefined>(undefined);
 
   // Consolidate state and functions into the context value
   const contextValue: CircuitEditorContextType = {
@@ -31,6 +35,8 @@ export const CircuitEditorProvider: React.FC<CircuitEditorProviderProps> = ({ ch
     setDraggingComponentType,
     highlightedPins,
     setHighlightedPins,
+    viewport,
+    setViewport,
   };
 
   return (
