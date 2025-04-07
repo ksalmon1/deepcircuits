@@ -9,31 +9,20 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Pencil, Trash2, Cpu } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
-
-export interface ProjectData {
-  id: string;
-  name: string;
-  description: string;
-  updatedAt: string;
-  thumbnailUrl?: string;
-  microcontroller?: {
-    type: string;
-    codeSize?: number;
-    lastCompiled?: string;
-  };
-}
+import { DashboardProject } from '@/integrations/supabase/projectsApi';
 
 interface ProjectCardProps {
-  project: ProjectData;
+  project: DashboardProject;
   onDelete?: (id: string) => void;
+  isDeleting?: boolean;
 }
 
-const ProjectCard = ({ project, onDelete }: ProjectCardProps) => {
+const ProjectCard = ({ project, onDelete, isDeleting = false }: ProjectCardProps) => {
   const navigate = useNavigate();
   
-  const handleEdit = () => {
+  const handleOpen = () => {
     navigate(`/circuit-editor/${project.id}`);
   };
   
@@ -54,55 +43,39 @@ const ProjectCard = ({ project, onDelete }: ProjectCardProps) => {
   return (
     <Card className="h-full flex flex-col shadow-sm hover:shadow-md transition-shadow">
       <CardHeader className="pb-2">
-        <CardTitle className="text-lg text-primary flex items-center justify-between">
-          {project.name}
-          {project.microcontroller && (
-            <Badge variant="outline" className="flex items-center gap-1">
-              <Cpu className="h-3 w-3" />
-              {project.microcontroller.type}
-            </Badge>
-          )}
-        </CardTitle>
+        <Link to={`/circuit-editor/${project.id}`} className="hover:text-primary transition-colors block">
+          <CardTitle className="text-lg text-primary flex items-center justify-between">
+            <span>{project.name}</span>
+          </CardTitle>
+        </Link>
         <CardDescription className="text-sm text-muted-foreground">
-          Last updated: {formatDate(project.updatedAt)}
+          Last updated: {formatDate(project.updated_at)}
         </CardDescription>
       </CardHeader>
       
       <CardContent className="flex-grow">
-        {project.thumbnailUrl ? (
-          <div className="aspect-video bg-gray-100 rounded-md mb-3 overflow-hidden">
-            <img 
-              src={project.thumbnailUrl} 
-              alt={project.name} 
-              className="h-full w-full object-cover"
-            />
-          </div>
-        ) : (
-          <div className="aspect-video bg-gray-100 rounded-md mb-3 flex items-center justify-center text-gray-400">
-            No preview
-          </div>
-        )}
-        <p className="text-sm line-clamp-2">{project.description}</p>
-        
-        {project.microcontroller?.lastCompiled && (
-          <div className="mt-2 text-xs text-muted-foreground">
-            <span>Code compiled: {formatDate(project.microcontroller.lastCompiled)}</span>
-            {project.microcontroller.codeSize && (
-              <span className="ml-2">
-                Size: {(project.microcontroller.codeSize / 1024).toFixed(1)} KB
-              </span>
-            )}
-          </div>
-        )}
+        <div className="aspect-video bg-gray-100 rounded-md mb-3 flex items-center justify-center text-gray-400">
+          No preview available
+        </div>
       </CardContent>
       
       <CardFooter className="border-t pt-3 flex justify-between">
-        <Button variant="outline" size="sm" onClick={handleEdit}>
+        <Button variant="outline" size="sm" onClick={handleOpen}>
           <Pencil className="h-4 w-4 mr-1" />
-          Edit
+          Open
         </Button>
-        <Button variant="outline" size="sm" onClick={handleDelete} className="text-destructive hover:bg-destructive/10">
-          <Trash2 className="h-4 w-4" />
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={handleDelete} 
+          className="text-destructive hover:bg-destructive/10"
+          disabled={isDeleting}
+        >
+          {isDeleting ? (
+            <span className="animate-spin h-4 w-4">⏳</span> 
+          ) : (
+            <Trash2 className="h-4 w-4" />
+          )}
         </Button>
       </CardFooter>
     </Card>

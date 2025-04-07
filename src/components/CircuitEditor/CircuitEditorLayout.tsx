@@ -18,7 +18,7 @@ import {
   RotateCw
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { useNavigate, useLocation, useParams } from 'react-router-dom';
+import { useNavigate, useLocation, useParams, useBlocker } from 'react-router-dom';
 import { CircuitComponent } from '@/types/component';
 import { WireConnection } from '@/types/circuit';
 import { CircuitEditorProvider, useCircuitEditor } from '@/context/CircuitEditorContext';
@@ -39,10 +39,29 @@ import { getProjectById } from '@/integrations/supabase/projectsApi';
 const resizeHandleStyle = "w-[1px] bg-border hover:bg-primary transition-colors duration-200 ease-in-out";
 const verticalResizeHandleStyle = "h-[1px] bg-border hover:bg-primary transition-colors duration-200 ease-in-out";
 
+// Define props for the content component
+interface CircuitEditorLayoutContentProps {
+  isModified: boolean;
+  setIsModified: React.Dispatch<React.SetStateAction<boolean>>;
+  circuitName: string;
+  setCircuitName: React.Dispatch<React.SetStateAction<string>>;
+  saveHandlerRef: React.MutableRefObject<(() => Promise<boolean>) | null>;
+  isSaving: boolean;
+  setIsSaving: React.Dispatch<React.SetStateAction<boolean>>;
+}
+
 /**
- * Circuit Editor Layout Content - uses the CircuitEditorContext
+ * Circuit Editor Layout Content - Now receives state/setters as props + ref
  */
-const CircuitEditorLayoutContent = () => {
+const CircuitEditorLayoutContent = ({ 
+  isModified,
+  setIsModified,
+  circuitName,
+  setCircuitName,
+  saveHandlerRef,
+  isSaving,
+  setIsSaving
+}: CircuitEditorLayoutContentProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const params = useParams();
@@ -70,109 +89,110 @@ const CircuitEditorLayoutContent = () => {
     initializeProjectState,
   } = useCircuitEditor();
   
-  const [circuitName, setCircuitName] = useState<string>('Loading Project...');
-  const [isSaving, setIsSaving] = useState<boolean>(false);
-  const [isModified, setIsModified] = useState<boolean>(false);
+  // Internal state for the content layout and UI toggles
   const [showCodeEditor, setShowCodeEditor] = useState<boolean>(false);
   const [showSerialMonitor, setShowSerialMonitor] = useState<boolean>(false);
   const [verticalSplit, setVerticalSplit] = useState<boolean>(true);
   const [isClearConfirmOpen, setIsClearConfirmOpen] = useState<boolean>(false);
   const [isLoadingProject, setIsLoadingProject] = useState<boolean>(true);
-  const loadedProjectIdRef = useRef<string | null>(null); // Ref to track loaded ID
-  
-  // State to store panel sizes - Adjust mainLayout default
-  const [mainLayout, setMainLayout] = useState<number[]>([73, 27]); // Canvas 73%, Editor/Monitor 27%
+  // State for panel sizes - Keep this internal to the content component
+  const [mainLayout, setMainLayout] = useState<number[]>([73, 27]); 
   const [editorMonitorLayout, setEditorMonitorLayout] = useState<number[]>([50, 50]);
 
-  // Add refs for PanelGroups
+  const loadedProjectIdRef = useRef<string | null>(null); 
+  const isInitializingRef = useRef<boolean>(false); 
+  const isInitialLoadCompleteRef = useRef<boolean>(false);
+  const isModifiedRef = useRef<boolean>(isModified);
   const mainPanelGroupRef = useRef<ImperativePanelGroupHandle>(null);
   const innerPanelGroupRef = useRef<ImperativePanelGroupHandle>(null);
 
-  // Handlers to update layout state
+  // Define layout handlers here, where they manage local state
   const handleMainLayout: PanelGroupOnLayout = (sizes) => {
-    // Only save layout if the second panel is visible and has size
     if (sizes.length === 2 && sizes[1] > 0) {
       setMainLayout(sizes);
     }
   };
 
   const handleEditorMonitorLayout: PanelGroupOnLayout = (sizes) => {
-    // Only save layout if both inner panels are visible and have size
     if (showCodeEditor && showSerialMonitor && sizes.length === 2 && sizes[0] > 0 && sizes[1] > 0) {
       setEditorMonitorLayout(sizes);
     }
-    // Handle cases where only one panel is visible (layout will be [100])
-    // No need to save this layout as it's implicit when only one is shown
   };
 
   useEffect(() => {
-    // Prevent re-fetch/re-init if the current projectId is already loaded
+    isModifiedRef.current = isModified;
+  }, [isModified]);
+  
+  useEffect(() => {
+    const effectId = Date.now();
+    console.log(`[${effectId}] Load Effect: Running. ProjectId: ${projectId}, LoadedRef: ${loadedProjectIdRef.current}`);
+
     if (projectId && loadedProjectIdRef.current === projectId) {
-        console.log(`Project ${projectId} is already loaded. Skipping fetch.`);
-        // If we are skipping because it's loaded, ensure loading is false.
-        if (isLoadingProject) setIsLoadingProject(false);
-        return; 
+      console.log(`[${effectId}] Load Effect: Skipping fetch, already loaded.`);
+      if (isLoadingProject) setIsLoadingProject(false);
+      return;
     }
 
-    // If we reach here, we intend to load this projectId.
-    // Set the ref *immediately* to prevent StrictMode double-run race condition.
     if (projectId) {
-        loadedProjectIdRef.current = projectId; // Set ref BEFORE async fetch
-        setIsLoadingProject(true);
-        console.log(`Attempting to load project with ID: ${projectId}`);
-        getProjectById(projectId)
-          .then(projectData => {
-              // Check if the component is still mounted and processing the *correct* ID
-              // This check might be redundant now but adds safety
-              if (loadedProjectIdRef.current !== projectId) {
-                  console.log("Stale fetch result ignored for", projectId);
-                  return; 
-              }
-              if (projectData) {
-                console.log("Project data fetched:", projectData);
-                initializeProjectState({
-                  components: projectData.components ?? [],
-                  wires: projectData.wires ?? [],
-                  code: projectData.code ?? '',
-                });
-                setCircuitName(projectData.name || 'Untitled Circuit');
-                setIsModified(false);
-                // No need to set ref here, already set
-              } else {
-                console.warn(`Project with ID ${projectId} not found in database.`);
-                toast.error("Project not found");
-                setCircuitName('Project Not Found');
-                // Clear the state if project not found?
-                clearCircuitState(); 
-                // No need to set ref here, already set
-              }
-          })
-          .catch(error => {
-               if (loadedProjectIdRef.current !== projectId) {
-                  console.log("Stale fetch error ignored for", projectId);
-                  return; 
-              }
-              console.error("Error loading project:", error);
-              toast.error(`Failed to load project: ${error.message}`);
-              setCircuitName('Error Loading Project');
-              // No need to set ref here, already set
-          })
-          .finally(() => {
-              // Only set loading false if we are still concerned with this projectId
-              if (loadedProjectIdRef.current === projectId) {
-                 setIsLoadingProject(false);
-              }
-          });
+      loadedProjectIdRef.current = projectId;
+      setIsLoadingProject(true);
+      isInitializingRef.current = true;
+      isInitialLoadCompleteRef.current = false;
+      console.log(`[${effectId}] Load Effect: Attempting fetch.`);
+      getProjectById(projectId)
+        .then(projectData => {
+          console.log(`[${effectId}] Load Effect: Fetch resolved.`);
+          if (loadedProjectIdRef.current !== projectId) {
+            console.log(`[${effectId}] Load Effect: Stale fetch result ignored.`);
+            return;
+          }
+          if (projectData) {
+            console.log(`[${effectId}] Load Effect: Project data found.`);
+            initializeProjectState({
+              components: projectData.components ?? [],
+              wires: projectData.wires ?? [],
+              code: projectData.code ?? '',
+            });
+            setCircuitName(projectData.name || 'Untitled Circuit');
+            setIsModified(false);
+          } else {
+            console.warn(`[${effectId}] Load Effect: Project not found.`);
+            clearCircuitState();
+            setCircuitName('Project Not Found');
+          }
+        })
+        .catch(error => {
+          console.log(`[${effectId}] Load Effect: Fetch errored.`);
+           if (loadedProjectIdRef.current !== projectId) {
+              console.log(`[${effectId}] Load Effect: Stale error ignored.`);
+              return; 
+          }
+          console.error(`[${effectId}] Error loading project:`, error);
+          toast.error(`Failed to load project: ${error.message}`);
+          setCircuitName('Error Loading Project');
+        })
+        .finally(() => {
+          console.log(`[${effectId}] Load Effect: Finally block.`);
+          if (loadedProjectIdRef.current === projectId) {
+             console.log(`[${effectId}] Load Effect: Updating refs.`);
+             isInitializingRef.current = false;
+             setIsLoadingProject(false);
+             isInitialLoadCompleteRef.current = true;
+          } else {
+              console.log(`[${effectId}] Load Effect: Finally skip.`);
+          }
+        });
     } else {
-      // Handle case where there is no projectId
-      console.warn("No projectId provided in URL for loading.");
-      setCircuitName('New Circuit');
-      setIsLoadingProject(false);
+       console.log(`[${effectId}] Load Effect: No projectId.`);
       clearCircuitState(); 
-      loadedProjectIdRef.current = null; // Reset ref if no project ID
+      loadedProjectIdRef.current = null;
+      isInitializingRef.current = false;
+      isInitialLoadCompleteRef.current = false;
+      setCircuitName('New Circuit');
+      setIsModified(false);
+      setIsLoadingProject(false);
     }
-    // Dependency array should only include external values that trigger a re-fetch/re-init
-  }, [projectId, initializeProjectState, clearCircuitState]); // Removed isLoadingProject
+   }, [projectId, initializeProjectState, clearCircuitState, setCircuitName, setIsModified]);
 
   useEffect(() => {
     document.title = `${circuitName} - DeepCircuits Editor`;
@@ -180,29 +200,6 @@ const CircuitEditorLayoutContent = () => {
       document.title = 'DeepCircuits - Interactive Circuit Simulator';
     };
   }, [circuitName]);
-
-  const handleSaveCircuit = async () => {
-    if (!projectId) {
-        toast.error('Cannot save: Project ID is missing.');
-        console.error("Save attempt failed: No Project ID found in URL params.");
-        return;
-    }
-    if (!circuitName) {
-        toast.error('Cannot save: Project Name is missing.');
-        console.error("Save attempt failed: circuitName state is empty.");
-        return;
-    }
-    
-    setIsSaving(true);
-    try {
-      await saveProject(projectId, circuitName);
-      setIsModified(false);
-    } catch (error) {
-      console.error("Save operation failed in layout:", error); 
-    } finally {
-      setIsSaving(false);
-    }
-  };
 
   const handleSimulate = () => {
     setShowSerialMonitor(true);
@@ -214,25 +211,8 @@ const CircuitEditorLayoutContent = () => {
   };
 
   const handleBackToDashboard = () => {
-    if (isModified) {
-      toast.warning('Unsaved changes', {
-        description: 'You have unsaved changes. Save before leaving?',
-        duration: Infinity,
-        action: {
-          label: 'Save & Exit',
-          onClick: () => {
-            handleSaveCircuit();
-            navigate('/dashboard');
-          },
-        },
-        cancel: {
-          label: 'Exit Anyway',
-          onClick: () => navigate('/dashboard'),
-        },
-      });
-    } else {
-      navigate('/dashboard');
-    }
+    console.log('[handleBackToDashboard] triggered. Attempting navigation...');
+    navigate('/dashboard'); 
   };
 
   const handleCompileCode = async (codeToCompile: string) => {
@@ -242,21 +222,8 @@ const CircuitEditorLayoutContent = () => {
 
   const handleCodeChange = (newCode: string) => {
     updateCode(newCode);
+    setIsModified(true);
   };
-
-  useEffect(() => {
-    if (components.length > 0) {
-      setIsModified(true);
-    }
-  }, [components]);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsModified(true);
-    }, 5000);
-    
-    return () => clearTimeout(timer);
-  }, []);
 
   const toggleOrientation = () => {
     setVerticalSplit(!verticalSplit);
@@ -270,27 +237,24 @@ const CircuitEditorLayoutContent = () => {
   const handleRotateSelectedComponent = useCallback(() => {
     if (selectedComponent) {
       rotateComponent(selectedComponent.id);
+      setIsModified(true);
     }
   }, [selectedComponent, rotateComponent]);
 
-  // useEffect to manually trigger layout update when visibility/orientation changes
   useEffect(() => {
     const mainGroup = mainPanelGroupRef.current;
     const innerGroup = innerPanelGroupRef.current;
 
     requestAnimationFrame(() => {
       if (mainGroup) {
-        // Determine the correct layout based on current visibility
         const expectedMainLayout = (showCodeEditor || showSerialMonitor)
-          ? mainLayout  // Use stored layout [73, 27] if second panel is visible
-          : [100];     // Use layout [100] if only canvas is visible
+          ? mainLayout 
+          : [100];
         
-        // Check if expected layout is valid before setting
-        if (expectedMainLayout && expectedMainLayout.reduce((sum, size) => sum + size, 0) > 99) { // Basic check for ~100%
+        if (expectedMainLayout && expectedMainLayout.reduce((sum, size) => sum + size, 0) > 99) {
             try {
                 mainGroup.setLayout(expectedMainLayout);
             } catch (error) {
-                // Catch potential errors during layout setting, though validation should prevent most
                 console.error("Error setting main layout:", error, "Layout:", expectedMainLayout);
             }
         } else {
@@ -298,9 +262,7 @@ const CircuitEditorLayoutContent = () => {
         }
       }
 
-      // Only set inner layout if the inner group exists AND both panels are visible
       if (innerGroup && showCodeEditor && showSerialMonitor) {
-         // Check if expected layout is valid before setting
          if (editorMonitorLayout && editorMonitorLayout.reduce((sum, size) => sum + size, 0) > 99) {
             try {
                 innerGroup.setLayout(editorMonitorLayout);
@@ -314,19 +276,49 @@ const CircuitEditorLayoutContent = () => {
     });
   }, [showCodeEditor, showSerialMonitor, verticalSplit, mainLayout, editorMonitorLayout]);
 
-  // Function to actually perform the clearing - use new context action
   const performClear = () => {
     console.log("--- performClear called ---");
-    // Call the context action which handles state update and history reset
     clearCircuitState(); 
-    // Remove individual calls and toast (toast is now handled in context action)
-    // console.log("Clearing components...");
-    // handleComponentsChange([...[]]);
-    // console.log("Clearing wires...");
-    // handleWiresChange([...[]]);
-    // console.log("--- performClear finished ---");
-    // toast.success('Circuit cleared');
+    setIsModified(true);
   };
+
+  const handleSaveCircuitInternal = useCallback(async (): Promise<boolean> => {
+    const currentProjectId = params.id || null;
+    if (!currentProjectId) {
+      toast.error('Cannot save: Project ID is missing.');
+      return false; 
+    }
+    if (!circuitName) {
+      toast.error('Cannot save: Project Name is missing.');
+      return false; 
+    }
+    
+    setIsSaving(true);
+    let success = false;
+    try {
+      success = await saveProject(currentProjectId, circuitName);
+      if (success) {
+        setIsModified(false);
+      }
+    } catch (error) {
+      console.error("Error calling saveProject from content:", error); 
+      success = false;
+    } finally {
+      setIsSaving(false);
+    }
+    return success; 
+  }, [params.id, circuitName, saveProject, setIsSaving, setIsModified]);
+
+  useEffect(() => {
+    if (saveHandlerRef) {
+      saveHandlerRef.current = handleSaveCircuitInternal;
+    }
+    return () => {
+      if (saveHandlerRef) {
+        saveHandlerRef.current = null;
+      }
+    };
+  }, [saveHandlerRef, handleSaveCircuitInternal]);
 
   if (isLoadingProject) {
     return (
@@ -430,7 +422,7 @@ const CircuitEditorLayoutContent = () => {
           <Button 
             variant="outline" 
             size="sm"
-            onClick={handleSaveCircuit}
+            onClick={handleSaveCircuitInternal}
             disabled={isSaving || !isModified}
           >
             <Save className="mr-1 h-4 w-4" />
@@ -471,6 +463,7 @@ const CircuitEditorLayoutContent = () => {
                     wireConnections={wires}
                     onComponentsChange={handleComponentsChange}
                     onWiresChange={handleWiresChange}
+                    onModified={() => setIsModified(true)}
                   />
                 </div>
               </Panel>
@@ -559,12 +552,73 @@ const CircuitEditorLayoutContent = () => {
 };
 
 /**
- * Main Circuit Editor Layout component that provides the context
+ * Main Circuit Editor Layout component that provides the context AND handles blocking
  */
 export const CircuitEditorLayout = () => {
+  const [isModified, setIsModified] = useState<boolean>(false);
+  const [circuitName, setCircuitName] = useState<string>('Loading Project...');
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+
+  const saveHandlerRef = useRef<(() => Promise<boolean>) | null>(null);
+
+  const [showNavigationBlockerDialog, setShowNavigationBlockerDialog] = useState(false);
+  const blocker = useBlocker(() => isModified); 
+  const isModifiedRef = useRef<boolean>(isModified);
+  useEffect(() => { isModifiedRef.current = isModified; }, [isModified]);
+  useEffect(() => {
+    if (blocker.state === "blocked") { setShowNavigationBlockerDialog(true); }
+    else { setShowNavigationBlockerDialog(false); }
+  }, [blocker.state]);
+
   return (
     <CircuitEditorProvider>
-      <CircuitEditorLayoutContent />
+      <CircuitEditorLayoutContent 
+        isModified={isModified}
+        setIsModified={setIsModified}
+        circuitName={circuitName}
+        setCircuitName={setCircuitName}
+        saveHandlerRef={saveHandlerRef}
+        isSaving={isSaving}
+        setIsSaving={setIsSaving}
+      />
+      <AlertDialog open={showNavigationBlockerDialog} onOpenChange={setShowNavigationBlockerDialog}>
+         <AlertDialogContent>
+           <AlertDialogHeader>
+             <AlertDialogTitle>Leave Page?</AlertDialogTitle>
+             <AlertDialogDescription>
+               You have unsaved changes. Are you sure you want to leave?
+             </AlertDialogDescription>
+           </AlertDialogHeader>
+           <AlertDialogFooter>
+             <AlertDialogCancel onClick={() => blocker.reset?.()}>Cancel</AlertDialogCancel>
+             <AlertDialogAction 
+               onClick={async () => {
+                 if (saveHandlerRef.current) {
+                   const saveSuccess = await saveHandlerRef.current(); 
+                   if (saveSuccess) {
+                     blocker.proceed?.(); 
+                   } else {
+                     blocker.reset?.(); 
+                   }
+                 } else {
+                    console.error("Save handler ref not set!");
+                    toast.error("Cannot save, save handler not available.");
+                    blocker.reset?.();
+                 }
+               }}
+               disabled={isSaving}
+             >
+               {isSaving ? 'Saving...' : 'Save & Leave'}
+             </AlertDialogAction>
+             <AlertDialogAction 
+               variant="destructive" 
+               onClick={() => blocker.proceed?.()}
+             >
+               Leave Anyway
+             </AlertDialogAction>
+           </AlertDialogFooter>
+         </AlertDialogContent>
+      </AlertDialog>
     </CircuitEditorProvider>
   );
 };

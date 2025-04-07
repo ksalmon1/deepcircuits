@@ -16,6 +16,13 @@ interface ProjectSaveData {
     // is_public and thumbnail_url are not directly handled in this save function
 }
 
+// Define the structure for dashboard projects (can be simpler than full Project)
+export interface DashboardProject {
+  id: string;
+  name: string;
+  description?: string | null;
+  updated_at: string; // Keep as string from Supabase
+}
 
 /**
  * Saves or updates a project in the Supabase 'projects' table.
@@ -106,4 +113,115 @@ export async function getProjectById(projectId: string): Promise<Project | null>
         wires: data?.wires ?? [],
         code: data?.code ?? '' // Provide a default empty string for code if null
     } as Project | null;
+}
+
+/**
+ * Fetches all projects for a given user from the Supabase 'projects' table.
+ * Only selects fields needed for the dashboard view.
+ * Orders projects by updated_at descending.
+ * Assumes RLS policies restrict results to the specified user_id.
+ *
+ * @param userId - The UUID of the user whose projects to fetch.
+ * @returns An array of DashboardProject objects or throws an error.
+ * @throws Error if userId is missing or if the Supabase operation fails.
+ */
+export async function getDashboardProjectsByUserId(userId: string): Promise<DashboardProject[]> {
+    if (!userId) {
+        console.error("Error fetching dashboard projects: User ID is required.");
+        throw new Error("User ID is required for fetching dashboard projects.");
+    }
+
+    const { data, error } = await supabase
+        .from('projects')
+        .select(`
+            id,
+            name,
+            description,
+            updated_at
+        `)
+        .eq('user_id', userId)
+        .order('updated_at', { ascending: false }); // Order by most recently updated
+
+    if (error) {
+        console.error('Error fetching dashboard projects from Supabase:', error);
+        throw new Error(`Supabase fetch error: ${error.message}`);
+    }
+
+    console.log('Dashboard projects fetched successfully for user:', userId, data);
+    return data || []; // Return fetched data or an empty array if null
+}
+
+/**
+ * Deletes a project from the Supabase 'projects' table by its ID.
+ * Assumes RLS policies are in place to ensure the user can only delete their own projects.
+ *
+ * @param projectId - The UUID of the project to delete.
+ * @returns Promise<void> - Resolves if deletion is successful, throws error otherwise.
+ * @throws Error if projectId is missing or if the Supabase operation fails.
+ */
+export async function deleteProjectById(projectId: string): Promise<void> {
+    if (!projectId) {
+        console.error("Error deleting project: Project ID is required.");
+        throw new Error("Project ID is required for deletion.");
+    }
+
+    console.log('Attempting to delete project with ID:', projectId);
+
+    const { error } = await supabase
+        .from('projects')
+        .delete()
+        .eq('id', projectId);
+
+    if (error) {
+        console.error('Error deleting project from Supabase:', error);
+        throw new Error(`Supabase delete error: ${error.message}`);
+    }
+
+    console.log('Project deleted successfully from Supabase:', projectId);
+    // No data is typically returned on delete, so we just check for errors.
+}
+
+/**
+ * Creates a new project record in the Supabase 'projects' table.
+ *
+ * @param projectId - The client-generated UUID for the new project.
+ * @param userId - The UUID of the user creating the project.
+ * @param name - The initial name for the project.
+ * @returns The newly created project data or null if an error occurred.
+ * @throws Error if required IDs/name are missing or if the Supabase operation fails.
+ */
+export async function createProject(projectId: string, userId: string, name: string): Promise<Project | null> {
+    if (!projectId || !userId || !name) {
+        console.error("Error creating project: Project ID, User ID, and Name are required.");
+        throw new Error("Project ID, User ID, and Name are required for creation.");
+    }
+
+    console.log(`Attempting to create project: ${name} (ID: ${projectId}) for user: ${userId}`);
+
+    const newProjectData = {
+        id: projectId,
+        user_id: userId,
+        name: name,
+        description: null, // Default values
+        components: [],
+        wires: [],
+        code: '// Start coding your circuit!\nvoid setup() {\n  \n}\n\nvoid loop() {\n  \n}', 
+        is_public: false,
+        thumbnail_url: null,
+        // created_at and updated_at will be handled by the database defaults/triggers
+    };
+
+    const { data, error } = await supabase
+        .from('projects')
+        .insert(newProjectData)
+        .select() // Select the inserted row
+        .single(); // Expect a single row back
+
+    if (error) {
+        console.error('Error creating project in Supabase:', error);
+        throw new Error(`Supabase create error: ${error.message}`);
+    }
+
+    console.log('Project created successfully in Supabase:', data);
+    return data as Project | null;
 } 

@@ -84,7 +84,7 @@ interface CircuitCanvasProps {
   wireConnections: WireEdge[];
   onComponentsChange: (components: CircuitComponent[]) => void;
   onWiresChange: (wires: WireEdge[]) => void;
-  // Add any other necessary props (e.g., selectedComponentId, onSelect)
+  onModified?: () => void;
 }
 
 // Utility function - Update type to 'circuitComponent'
@@ -123,6 +123,7 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
   wireConnections,
   onComponentsChange,
   onWiresChange,
+  onModified,
 }) => {
   // Remove the wrapper ref again
   // const reactFlowWrapper = useRef<HTMLDivElement>(null);
@@ -192,9 +193,10 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
           comp => !removedNodeIds.includes(comp.id)
         );
         onComponentsChange(updatedComponents);
+        onModified?.();
       }
     },
-    [onNodesChangeInternal, circuitComponents, onComponentsChange] // Add dependencies
+    [onNodesChangeInternal, circuitComponents, onComponentsChange, onModified]
   );
 
   const onConnect: OnConnect = useCallback((connection: Connection) => {
@@ -249,9 +251,9 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
       console.log('Creating new WireEdge:', newWire);
       // Update the external state via the callback prop
       onWiresChange([...wireConnections, newWire]);
-
+      onModified?.();
     },
-    [circuitComponents, wireConnections, onWiresChange] // Add dependencies
+    [circuitComponents, wireConnections, onWiresChange, onModified]
   );
 
   const onNodeDragStop = useCallback((event: React.MouseEvent, node: Node) => {
@@ -261,8 +263,9 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
         comp.id === node.id ? { ...comp, left: node.position.x, top: node.position.y } : comp
       );
       onComponentsChange(updatedComponents);
+      onModified?.();
     },
-    [circuitComponents, onComponentsChange]
+    [circuitComponents, onComponentsChange, onModified]
   );
 
   // --- React Flow Selection Handlers ---
@@ -275,12 +278,14 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
       console.warn('Clicked node data is not a valid CircuitComponent:', node.data);
       selectComponent(null); // Clear selection if data is invalid
     }
-  }, [selectComponent]);
+    onModified?.();
+  }, [selectComponent, onModified]);
 
   const handlePaneClick: OnPaneClick = useCallback(() => {
     console.log('Pane clicked, clearing selection.');
     selectComponent(null);
-  }, [selectComponent]);
+    onModified?.();
+  }, [selectComponent, onModified]);
 
   // --- React Flow Drag and Drop Handlers ---
   const onDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => {
@@ -356,9 +361,10 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
 
       console.log('ReactFlow drop: creating component with details:', newComponent);
       onComponentsChange([...circuitComponents, newComponent]);
+      onModified?.();
     },
     // Update dependencies to include draggingComponentType
-    [reactFlowInstance, circuitComponents, onComponentsChange, libraryComponents, componentsDetailsMap, draggingComponentType]
+    [reactFlowInstance, circuitComponents, onComponentsChange, libraryComponents, componentsDetailsMap, draggingComponentType, onModified]
   );
   // ----------------------------------------------------
 
@@ -375,8 +381,9 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
       );
       onComponentsChange(remainingComponents);
       onWiresChange(remainingWires);
+      onModified?.();
     },
-    [circuitComponents, wireConnections, onComponentsChange, onWiresChange]
+    [circuitComponents, wireConnections, onComponentsChange, onWiresChange, onModified]
   );
 
   const onEdgesDelete = useCallback(
@@ -386,11 +393,34 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
       // Remove wires corresponding to deleted edges
       const remainingWires = wireConnections.filter(wire => !deletedEdgeIds.has(wire.id));
       onWiresChange(remainingWires);
+      onModified?.();
     },
-    [wireConnections, onWiresChange]
+    [wireConnections, onWiresChange, onModified]
   );
 
-  // ---------------------------------------------
+  // Add edge deletion handling
+  const handleEdgesChange: OnEdgesChange = useCallback(
+    (changes) => {
+      // Apply changes internally
+      onEdgesChange(changes);
+      
+      // Find removed edges
+      const removedEdgeIds = changes
+        .filter(change => change.type === 'remove')
+        .map(change => change.id);
+      
+      if (removedEdgeIds.length > 0) {
+        console.log("Edges removed:", removedEdgeIds);
+        // Update parent state
+        const updatedEdges = wireConnections.filter(
+          edge => !removedEdgeIds.includes(edge.id)
+        );
+        onWiresChange(updatedEdges);
+        onModified?.();
+      }
+    },
+    [onEdgesChange, wireConnections, onWiresChange, onModified]
+  );
 
   // Handle React Flow instance initialization
   const handleInit = (instance: ReactFlowInstance) => {
@@ -401,6 +431,10 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
     }
   };
 
+  // Memoize nodeTypes and edgeTypes to prevent unnecessary re-renders
+  const memoizedNodeTypes = useMemo(() => nodeTypes, []);
+  const memoizedEdgeTypes = useMemo(() => edgeTypes, []);
+
   return (
     // Remove ref from wrapper div
     <div className="flex-grow h-full relative" /* Removed ref={reactFlowWrapper} */ >
@@ -410,7 +444,7 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
           nodes={nodes}
           edges={edges}
           onNodesChange={handleNodesChange}
-          onEdgesChange={onEdgesChange}
+          onEdgesChange={handleEdgesChange}
           onConnect={onConnect}
           onNodeDragStop={onNodeDragStop}
           // Use handleInit instead of onInit directly to manage restore/fitView logic
@@ -419,9 +453,9 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
           onEdgesDelete={onEdgesDelete}
           onNodeClick={handleNodeClick}
           onPaneClick={handlePaneClick}
-          nodeTypes={nodeTypes}
+          nodeTypes={memoizedNodeTypes}
           // Restore edgeTypes
-          edgeTypes={edgeTypes}
+          edgeTypes={memoizedEdgeTypes}
           // Restore custom connection line
           connectionLineComponent={ManhattanConnectionLine}
           connectionMode={ConnectionMode.Loose}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Route, Routes } from "react-router-dom";
+import { Route, Outlet } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster as SonnerToaster } from "@/components/ui/sonner"
 
@@ -34,62 +34,8 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <ComponentLibraryProvider>
-          <Routes>
-            {/* Public Routes */}
-            <Route path="/" element={<Index />} />
-            <Route path="/login" element={<PublicOnlyRoute><Login /></PublicOnlyRoute>} />
-            <Route path="/signup" element={<PublicOnlyRoute><Signup /></PublicOnlyRoute>} />
-            <Route path="/about" element={<About />} />
-            <Route path="/features" element={<Features />} />
-            <Route path="/pricing" element={<Pricing />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            
-            {/* These routes will show 404 until implemented */}
-            <Route path="/documentation" element={<NotFound />} />
-            <Route path="/tutorials" element={<NotFound />} />
-            <Route path="/blog" element={<NotFound />} />
-            <Route path="/team" element={<NotFound />} />
-            <Route path="/contact" element={<NotFound />} />
-
-            {/* Protected Routes */}
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/profile"
-              element={
-                <ProtectedRoute>
-                  <ProfileSettings />
-                </ProtectedRoute>
-              }
-            />
-            
-            {/* Admin Routes */}
-            <Route path="/admin" element={<AdminRoute><AdminSettings /></AdminRoute>} />
-            <Route path="/admin/users" element={<AdminRoute><UserManagement /></AdminRoute>} />
-            <Route path="/admin/system" element={<AdminRoute><SystemSettings /></AdminRoute>} />
-            <Route path="/admin/components" element={<AdminRoute><ComponentAdmin /></AdminRoute>} />
-            <Route path="/admin/database" element={<AdminRoute><DatabaseBackup /></AdminRoute>} />
-            
-            <Route
-              path="/circuit-editor/:id"
-              element={
-                <ProtectedRoute>
-                  <CircuitEditorLayout />
-                </ProtectedRoute>
-              }
-            />
-
-            {/* 404 Route */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-          <SonnerToaster position="top-center" />
+          <Outlet />
+          <SonnerToaster position="top-center" duration={3000} />
         </ComponentLibraryProvider>
       </AuthProvider>
     </QueryClientProvider>

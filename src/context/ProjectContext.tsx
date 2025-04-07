@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, ReactNode, useMemo } from 'react';
 import { CircuitComponent } from '@/types/component';
 import { WireEdge } from '@/types/circuit';
 import { toast } from 'sonner';
@@ -52,7 +52,7 @@ interface ProjectContextType {
   clearCircuitState: () => void; // Add clear action type
 
   // Other actions
-  saveProject: (projectId: string, projectName: string) => Promise<void>;
+  saveProject: (projectId: string, projectName: string) => Promise<boolean>;
   exportProject: () => void;
   importProject: (projectData: ProjectState) => void; // Update import signature
 
@@ -242,47 +242,48 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
   }, []);
 
   // --- Other Core Actions (save/export use currentState, import resets state) ---
-  const coreSaveProject = useCallback(async (projectId: string, projectName: string) => {
+  const coreSaveProject = useCallback(async (projectId: string, projectName: string): Promise<boolean> => {
     if (!user) {
       toast.error('You must be logged in to save a project.');
       setError(new Error('User not authenticated for saving.'));
-      return;
-    }
-    if (!projectId || !projectName) {
-        toast.error('Project ID and Name are required to save.');
-        setError(new Error('Missing Project ID or Name for saving.'));
-        return;
+      return false; // Indicate failure
     }
 
-    const projectData = {
+    const currentProjectState = historyState.history[historyState.currentIndex];
+    console.log('Attempting to save Project State to Supabase:', { id: projectId, user_id: user.id, name: projectName, ...currentProjectState });
+
+    try {
+      const result = await saveProjectToSupabase({
         id: projectId,
         user_id: user.id,
         name: projectName,
-        components: currentState.components,
-        wires: currentState.wires,
-        code: currentState.code,
-        // description, thumbnail_url, is_public could be added if needed
-    };
+        components: currentProjectState.components,
+        wires: currentProjectState.wires,
+        code: currentProjectState.code,
+        // description is not part of currentProjectState, potentially add later
+      });
 
-    console.log("Attempting to save Project State to Supabase:", projectData); // Log data being sent
-    // toast.info('Saving project...'); // Commented out the info toast
-
-    try {
-      const savedProject = await saveProjectToSupabase(projectData);
-      if (savedProject) {
+      if (result) {
+        console.log('Project saved successfully:', result);
         toast.success('Project saved successfully!');
-        console.log('Project saved successfully:', savedProject);
+        return true; // Indicate success
       } else {
-        // This case might occur if upsert doesn't return data or saveProjectToSupabase returns null explicitly on non-error
-        toast.warning('Project saved, but no confirmation data received.');
-         console.warn('Project save operation completed, but no data returned from API function.');
+        // This case might not be reachable if saveProjectToSupabase throws on error,
+        // but handle it defensively.
+        console.error('Save operation returned null/undefined.');
+        toast.error('Failed to save project.', { description: 'The save operation did not return the expected result.'});
+        setError(new Error('Save operation failed unexpectedly.'));
+        return false; // Indicate failure
       }
-    } catch (error: any) {
-      console.error("Error saving project:", error);
-      toast.error(`Failed to save project: ${error.message}`);
-      setError(error); // Set error state for potential global handling
+    } catch (error) {
+      console.error('Error during save project operation:', error);
+      toast.error('Failed to save project.', {
+        description: error instanceof Error ? error.message : 'An unknown error occurred.',
+      });
+      setError(error instanceof Error ? error : new Error('An unknown save error occurred.'));
+      return false; // Indicate failure
     }
-  }, [currentState, user, setError]);
+  }, [user, historyState, setError]);
   
   const coreExportProject = useCallback(() => {
     const projectData = currentState; // currentState is derived correctly
@@ -305,12 +306,12 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
         wires: Array.isArray(projectData.wires) ? projectData.wires : [],
         code: typeof projectData.code === 'string' ? projectData.code : initialCode,
     };
-    // Reset state completely for import
+    // Reset history, similar to initializeProjectState
     setHistoryState({
         history: [validatedState],
         currentIndex: 0,
     });
-    toast.success("Project imported successfully!");
+    toast.success("Project imported.");
   }, []);
   
   // --- Add Core Clear Action --- 
@@ -382,35 +383,41 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
   const canUndo = historyState.currentIndex > 0;
   const canRedo = historyState.currentIndex < historyState.history.length - 1;
 
-  // --- Provide Context Value (derived from currentState and combined state) ---
-  // Now the functions provided here should have stable references
-  const value = {
-    components: currentState.components,
-    wires: currentState.wires,
-    code: currentState.code,
-    draggingComponentType,
-    handleComponentsChange,
-    handleWiresChange,
-    updateCode,
-    handleUpdateComponentAttributes,
-    rotateComponent,
-    setDraggingComponentType,
-    undoLastAction,
-    redoLastAction,
-    clearCircuitState,
-    canUndo,
-    canRedo,
-    saveProject,
-    exportProject,
-    importProject,
-    initializeProjectState,
-  };
-  
-  // Log the value being provided
-  console.log("ProjectContext: Providing value - Components:", currentState.components?.length, "Wires:", currentState.wires?.length);
+  // --- Memoized Context Value --- 
+  const contextValue = useMemo(() => {
+    const current = historyState.history[historyState.currentIndex];
+    console.log(`ProjectContext: Providing value - Components: ${current.components.length} Wires: ${current.wires.length}`);
+    return {
+      components: current.components,
+      wires: current.wires,
+      code: current.code,
+      draggingComponentType: draggingComponentType,
+      // Actions:
+      handleComponentsChange: withErrorHandling(coreHandleComponentsChange, setError, 'UPDATE_COMPONENTS'),
+      handleWiresChange: withErrorHandling(coreHandleWiresChange, setError, 'UPDATE_WIRES'),
+      updateCode: withErrorHandling(coreUpdateCode, setError, 'UPDATE_CODE'),
+      handleUpdateComponentAttributes: withErrorHandling(coreUpdateComponentAttributes, setError, 'UPDATE_ATTRIBUTES'),
+      rotateComponent: withErrorHandling(coreRotateComponent, setError, 'ROTATE_COMPONENT'),
+      setDraggingComponentType: coreSetDraggingComponentType, // No error handling needed
+      undoLastAction: withErrorHandling(coreUndoLastAction, setError, 'UNDO'),
+      redoLastAction: withErrorHandling(coreRedoLastAction, setError, 'REDO'),
+      clearCircuitState: withErrorHandling(() => {
+          // Wrap the state reset logic for error handling if needed, though unlikely to fail
+          setHistoryState(initialHistoryState);
+          toast.info('Circuit cleared.');
+      }, setError, 'CLEAR_CIRCUIT'),
+      saveProject: withErrorHandling(coreSaveProject, setError, 'SAVE_PROJECT'),
+      exportProject: withErrorHandling(coreExportProject, setError, 'EXPORT_PROJECT'),
+      importProject: withErrorHandling(coreImportProject, setError, 'IMPORT_PROJECT'),
+      initializeProjectState: withErrorHandling(coreInitializeProjectState, setError, 'INITIALIZE_PROJECT'),
+      // History flags:
+      canUndo: historyState.currentIndex > 0,
+      canRedo: historyState.currentIndex < historyState.history.length - 1,
+    };
+  }, [historyState, draggingComponentType, setError, coreUndoLastAction, coreRedoLastAction, coreInitializeProjectState, coreSaveProject, coreExportProject, coreImportProject]);
 
   return (
-    <ProjectContext.Provider value={value}>
+    <ProjectContext.Provider value={contextValue}>
       {children}
     </ProjectContext.Provider>
   );
@@ -418,7 +425,7 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
 
 export const useProject = (): ProjectContextType => {
   const context = useContext(ProjectContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useProject must be used within a ProjectProvider');
   }
   return context;

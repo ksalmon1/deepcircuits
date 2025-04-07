@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import PageLayout from "@/components/layout/PageLayout";
 import { useAuth } from "@/context/AuthContext";
 import { useProfile } from "@/hooks/use-profile";
@@ -15,40 +15,18 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-
-const sampleProjects: ProjectData[] = [
-  {
-    id: "1",
-    name: "LED Blink Circuit",
-    description: "Simple Arduino circuit that blinks an LED on and off.",
-    updatedAt: "2023-09-15T14:48:00.000Z",
-  },
-  {
-    id: "2",
-    name: "Temperature Sensor",
-    description: "Circuit that reads temperature using a DHT22 sensor and displays it on an LCD.",
-    updatedAt: "2023-10-02T09:23:00.000Z",
-  },
-  {
-    id: "3",
-    name: "Motor Control",
-    description: "DC motor control circuit with speed adjustment.",
-    updatedAt: "2023-11-10T15:30:00.000Z",
-  },
-  {
-    id: "4",
-    name: "IoT Weather Station",
-    description: "ESP32-based weather station that uploads data to the cloud.",
-    updatedAt: "2023-12-05T11:20:00.000Z",
-  },
-];
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { getDashboardProjectsByUserId, DashboardProject, deleteProjectById, createProject } from "@/integrations/supabase/projectsApi";
 
 type SortOption = "name-asc" | "name-desc" | "date-asc" | "date-desc";
 
@@ -56,52 +34,125 @@ const Dashboard = () => {
   const { user } = useAuth();
   const { profile } = useProfile();
   const navigate = useNavigate();
-  const [projects, setProjects] = useState<ProjectData[]>(sampleProjects);
+  const [projects, setProjects] = useState<DashboardProject[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortOption, setSortOption] = useState<SortOption>("date-desc");
-  const [filterType, setFilterType] = useState<string>("all");
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState<boolean>(false);
+  const [projectToDeleteId, setProjectToDeleteId] = useState<string | null>(null);
+  const [isCreating, setIsCreating] = useState<boolean>(false);
 
-  const handleCreateProject = () => {
+  useEffect(() => {
+    if (user?.id) {
+      setIsLoading(true);
+      setError(null);
+      console.log('Dashboard: Fetching projects for user:', user.id);
+      getDashboardProjectsByUserId(user.id)
+        .then(data => {
+          console.log('Dashboard: Projects fetched successfully', data);
+          setProjects(data);
+        })
+        .catch(err => {
+          console.error('Dashboard: Error fetching projects:', err);
+          setError("Failed to load your projects. Please try again later.");
+          toast.error("Failed to load projects", {
+            description: err.message || "An unknown error occurred.",
+          });
+        })
+        .finally(() => {
+          setIsLoading(false);
+        });
+    } else {
+        setIsLoading(false);
+        setProjects([]);
+        console.log('Dashboard: No user ID available, skipping fetch.');
+    }
+  }, [user?.id]);
+
+  const handleCreateProject = async () => {
+    if (!user?.id) {
+      toast.error("You must be logged in to create a project.");
+      return;
+    }
+    if (isCreating) return;
+
+    setIsCreating(true);
     const newProjectId = crypto.randomUUID();
-    const newProject: ProjectData = {
-      id: newProjectId,
-      name: "New Project",
-      description: "",
-      updatedAt: new Date().toISOString(),
-    };
-    
-    setProjects([...projects, newProject]);
-    toast.success("New project initialized", {
-      description: `Navigating to editor...`,
-    });
-    navigate(`/circuit-editor/${newProjectId}`);
+    const newProjectName = "Untitled Project";
+
+    console.log(`Dashboard: Attempting to create project ${newProjectName} (${newProjectId})`);
+    try {
+      const createdProject = await createProject(newProjectId, user.id, newProjectName);
+
+      if (createdProject) {
+        console.log(`Dashboard: Project created successfully in DB. Navigating...`, createdProject);
+        const newDashboardProject: DashboardProject = {
+          id: createdProject.id,
+          name: createdProject.name,
+          description: createdProject.description,
+          updated_at: createdProject.updated_at
+        };
+        setProjects(prevProjects => [newDashboardProject, ...prevProjects]);
+
+        toast.success("New project created", {
+          description: `Navigating to editor...`,
+        });
+        navigate(`/circuit-editor/${newProjectId}`);
+      } else {
+        throw new Error("Project creation call returned no data.");
+      }
+    } catch (err) {
+      console.error("Dashboard: Error creating project:", err);
+      toast.error("Failed to create project", {
+        description: err instanceof Error ? err.message : "An unknown error occurred.",
+      });
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   const handleDeleteProject = (id: string) => {
-    toast.warning("Delete project?", {
-      description: "This action cannot be undone.",
-      action: {
-        label: "Delete",
-        onClick: () => {
-          setProjects(projects.filter(project => project.id !== id));
-          toast.success("Project deleted");
-        },
-      },
-    });
+    if (!id || isDeleting) return;
+    setProjectToDeleteId(id);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteProject = async () => {
+    if (!projectToDeleteId || isDeleting) return;
+    
+    const idToDelete = projectToDeleteId;
+    setIsDeleting(idToDelete);
+    setIsDeleteDialogOpen(false);
+    setProjectToDeleteId(null);
+    
+    console.log(`Dashboard: Confirming delete for project ${idToDelete}`);
+    try {
+      await deleteProjectById(idToDelete);
+      setProjects(prevProjects => prevProjects.filter(project => project.id !== idToDelete));
+      console.log(`Dashboard: Project ${idToDelete} deleted successfully locally.`);
+      toast.success("Project deleted successfully");
+    } catch (err) {
+      console.error(`Dashboard: Error deleting project ${idToDelete}:`, err);
+      toast.error("Failed to delete project", {
+        description: err instanceof Error ? err.message : "An unknown error occurred.",
+      });
+    } finally {
+      setIsDeleting(null);
+    }
+  };
+
+  const cancelDeleteProject = () => {
+     setIsDeleteDialogOpen(false);
+     setProjectToDeleteId(null);
   };
 
   const filteredProjects = useMemo(() => {
     let result = projects.filter(project => 
       project.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      project.description?.toLowerCase().includes(searchQuery.toLowerCase())
+      (project.description && project.description.toLowerCase().includes(searchQuery.toLowerCase()))
     );
-    
-    if (filterType !== "all") {
-      result = result.filter(project => {
-        const hasKeyword = project.description?.toLowerCase().includes(filterType.toLowerCase());
-        return hasKeyword;
-      });
-    }
     
     return result.sort((a, b) => {
       switch (sortOption) {
@@ -117,7 +168,7 @@ const Dashboard = () => {
           return 0;
       }
     });
-  }, [projects, searchQuery, sortOption, filterType]);
+  }, [projects, searchQuery, sortOption]);
 
   return (
     <PageLayout>
@@ -136,9 +187,9 @@ const Dashboard = () => {
         <div className="mb-6 flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold">Your Projects</h2>
-            <Button onClick={handleCreateProject}>
+            <Button onClick={handleCreateProject} disabled={isCreating}>
               <Plus className="mr-1 h-4 w-4" />
-              New Project
+              {isCreating ? 'Creating...' : 'New Project'}
             </Button>
           </div>
           
@@ -154,23 +205,6 @@ const Dashboard = () => {
             </div>
             
             <div className="flex gap-2">
-              <Select
-                value={filterType}
-                onValueChange={setFilterType}
-              >
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Filter by type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Projects</SelectItem>
-                  <SelectItem value="arduino">Arduino</SelectItem>
-                  <SelectItem value="esp32">ESP32</SelectItem>
-                  <SelectItem value="sensor">Sensors</SelectItem>
-                  <SelectItem value="motor">Motors</SelectItem>
-                  <SelectItem value="lcd">Displays</SelectItem>
-                </SelectContent>
-              </Select>
-              
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm" className="flex items-center gap-1">
@@ -197,28 +231,73 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filteredProjects.map((project) => (
-            <ProjectCard
-              key={project.id}
-              project={project}
-              onDelete={handleDeleteProject}
-            />
-          ))}
-          
-          {projects.length === 0 && (
-            <div className="col-span-full py-12 text-center text-slate-500">
-              <p>You don't have any projects yet. Create your first project using the "New Project" button.</p>
-            </div>
-          )}
-          
-          {projects.length > 0 && filteredProjects.length === 0 && (
-            <div className="col-span-full py-12 text-center text-slate-500">
-              <p>No projects match your search criteria. Try adjusting your filters.</p>
-            </div>
-          )}
-        </div>
+        {isLoading && (
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {[...Array(4)].map((_, index) => (
+              <div key={index} className="flex flex-col space-y-3">
+                <Skeleton className="h-[125px] w-full rounded-xl" />
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-[200px]" />
+                  <Skeleton className="h-4 w-[150px]" />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        
+        {!isLoading && error && (
+           <div className="col-span-full rounded-md border border-destructive bg-destructive/10 p-4 text-center text-destructive">
+            <p><strong>Error:</strong> {error}</p>
+          </div>
+        )}
+
+        {!isLoading && !error && (
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {filteredProjects.map((project) => (
+              <ProjectCard
+                key={project.id}
+                project={project}
+                onDelete={handleDeleteProject}
+                isDeleting={isDeleting === project.id}
+              />
+            ))}
+            
+            {projects.length === 0 && (
+              <div className="col-span-full py-12 text-center text-slate-500">
+                <p>You don't have any projects yet. Create your first project using the "New Project" button.</p>
+              </div>
+            )}
+            
+            {projects.length > 0 && filteredProjects.length === 0 && (
+              <div className="col-span-full py-12 text-center text-slate-500">
+                <p>No projects match your search criteria. Try adjusting your filters.</p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the project 
+              and all associated data from our servers.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={cancelDeleteProject}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeleteProject}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isDeleting === projectToDeleteId}
+            >
+              {isDeleting === projectToDeleteId ? 'Deleting...' : 'Delete Project'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </PageLayout>
   );
 };
