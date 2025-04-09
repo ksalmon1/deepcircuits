@@ -1,69 +1,95 @@
-# Welcome to your Lovable project
+# DeepCircuits
 
-## Project info
+DeepCircuits is a web-based interactive circuit simulator for designing, testing, and analyzing electronic circuits in a user-friendly environment.
 
-**URL**: https://lovable.dev/projects/5f4020f9-40c3-4d86-ab51-f95955dafa1d
+## Features
 
-## How can I edit this code?
+- **Interactive Circuit Editor**: Drag-and-drop circuit components with intuitive wiring
+- **Real-time Simulation**: Analyze circuit behavior with accurate voltage and current calculations
+- **Component Library**: Access a variety of electronic components including resistors, capacitors, diodes, LEDs, and voltage sources
+- **Custom SPICE Integration**: Powered by ngspice compiled to WebAssembly for accurate circuit simulations
+- **Responsive Design**: Works across desktop and tablet devices
 
-There are several ways of editing your application.
+## Technology Stack
 
-**Use Lovable**
+- **Frontend**:
+  - React 18 with TypeScript
+  - Vite for fast builds
+  - Tailwind CSS for styling
+  - shadcn/ui components
+  - React Flow for circuit canvas
+  
+- **Simulation Engine**:
+  - Custom-compiled ngspice/WASM integration
+  - SPICE simulation for accurate circuit analysis
+  
+- **Authentication & Backend**:
+  - Supabase for authentication and database
+  - React Query for data fetching
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/5f4020f9-40c3-4d86-ab51-f95955dafa1d) and start prompting.
+## Getting Started
 
-Changes made via Lovable will be committed automatically to this repo.
+### Prerequisites
 
-**Use your preferred IDE**
+- Node.js (v16 or higher)
+- npm or yarn
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### Installation
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/ksalmon1/deepcircuits.git
+   cd deepcircuits
+   ```
 
-Follow these steps:
+2. Install dependencies:
+   ```bash
+   npm install
+   # or
+   yarn install
+   ```
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+3. Start the development server:
+   ```bash
+   npm run dev
+   # or
+   yarn dev
+   ```
+   
+## Architecture
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+DeepCircuits uses a modular architecture:
 
-# Step 3: Install the necessary dependencies.
-npm i
+1. **User Interface Layer**: React components for the circuit editor, component library, and simulation controls
+2. **Simulation Layer**: SPICE simulation engine integrated via WebAssembly
+3. **Data Management Layer**: State management with React Context and components data structures
+4. **Backend Integration**: Data persistence via Supabase
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+## SPICE Simulation Details
 
-**Edit a file directly in GitHub**
+The simulation engine in DeepCircuits is powered by ngspice compiled to WebAssembly. 
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+See [deepcircuits-ngspice-wasm](https://github.com/ksalmon1/deepcircuits-ngspice-wasm)
 
-**Use GitHub Codespaces**
+The core simulation process:
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+1. **Component Definition**: Components like resistors, capacitors, diodes, and voltage sources are defined with their properties
+2. **Netlist Generation**: Circuit connections are converted to a SPICE-compatible netlist format
+3. **Simulation Execution**: The ngspice WASM module processes the netlist and runs the simulation
+4. **Result Processing**: Simulation outputs (node voltages and branch currents) are parsed and displayed
 
-## What technologies are used for this project?
+The `spiceService.ts` module handles:
+- Converting components to SPICE models and element lines
+- Adding appropriate control statements for simulation
+- Processing and displaying simulation results
+- Error handling and diagnostics
 
-This project is built with .
+## License
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+This project is licensed under the MIT License.
 
-## How can I deploy this project?
+## Acknowledgments
 
-Simply open [Lovable](https://lovable.dev/projects/5f4020f9-40c3-4d86-ab51-f95955dafa1d) and click on Share -> Publish.
-
-## I want to use a custom domain - is that possible?
-
-We don't support custom domains (yet). If you want to deploy your project under your own domain then we recommend using Netlify. Visit our docs for more details: [Custom domains](https://docs.lovable.dev/tips-tricks/custom-domain/)
+- [ngspice](http://ngspice.sourceforge.net/) - The open source SPICE circuit simulator
+- [React Flow](https://reactflow.dev/) - Interactive node-based UI for the circuit editor
+- [shadcn/ui](https://ui.shadcn.com/) - UI component system
