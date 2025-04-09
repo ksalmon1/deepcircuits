@@ -54,7 +54,9 @@ interface EditComponentDialogProps {
 // Define available signal types for the dropdown
 const AVAILABLE_SIGNALS = [
   'power', 'ground', 'digital', 'analog', 'i2c', 'spi', 'uart', 
-  'pwm', 'clock', 'data', 'reset', 'interrupt', 'other'
+  'pwm', 'clock', 'data', 'reset', 'interrupt', 
+  'passive',
+  'other'
 ];
 
 const EditComponentDialog = ({
@@ -108,6 +110,14 @@ const EditComponentDialog = ({
     onPinUpdate(updatedPins);
   };
 
+  const handlePinHandleIdChange = (index: number, handleId: string) => {
+    if (!editedComponent || !editedComponent.pins) return;
+    const updatedPins = editedComponent.pins.map((pin, i) => 
+      i === index ? { ...pin, handle_id: handleId } : pin
+    );
+    onPinUpdate(updatedPins);
+  };
+
   const handlePinSignalChange = (index: number, signal: string) => {
     if (!editedComponent || !editedComponent.pins) return;
     const updatedPins = editedComponent.pins.map((pin, i) =>
@@ -118,21 +128,25 @@ const EditComponentDialog = ({
 
   const handleDeletePin = (index: number) => {
     if (!editedComponent || !editedComponent.pins) return;
+    const pinToDelete = editedComponent.pins[index];
+    const pinIdentifier = pinToDelete.name || `Pin ${index + 1}`;
     const updatedPins = editedComponent.pins.filter((_, i) => i !== index);
     onPinUpdate(updatedPins);
-    toast({ title: `Pin ${index + 1} deleted` });
+    toast.success(`Deleted: ${pinIdentifier}`);
   };
 
   const handleAddPin = () => {
     if (!editedComponent) return;
+    const nextPinIndex = (editedComponent.pins || []).length;
     const newPin: ComponentPin = {
-      name: `Pin ${ (editedComponent.pins || []).length + 1 }`,
+      name: `Pin ${nextPinIndex + 1}`,
       x: 10,
-      y: (editedComponent.pins || []).length * 15 + 10,
-      signals: ['digital']
+      y: nextPinIndex * 15 + 10,
+      signals: ['digital'],
+      handle_id: `pin-${nextPinIndex}`
     };
     onPinUpdate([...(editedComponent.pins || []), newPin]);
-    toast({ title: "New pin added" });
+    toast.success(`Added: ${newPin.name}`);
   };
 
   return (
@@ -303,17 +317,24 @@ const EditComponentDialog = ({
                             <div key={index} className="border rounded p-3 bg-white">
                               <div className="flex justify-between items-center mb-2">
                                 <span className="font-medium text-primary">
-                                  {index + 1} {pin.name}
+                                  {index + 1} - {pin.name} ({pin.handle_id || 'No ID'})
                                 </span>
                                 <Button variant="ghost" size="sm" onClick={() => handleDeletePin(index)} title="Delete Pin">
                                   <Trash2 className="h-4 w-4 text-destructive" />
                                 </Button>
                               </div>
-                              <div className="grid grid-cols-2 gap-2 text-sm mb-2">
+                              <div className="grid grid-cols-3 gap-2 text-sm mb-2">
                                 <Input 
-                                  placeholder="Pin Name" 
+                                  placeholder="Pin Name"
+                                  title="User-facing pin name"
                                   value={pin.name} 
                                   onChange={(e) => handlePinNameChange(index, e.target.value)} 
+                                />
+                                <Input 
+                                  placeholder="Handle ID"
+                                  title="Internal Handle ID (e.g., pin-0)"
+                                  value={pin.handle_id || ''}
+                                  onChange={(e) => handlePinHandleIdChange(index, e.target.value)} 
                                 />
                                  <Select 
                                   value={pin.signals?.[0] || ''} 
@@ -330,7 +351,7 @@ const EditComponentDialog = ({
                                 </Select>
                               </div>
                               <div className="text-xs text-muted-foreground">
-                                x: {pin.x}, y: {pin.y}
+                                Pos: ({pin.x?.toFixed(1)}, {pin.y?.toFixed(1)})
                               </div>
                             </div>
                           ))}

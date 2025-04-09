@@ -122,12 +122,12 @@ export async function getComponentWithDetails(id: string): Promise<ComponentLibr
     console.log('Getting component with details for ID:', id);
 
     const { data: rpcData, error: rpcError } = await supabase.rpc('get_component_with_details', {
-      component_id: id
+      component_id_input: id 
     });
 
     if (rpcError) {
       console.error('Error in RPC get_component_with_details:', rpcError);
-      return null;
+      throw new Error(`RPC Error (${rpcError.code}): ${rpcError.message}. Hint: ${rpcError.hint}`); 
     }
 
     if (!rpcData) {
@@ -137,13 +137,23 @@ export async function getComponentWithDetails(id: string): Promise<ComponentLibr
 
     if (typeof rpcData !== 'object' || rpcData === null) {
       console.error('RPC returned invalid data format for component ID:', id, rpcData);
-      return null;
+      throw new Error('Invalid data format received from component details RPC.');
     }
 
-    const rpcDataObj = rpcData as Record<string, any>;
-    const componentData = rpcDataObj.component as Record<string, any> || {};
-    const pins = Array.isArray(rpcDataObj.pins) ? rpcDataObj.pins : [];
-    const properties = typeof rpcDataObj.properties === 'object' ? rpcDataObj.properties as Record<string, any> : {};
+    const rpcDataObj = rpcData as {
+      component: Record<string, any> | null;
+      pins: ComponentPin[] | null;
+      properties: Record<string, any> | null;
+    };
+    
+    const componentData = rpcDataObj.component;
+    const pins = rpcDataObj.pins || [];
+    const properties = rpcDataObj.properties || {};
+
+    if (!componentData) {
+        console.warn('Component data was null in RPC response for ID:', id);
+        return null;
+    }
 
     console.log('Mapped component data:', {
       id: componentData.id,
@@ -161,14 +171,21 @@ export async function getComponentWithDetails(id: string): Promise<ComponentLibr
       svgPath: componentData.svg_path,
       enabled: componentData.enabled,
       isOriginal: componentData.is_original,
-      pins: pins,
+      pins: pins.map(pin => ({
+        id: pin.id,
+        name: pin.name,
+        x: pin.x,
+        y: pin.y,
+        signals: pin.signals,
+        handle_id: pin.handle_id
+      })),
       properties: properties,
       createdAt: componentData.created_at,
       updatedAt: componentData.updated_at
     };
   } catch (error) {
-    console.error('Error in getComponentWithDetails:', error);
-    return null;
+    console.error('Error caught in getComponentWithDetails wrapper:', error);
+    throw error; 
   }
 }
 
@@ -282,24 +299,24 @@ export async function deleteComponent(id: string): Promise<void> {
   }
 }
 
-// Helper functions for component pins
+/**
+ * Helper to insert pins for a component
+ */
 async function insertPins(componentId: string, pins: ComponentPin[]): Promise<void> {
   try {
-    if (!pins || pins.length === 0) {
-      return;
-    }
-
-    const pinsToInsert = pins.map(pin => ({
+    const pinsToInsert = pins.map((pin, index) => ({
       component_id: componentId,
       name: pin.name,
       x: pin.x,
       y: pin.y,
-      signals: Array.isArray(pin.signals) ? pin.signals : []
+      signals: pin.signals,
+      // Ensure the handle_id is included in the insert data
+      handle_id: pin.handle_id || `pin-${index}` // Provide a default if missing, though it should be set in UI
     }));
 
-    const { error } = await supabase
-      .from('component_pins')
-      .insert(pinsToInsert);
+    console.log(`Inserting ${pinsToInsert.length} pins:`, pinsToInsert);
+
+    const { error } = await supabase.from('component_pins').insert(pinsToInsert);
 
     if (error) {
       console.error('Error inserting pins:', error);
@@ -311,26 +328,28 @@ async function insertPins(componentId: string, pins: ComponentPin[]): Promise<vo
   }
 }
 
+/**
+ * Helper to update pins for a component (delete old, insert new)
+ */
 async function updatePins(componentId: string, pins: ComponentPin[]): Promise<void> {
   try {
     // Delete existing pins
+    console.log('Deleting existing pins for component:', componentId);
     const { error: deleteError } = await supabase
       .from('component_pins')
       .delete()
       .eq('component_id', componentId);
 
     if (deleteError) {
-      console.error('Error deleting existing pins:', deleteError);
+      console.error('Error deleting old pins:', deleteError);
       throw new Error(deleteError.message);
     }
 
-    // Skip insertion if no pins to add
-    if (!pins || pins.length === 0) {
-      return;
+    // Insert new pins if any exist
+    if (pins.length > 0) {
+      await insertPins(componentId, pins);
     }
-
-    // Insert new pins
-    await insertPins(componentId, pins);
+    console.log('Pins updated successfully for component:', componentId);
   } catch (error) {
     console.error('Error in updatePins:', error);
     throw error;

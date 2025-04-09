@@ -1,8 +1,8 @@
-
 /**
  * Pin interface representing connection points on a component
  */
 export interface ComponentPin {
+  id: string;
   name: string;
   x: number;
   y: number;

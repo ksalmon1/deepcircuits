@@ -18,13 +18,10 @@
     "noFallthroughCasesInSwitch": true,
 
     "composite": true,
-    "allowSyntheticDefaultImports": true,
-    "allowImportingTsExtensions": true,
-    "noEmit": true
+    "allowSyntheticDefaultImports": true
   },
   "include": [
-    "vite.config.ts",
-    "../src/simulation/circuit-engine/**/*.cts"
+    "vite.config.ts"
   ],
   "exclude": ["node_modules", "dist"]
 }
