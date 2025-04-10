@@ -227,7 +227,7 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
 
   // --- New Core Initialization Action ---
   const coreInitializeProjectState = useCallback((projectData: ProjectState) => {
-    console.log("Initializing project state with data:", projectData);
+    //console.log("Initializing project state with data:", projectData);
     const validatedState: ProjectState = {
         components: Array.isArray(projectData.components) ? projectData.components : [],
         wires: Array.isArray(projectData.wires) ? projectData.wires : [],
@@ -250,7 +250,7 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
     }
 
     const currentProjectState = historyState.history[historyState.currentIndex];
-    console.log('Attempting to save Project State to Supabase:', { id: projectId, user_id: user.id, name: projectName, ...currentProjectState });
+    //console.log('Attempting to save Project State to Supabase:', { id: projectId, user_id: user.id, name: projectName, ...currentProjectState });
 
     try {
       const result = await saveProjectToSupabase({
@@ -386,7 +386,7 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
   // --- Memoized Context Value --- 
   const contextValue = useMemo(() => {
     const current = historyState.history[historyState.currentIndex];
-    console.log(`ProjectContext: Providing value - Components: ${current.components.length} Wires: ${current.wires.length}`);
+    //console.log(`ProjectContext: Providing value - Components: ${current.components.length} Wires: ${current.wires.length}`);
     return {
       components: current.components,
       wires: current.wires,

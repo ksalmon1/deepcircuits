@@ -245,10 +245,10 @@ const CircuitEditorLayoutContent = ({
   
   useEffect(() => {
     const effectId = Date.now();
-    console.log(`[${effectId}] Load Effect: Running. ProjectId: ${projectId}, LoadedRef: ${loadedProjectIdRef.current}`);
+    //console.log(`[${effectId}] Load Effect: Running. ProjectId: ${projectId}, LoadedRef: ${loadedProjectIdRef.current}`);
 
     if (projectId && loadedProjectIdRef.current === projectId) {
-      console.log(`[${effectId}] Load Effect: Skipping fetch, already loaded.`);
+      //console.log(`[${effectId}] Load Effect: Skipping fetch, already loaded.`);
       if (isLoadingProject) setIsLoadingProject(false);
       return;
     }
@@ -258,16 +258,16 @@ const CircuitEditorLayoutContent = ({
       setIsLoadingProject(true);
       isInitializingRef.current = true;
       isInitialLoadCompleteRef.current = false;
-      console.log(`[${effectId}] Load Effect: Attempting fetch.`);
+      //console.log(`[${effectId}] Load Effect: Attempting fetch.`);
       getProjectById(projectId)
         .then(projectData => {
-          console.log(`[${effectId}] Load Effect: Fetch resolved.`);
+          //console.log(`[${effectId}] Load Effect: Fetch resolved.`);
           if (loadedProjectIdRef.current !== projectId) {
-            console.log(`[${effectId}] Load Effect: Stale fetch result ignored.`);
+            //console.log(`[${effectId}] Load Effect: Stale fetch result ignored.`);
             return;
           }
           if (projectData) {
-            console.log(`[${effectId}] Load Effect: Project data found.`);
+            //console.log(`[${effectId}] Load Effect: Project data found.`);
             initializeProjectState({
               components: projectData.components ?? [],
               wires: projectData.wires ?? [],
@@ -282,9 +282,9 @@ const CircuitEditorLayoutContent = ({
           }
         })
         .catch(error => {
-          console.log(`[${effectId}] Load Effect: Fetch errored.`);
+          //console.log(`[${effectId}] Load Effect: Fetch errored.`);
            if (loadedProjectIdRef.current !== projectId) {
-              console.log(`[${effectId}] Load Effect: Stale error ignored.`);
+              //console.log(`[${effectId}] Load Effect: Stale error ignored.`);
               return; 
           }
           console.error(`[${effectId}] Error loading project:`, error);
@@ -292,18 +292,18 @@ const CircuitEditorLayoutContent = ({
           setCircuitName('Error Loading Project');
         })
         .finally(() => {
-          console.log(`[${effectId}] Load Effect: Finally block.`);
+          //console.log(`[${effectId}] Load Effect: Finally block.`);
           if (loadedProjectIdRef.current === projectId) {
-             console.log(`[${effectId}] Load Effect: Updating refs.`);
+             //console.log(`[${effectId}] Load Effect: Updating refs.`);
              isInitializingRef.current = false;
              setIsLoadingProject(false);
              isInitialLoadCompleteRef.current = true;
           } else {
-              console.log(`[${effectId}] Load Effect: Finally skip.`);
+              //console.log(`[${effectId}] Load Effect: Finally skip.`);
           }
         });
     } else {
-       console.log(`[${effectId}] Load Effect: No projectId.`);
+       //console.log(`[${effectId}] Load Effect: No projectId.`);
       clearCircuitState(); 
       loadedProjectIdRef.current = null;
       isInitializingRef.current = false;
@@ -328,9 +328,9 @@ const CircuitEditorLayoutContent = ({
     setSimulationResult(null);
     setSimulationError(null);
     setShowSerialMonitor(true);
-    console.log('Starting simulation...');
-    console.log('Current components (state):', projectComponents);
-    console.log('Current wires (state):', projectWires);
+    //console.log('Starting simulation...');
+    //console.log('Current components (state):', projectComponents);
+    //console.log('Current wires (state):', projectWires);
     console.log('Component Definitions Map:', componentsDetailsMap);
 
     try {
@@ -396,8 +396,8 @@ const CircuitEditorLayoutContent = ({
           };
       });
       
-      console.log('Components prepared for SPICE service:', componentsForSpice);
-      console.log('Final Pin -> SPICE Node Map:', new Map(pinToNodeMap)); // Log the final map
+      //console.log('Components prepared for SPICE service:', componentsForSpice);
+      //console.log('Final Pin -> SPICE Node Map:', new Map(pinToNodeMap)); // Log the final map
 
       // 5. Run simulation with augmented components
       // The runSpiceSimulation function now expects this array directly
@@ -408,16 +408,16 @@ const CircuitEditorLayoutContent = ({
           toast.error(results.error);
           setSimulationError(results.error);
       } else if (results) { // Check if results object exists
-          console.log('Simulation successful:', results);
+          //console.log('Simulation successful:', results);
           setSimulationResult(results);
           toast.success('Simulation Complete: Results are available.');
           if (results.voltages || results.currents) { // Check if voltage/current data exists
-                console.log("Simulation Voltages:", results.voltages);
-                console.log("Simulation Currents:", results.currents);
+                //console.log("Simulation Voltages:", results.voltages);
+                //console.log("Simulation Currents:", results.currents);
            }
       } else {
            // Handle case where simulation returns null without error (shouldn't happen ideally)
-           console.error('Simulation returned null result without specific error.');
+           //console.error('Simulation returned null result without specific error.');
            setSimulationError('Simulation failed to return results.');
            toast.error('Simulation failed to return results.');
       }
@@ -428,7 +428,7 @@ const CircuitEditorLayoutContent = ({
       setSimulationError(errorMessage);
     } finally {
       setIsSimulating(false);
-      console.log('Simulation process finished.');
+      //console.log('Simulation process finished.');
     }
   };
 
@@ -437,7 +437,7 @@ const CircuitEditorLayoutContent = ({
   };
 
   const handleBackToDashboard = () => {
-    console.log('[handleBackToDashboard] triggered. Attempting navigation...');
+    //console.log('[handleBackToDashboard] triggered. Attempting navigation...');
     navigate('/dashboard'); 
   };
 
@@ -456,7 +456,7 @@ const CircuitEditorLayoutContent = ({
   };
 
   const handleComponentSelect = (component: CircuitComponent) => {
-    console.log('Component selected:', component);
+    //console.log('Component selected:', component);
     selectComponent(component);
   };
 
@@ -503,7 +503,7 @@ const CircuitEditorLayoutContent = ({
   }, [showCodeEditor, showSerialMonitor, verticalSplit, mainLayout, editorMonitorLayout]);
 
   const performClear = () => {
-    console.log("--- performClear called ---");
+    //console.log("--- performClear called ---");
     clearCircuitState(); 
     setIsModified(true);
   };

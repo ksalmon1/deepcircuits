@@ -105,7 +105,7 @@ export async function getProjectById(projectId: string): Promise<Project | null>
         }
     }
 
-    console.log('Project fetched successfully:', data);
+    //console.log('Project fetched successfully:', data);
     // Ensure components, wires, and code are initialized if null in DB
     return {
         ...data,
@@ -147,7 +147,7 @@ export async function getDashboardProjectsByUserId(userId: string): Promise<Dash
         throw new Error(`Supabase fetch error: ${error.message}`);
     }
 
-    console.log('Dashboard projects fetched successfully for user:', userId, data);
+    //console.log('Dashboard projects fetched successfully for user:', userId, data);
     return data || []; // Return fetched data or an empty array if null
 }
 
@@ -165,7 +165,7 @@ export async function deleteProjectById(projectId: string): Promise<void> {
         throw new Error("Project ID is required for deletion.");
     }
 
-    console.log('Attempting to delete project with ID:', projectId);
+    //console.log('Attempting to delete project with ID:', projectId);
 
     const { error } = await supabase
         .from('projects')
@@ -196,7 +196,7 @@ export async function createProject(projectId: string, userId: string, name: str
         throw new Error("Project ID, User ID, and Name are required for creation.");
     }
 
-    console.log(`Attempting to create project: ${name} (ID: ${projectId}) for user: ${userId}`);
+    //console.log(`Attempting to create project: ${name} (ID: ${projectId}) for user: ${userId}`);
 
     const newProjectData = {
         id: projectId,
@@ -222,6 +222,6 @@ export async function createProject(projectId: string, userId: string, name: str
         throw new Error(`Supabase create error: ${error.message}`);
     }
 
-    console.log('Project created successfully in Supabase:', data);
+    //console.log('Project created successfully in Supabase:', data);
     return data as Project | null;
 } 

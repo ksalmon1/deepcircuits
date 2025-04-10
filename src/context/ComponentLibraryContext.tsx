@@ -32,14 +32,14 @@ export const ComponentLibraryProvider: React.FC<ComponentLibraryProviderProps> =
   const loadComponentData = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-    console.log("ComponentLibraryProvider: Fetching initial library...");
+    //console.log("ComponentLibraryProvider: Fetching initial library...");
     try {
       const libraryItems = await getAllComponents();
       setComponents(libraryItems);
-      console.log(`ComponentLibraryProvider: Fetched ${libraryItems.length} library items.`);
+      //console.log(`ComponentLibraryProvider: Fetched ${libraryItems.length} library items.`);
 
       const detailsMap: ComponentDetailsMap = {};
-      console.log(`ComponentLibraryProvider: Fetching details for ${libraryItems.length} components...`);
+      //console.log(`ComponentLibraryProvider: Fetching details for ${libraryItems.length} components...`);
       
       await Promise.all(
         libraryItems.map(async (item) => {
@@ -63,7 +63,7 @@ export const ComponentLibraryProvider: React.FC<ComponentLibraryProviderProps> =
       );
 
       setComponentsDetailsMap(detailsMap);
-      console.log(`ComponentLibraryProvider: Finished fetching details.`);
+      //console.log(`ComponentLibraryProvider: Finished fetching details.`);
       
     } catch (fetchError: any) {
       console.error("ComponentLibraryProvider: Error fetching component library:", fetchError);

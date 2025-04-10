@@ -48,7 +48,7 @@ export const getUserProfileAndRoles = async (userId: string): Promise<{
   roles: UserRole[];
 }> => {
   try {
-    console.log("Fetching profile and roles for user:", userId);
+    //console.log("Fetching profile and roles for user:", userId);
     
     const { data: profileData, error: profileError } = await supabase
       .from('profiles')
@@ -61,7 +61,7 @@ export const getUserProfileAndRoles = async (userId: string): Promise<{
       return { profile: null, roles: [] };
     }
 
-    console.log("Profile loaded successfully");
+    //console.log("Profile loaded successfully");
 
     const { data: roleData, error: roleError } = await supabase
       .rpc('get_user_roles', { user_uuid: userId });
@@ -72,7 +72,7 @@ export const getUserProfileAndRoles = async (userId: string): Promise<{
     }
 
     const roleArray = Array.isArray(roleData) ? roleData : [];
-    console.log("Roles loaded successfully:", roleArray);
+    //console.log("Roles loaded successfully:", roleArray);
     
     return { 
       profile: profileData as Profile, 
@@ -87,7 +87,7 @@ export const getUserProfileAndRoles = async (userId: string): Promise<{
 // Get all users (using public schema instead of admin API)
 export const getAllUsers = async (): Promise<UserWithProfile[]> => {
   try {
-    console.log("Fetching user data from profiles and user_roles tables");
+    //console.log("Fetching user data from profiles and user_roles tables");
     
     const { data: profiles, error: profilesError } = await supabase
       .from('profiles')
@@ -119,7 +119,7 @@ export const getAllUsers = async (): Promise<UserWithProfile[]> => {
       };
     });
 
-    console.log(`Found ${users.length} users`);
+    //console.log(`Found ${users.length} users`);
     return users;
   } catch (error) {
     console.error("Error fetching users:", error);

@@ -161,14 +161,14 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
 
   // Convert circuitComponents to React Flow nodes using the utility function
   useEffect(() => {
-    console.log("CircuitCanvas: useEffect for circuitComponents running. Count:", circuitComponents.length);
+    //console.log("CircuitCanvas: useEffect for circuitComponents running. Count:", circuitComponents.length);
     const flowNodes = circuitComponents.map(circuitComponentToNode);
     setNodes(flowNodes);
   }, [circuitComponents, setNodes]);
 
   // Convert wireConnections (WireEdge[]) to React Flow edges using the utility function
   useEffect(() => {
-    console.log("CircuitCanvas: useEffect for wireConnections running. Count:", wireConnections.length);
+    //console.log("CircuitCanvas: useEffect for wireConnections running. Count:", wireConnections.length);
     const flowEdges = wireConnections.map(wireEdgeToFlowEdge);
     setEdges(flowEdges);
   }, [wireConnections, setEdges]);
@@ -187,7 +187,7 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
         .map(change => change.id);
 
       if (removedNodeIds.length > 0) {
-        console.log('Nodes removed:', removedNodeIds);
+        //console.log('Nodes removed:', removedNodeIds);
         // Update the parent component's state
         const updatedComponents = circuitComponents.filter(
           comp => !removedNodeIds.includes(comp.id)
@@ -200,8 +200,8 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
   );
 
   const onConnect: OnConnect = useCallback((connection: Connection) => {
-      console.log('!!! onConnect CALLED !!!', connection);
-      console.log('Attempting connection (Raw):', connection);
+      //console.log('!!! onConnect CALLED !!!', connection);
+      //console.log('Attempting connection (Raw):', connection);
 
       // Basic validation: Ensure source and target handles/nodes are present
       if (!connection.source || !connection.target || !connection.sourceHandle || !connection.targetHandle) {
@@ -338,7 +338,7 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
         return;
       }
       // Log the details fetched from the library
-      console.log('Component details fetched:', componentDetails); 
+      //console.log('Component details fetched:', componentDetails); 
       // -------------------------------------------------
       
       // Position calculation
@@ -359,7 +359,7 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
         isOriginal: componentDetails.isOriginal,
       };
 
-      console.log('ReactFlow drop: creating component with details:', newComponent);
+      //console.log('ReactFlow drop: creating component with details:', newComponent);
       onComponentsChange([...circuitComponents, newComponent]);
       onModified?.();
     },
@@ -371,7 +371,7 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
   // TODO: Implement deletion logic (onNodesDelete, onEdgesDelete or key listeners)
   const onNodesDelete = useCallback(
     (deletedNodes: Node[]) => {
-      console.log('Nodes deleted:', deletedNodes);
+      //console.log('Nodes deleted:', deletedNodes);
       const deletedNodeIds = new Set(deletedNodes.map(n => n.id));
       // Remove components corresponding to deleted nodes
       const remainingComponents = circuitComponents.filter(comp => !deletedNodeIds.has(comp.id));
@@ -388,7 +388,7 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
 
   const onEdgesDelete = useCallback(
     (deletedEdges: Edge[]) => {
-      console.log('Edges deleted:', deletedEdges);
+      //console.log('Edges deleted:', deletedEdges);
       const deletedEdgeIds = new Set(deletedEdges.map(e => e.id));
       // Remove wires corresponding to deleted edges
       const remainingWires = wireConnections.filter(wire => !deletedEdgeIds.has(wire.id));
@@ -410,7 +410,7 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
         .map(change => change.id);
       
       if (removedEdgeIds.length > 0) {
-        console.log("Edges removed:", removedEdgeIds);
+        //console.log("Edges removed:", removedEdgeIds);
         // Update parent state
         const updatedEdges = wireConnections.filter(
           edge => !removedEdgeIds.includes(edge.id)

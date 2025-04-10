@@ -35,7 +35,8 @@ let outputEndMarkerSeen = false;
 let outputComplete = false;
 
 function generateNetlist(componentsWithNodes: ComponentWithSpiceConnections[]): string {
-    console.log("Generating netlist using pre-mapped SPICE nodes:", JSON.stringify(componentsWithNodes, null, 2));
+    // Remove verbose logging
+    // console.log("Generating netlist using pre-mapped SPICE nodes:", JSON.stringify(componentsWithNodes, null, 2));
     let netlist = `* Auto-generated netlist for batch mode (-b)\n`;
 
     let modelStatements = `\n* Models\n`;
@@ -172,6 +173,7 @@ function generateNetlist(componentsWithNodes: ComponentWithSpiceConnections[]): 
     netlist += ".endc\n";
     netlist += ".end\n";
 
+    // Keep this log as requested by the user
     console.log("Final generated netlist (Updated Control Block):\n" + netlist);
     return netlist;
 }
@@ -190,7 +192,7 @@ function parseSimulationResults(stdout: string, stderr: string): SimulationResul
 
     // Perform basic error check first before attempting to parse
     if (!stdout || stdout.trim() === '') {
-        console.warn("Empty stdout received from simulation");
+        // console.warn("Empty stdout received from simulation");
         results.error = "No simulation output received.";
         if (stderr && stderr.trim() !== '') {
             results.error += `\nError output: ${stderr}`;
@@ -211,7 +213,7 @@ function parseSimulationResults(stdout: string, stderr: string): SimulationResul
         // console.log("Found marked results section. Length:", processOutput.length);
         // console.log("Results section sample:", processOutput.substring(0, 300));
     } else {
-        console.warn("Could not find result markers in output. Using full stdout.");
+        // console.warn("Could not find result markers in output. Using full stdout.");
     }
 
     // We'll use a simpler approach: scan line by line and examine each line directly
@@ -270,8 +272,6 @@ function parseSimulationResults(stdout: string, stderr: string): SimulationResul
         }
     });
 
-    console.log(`Parsed ${matchedLines} values from simulation output`);
-
     // Check for specific error messages in stderr
     const errorMessages = [];
     if (stderr && stderr.trim().length > 0) {
@@ -310,6 +310,7 @@ function parseSimulationResults(stdout: string, stderr: string): SimulationResul
         results.error = "Simulation produced no parsable results. Check circuit connectivity.";
     }
 
+    // Keep this log since it's requested by the user
     console.log("Simulation Results:", {
         voltages: results.voltages,
         currents: results.currents,
@@ -341,7 +342,8 @@ export function runSpiceSimulation(componentsWithNodes: ComponentWithSpiceConnec
             arguments: ['-b', inputFilename],
             preRun: [
                 (instance: SpiceModuleInstance) => {
-                    console.log("Preparing SPICE simulation...");
+                    // Remove this log
+                    // console.log("Preparing SPICE simulation...");
                     try {
                         // Create necessary directories to avoid file system errors
                         try {
@@ -403,7 +405,7 @@ export function runSpiceSimulation(componentsWithNodes: ComponentWithSpiceConnec
                         const stdout = capturedStdoutLines.join('\n');
                         const stderr = capturedStderrLines.join('\n');
                         
-                        console.log("Simulation completed.");
+                        //console.log("Simulation completed.");
                         
                         // Parse the simulation results
                         const results = parseSimulationResults(stdout, stderr);

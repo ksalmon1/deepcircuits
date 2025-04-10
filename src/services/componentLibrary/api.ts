@@ -119,7 +119,7 @@ export async function searchComponents(query: string): Promise<ComponentLibraryI
  */
 export async function getComponentWithDetails(id: string): Promise<ComponentLibraryItem | null> {
   try {
-    console.log('Getting component with details for ID:', id);
+    //console.log('Getting component with details for ID:', id);
 
     const { data: rpcData, error: rpcError } = await supabase.rpc('get_component_with_details', {
       component_id_input: id 
@@ -155,12 +155,12 @@ export async function getComponentWithDetails(id: string): Promise<ComponentLibr
         return null;
     }
 
-    console.log('Mapped component data:', {
-      id: componentData.id,
-      type: componentData.type,
-      pins: pins.length,
-      properties: Object.keys(properties).length
-    });
+    // console.log('Mapped component data:', {
+    //   id: componentData.id,
+    //   type: componentData.type,
+    //   pins: pins.length,
+    //   properties: Object.keys(properties).length
+    // });
 
     return {
       id: componentData.id,
@@ -236,12 +236,12 @@ export async function updateComponent(component: ComponentLibraryItem): Promise<
       throw new Error('Component ID is required');
     }
 
-    console.log('Updating component ID:', component.id, 'with data:', {
-      name: component.name,
-      type: component.type,
-      pins: component.pins?.length || 0,
-      properties: component.properties ? Object.keys(component.properties).length : 0
-    });
+    // console.log('Updating component ID:', component.id, 'with data:', {
+    //   name: component.name,
+    //   type: component.type,
+    //   pins: component.pins?.length || 0,
+    //   properties: component.properties ? Object.keys(component.properties).length : 0
+    // });
 
     // First, update the component basic info
     const { error: componentError } = await supabase
@@ -264,13 +264,13 @@ export async function updateComponent(component: ComponentLibraryItem): Promise<
 
     // Update pins if provided
     if (component.pins) {
-      console.log(`Updating ${component.pins.length} pins for component ${component.id}:`, component.pins);
+      //console.log(`Updating ${component.pins.length} pins for component ${component.id}:`, component.pins);
       await updatePins(component.id, component.pins);
     }
 
     // Update properties if provided
     if (component.properties) {
-      console.log(`Updating ${Object.keys(component.properties).length} properties for component ${component.id}:`, component.properties);
+      //console.log(`Updating ${Object.keys(component.properties).length} properties for component ${component.id}:`, component.properties);
       await updateProperties(component.id, component.properties);
     }
   } catch (error) {
@@ -314,7 +314,7 @@ async function insertPins(componentId: string, pins: ComponentPin[]): Promise<vo
       handle_id: pin.handle_id || `pin-${index}` // Provide a default if missing, though it should be set in UI
     }));
 
-    console.log(`Inserting ${pinsToInsert.length} pins:`, pinsToInsert);
+    //console.log(`Inserting ${pinsToInsert.length} pins:`, pinsToInsert);
 
     const { error } = await supabase.from('component_pins').insert(pinsToInsert);
 
@@ -334,7 +334,7 @@ async function insertPins(componentId: string, pins: ComponentPin[]): Promise<vo
 async function updatePins(componentId: string, pins: ComponentPin[]): Promise<void> {
   try {
     // Delete existing pins
-    console.log('Deleting existing pins for component:', componentId);
+    //console.log('Deleting existing pins for component:', componentId);
     const { error: deleteError } = await supabase
       .from('component_pins')
       .delete()
@@ -349,7 +349,7 @@ async function updatePins(componentId: string, pins: ComponentPin[]): Promise<vo
     if (pins.length > 0) {
       await insertPins(componentId, pins);
     }
-    console.log('Pins updated successfully for component:', componentId);
+    //console.log('Pins updated successfully for component:', componentId);
   } catch (error) {
     console.error('Error in updatePins:', error);
     throw error;

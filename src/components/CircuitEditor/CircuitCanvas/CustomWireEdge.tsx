@@ -120,9 +120,9 @@ const CustomWireEdge: React.FC<EdgeProps> = ({
   selected,
 }) => {
   // --- Log received props --- 
-  console.log(`CustomWireEdge Render [${id}]:`, { 
-    sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, data, selected 
-  });
+  // console.log(`CustomWireEdge Render [${id}]:`, { 
+  //   sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, data, selected 
+  // });
   // --------------------------
   
   const { deleteElements } = useReactFlow();
@@ -137,7 +137,7 @@ const CustomWireEdge: React.FC<EdgeProps> = ({
     targetPosition,
   });
   // Add log for calculated path
-  console.log(`CustomWireEdge Path [${id}]:`, edgePath);
+  //console.log(`CustomWireEdge Path [${id}]:`, edgePath);
 
   // --- Robust Style Calculation --- 
   // Determine base properties
@@ -159,7 +159,7 @@ const CustomWireEdge: React.FC<EdgeProps> = ({
   // Double-click handler to delete the edge
   const handleDoubleClick = (event: React.MouseEvent) => {
     event.stopPropagation();
-    console.log("Edge double clicked, deleting:", id);
+    //console.log("Edge double clicked, deleting:", id);
     deleteElements({ edges: [{ id }] });
   };
 
