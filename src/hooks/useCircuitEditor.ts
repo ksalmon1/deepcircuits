@@ -1,4 +1,3 @@
-
 import { 
   useProject,
   useSimulation,
@@ -40,23 +39,23 @@ export function useCircuitEditor() {
       throw new Error('Component must have a type');
     }
     
-    projectContext.setComponents(prev => [...prev, component]);
+    projectContext.handleComponentsChange([...projectContext.components, component]);
     return component.id;
   };
   
   // Core remove component function without try/catch
   const coreRemoveComponent = (componentId: string) => {
     // Remove the component
-    projectContext.setComponents(prev => 
-      prev.filter(comp => comp.id !== componentId)
-    );
+    const updatedComponents = projectContext.components.filter(comp => comp.id !== componentId);
+    projectContext.handleComponentsChange(updatedComponents);
     
     // Clean up any connections associated with this component
-    projectContext.setConnections(prev => 
-      prev.filter(conn => 
-        conn.sourceId !== componentId && conn.targetId !== componentId
-      )
+    // Note: connections API needs to be updated based on your current implementation
+    // This is a placeholder assuming you have wires in your context
+    const updatedWires = projectContext.wires.filter(wire => 
+      wire.source !== componentId && wire.target !== componentId
     );
+    projectContext.handleWiresChange(updatedWires);
     
     return true;
   };
@@ -70,12 +69,12 @@ export function useCircuitEditor() {
     }
     
     // Check if connection already exists
-    const connectionExists = projectContext.connections.some(
-      conn => 
-        (conn.sourceId === sourceId && conn.sourcePinIndex === sourcePinIndex && 
-         conn.targetId === targetId && conn.targetPinIndex === targetPinIndex) ||
-        (conn.sourceId === targetId && conn.sourcePinIndex === targetPinIndex && 
-         conn.targetId === sourceId && conn.targetPinIndex === sourcePinIndex)
+    const connectionExists = projectContext.wires.some(
+      wire => 
+        (wire.source === sourceId && wire.sourceHandle === `pin-${sourcePinIndex}` && 
+         wire.target === targetId && wire.targetHandle === `pin-${targetPinIndex}`) ||
+        (wire.source === targetId && wire.sourceHandle === `pin-${targetPinIndex}` && 
+         wire.target === sourceId && wire.targetHandle === `pin-${sourcePinIndex}`)
     );
     
     if (connectionExists) {
@@ -83,15 +82,23 @@ export function useCircuitEditor() {
       return false;
     }
     
-    // Create the connection
-    const newConnection: PinConnection = {
-      sourceId,
-      sourcePinIndex,
-      targetId,
-      targetPinIndex
+    // Create the connection - use your wire creation logic here
+    const newWire = {
+      id: `wire-${Date.now()}`,
+      source: sourceId,
+      sourceHandle: `pin-${sourcePinIndex}`,
+      target: targetId, 
+      targetHandle: `pin-${targetPinIndex}`,
+      type: 'customWire',
+      data: {
+        color: '#555', // Default color, adjust as needed
+        sourcePinIndex: sourcePinIndex,
+        targetPinIndex: targetPinIndex,
+        signal: '' // Default signal, adjust as needed
+      }
     };
     
-    projectContext.addConnection(newConnection);
+    projectContext.handleWiresChange([...projectContext.wires, newWire]);
     return true;
   };
   
@@ -102,7 +109,7 @@ export function useCircuitEditor() {
       return false;
     }
     
-    if (projectContext.connections.length === 0) {
+    if (projectContext.wires.length === 0) {
       toast.warning('Running simulation with no connections between components');
     }
     

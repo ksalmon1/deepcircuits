@@ -35,6 +35,7 @@ export const convertLibraryItemToCircuitComponent = (item: ComponentLibraryItem)
     left: 0,
     attributes: {},
     pins: item.pins ? item.pins.map(pin => ({
+      id: pin.id || `pin-${crypto.randomUUID().slice(0, 8)}`,
       name: pin.name,
       x: pin.x,
       y: pin.y,
@@ -58,6 +59,7 @@ export const componentToNode = (component: CircuitComponent): Node => {
       label: component.name || component.type,
       attributes: component.attributes || {},
       pins: component.pins ? component.pins.map(pin => ({
+        id: pin.id || `pin-${crypto.randomUUID().slice(0, 8)}`,
         name: pin.name,
         x: pin.x,
         y: pin.y,
@@ -84,6 +86,7 @@ export const nodeToCircuitComponent = (node: Node): CircuitComponent => {
     left: node.position.x,
     attributes: nodeData.attributes || {},
     pins: (nodeData.pins || []).map(pin => ({
+      id: pin.id || `pin-${crypto.randomUUID().slice(0, 8)}`,
       name: pin.name,
       x: pin.x,
       y: pin.y,

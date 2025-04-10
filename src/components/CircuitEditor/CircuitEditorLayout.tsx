@@ -20,7 +20,7 @@ import {
 import { toast } from 'sonner';
 import { useNavigate, useLocation, useParams, useBlocker } from 'react-router-dom';
 import { CircuitComponent } from '@/types/component';
-import { WireConnection } from '@/types/circuit';
+//import { WireConnection } from '@/types/circuit';
 import { CircuitEditorProvider, useCircuitEditor } from '@/context/CircuitEditorContext';
 import {
   AlertDialog,
@@ -336,7 +336,7 @@ const CircuitEditorLayoutContent = ({
     try {
       // 1. Map project components to AppComponentModel
       const initialAppComponents: AppComponentModel[] = projectComponents.map((instance) => {
-        const definition = Object.values(componentsDetailsMap).find(def => def.type === instance.type);
+        const definition = Object.values(componentsDetailsMap).find(def => (def as any).type === instance.type) as any;
         if (!definition) {
           throw new Error(`Component definition not found for type: ${instance.type} (ID: ${instance.id})`);
         }
@@ -668,7 +668,7 @@ const CircuitEditorLayoutContent = ({
       <ReactFlowProvider>
         <div className="flex-1 flex">
           <div className="w-64 border-r bg-gray-50 p-4 overflow-y-auto flex-shrink-0">
-            <ComponentPanel onComponentSelect={handleComponentSelect} />
+            <ComponentPanel />
           </div>
 
           <div className="flex-1 flex flex-col overflow-hidden">
@@ -838,7 +838,7 @@ export const CircuitEditorLayout = () => {
                {isSaving ? 'Saving...' : 'Save & Leave'}
              </AlertDialogAction>
              <AlertDialogAction 
-               variant="destructive" 
+               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                onClick={() => blocker.proceed?.()}
              >
                Leave Anyway

@@ -7,6 +7,7 @@ export interface ComponentPin {
   x: number;
   y: number;
   signals: string[];
+  handle_id?: string; // Unique identifier for the pin handle in the UI
 }
 
 /**

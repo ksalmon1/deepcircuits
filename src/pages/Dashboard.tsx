@@ -4,7 +4,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useProfile } from "@/hooks/use-profile";
 import { Button } from "@/components/ui/button";
 import { Plus, Search, ArrowUpDown } from "lucide-react";
-import ProjectCard, { ProjectData } from "@/components/common/ProjectCard";
+import ProjectCard from "@/components/common/ProjectCard";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -161,9 +161,9 @@ const Dashboard = () => {
         case "name-desc":
           return b.name.localeCompare(a.name);
         case "date-asc":
-          return new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime();
+          return new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime();
         case "date-desc":
-          return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+          return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
         default:
           return 0;
       }

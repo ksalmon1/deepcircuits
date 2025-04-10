@@ -1,4 +1,3 @@
-
 import { ComponentLibraryItem, CircuitComponent } from "@/types/component";
 import { ComponentPin } from "@/types/pin";
 import { supabase } from "@/integrations/supabase/client";
@@ -105,6 +104,7 @@ export class ComponentRepository {
       const componentWithDetails = {
         ...component,
         pins: pinsData.map((p: any) => ({
+          id: p.id || `pin-${p.name}-${Math.random().toString(36).slice(2, 7)}`,
           name: p.name,
           x: p.x,
           y: p.y,
@@ -161,6 +161,7 @@ export class ComponentRepository {
       }
       
       return data.map((p: any) => ({
+        id: p.id || `pin-${p.name}-${Math.random().toString(36).slice(2, 7)}`,
         name: p.name,
         x: p.x,
         y: p.y,

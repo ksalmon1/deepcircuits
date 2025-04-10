@@ -29,6 +29,7 @@ export function useComponentPinCache() {
           if (details && details.pins && Array.isArray(details.pins) && details.pins.length > 0) {
             console.log(`Found pins for ${component.name} (${component.type}) from details:`, details.pins);
             pinCache[component.type] = details.pins.map((pin: any) => ({
+              id: pin.id || `pin-${pin.name}-${Math.random().toString(36).slice(2, 7)}`,
               name: pin.name,
               x: Number(pin.x),
               y: Number(pin.y),
@@ -46,6 +47,7 @@ export function useComponentPinCache() {
         if (component.pins && Array.isArray(component.pins) && component.pins.length > 0) {
           console.log(`Found pins for ${component.name} (${component.type}):`, component.pins);
           pinCache[component.type] = component.pins.map(pin => ({
+            id: pin.id || `pin-${pin.name}-${Math.random().toString(36).slice(2, 7)}`,
             name: pin.name,
             x: Number(pin.x), 
             y: Number(pin.y),

@@ -17,6 +17,7 @@ export const nodeToCircuitComponent = (node: Node): CircuitComponent => {
     left: node.position.x,
     attributes: nodeData.attributes || {},
     pins: (nodeData.pins || []).map(pin => ({
+      id: pin.id || `pin-${crypto.randomUUID().slice(0, 8)}`,
       name: pin.name,
       x: typeof pin.x === 'number' && !isNaN(pin.x) ? pin.x : 0,
       y: typeof pin.y === 'number' && !isNaN(pin.y) ? pin.y : 0,

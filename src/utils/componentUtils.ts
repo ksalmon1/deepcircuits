@@ -6,8 +6,9 @@ import { ComponentError } from './errorHandling';
 /**
  * Get component pins with default values for missing fields
  */
-export function normalizePins(pins: ComponentPin[] = []): ComponentPin[] {
+export function normalizePins(pins: ComponentPin[] | Array<{ name: string; x: number; y: number; signals: string[] }> = []): ComponentPin[] {
   return pins.map(pin => ({
+    id: 'id' in pin ? pin.id : `pin-${crypto.randomUUID().slice(0, 8)}`,
     name: pin.name || 'unnamed',
     x: typeof pin.x === 'number' ? pin.x : 0,
     y: typeof pin.y === 'number' ? pin.y : 0,
@@ -31,7 +32,8 @@ export function getComponentDisplayName(component: CircuitComponent | ComponentL
  * Get the pin positions for a component type
  */
 export function getComponentPinPositions(componentType: string): ComponentPin[] {
-  return componentRegistry.getComponentPinInfo(componentType);
+  const pins = componentRegistry.getComponentPinInfo(componentType);
+  return normalizePins(pins);
 }
 
 /**

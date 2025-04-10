@@ -13,15 +13,14 @@ import { WireData, WireEdge } from '@/types/circuit';
 import { PinConnection } from '@/types/pin';
 import { AppError, ComponentError, withErrorHandling } from '@/utils/errorHandling';
 import { useCircuitEditor } from '@/context/CircuitEditorContext';
-import { Wire } from '@/types/wire';
 
 /**
  * Enhanced hook for managing wire connections between components
  */
 export function useWireSystem(components: CircuitComponent[]) {
   const { setEdges, getNodes } = useReactFlow();
-  const { addConnection } = useCircuitEditor();
-  const [wires, setWires] = useState<Wire[]>([]);
+  const { handleWiresChange } = useCircuitEditor();
+  const [wires, setWires] = useState<WireEdge[]>([]);
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   
   // Core connect pins function without try/catch
@@ -86,16 +85,8 @@ export function useWireSystem(components: CircuitComponent[]) {
     // Add to React Flow
     setEdges((eds) => addEdge(newEdge, eds) as Edge[]);
     
-    // Create the connection object
-    const newConnection: PinConnection = {
-      sourceId,
-      sourcePinIndex,
-      targetId,
-      targetPinIndex
-    };
-    
-    // Add to context
-    addConnection(newConnection);
+    // Update wires in the context
+    handleWiresChange([...wires, newEdge as WireEdge]);
     
     toast.success('Connection created', {
       description: 'Wire connected successfully',

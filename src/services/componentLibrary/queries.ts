@@ -1,4 +1,3 @@
-
 import { ComponentLibraryItem } from '@/types/component';
 import { mapComponentFromDb } from './converters';
 import { supabase } from '@/integrations/supabase/client';
@@ -105,6 +104,7 @@ export async function getComponentWithDetails(id: string): Promise<ComponentLibr
     const componentWithDetails = {
       ...component,
       pins: pinsData.map(p => ({
+        id: p.id || `pin-${crypto.randomUUID().slice(0, 8)}`,
         name: p.name,
         x: p.x,
         y: p.y,

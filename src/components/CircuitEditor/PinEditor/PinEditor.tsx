@@ -195,9 +195,11 @@ Calculated pin position relative to component origin: (${canvasX}, ${canvasY})`;
   
   useEffect(() => {
     if (loadError) {
-      toast({ title: 'Error rendering preview', description: loadError.message, variant: 'destructive' });
+      toast.error('Error rendering preview', {
+        description: loadError.message
+      });
     }
-  }, [loadError, toast]);
+  }, [loadError]);
   
   return (
     <div className={`flex flex-col h-full ${className}`} style={{ minHeight: '400px' }}>

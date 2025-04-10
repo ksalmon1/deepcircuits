@@ -1,5 +1,4 @@
-
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { SendHorizonal, X } from 'lucide-react';
 
@@ -8,21 +7,31 @@ interface SerialMonitorProps {
   serialOutput: string[];
 }
 
-const SerialMonitor: React.FC<SerialMonitorProps> = ({ 
-  isSimulationRunning,
-  serialOutput 
-}) => {
+// Use a fixed length for terminal output to prevent excessive rendering
+const MAX_LINES = 1000;
+
+// Functional component with memoization
+const SerialMonitor = React.memo(({ isSimulationRunning, serialOutput }: SerialMonitorProps) => {
   const [inputCommand, setInputCommand] = useState('');
   const outputRef = useRef<HTMLDivElement>(null);
+  const prevOutputLengthRef = useRef<number>(0);
 
-  // Scroll to the bottom when new output is added
+  // Optimized output text - only process when the array length changes
+  const processedOutput = useMemo(() => {
+    // Limit the number of lines to prevent performance issues
+    const limitedOutput = serialOutput.slice(-MAX_LINES);
+    return limitedOutput.join('\n');
+  }, [serialOutput.length, serialOutput]);
+
+  // Only scroll when new output is added
   useEffect(() => {
-    if (outputRef.current) {
+    if (outputRef.current && serialOutput.length > prevOutputLengthRef.current) {
       outputRef.current.scrollTop = outputRef.current.scrollHeight;
+      prevOutputLengthRef.current = serialOutput.length;
     }
-  }, [serialOutput]);
+  }, [serialOutput.length]);
 
-  const handleSendCommand = () => {
+  const handleSendCommand = useCallback(() => {
     if (!inputCommand.trim()) return;
     
     // In a real app, this would send the command to the simulator
@@ -30,18 +39,41 @@ const SerialMonitor: React.FC<SerialMonitorProps> = ({
     
     // Clear the input
     setInputCommand('');
-  };
+  }, [inputCommand]);
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       handleSendCommand();
     }
-  };
+  }, [handleSendCommand]);
 
-  const clearOutput = () => {
+  const clearOutput = useCallback(() => {
     // This would be handled by the parent component in a real application
     console.log('Clearing serial output');
-  };
+  }, []);
+
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setInputCommand(e.target.value);
+  }, []);
+  
+  // Memoize static JSX elements to prevent recreating them on each render
+  const serialOutputContent = useMemo(() => {
+    if (serialOutput.length === 0) {
+      return (
+        <div className="text-gray-500 text-center mt-8">
+          {isSimulationRunning 
+            ? "Waiting for output..." 
+            : "Start the simulation to see serial output"}
+        </div>
+      );
+    }
+    
+    return (
+      <pre className="whitespace-pre-wrap">
+        {processedOutput}
+      </pre>
+    );
+  }, [isSimulationRunning, processedOutput, serialOutput.length]);
 
   return (
     <div className="h-full flex flex-col bg-gray-50">
@@ -63,24 +95,14 @@ const SerialMonitor: React.FC<SerialMonitorProps> = ({
         ref={outputRef}
         className="flex-1 p-3 font-mono text-sm overflow-auto bg-gray-900 text-gray-100"
       >
-        {serialOutput.length === 0 ? (
-          <div className="text-gray-500 text-center mt-8">
-            {isSimulationRunning 
-              ? "Waiting for output..." 
-              : "Start the simulation to see serial output"}
-          </div>
-        ) : (
-          <pre className="whitespace-pre-wrap">
-            {serialOutput.join('\n')}
-          </pre>
-        )}
+        {serialOutputContent}
       </div>
       
       <div className="p-2 border-t flex gap-2 bg-white">
         <input
           type="text"
           value={inputCommand}
-          onChange={(e) => setInputCommand(e.target.value)}
+          onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           placeholder="Enter command..."
           className="flex-1 px-3 py-1 border rounded text-sm"
@@ -97,6 +119,8 @@ const SerialMonitor: React.FC<SerialMonitorProps> = ({
       </div>
     </div>
   );
-};
+});
+
+SerialMonitor.displayName = 'SerialMonitor';
 
 export default SerialMonitor;

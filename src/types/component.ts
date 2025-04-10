@@ -1,4 +1,3 @@
-
 import { ComponentPin } from "./pin";
 
 /**
@@ -36,6 +35,7 @@ export interface CircuitComponent extends BaseComponent {
   attributes: Record<string, any>;
   svgPath?: string | null;
   isOriginal?: boolean;
+  rotation?: number;
 }
 
 /**
@@ -89,3 +89,23 @@ export interface ComponentInstance {
   pinStates: Record<number, any>;
   update: (delta: number) => void;
 }
+
+/**
+ * Extended component details including additional metadata
+ */
+export interface ExtendedComponentDetails {
+  id: string;
+  type: string;
+  name?: string;
+  category?: string;
+  description?: string;
+  svgPath?: string;
+  pins?: ComponentPin[];
+  properties?: Record<string, any>;
+  isOriginal?: boolean;
+}
+
+/**
+ * Map of component IDs to their extended details
+ */
+export type ComponentDetailsMap = Record<string, ExtendedComponentDetails>;

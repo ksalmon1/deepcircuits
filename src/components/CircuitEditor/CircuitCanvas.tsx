@@ -13,8 +13,7 @@ import {
   OnNodesChange,
   OnEdgesChange,
   OnConnect,
-  OnNodeClick,
-  OnPaneClick,
+  NodeMouseHandler,
   XYPosition,
   NodeTypes,
   EdgeTypes,
@@ -269,11 +268,11 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
   );
 
   // --- React Flow Selection Handlers ---
-  const handleNodeClick: OnNodeClick = useCallback((event, node) => {
+  const handleNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
     console.log('Node clicked:', node);
     // Ensure node.data exists and is a CircuitComponent before selecting
     if (node.data && typeof node.data === 'object' && 'id' in node.data) {
-      selectComponent(node.data as CircuitComponent);
+      selectComponent(node.data as unknown as CircuitComponent);
     } else {
       console.warn('Clicked node data is not a valid CircuitComponent:', node.data);
       selectComponent(null); // Clear selection if data is invalid
@@ -281,7 +280,7 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
     onModified?.();
   }, [selectComponent, onModified]);
 
-  const handlePaneClick: OnPaneClick = useCallback(() => {
+  const handlePaneClick = useCallback((event: React.MouseEvent) => {
     console.log('Pane clicked, clearing selection.');
     selectComponent(null);
     onModified?.();

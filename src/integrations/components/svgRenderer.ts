@@ -1,6 +1,3 @@
-
-import { ComponentRenderer } from './registry';
-
 // Helper function to set up SVG element properties
 function setupSvgElement(svgElement: SVGElement | null): void {
   if (svgElement) {
@@ -56,50 +53,28 @@ function getSvgContentForType(componentType: string): string | null {
 }
 
 /**
- * SVG component renderer implementation
- * Handles rendering custom SVG-based components
+ * SVG Renderer for component visualization
  */
-export const svgRenderer: ComponentRenderer = {
-  canRender(componentType: string): boolean {
-    // This renderer handles types that start with 'svg-'
-    return componentType.startsWith('svg-');
+export const svgRenderer = {
+  id: 'svg',
+  
+  /**
+   * Render a component as SVG
+   */
+  render(component: any) {
+    if (!component || !component.svgPath) {
+      console.warn('Component has no SVG path');
+      return null;
+    }
+    
+    return component.svgPath;
   },
   
-  render(element: HTMLElement, componentType: string, options?: any): void {
-    try {
-      console.log('Rendering SVG component:', componentType);
-      element.innerHTML = '';
-      
-      // If SVG content is directly provided in options
-      if (options && options.svgContent) {
-        element.innerHTML = options.svgContent;
-        setupSvgElement(element.querySelector('svg'));
-        return;
-      }
-      
-      // If a path to an SVG file is provided
-      if (options && options.svgPath) {
-        loadSvgFromPath(element, options.svgPath)
-          .catch(error => {
-            console.error(`Failed to load SVG from path for ${componentType}:`, error);
-          });
-        return;
-      }
-      
-      // If this is a predefined SVG component
-      const svgContent = getSvgContentForType(componentType);
-      if (svgContent) {
-        element.innerHTML = svgContent;
-        setupSvgElement(element.querySelector('svg'));
-        return;
-      }
-      
-      // If we couldn't render anything
-      element.innerHTML = `<div class="error">Could not render SVG component: ${componentType}</div>`;
-    } catch (error) {
-      console.error(`Error rendering SVG component ${componentType}:`, error);
-      element.innerHTML = `<div class="error">Failed to render ${componentType}</div>`;
-    }
+  /**
+   * Check if this renderer can handle a component
+   */
+  canRender(component: any) {
+    return component && typeof component.svgPath === 'string';
   },
   
   getComponentPinInfo(componentType: string): Array<{ name: string; x: number; y: number; signals: string[] }> {

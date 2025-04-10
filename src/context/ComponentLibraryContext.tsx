@@ -47,7 +47,11 @@ export const ComponentLibraryProvider: React.FC<ComponentLibraryProviderProps> =
             try {
               const details = await getComponentWithDetails(item.id); 
               if (details) {
-                detailsMap[item.id] = details;
+                // Ensure id is defined and convert to ExtendedComponentDetails
+                detailsMap[item.id] = {
+                  ...details,
+                  id: item.id, // Explicitly set id to ensure it's not optional
+                };
                 // console.log(`ComponentLibraryProvider: Got details for ${item.name} (${item.type})`); // Reduce noise
               } else {
                  console.warn(`ComponentLibraryProvider: No details found for ${item.name} (ID: ${item.id})`);

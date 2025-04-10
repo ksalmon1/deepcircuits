@@ -1,4 +1,3 @@
-
 import { ComponentPin } from '@/types/pin';
 
 /**
@@ -39,9 +38,8 @@ export const createNewPin = (
   const roundedX = Math.round(x);
   const roundedY = Math.round(y);
   
-  console.log(`Creating new pin at (${roundedX}, ${roundedY}) relative to component origin`);
-  
   return {
+    id: `pin-${crypto.randomUUID().slice(0, 8)}`,
     name: `pin${existingPins.length + 1}`,
     x: roundedX,
     y: roundedY,

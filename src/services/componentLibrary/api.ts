@@ -121,9 +121,11 @@ export async function getComponentWithDetails(id: string): Promise<ComponentLibr
   try {
     //console.log('Getting component with details for ID:', id);
 
-    const { data: rpcData, error: rpcError } = await supabase.rpc('get_component_with_details', {
-      component_id_input: id 
-    });
+    const { data: rpcData, error: rpcError } = await supabase.rpc(
+      'get_component_with_details', 
+      // Use type assertion to tell TypeScript this is intentional
+      { component_id_input: id } as any
+    );
 
     if (rpcError) {
       console.error('Error in RPC get_component_with_details:', rpcError);
@@ -140,7 +142,7 @@ export async function getComponentWithDetails(id: string): Promise<ComponentLibr
       throw new Error('Invalid data format received from component details RPC.');
     }
 
-    const rpcDataObj = rpcData as {
+    const rpcDataObj = rpcData as unknown as {
       component: Record<string, any> | null;
       pins: ComponentPin[] | null;
       properties: Record<string, any> | null;

@@ -61,6 +61,7 @@ export const componentToNode = (component: CircuitComponent): Node => {
  */
 function validatePin(pin: ComponentPin): ComponentPin {
   return {
+    id: pin.id,
     name: pin.name || '',
     x: typeof pin.x === 'number' && !isNaN(pin.x) ? pin.x : 0,
     y: typeof pin.y === 'number' && !isNaN(pin.y) ? pin.y : 0,

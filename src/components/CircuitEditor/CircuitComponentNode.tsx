@@ -1,5 +1,5 @@
 import React, { memo, useContext, useCallback } from 'react';
-import { Handle, NodeProps, Position, useNodes } from '@xyflow/react';
+import { Handle, NodeProps, Position, useNodes, HandleType } from '@xyflow/react';
 import { CircuitComponent } from '@/types/component';
 import { ComponentPin } from '@/types/pin';
 import clsx from 'clsx';
@@ -38,12 +38,17 @@ interface HighlightedPin {
   pinIndex: number;
 }
 
+// Define custom CircuitComponent type with additional properties
+interface CircuitComponentExtended extends CircuitComponent {
+  hideHandles?: boolean;
+  rotation?: number;
+}
+
 // Define the props specifically for this node type
-interface CustomNodeProps extends NodeProps {
-  // Expecting CircuitComponent data, potentially extended 
-  // with simulation state/callbacks later
-  data: CircuitComponent & { hideHandles?: boolean };
-  // Destructure width and height provided by React Flow
+interface CustomNodeProps {
+  id: string;
+  data: CircuitComponentExtended;
+  selected?: boolean;
   width?: number | null;
   height?: number | null;
 }
@@ -52,14 +57,14 @@ const CircuitComponentNode: React.FC<CustomNodeProps> = ({
   id: sourceNodeId,
   data,
   selected,
-  width,  // Get width
-  height, // Get height
+  width,
+  height,
 }) => {
   const handleSize = 8;
   // Get context for highlighting
   const { highlightedPins, setHighlightedPins } = useCircuitEditor();
   // Get all current nodes on the canvas
-  const nodes = useNodes<CircuitComponent>();
+  const nodes = useNodes();
 
   // Get rotation value from data, default to 0
   const rotation = data.rotation || 0;
@@ -78,7 +83,13 @@ const CircuitComponentNode: React.FC<CustomNodeProps> = ({
       if (targetNode.data?.pins && Array.isArray(targetNode.data.pins)) {
         targetNode.data.pins.forEach((_, targetPinIndex) => {
           // Check connection validity using the domain rule
-          if (isValidConnection(nodes.map(n => n.data), sourceNodeId, sourcePinIndex, targetNode.id, targetPinIndex)) {
+          if (isValidConnection(
+            nodes.map(n => n.data as unknown as CircuitComponent), 
+            sourceNodeId, 
+            sourcePinIndex, 
+            targetNode.id, 
+            targetPinIndex
+          )) {
             validTargets.push({ nodeId: targetNode.id, pinIndex: targetPinIndex });
           }
         });
@@ -189,7 +200,7 @@ const CircuitComponentNode: React.FC<CustomNodeProps> = ({
         return (
           <Handle
             key={pin.name || `pin-${index}`}
-            type="both"
+            type="source"
             position={Position.Top}
             id={`pin-${index}`}
             style={getHandleStyle(pin)}

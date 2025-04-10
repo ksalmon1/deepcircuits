@@ -32,7 +32,7 @@ interface ProjectContextType {
   // Remove direct setters
   // setComponents: React.Dispatch<React.SetStateAction<CircuitComponent[]>>;
   // setWires: React.Dispatch<React.SetStateAction<WireEdge[]>>;
-  // setCode: React.Dispatch<React.SetStateAction<string>>;
+  setCode: (newCode: string) => void;
 
   // Action handlers
   handleComponentsChange: (updatedComponents: CircuitComponent[]) => void;
@@ -245,7 +245,7 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
   const coreSaveProject = useCallback(async (projectId: string, projectName: string): Promise<boolean> => {
     if (!user) {
       toast.error('You must be logged in to save a project.');
-      setError(new Error('User not authenticated for saving.'));
+      setError(new Error('User not authenticated for saving.'), 'PROJECT_SAVE');
       return false; // Indicate failure
     }
 
@@ -272,7 +272,7 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
         // but handle it defensively.
         console.error('Save operation returned null/undefined.');
         toast.error('Failed to save project.', { description: 'The save operation did not return the expected result.'});
-        setError(new Error('Save operation failed unexpectedly.'));
+        setError(new Error('Save operation failed unexpectedly.'), 'PROJECT_SAVE');
         return false; // Indicate failure
       }
     } catch (error) {
@@ -280,7 +280,7 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
       toast.error('Failed to save project.', {
         description: error instanceof Error ? error.message : 'An unknown error occurred.',
       });
-      setError(error instanceof Error ? error : new Error('An unknown save error occurred.'));
+      setError(error instanceof Error ? error : new Error('An unknown save error occurred.'), 'PROJECT_SAVE');
       return false; // Indicate failure
     }
   }, [user, historyState, setError]);
@@ -327,55 +327,55 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
   // --- Wrap core functions with error handling --- 
   // Wrap the error handlers themselves in useCallback to stabilize their references
   const handleComponentsChange = useCallback(
-    withErrorHandling(coreHandleComponentsChange, setError, 'Failed to update components'),
+    withErrorHandling(coreHandleComponentsChange, 'Failed to update components', setError),
     [coreHandleComponentsChange, setError]
   );
   const handleWiresChange = useCallback(
-    withErrorHandling(coreHandleWiresChange, setError, 'Failed to update wires'),
+    withErrorHandling(coreHandleWiresChange, 'Failed to update wires', setError),
     [coreHandleWiresChange, setError]
   );
   const updateCode = useCallback(
-    withErrorHandling(coreUpdateCode, setError, 'Failed to update code'),
+    withErrorHandling(coreUpdateCode, 'Failed to update code', setError),
     [coreUpdateCode, setError]
   );
   const handleUpdateComponentAttributes = useCallback(
-    withErrorHandling(coreUpdateComponentAttributes, setError, 'Failed to update component attributes'),
+    withErrorHandling(coreUpdateComponentAttributes, 'Failed to update component attributes', setError),
     [coreUpdateComponentAttributes, setError]
   );
   const rotateComponent = useCallback(
-    withErrorHandling(coreRotateComponent, setError, 'Failed to rotate component'),
+    withErrorHandling(coreRotateComponent, 'Failed to rotate component', setError),
     [coreRotateComponent, setError]
   );
   const setDraggingComponentType = useCallback(
-    withErrorHandling(coreSetDraggingComponentType, setError, 'Failed to set dragging component type'),
+    withErrorHandling(coreSetDraggingComponentType, 'Failed to set dragging component type', setError),
     [coreSetDraggingComponentType, setError]
   );
   const saveProject = useCallback(
-    withErrorHandling(coreSaveProject, setError, 'Failed to save project'),
+    withErrorHandling(coreSaveProject, 'Failed to save project', setError),
     [coreSaveProject, setError] // Depends on the memoized coreSaveProject
   );
   const undoLastAction = useCallback(
-    withErrorHandling(coreUndoLastAction, setError, 'Failed to undo action'),
+    withErrorHandling(coreUndoLastAction, 'Failed to undo action', setError),
     [coreUndoLastAction, setError]
   );
   const redoLastAction = useCallback(
-    withErrorHandling(coreRedoLastAction, setError, 'Failed to redo action'),
+    withErrorHandling(coreRedoLastAction, 'Failed to redo action', setError),
     [coreRedoLastAction, setError]
   );
   const exportProject = useCallback(
-    withErrorHandling(coreExportProject, setError, 'Failed to export project'),
+    withErrorHandling(coreExportProject, 'Failed to export project', setError),
     [coreExportProject, setError]
   );
   const importProject = useCallback(
-    withErrorHandling(coreImportProject, setError, 'Failed to import project'),
+    withErrorHandling(coreImportProject, 'Failed to import project', setError),
     [coreImportProject, setError]
   );
   const clearCircuitState = useCallback(
-    withErrorHandling(coreClearCircuitState, setError, 'Failed to clear circuit state'),
+    withErrorHandling(coreClearCircuitState, 'Failed to clear circuit state', setError),
     [coreClearCircuitState, setError]
   );
   const initializeProjectState = useCallback(
-    withErrorHandling(coreInitializeProjectState, setError, 'Failed to initialize project state'),
+    withErrorHandling(coreInitializeProjectState, 'Failed to initialize project state', setError),
     [coreInitializeProjectState, setError]
   );
 
@@ -393,23 +393,24 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
       code: current.code,
       draggingComponentType: draggingComponentType,
       // Actions:
-      handleComponentsChange: withErrorHandling(coreHandleComponentsChange, setError, 'UPDATE_COMPONENTS'),
-      handleWiresChange: withErrorHandling(coreHandleWiresChange, setError, 'UPDATE_WIRES'),
-      updateCode: withErrorHandling(coreUpdateCode, setError, 'UPDATE_CODE'),
-      handleUpdateComponentAttributes: withErrorHandling(coreUpdateComponentAttributes, setError, 'UPDATE_ATTRIBUTES'),
-      rotateComponent: withErrorHandling(coreRotateComponent, setError, 'ROTATE_COMPONENT'),
+      handleComponentsChange: withErrorHandling(coreHandleComponentsChange, 'UPDATE_COMPONENTS', setError),
+      handleWiresChange: withErrorHandling(coreHandleWiresChange, 'UPDATE_WIRES', setError),
+      updateCode: withErrorHandling(coreUpdateCode, 'UPDATE_CODE', setError),
+      setCode: withErrorHandling(coreUpdateCode, 'UPDATE_CODE', setError),
+      handleUpdateComponentAttributes: withErrorHandling(coreUpdateComponentAttributes, 'UPDATE_ATTRIBUTES', setError),
+      rotateComponent: withErrorHandling(coreRotateComponent, 'ROTATE_COMPONENT', setError),
       setDraggingComponentType: coreSetDraggingComponentType, // No error handling needed
-      undoLastAction: withErrorHandling(coreUndoLastAction, setError, 'UNDO'),
-      redoLastAction: withErrorHandling(coreRedoLastAction, setError, 'REDO'),
+      undoLastAction: withErrorHandling(coreUndoLastAction, 'UNDO', setError),
+      redoLastAction: withErrorHandling(coreRedoLastAction, 'REDO', setError),
       clearCircuitState: withErrorHandling(() => {
           // Wrap the state reset logic for error handling if needed, though unlikely to fail
           setHistoryState(initialHistoryState);
           toast.info('Circuit cleared.');
-      }, setError, 'CLEAR_CIRCUIT'),
-      saveProject: withErrorHandling(coreSaveProject, setError, 'SAVE_PROJECT'),
-      exportProject: withErrorHandling(coreExportProject, setError, 'EXPORT_PROJECT'),
-      importProject: withErrorHandling(coreImportProject, setError, 'IMPORT_PROJECT'),
-      initializeProjectState: withErrorHandling(coreInitializeProjectState, setError, 'INITIALIZE_PROJECT'),
+      }, 'CLEAR_CIRCUIT', setError),
+      saveProject: withErrorHandling(coreSaveProject, 'SAVE_PROJECT', setError),
+      exportProject: withErrorHandling(coreExportProject, 'EXPORT_PROJECT', setError),
+      importProject: withErrorHandling(coreImportProject, 'IMPORT_PROJECT', setError),
+      initializeProjectState: withErrorHandling(coreInitializeProjectState, 'INITIALIZE_PROJECT', setError),
       // History flags:
       canUndo: historyState.currentIndex > 0,
       canRedo: historyState.currentIndex < historyState.history.length - 1,

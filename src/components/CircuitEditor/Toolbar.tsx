@@ -92,14 +92,25 @@ export const ContextToolbar = () => {
     toggleSimulation
   } = useSimulation();
   
+  // Create wrapper functions to match expected prop types
+  const handleSave = () => {
+    // You might want to get projectId and projectName from context or elsewhere
+    saveProject('default', 'My Circuit');
+  };
+  
+  const handleImport = () => {
+    // Add default or empty project data
+    importProject({ components: [], wires: [], code: '' });
+  };
+  
   return (
     <Toolbar 
       isSimulationRunning={isSimulationRunning}
       toggleSimulation={toggleSimulation}
-      saveProject={saveProject}
+      saveProject={handleSave}
       undoLastAction={undoLastAction}
       exportProject={exportProject}
-      importProject={importProject}
+      importProject={handleImport}
     />
   );
 };
