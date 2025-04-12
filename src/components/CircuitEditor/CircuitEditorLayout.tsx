@@ -39,6 +39,7 @@ import type { AppComponentModel, AppConnectionModel } from '@/simulation/appStat
 import { Node, Edge } from '@xyflow/react';
 import { useProject } from '@/context/ProjectContext';
 import { useComponentLibrary } from '@/hooks/useComponentLibrary';
+import { useSimulation } from '@/context/SimulationContext';
 
 // Define styles for the resize handle
 const resizeHandleStyle = "w-[1px] bg-border hover:bg-primary transition-colors duration-200 ease-in-out";
@@ -164,6 +165,78 @@ function mergeNodes(connections: AppConnectionModel[], pinToNodeMap: PinToSpiceN
   // console.log("[mergeNodes] Final Node Map:", new Map(pinToNodeMap));
 }
 
+/** Finds groups of pins that are connected through one or more wires */
+function findConnectedGroups(connections: AppConnectionModel[], components: AppComponentModel[]): Set<string>[] {
+  // Build an adjacency list representing pin connections
+  const graph = new Map<string, Set<string>>();
+  
+  // Initialize the graph with all pins
+  components.forEach(comp => {
+    comp.pins?.forEach(pin => {
+      const pinKey = `${comp.id}_${pin.id}`;
+      if (!graph.has(pinKey)) {
+        graph.set(pinKey, new Set<string>());
+      }
+    });
+  });
+  
+  // Add connections to the graph
+  connections.forEach((conn, index) => {
+    const fromKey = `${conn.from.componentId}_${conn.from.pinId}`;
+    const toKey = `${conn.to.componentId}_${conn.to.pinId}`;
+    
+    console.log(`Graph: Adding connection ${index} from ${fromKey} to ${toKey}`);
+    
+    // Add bidirectional connection
+    if (graph.has(fromKey) && graph.has(toKey)) {
+      graph.get(fromKey)!.add(toKey);
+      graph.get(toKey)!.add(fromKey);
+    } else {
+      console.warn(`Graph: Missing node for connection ${index}: ${!graph.has(fromKey) ? fromKey : toKey} not found`);
+    }
+  });
+  
+  // Debug: Print the complete graph
+  console.log('Graph structure:');
+  graph.forEach((neighbors, node) => {
+    if (neighbors.size > 0) {
+      console.log(`Node ${node} connects to:`, Array.from(neighbors));
+    }
+  });
+  
+  // Perform a breadth-first search to find connected components
+  const visited = new Set<string>();
+  const connectedGroups: Set<string>[] = [];
+  
+  // Process each pin
+  graph.forEach((_, pinKey) => {
+    // Skip if already visited
+    if (visited.has(pinKey)) return;
+    
+    // New connected group
+    const group = new Set<string>();
+    const queue = [pinKey];
+    visited.add(pinKey);
+    group.add(pinKey);
+    
+    // Process all connected pins
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      graph.get(current)?.forEach(neighbor => {
+        if (!visited.has(neighbor)) {
+          visited.add(neighbor);
+          group.add(neighbor);
+          queue.push(neighbor);
+        }
+      });
+    }
+    
+    connectedGroups.push(group);
+  });
+  
+  return connectedGroups;
+}
+
 /**
  * Circuit Editor Layout Content - Now receives state/setters as props + ref
  */
@@ -205,6 +278,9 @@ const CircuitEditorLayoutContent = ({
   
   const { components: projectComponents, wires: projectWires } = useProject();
   const { componentsDetailsMap } = useComponentLibrary();
+  
+  // Get the addSerialOutput function from the simulation context
+  const { addSerialOutput, clearSerialOutput } = useSimulation();
   
   // Internal state for the content layout and UI toggles
   const [showCodeEditor, setShowCodeEditor] = useState<boolean>(false);
@@ -333,6 +409,9 @@ const CircuitEditorLayoutContent = ({
     //console.log('Current wires (state):', projectWires);
     console.log('Component Definitions Map:', componentsDetailsMap);
 
+    // Clear previous serial output and add a header
+    addSerialOutput('> Circuit Simulation Started');
+
     try {
       // 1. Map project components to AppComponentModel
       const initialAppComponents: AppComponentModel[] = projectComponents.map((instance) => {
@@ -361,7 +440,7 @@ const CircuitEditorLayoutContent = ({
       
       // --- 3. Perform SPICE Node Mapping --- 
       const pinToNodeMap: PinToSpiceNodeMap = new Map();
-      const nextNodeCounter = { value: 1 }; // Start node names from '1'
+      const nextNodeCounter = { value: 1 };
       
       // Initial pass to assign preliminary nodes based on pins
       initialAppComponents.forEach(comp => {
@@ -371,7 +450,59 @@ const CircuitEditorLayoutContent = ({
           });
       });
       
-      // Merge nodes based on connections (wires)
+      // Find connected groups of pins using graph traversal
+      const connectedGroups = findConnectedGroups(appConnections, initialAppComponents);
+      
+      // Add more detailed logging
+      console.log('Debug: Found connected pin groups:', connectedGroups);
+      // Log the details of each group for better visibility
+      connectedGroups.forEach((group, index) => {
+        console.log(`Group ${index} contains pins:`, Array.from(group));
+      });
+      
+      // Log detailed connection information
+      console.log('Debug: Connection details:');
+      appConnections.forEach((conn, index) => {
+        const fromKey = `${conn.from.componentId}_${conn.from.pinId}`;
+        const toKey = `${conn.to.componentId}_${conn.to.pinId}`;
+        console.log(`Connection ${index}: ${fromKey} ↔ ${toKey}`);
+      });
+      
+      // Pre-assign the same node to all pins in each group
+      connectedGroups.forEach(group => {
+        let representativeNode = null;
+        
+        // First pass: find ground or existing node
+        for (const pinKey of group) {
+          if (pinToNodeMap.has(pinKey)) {
+            const node = pinToNodeMap.get(pinKey);
+            if (node === '0' || !representativeNode) {
+              representativeNode = node;
+              if (node === '0') break; // Ground takes precedence
+            } else if (representativeNode && parseInt(node!, 10) < parseInt(representativeNode, 10)) {
+              // Use the lower node number if not ground
+              representativeNode = node;
+            }
+          }
+        }
+        
+        // If no node found, create a new one
+        if (!representativeNode) {
+          representativeNode = String(nextNodeCounter.value++);
+        }
+        
+        // Assign the same node to all pins in the group
+        for (const pinKey of group) {
+          pinToNodeMap.set(pinKey, representativeNode!);
+        }
+      });
+      
+      // Log the state before merging
+      console.log('Debug: appConnections before mergeNodes:', appConnections);
+      console.log('Debug: pinToNodeMap before mergeNodes:', new Map(pinToNodeMap)); 
+
+      // Run mergeNodes as a backup to ensure all connections are properly merged
+      // This should be redundant with our group-based assignment but serves as a safety net
       mergeNodes(appConnections, pinToNodeMap);
       
       // --- 4. Augment Components with Final SPICE Connections --- 
@@ -400,17 +531,19 @@ const CircuitEditorLayoutContent = ({
       //console.log('Final Pin -> SPICE Node Map:', new Map(pinToNodeMap)); // Log the final map
 
       // 5. Run simulation with augmented components
-      // The runSpiceSimulation function now expects this array directly
-      const results = await runSpiceSimulation(componentsForSpice); 
+      // Pass the addSerialOutput function to runSpiceSimulation
+      const results = await runSpiceSimulation(componentsForSpice, addSerialOutput); 
       
       if (results?.error) { // Null check results as well
           console.error('Simulation failed:', results.error);
           toast.error(results.error);
           setSimulationError(results.error);
+          addSerialOutput(`Simulation Error: ${results.error}`);
       } else if (results) { // Check if results object exists
           //console.log('Simulation successful:', results);
           setSimulationResult(results);
           toast.success('Simulation Complete: Results are available.');
+          addSerialOutput('\n> Circuit Simulation Completed Successfully');
           if (results.voltages || results.currents) { // Check if voltage/current data exists
                 //console.log("Simulation Voltages:", results.voltages);
                 //console.log("Simulation Currents:", results.currents);
@@ -420,12 +553,14 @@ const CircuitEditorLayoutContent = ({
            //console.error('Simulation returned null result without specific error.');
            setSimulationError('Simulation failed to return results.');
            toast.error('Simulation failed to return results.');
+           addSerialOutput('Simulation Error: Failed to return results');
       }
     } catch (error: any) {
       console.error('Simulation setup or execution error:', error);
       const errorMessage = `Simulation error: ${error.message || String(error)}`;
       toast.error(errorMessage);
       setSimulationError(errorMessage);
+      addSerialOutput(`Simulation Error: ${error.message || String(error)}`);
     } finally {
       setIsSimulating(false);
       //console.log('Simulation process finished.');
@@ -746,6 +881,7 @@ const CircuitEditorLayoutContent = ({
                           <SerialMonitor 
                             isSimulationRunning={isSimulationRunning} 
                             serialOutput={serialOutput} 
+                            clearSerialOutput={clearSerialOutput}
                           />
                         </div>
                       </Panel>

@@ -20,6 +20,7 @@ export interface SimulationResults {
     analysisType: 'op';
     rawOutput: string;
     error?: string;
+    formattedSummary?: string;
 }
 
 interface ComponentWithSpiceConnections extends AppComponentModel {
@@ -27,7 +28,7 @@ interface ComponentWithSpiceConnections extends AppComponentModel {
 }
 
 let currentSimulationPromise: Promise<SimulationResults | null> | null = null;
-let simulationResolve: ((result: SimulationResults | null) => void) | null = null;
+let simulationResolve: ((value: SimulationResults | null) => void) | null = null;
 let capturedStdoutLines: string[] = [];
 let capturedStderrLines: string[] = [];
 let mainHasRun = false;
@@ -320,7 +321,261 @@ function parseSimulationResults(stdout: string, stderr: string): SimulationResul
     return results;
 }
 
-export function runSpiceSimulation(componentsWithNodes: ComponentWithSpiceConnections[]): Promise<SimulationResults | null> {
+/**
+ * Formats simulation results in a sequential order for better debugging
+ * @param results The raw simulation results
+ * @param componentsWithNodes The circuit components with their node connections
+ * @returns A formatted string with circuit path information
+ */
+function formatSimulationResults(results: SimulationResults, componentsWithNodes: ComponentWithSpiceConnections[]): string {
+    if (results.error) {
+        return `Simulation Error: ${results.error}`;
+    }
+    
+    // Create a mapping of nodes to components for easier lookup
+    const nodeToComponentMap = new Map<string, {
+        componentId: string,
+        componentType: string,
+        pinIndex: number
+    }[]>();
+    
+    // Build the node-to-component mapping
+    componentsWithNodes.forEach(comp => {
+        comp.spiceConnections?.forEach((node, pinIndex) => {
+            if (!nodeToComponentMap.has(node)) {
+                nodeToComponentMap.set(node, []);
+            }
+            nodeToComponentMap.get(node)?.push({
+                componentId: comp.id,
+                componentType: comp.type,
+                pinIndex: pinIndex
+            });
+        });
+    });
+    
+    // Find the voltage source as the starting point
+    const voltageSources = componentsWithNodes.filter(
+        comp => comp.type.toLowerCase() === 'voltagesource' || comp.type.toLowerCase() === 'power'
+    );
+    
+    if (voltageSources.length === 0) {
+        return "Cannot create analysis: No voltage source found in circuit.";
+    }
+    
+    const source = voltageSources[0];
+    
+    // Try different possible key formats with proper case (lowercase v)
+    const sourceId = source.id.replace(/-/g, '');
+    const sourceCurrent = results.currents[`vpower${sourceId}`] || 
+                          results.currents[`v${sourceId}`] || 
+                          Object.values(results.currents)[0]; // Fallback to first current value
+    
+    // Calculate current value in mA
+    const currentValue = Math.abs(sourceCurrent || 0) * 1000;
+    
+    // Get voltage nodes sorted by voltage (descending)
+    const sortedNodes = Object.entries(results.voltages)
+        .sort(([, valueA], [, valueB]) => valueB - valueA);
+    
+    // Calculate component voltage drops
+    const componentDrops = componentsWithNodes.map(comp => {
+        if (comp.spiceConnections?.length === 2) {
+            const node1 = comp.spiceConnections[0];
+            const node2 = comp.spiceConnections[1];
+            const voltage1 = results.voltages[node1] || 0;
+            const voltage2 = results.voltages[node2] || 0;
+            const voltageDrop = Math.abs(voltage1 - voltage2);
+            
+            // Get a readable component name
+            const componentName = comp.type.charAt(0).toUpperCase() + comp.type.slice(1);
+            const shortId = comp.id.split('-')[1]?.substring(0, 6) || '';
+            
+            return {
+                name: `${componentName} ${shortId}`,
+                type: comp.type,
+                id: comp.id,
+                node1,
+                node2,
+                voltageDrop,
+                percentage: (voltageDrop / (results.voltages["1"] || 9)) * 100
+            };
+        }
+        return null;
+    }).filter(Boolean);
+    
+    // Build a structured output
+    let output = "";
+    
+    // 1. Summary section
+    output += "\nCircuit Summary\n";
+    output += "---------------------\n";
+    output += `Source Voltage: ${results.voltages["1"] || 9} V\n`;
+    output += `Total Current: ${currentValue.toFixed(2)} mA\n`;
+    output += `Components: ${componentsWithNodes.length}\n\n`;
+    
+    // Add a Circuit Connections subsection - visual representation
+    output += "Circuit Connections:\n";
+    output += "---------------------\n";
+    
+    // First identify the path through the circuit from source to ground
+    const circuitPath: ComponentWithSpiceConnections[] = [];
+    const processedComponents = new Set<string>();
+    
+    // Start with voltage source
+    const sourceComp = voltageSources[0];
+    let currentNode = sourceComp.spiceConnections?.[1] || '1'; // Output node of source
+    circuitPath.push(sourceComp);
+    processedComponents.add(sourceComp.id);
+    
+    // Follow the circuit path until we reach ground or can't find more components
+    while (currentNode !== '0' && circuitPath.length < componentsWithNodes.length) {
+        // Find components connected to the current node (excluding already processed ones)
+        const nodesComponents = nodeToComponentMap.get(currentNode) || [];
+        const nextCompInfo = nodesComponents.find(c => !processedComponents.has(c.componentId));
+        
+        if (!nextCompInfo) break; // No more connections found
+        
+        // Get the next component
+        const nextComp = componentsWithNodes.find(c => c.id === nextCompInfo.componentId);
+        if (!nextComp) break;
+        
+        circuitPath.push(nextComp);
+        processedComponents.add(nextComp.id);
+        
+        // Find the other node of this component (the one we're not currently at)
+        const pinIndex = nextComp.spiceConnections.findIndex(n => n === currentNode);
+        const otherPinIndex = pinIndex === 0 ? 1 : 0;
+        currentNode = nextComp.spiceConnections[otherPinIndex];
+    }
+    
+    // Add any remaining components that weren't in the main path
+    componentsWithNodes.forEach(comp => {
+        if (!processedComponents.has(comp.id)) {
+            circuitPath.push(comp);
+            processedComponents.add(comp.id);
+        }
+    });
+    
+    // Create a visual representation of the circuit path
+    let circuitString = "";
+    
+    circuitPath.forEach((comp, index) => {
+        const compType = comp.type.charAt(0).toUpperCase() + comp.type.slice(1);
+        const compShortId = comp.id.split('-')[1]?.substring(0, 6) || '';
+        const displayName = `${compType} ${compShortId}`;
+        
+        // Add component to the circuit string
+        circuitString += displayName;
+        
+        // Add voltage levels between components
+        if (index < circuitPath.length - 1) {
+            // Find the shared node between this component and the next
+            const thisComp = circuitPath[index];
+            const nextComp = circuitPath[index + 1];
+            
+            // Find the connecting node
+            let connectingNode = null;
+            for (const node of thisComp.spiceConnections) {
+                if (nextComp.spiceConnections.includes(node)) {
+                    connectingNode = node;
+                    break;
+                }
+            }
+            
+            // If we found a connecting node, show its voltage
+            if (connectingNode) {
+                const nodeVoltage = results.voltages[connectingNode];
+                const voltageText = nodeVoltage !== undefined ? 
+                    ` [${nodeVoltage.toFixed(2)}V] ` : ' → ';
+                circuitString += ` →${voltageText}→ `;
+            } else {
+                circuitString += ' → ';
+            }
+        }
+    });
+    
+    // Add circuit flow diagram (as text)
+    output += circuitString + "\n\n";
+    
+    // Show components in detail with voltages
+    output += "Component Details:\n";
+    output += "---------------------\n";
+    
+    circuitPath.forEach((comp) => {
+        const compType = comp.type.charAt(0).toUpperCase() + comp.type.slice(1);
+        const compShortId = comp.id.split('-')[1]?.substring(0, 6) || '';
+        const displayName = `${compType} ${compShortId}`;
+        
+        output += `${displayName}\n`;
+        
+        // Show pins and voltages
+        comp.spiceConnections?.forEach((node, index) => {
+            const pinName = comp.pins?.[index]?.name || `Pin ${index}`;
+            const nodeVoltage = results.voltages[node];
+            let voltageText = node === '0' ? '0V' : 
+                (nodeVoltage !== undefined ? `${nodeVoltage.toFixed(2)}V` : '?V');
+            
+            output += `  ${pinName}: ${voltageText}\n`;
+        });
+        
+        // Show voltage drop if it's a two-pin component
+        if (comp.spiceConnections?.length === 2) {
+            const node1 = comp.spiceConnections[0];
+            const node2 = comp.spiceConnections[1];
+            const v1 = results.voltages[node1] || 0;
+            const v2 = results.voltages[node2] || 0;
+            const voltageDrop = Math.abs(v1 - v2);
+            
+            output += `  Voltage Drop: ${voltageDrop.toFixed(2)}V\n`;
+        }
+        
+        output += '\n';
+    });
+    
+    // Remove trailing newlines to ensure consistent formatting
+    output = output.trimEnd();
+    
+    return output;
+}
+
+// Helper function to split long text into multiple lines
+function splitLongText(text: string, maxLength: number): string[] {
+    if (text.length <= maxLength) {
+        return [text];
+    }
+    
+    const lines: string[] = [];
+    let currentIndex = 0;
+    
+    while (currentIndex < text.length) {
+        // Find a good place to break the line
+        let breakIndex = currentIndex + maxLength;
+        if (breakIndex < text.length) {
+            // Look backwards for a space to break cleanly
+            const lastSpace = text.lastIndexOf(' ', breakIndex);
+            if (lastSpace > currentIndex && lastSpace - currentIndex >= maxLength / 2) {
+                breakIndex = lastSpace;
+            }
+        } else {
+            breakIndex = text.length;
+        }
+        
+        lines.push(text.substring(currentIndex, breakIndex));
+        currentIndex = breakIndex;
+        
+        // Skip the space at the beginning of the next line
+        if (text[currentIndex] === ' ') {
+            currentIndex++;
+        }
+    }
+    
+    return lines;
+}
+
+export function runSpiceSimulation(
+  componentsWithNodes: ComponentWithSpiceConnections[],
+  addToSerialOutput?: (message: string) => void
+): Promise<SimulationResults | null> {
     // console.log('runSpiceSimulation called (using Module config)...');
 
     if (currentSimulationPromise) {
@@ -415,6 +670,25 @@ export function runSpiceSimulation(componentsWithNodes: ComponentWithSpiceConnec
                             Object.keys(results.currents).length === 0 && 
                             !results.error) {
                             results.error = "No voltage or current values were found in the simulation output.";
+                        }
+                        
+                        // Format results in a sequential order for debugging
+                        if (Object.keys(results.voltages).length > 0) {
+                            const formattedResults = formatSimulationResults(results, componentsWithNodes);
+                            
+                            // Store formatted results in the results object for UI display
+                            results.formattedSummary = formattedResults;
+                            
+                            // Log the results to the console as before
+                            console.log("\n" + formattedResults + "\n");
+                            
+                            // If a callback was provided, send the formatted results to the serial output
+                            if (addToSerialOutput) {
+                                // Split by newlines and send each line separately
+                                formattedResults.split('\n').forEach(line => {
+                                    addToSerialOutput(line);
+                                });
+                            }
                         }
                         
                         simulationResolve?.(results);

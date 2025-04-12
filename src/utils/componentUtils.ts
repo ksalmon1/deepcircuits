@@ -37,12 +37,24 @@ export function getComponentPinPositions(componentType: string): ComponentPin[] 
 }
 
 /**
+ * Store counters for each component type
+ */
+const componentCounters: Record<string, number> = {};
+
+/**
  * Generate a unique ID for a component
  */
 export function generateComponentId(type: string): string {
-  const timestamp = Date.now();
-  const random = Math.floor(Math.random() * 10000);
-  return `${type}-${timestamp}-${random}`;
+  // Initialize counter for this type if it doesn't exist
+  if (!componentCounters[type]) {
+    componentCounters[type] = 0;
+  }
+  
+  // Increment the counter
+  componentCounters[type]++;
+  
+  // Return the ID with sequential number
+  return `${type}-${componentCounters[type]}`;
 }
 
 /**

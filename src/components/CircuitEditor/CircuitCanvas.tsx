@@ -30,6 +30,7 @@ import { CircuitComponent } from '@/types/component';
 import { WireEdge, WireData } from '@/types/circuit';
 import { getPinSignalType, getWireColorFromSignal, createWireId } from '@/utils/wireUtils';
 import { findComponentById, getPinByIndex } from '@/utils/pinManagement';
+import { generateComponentId } from '@/utils/componentUtils';
 
 // Import validation function
 import { isValidConnection } from '@/domain/connectionRules';
@@ -114,7 +115,7 @@ const wireEdgeToFlowEdge = (wire: WireEdge): Edge => {
 
 // Need a utility to create unique IDs for components
 const createComponentId = (type: string): string => {
-  return `${type}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  return generateComponentId(type);
 };
 
 const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({

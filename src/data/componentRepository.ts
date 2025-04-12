@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { mapComponentFromDb, convertLibraryItemToCircuitComponent } from "@/services/componentLibrary/converters";
 import { toast } from "sonner";
 import { AppError, ComponentError } from "@/utils/errorHandling";
+import { generateComponentId } from "@/utils/componentUtils";
 
 /**
  * Component Repository
@@ -139,7 +140,7 @@ export class ComponentRepository {
     
     // Generate a unique ID if one doesn't exist
     if (!component.id) {
-      component.id = `comp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      component.id = generateComponentId(libraryItem.type);
     }
     
     return component;
