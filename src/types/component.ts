@@ -39,6 +39,7 @@ export interface CircuitComponent extends BaseComponent {
   isOriginal?: boolean;
   rotation?: number;
   simulationState?: ComponentSimulationState | null;
+  activeStates?: any[];
 }
 
 /**

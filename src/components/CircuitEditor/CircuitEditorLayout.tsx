@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { 
   Play, Save, Undo, Redo, Trash2, ArrowLeft, 
   Code, MonitorUp, SplitSquareVertical, SplitSquareHorizontal,
-  RotateCw
+  RotateCw, Square
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate, useLocation, useParams, useBlocker } from 'react-router-dom';
@@ -398,8 +398,25 @@ const CircuitEditorLayoutContent = ({
   }, [circuitName]);
 
   const handleSimulate = async () => {
-    if (isSimulating) return;
+    // If already simulating, stop simulation
+    if (isSimulating) {
+      console.log('User stopped the simulation.');
+      setIsSimulating(false);
+      
+      // Reset all component states by updating them with null simulationState
+      const updatedComponents = projectComponents.map(component => 
+        component.simulationState ? { ...component, simulationState: null, activeStates: [] } : component
+      );
+      handleComponentsChange(updatedComponents);
+      
+      // Clear simulation results
+      setSimulationResult(null);
+      setSimulationError(null);
+      toast.success('Simulation stopped. Circuit is now off.');
+      return;
+    }
 
+    // Otherwise, start a new simulation
     setIsSimulating(true);
     setSimulationResult(null);
     setSimulationError(null);
@@ -532,12 +549,21 @@ const CircuitEditorLayoutContent = ({
           console.error('Simulation failed:', results.error);
           toast.error(results.error);
           setSimulationError(results.error);
+          
+          // Only set isSimulating to false on error
+          setIsSimulating(false);
+          toast.error('Circuit turned off due to simulation error');
       } else if (results) {
           setSimulationResult(results);
-          toast.success('Simulation Complete: Results are available.');
+          toast.success('Circuit is now running');
+          // Keep isSimulating true after successful simulation
       } else {
           setSimulationError('Simulation failed to return results.');
           toast.error('Simulation failed to return results.');
+          
+          // Only set isSimulating to false when no results returned
+          setIsSimulating(false);
+          toast.error('Circuit turned off due to simulation failure');
       }
     } catch (error: any) {
       console.error('Simulation setup or execution error:', error);
@@ -545,8 +571,10 @@ const CircuitEditorLayoutContent = ({
       toast.error(errorMessage);
       setSimulationError(errorMessage);
       addSerialOutput(`Simulation Error: ${error.message || String(error)}`);
-    } finally {
+      
+      // Only set to false on error
       setIsSimulating(false);
+      toast.error('Circuit turned off due to simulation error');
     }
   };
 
@@ -775,10 +803,13 @@ const CircuitEditorLayoutContent = ({
           <Button 
             size="sm"
             onClick={handleSimulate}
-            disabled={isSimulating}
           >
-            <Play className="mr-1 h-4 w-4" />
-            {isSimulating ? 'Simulating...' : 'Simulate'}
+            {isSimulating ? (
+              <Square className="mr-1 h-4 w-4" />
+            ) : (
+              <Play className="mr-1 h-4 w-4" />
+            )}
+            {isSimulating ? 'Stop' : 'Start'}
           </Button>
         </div>
       </div>
