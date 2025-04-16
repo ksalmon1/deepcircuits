@@ -127,7 +127,10 @@ const CustomWireEdge: React.FC<EdgeProps> = ({
   
   const { deleteElements } = useReactFlow();
 
-  // Calculate the path
+  // Calculate the path as a straight line
+  const edgePath = `M ${sourceX},${sourceY} L ${targetX},${targetY}`;
+
+  /* // Remove Manhattan path calculation - COMMENTED OUT
   const edgePath = getManhattanPath({
     sourceX,
     sourceY,
@@ -136,10 +139,9 @@ const CustomWireEdge: React.FC<EdgeProps> = ({
     sourcePosition,
     targetPosition,
   });
-  // Add log for calculated path
-  //console.log(`CustomWireEdge Path [${id}]:`, edgePath);
+  */
 
-  // --- Robust Style Calculation --- 
+  // --- Robust Style Calculation (Keep this for color) --- 
   // Determine base properties
   const signal = typeof data?.signal === 'string' ? data.signal : '';
   const baseColor = signal ? getWireColorFromSignal(signal) : '#555'; // Default color

@@ -1,11 +1,12 @@
-import React, { memo, useContext, useCallback } from 'react';
-import { Handle, NodeProps, Position, useNodes, HandleType } from '@xyflow/react';
+import React, { memo, useCallback } from 'react';
+import { Handle, Position, useNodes } from '@xyflow/react';
 import { CircuitComponent } from '@/types/component';
 import { ComponentPin } from '@/types/pin';
 import clsx from 'clsx';
 import './CircuitCanvas/CircuitComponentNode.css';
 import { useCircuitEditor } from '@/context/CircuitEditorContext';
 import { isValidConnection } from '@/domain/connectionRules';
+import { renderComponent } from './ComponentRenderers';
 
 /**
  * A node component that represents a circuit component in the editor.
@@ -18,19 +19,6 @@ import { isValidConnection } from '@/domain/connectionRules';
  * 1. Inside CircuitEditorPage which provides all required contexts
  * 2. Wrapped with withCircuitProviders HOC
  */
-
-// Remove registry and placeholder imports
-/*
-// --- Placeholder Imports for Your Custom Components ---
-// import CustomResistor from './CustomResistor';
-// ... etc
-
-// Map component types to your future custom React components
-const componentRegistry: Record<string, React.ComponentType<any>> = {
-  // 'resistor': CustomResistor, // Example
-};
-*/
-// ---------------------------------------------------
 
 // Interface for Highlighted Pin
 interface HighlightedPin {
@@ -60,6 +48,9 @@ const CircuitComponentNode: React.FC<CustomNodeProps> = ({
   width,
   height,
 }) => {
+  // Log the received props, especially width and height
+  // console.log(`[Node ${sourceNodeId}] Rendering with props:`, { id: sourceNodeId, data, selected, width, height });
+
   const handleSize = 8;
   // Get context for highlighting
   const { highlightedPins, setHighlightedPins } = useCircuitEditor();
@@ -99,7 +90,7 @@ const CircuitComponentNode: React.FC<CustomNodeProps> = ({
     // Add the source pin itself to the highlighted list for visual feedback
     const selfPin: HighlightedPin = { nodeId: sourceNodeId, pinIndex: sourcePinIndex };
     
-    console.log('Highlighting pins:', [selfPin, ...validTargets]); // Debug log
+    // console.log('Highlighting pins:', [selfPin, ...validTargets]); // Debug log
     setHighlightedPins([selfPin, ...validTargets]); // Update context
 
   }, [nodes, sourceNodeId, setHighlightedPins]);
@@ -148,38 +139,7 @@ const CircuitComponentNode: React.FC<CustomNodeProps> = ({
       cursor: 'crosshair',
       border: 'none',
     };
-    // No complex dependencies needed
-  }, []);
-
-  // Render the component's visual representation (no inner rotation needed)
-  const renderComponentVisual = () => {
-    if (data.svgPath) {
-      const svgString = data.svgPath;
-      if (typeof svgString === 'string' && svgString.trim().startsWith('<svg')) {
-        return (
-          <div
-            className="component-svg-wrapper"
-            // No inline style needed here
-            dangerouslySetInnerHTML={{ __html: svgString }}
-          />
-        );
-      } else {
-        return (
-          <img
-            src={svgString}
-            alt={data.name || data.type}
-            style={{ display: 'block', maxWidth: '100%', height: 'auto' }}
-          />
-        );
-      }
-    } else {
-      return (
-        <div style={{ padding: '5px', background: 'rgba(255,255,255,0.8)', border: '1px dashed #ccc' }}>
-          {data.name || data.type}
-        </div>
-      );
-    }
-  };
+  }, [handleSize]);
 
   // React Flow might render the node before width/height are measured.
   // Handle this case to avoid errors in calculations.
@@ -190,8 +150,8 @@ const CircuitComponentNode: React.FC<CustomNodeProps> = ({
   return (
     // Main container IS rotated
     <div style={nodeStyle} className={clsx('circuit-component-node', { 'selected': selected })}>
-      {/* Visual content rendered directly */}
-      {renderComponentVisual()}
+      {/* Use the component registry for rendering */}
+      {renderComponent(data)}
 
       {/* Handles positioned relative to rotating parent */}
       {!data.hideHandles && data.pins && data.pins.map((pin, index) => {
@@ -199,10 +159,10 @@ const CircuitComponentNode: React.FC<CustomNodeProps> = ({
 
         return (
           <Handle
-            key={pin.name || `pin-${index}`}
-            type="source"
-            position={Position.Top}
+            key={`pin-${index}`}
             id={`pin-${index}`}
+            type="source"
+            position={Position.Right} // Position doesn't matter as we're using custom styles
             style={getHandleStyle(pin)}
             className={clsx('circuit-pin-handle', { 'pin-highlighted': isHighlighted })}
             onMouseEnter={() => handlePinMouseEnter(index)}

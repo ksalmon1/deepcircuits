@@ -1,10 +1,10 @@
-import React, { createContext, useState, useContext, ReactNode } from 'react';
+import React, { createContext, useState, useContext, ReactNode, useCallback, useEffect } from 'react';
 import { Viewport } from '@xyflow/react';
 import { ErrorProvider, useError } from './ErrorContext';
 import { ProjectProvider, useProject } from './ProjectContext';
 import { SimulationProvider, useSimulation } from './SimulationContext';
 import { SelectionProvider, useSelection } from './SelectionContext';
-import { ComponentLibraryItem } from '@/types/component';
+import { CircuitComponent } from '@/types/component';
 
 // Define the shape of the context data
 interface CircuitEditorContextType {

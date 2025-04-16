@@ -1,4 +1,6 @@
 import { ComponentPin } from "./pin";
+import { SimulationState, ComponentSimulationState } from '@/utils/simulationUtils';
+import { Node, XYPosition } from '@xyflow/react';
 
 /**
  * Base interface for common component properties
@@ -36,6 +38,7 @@ export interface CircuitComponent extends BaseComponent {
   svgPath?: string | null;
   isOriginal?: boolean;
   rotation?: number;
+  simulationState?: ComponentSimulationState | null;
 }
 
 /**

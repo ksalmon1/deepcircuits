@@ -6,6 +6,8 @@ export interface ComponentPin {
   name: string;
   x: number;
   y: number;
+  type: 'anode' | 'cathode' | 'input' | 'output' | 'power' | 'ground';
+  spiceNodeNumber?: number;  // Optional because it's only assigned when connected
   signals: string[];
   handle_id?: string; // Unique identifier for the pin handle in the UI
 }

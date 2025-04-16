@@ -26,6 +26,8 @@ import { AuthProvider } from "@/context/AuthContext";
 import { ComponentLibraryProvider } from "@/context/ComponentLibraryContext";
 
 import "./App.css";
+import '@/styles/simulation.css';
+import '@/styles/components.css';
 
 function App() {
   const queryClient = new QueryClient();

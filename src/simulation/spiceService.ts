@@ -535,6 +535,15 @@ function formatSimulationResults(results: SimulationResults, componentsWithNodes
     // Remove trailing newlines to ensure consistent formatting
     output = output.trimEnd();
     
+    // ADD: Save the formatted results to window for component renderers to access
+    if (typeof window !== 'undefined') {
+        window.lastCircuitSummary = output;
+        window.simulationResults = {
+            voltages: results.voltages,
+            currents: results.currents
+        };
+    }
+    
     return output;
 }
 

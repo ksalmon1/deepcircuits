@@ -4,8 +4,8 @@ import {
   ReactFlow,
   Background,
   Controls,
-  useNodesState,
   useEdgesState,
+  useNodesState,
   Node,
   Edge,
   BackgroundVariant,
@@ -24,6 +24,7 @@ import {
   Viewport,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import { produce } from 'immer';
 
 // Import actual types
 import { CircuitComponent } from '@/types/component';
@@ -127,7 +128,7 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
 }) => {
   // Remove the wrapper ref again
   // const reactFlowWrapper = useRef<HTMLDivElement>(null);
-  const [nodes, setNodes, onNodesChangeInternal] = useNodesState([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
 
@@ -159,12 +160,49 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
   
   // --- End Viewport Persistence ---
 
-  // Convert circuitComponents to React Flow nodes using the utility function
+  // Convert circuitComponents to React Flow nodes and update the internal nodes state
   useEffect(() => {
-    //console.log("CircuitCanvas: useEffect for circuitComponents running. Count:", circuitComponents.length);
-    const flowNodes = circuitComponents.map(circuitComponentToNode);
+    const flowNodes = circuitComponents.map(comp => ({
+      ...circuitComponentToNode(comp),
+      // Ensure these properties are explicitly set for proper initialization
+      draggable: true,
+      selectable: true,
+      connectable: true
+    }));
     setNodes(flowNodes);
   }, [circuitComponents, setNodes]);
+
+  // Sync nodes changes back to parent component - with debounce to avoid conflicts
+  useEffect(() => {
+    if (nodes.length === 0 || circuitComponents.length === 0) return;
+    
+    // Skip position updates during active drags to avoid conflicts
+    const isDragging = nodes.some(node => node.dragging);
+    if (isDragging) return;
+
+    // Map nodes back to circuit components by updating position
+    const updatedComponents = circuitComponents.map(comp => {
+      const node = nodes.find(n => n.id === comp.id);
+      if (node) {
+        return {
+          ...comp,
+          left: node.position.x,
+          top: node.position.y
+        };
+      }
+      return comp;
+    });
+    
+    // Check if positions actually changed to avoid infinite update loop
+    const positionsChanged = updatedComponents.some((comp, i) => 
+      circuitComponents[i] && 
+      (comp.left !== circuitComponents[i].left || comp.top !== circuitComponents[i].top)
+    );
+    
+    if (positionsChanged) {
+      onComponentsChange(updatedComponents);
+    }
+  }, [nodes, circuitComponents, onComponentsChange]);
 
   // Convert wireConnections (WireEdge[]) to React Flow edges using the utility function
   useEffect(() => {
@@ -174,30 +212,6 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
   }, [wireConnections, setEdges]);
 
   // --- Interaction Handlers ---
-
-  // Custom handler for node changes to intercept deletions
-  const handleNodesChange: OnNodesChange = useCallback(
-    (changes) => {
-      // Apply changes to React Flow's internal state first
-      onNodesChangeInternal(changes);
-
-      // Check for node removals
-      const removedNodeIds = changes
-        .filter(change => change.type === 'remove')
-        .map(change => change.id);
-
-      if (removedNodeIds.length > 0) {
-        //console.log('Nodes removed:', removedNodeIds);
-        // Update the parent component's state
-        const updatedComponents = circuitComponents.filter(
-          comp => !removedNodeIds.includes(comp.id)
-        );
-        onComponentsChange(updatedComponents);
-        onModified?.();
-      }
-    },
-    [onNodesChangeInternal, circuitComponents, onComponentsChange, onModified]
-  );
 
   const onConnect: OnConnect = useCallback((connection: Connection) => {
       //console.log('!!! onConnect CALLED !!!', connection);
@@ -257,13 +271,17 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
   );
 
   const onNodeDragStop = useCallback((event: React.MouseEvent, node: Node) => {
-      console.log('Node drag stop:', node);
-      // Find the corresponding component and update its position (left/top)
-      const updatedComponents = circuitComponents.map(comp =>
-        comp.id === node.id ? { ...comp, left: node.position.x, top: node.position.y } : comp
+      console.log('Node drag stop:', node.id, 'Final position:', node.position);
+      
+      // Directly update the component position in parent state to ensure consistency
+      const updatedComponents = circuitComponents.map(comp => 
+        comp.id === node.id 
+          ? { ...comp, left: node.position.x, top: node.position.y } 
+          : comp
       );
+      
       onComponentsChange(updatedComponents);
-      onModified?.();
+      onModified?.(); // Notify about modification
     },
     [circuitComponents, onComponentsChange, onModified]
   );
@@ -360,7 +378,16 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
       };
 
       //console.log('ReactFlow drop: creating component with details:', newComponent);
+      
+      // Log state before and the component being added
+      // console.log('[onDrop] State BEFORE add:', circuitComponents);
+      // console.log('[onDrop] Adding component:', newComponent);
+      
       onComponentsChange([...circuitComponents, newComponent]);
+      
+      // Log after calling the state update function
+      // console.log('[onDrop] onComponentsChange called.');
+      
       onModified?.();
     },
     // Update dependencies to include draggingComponentType
@@ -401,9 +428,6 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
   // Add edge deletion handling
   const handleEdgesChange: OnEdgesChange = useCallback(
     (changes) => {
-      // Apply changes internally
-      onEdgesChange(changes);
-      
       // Find removed edges
       const removedEdgeIds = changes
         .filter(change => change.type === 'remove')
@@ -419,7 +443,7 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
         onModified?.();
       }
     },
-    [onEdgesChange, wireConnections, onWiresChange, onModified]
+    [wireConnections, onWiresChange, onModified]
   );
 
   // Handle React Flow instance initialization
@@ -435,16 +459,28 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
   const memoizedNodeTypes = useMemo(() => nodeTypes, []);
   const memoizedEdgeTypes = useMemo(() => edgeTypes, []);
 
+  // Memoize the nodes and edges to prevent unnecessary re-renders
+  // This helps with React Flow's internal optimizations for drag operations
+  const memoizedNodes = useMemo(() => nodes, [nodes]);
+  const memoizedEdges = useMemo(() => edges, [edges]);
+
   return (
     // Remove ref from wrapper div
     <div className="flex-grow h-full relative" /* Removed ref={reactFlowWrapper} */ >
       {/* Restore ReactFlow rendering */}
       <ReactFlowProvider>
+        {/* 
+          To fix: "It seems that you are trying to drag a node that is not initialized"
+          1. We use useNodesState and onNodesChange for proper ReactFlow node handling
+          2. We ensure nodes have explicit draggable/selectable properties
+          3. We avoid updating parent state during active dragging
+          4. We use memoized nodes and edges to prevent unnecessary re-renders
+        */}
         <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={handleNodesChange}
-          onEdgesChange={handleEdgesChange}
+          nodes={memoizedNodes}
+          edges={memoizedEdges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           onNodeDragStop={onNodeDragStop}
           // Use handleInit instead of onInit directly to manage restore/fitView logic
@@ -477,5 +513,5 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
   );
 };
 
-// Export the inner component directly
-export default CircuitCanvasInner; 
+// Export the inner component directly, wrapped with React.memo
+export default React.memo(CircuitCanvasInner); 

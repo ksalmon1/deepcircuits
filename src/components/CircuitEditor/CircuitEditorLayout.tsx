@@ -404,13 +404,10 @@ const CircuitEditorLayoutContent = ({
     setSimulationResult(null);
     setSimulationError(null);
     setShowSerialMonitor(true);
-    //console.log('Starting simulation...');
-    //console.log('Current components (state):', projectComponents);
-    //console.log('Current wires (state):', projectWires);
     console.log('Component Definitions Map:', componentsDetailsMap);
 
-    // Clear previous serial output and add a header
-    addSerialOutput('> Circuit Simulation Started');
+    // Clear previous serial output before starting new simulation
+    clearSerialOutput();
 
     try {
       // 1. Map project components to AppComponentModel
@@ -526,34 +523,21 @@ const CircuitEditorLayoutContent = ({
               spiceConnections: spiceConnections 
           };
       });
-      
-      //console.log('Components prepared for SPICE service:', componentsForSpice);
-      //console.log('Final Pin -> SPICE Node Map:', new Map(pinToNodeMap)); // Log the final map
 
       // 5. Run simulation with augmented components
-      // Pass the addSerialOutput function to runSpiceSimulation
+      // All serial output will be handled by spiceService
       const results = await runSpiceSimulation(componentsForSpice, addSerialOutput); 
       
-      if (results?.error) { // Null check results as well
+      if (results?.error) {
           console.error('Simulation failed:', results.error);
           toast.error(results.error);
           setSimulationError(results.error);
-          addSerialOutput(`Simulation Error: ${results.error}`);
-      } else if (results) { // Check if results object exists
-          //console.log('Simulation successful:', results);
+      } else if (results) {
           setSimulationResult(results);
           toast.success('Simulation Complete: Results are available.');
-          addSerialOutput('\n> Circuit Simulation Completed Successfully');
-          if (results.voltages || results.currents) { // Check if voltage/current data exists
-                //console.log("Simulation Voltages:", results.voltages);
-                //console.log("Simulation Currents:", results.currents);
-           }
       } else {
-           // Handle case where simulation returns null without error (shouldn't happen ideally)
-           //console.error('Simulation returned null result without specific error.');
-           setSimulationError('Simulation failed to return results.');
-           toast.error('Simulation failed to return results.');
-           addSerialOutput('Simulation Error: Failed to return results');
+          setSimulationError('Simulation failed to return results.');
+          toast.error('Simulation failed to return results.');
       }
     } catch (error: any) {
       console.error('Simulation setup or execution error:', error);
@@ -563,7 +547,6 @@ const CircuitEditorLayoutContent = ({
       addSerialOutput(`Simulation Error: ${error.message || String(error)}`);
     } finally {
       setIsSimulating(false);
-      //console.log('Simulation process finished.');
     }
   };
 

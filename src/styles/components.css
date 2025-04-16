@@ -1,0 +1,18 @@
+/* Component Base Styles */
+
+/* Component visibility fixes - critical for preventing disappearing components */
+.component-svg-wrapper {
+  position: relative;
+  z-index: 1;
+  pointer-events: auto;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* Fix for component stacking issues */
+.circuit-component-node {
+  z-index: 1 !important;
+  position: relative;
+  opacity: 1 !important;
+  visibility: visible !important;
+} 

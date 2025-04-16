@@ -1,0 +1,5 @@
+/* LED component transitions */
+[data-component-type="led"] #led-body,
+[data-component-type="led"] #led-gloss {
+  transition: fill 0.3s ease, filter 0.3s ease;
+} 

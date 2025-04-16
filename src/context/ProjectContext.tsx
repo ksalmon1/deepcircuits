@@ -40,6 +40,7 @@ interface ProjectContextType {
   updateCode: (newCode: string) => void; // New handler for code changes
   handleUpdateComponentAttributes: (componentId: string, attributes: Record<string, any>) => void;
   rotateComponent: (componentId: string, angleIncrement?: number) => void;
+  updateComponent: (updatedComponent: CircuitComponent) => void; // Add individual component update
   
   // Drag actions
   setDraggingComponentType: (type: string | null) => void;
@@ -225,6 +226,32 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
     });
   }, []);
 
+  // Core function to update an individual component
+  const coreUpdateComponent = (updatedComponent: CircuitComponent) => {
+    if (!updatedComponent || !updatedComponent.id) {
+      throw new ComponentError('Invalid component data', 'INVALID_COMPONENT_DATA');
+    }
+    
+    setHistoryState(prev => {
+      const currentSt = prev.history[prev.currentIndex];
+      const updatedComponents = currentSt.components.map(component => 
+        component.id === updatedComponent.id ? updatedComponent : component
+      );
+      
+      // Avoid pushing history if no change occurred
+      if (JSON.stringify(updatedComponents) === JSON.stringify(currentSt.components)) {
+        return prev; // No change, return previous state
+      }
+      
+      const newState = { ...currentSt, components: updatedComponents };
+      const newHistory = prev.history.slice(0, prev.currentIndex + 1);
+      return {
+        history: [...newHistory, newState],
+        currentIndex: newHistory.length,
+      };
+    });
+  };
+
   // --- New Core Initialization Action ---
   const coreInitializeProjectState = useCallback((projectData: ProjectState) => {
     //console.log("Initializing project state with data:", projectData);
@@ -314,69 +341,88 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
     toast.success("Project imported.");
   }, []);
   
-  // --- Add Core Clear Action --- 
-  const coreClearCircuitState = useCallback(() => {
-    // Reset state completely, similar to initialization but with initialProjectState
-    setHistoryState({
-        history: [initialProjectState],
-        currentIndex: 0,
-    });
-    toast.info("Circuit cleared.");
-  }, []);
+  // --- Wrap Core Functions with Error Handling ---
+  const handleComponentsChange = withErrorHandling(
+    coreHandleComponentsChange,
+    'UPDATE_COMPONENTS',
+    setError
+  );
   
-  // --- Wrap core functions with error handling --- 
-  // Wrap the error handlers themselves in useCallback to stabilize their references
-  const handleComponentsChange = useCallback(
-    withErrorHandling(coreHandleComponentsChange, 'Failed to update components', setError),
-    [coreHandleComponentsChange, setError]
+  const handleWiresChange = withErrorHandling(
+    coreHandleWiresChange,
+    'UPDATE_WIRES',
+    setError
   );
-  const handleWiresChange = useCallback(
-    withErrorHandling(coreHandleWiresChange, 'Failed to update wires', setError),
-    [coreHandleWiresChange, setError]
+  
+  const updateCode = withErrorHandling(
+    coreUpdateCode,
+    'UPDATE_CODE',
+    setError
   );
-  const updateCode = useCallback(
-    withErrorHandling(coreUpdateCode, 'Failed to update code', setError),
-    [coreUpdateCode, setError]
+  
+  const handleUpdateComponentAttributes = withErrorHandling(
+    coreUpdateComponentAttributes,
+    'UPDATE_ATTRIBUTES',
+    setError
   );
-  const handleUpdateComponentAttributes = useCallback(
-    withErrorHandling(coreUpdateComponentAttributes, 'Failed to update component attributes', setError),
-    [coreUpdateComponentAttributes, setError]
+  
+  const rotateComponent = withErrorHandling(
+    coreRotateComponent,
+    'ROTATE_COMPONENT',
+    setError
   );
-  const rotateComponent = useCallback(
-    withErrorHandling(coreRotateComponent, 'Failed to rotate component', setError),
-    [coreRotateComponent, setError]
+  
+  const updateComponent = withErrorHandling(
+    coreUpdateComponent,
+    'UPDATE_COMPONENT',
+    setError
   );
-  const setDraggingComponentType = useCallback(
-    withErrorHandling(coreSetDraggingComponentType, 'Failed to set dragging component type', setError),
-    [coreSetDraggingComponentType, setError]
+  
+  const setDraggingComponentType = coreSetDraggingComponentType;  // Simple enough, no error handling
+  
+  const undoLastAction = withErrorHandling(
+    coreUndoLastAction,
+    'UNDO',
+    setError
   );
-  const saveProject = useCallback(
-    withErrorHandling(coreSaveProject, 'Failed to save project', setError),
-    [coreSaveProject, setError] // Depends on the memoized coreSaveProject
+  
+  const redoLastAction = withErrorHandling(
+    coreRedoLastAction,
+    'REDO',
+    setError
   );
-  const undoLastAction = useCallback(
-    withErrorHandling(coreUndoLastAction, 'Failed to undo action', setError),
-    [coreUndoLastAction, setError]
+  
+  const clearCircuitState = withErrorHandling(
+    () => {
+      setHistoryState(initialHistoryState);
+      toast.info('Circuit cleared.');
+    },
+    'CLEAR_CIRCUIT',
+    setError
   );
-  const redoLastAction = useCallback(
-    withErrorHandling(coreRedoLastAction, 'Failed to redo action', setError),
-    [coreRedoLastAction, setError]
+  
+  const saveProject = withErrorHandling(
+    coreSaveProject,
+    'SAVE_PROJECT',
+    setError
   );
-  const exportProject = useCallback(
-    withErrorHandling(coreExportProject, 'Failed to export project', setError),
-    [coreExportProject, setError]
+  
+  const exportProject = withErrorHandling(
+    coreExportProject,
+    'EXPORT_PROJECT',
+    setError
   );
-  const importProject = useCallback(
-    withErrorHandling(coreImportProject, 'Failed to import project', setError),
-    [coreImportProject, setError]
+  
+  const importProject = withErrorHandling(
+    coreImportProject,
+    'IMPORT_PROJECT',
+    setError
   );
-  const clearCircuitState = useCallback(
-    withErrorHandling(coreClearCircuitState, 'Failed to clear circuit state', setError),
-    [coreClearCircuitState, setError]
-  );
-  const initializeProjectState = useCallback(
-    withErrorHandling(coreInitializeProjectState, 'Failed to initialize project state', setError),
-    [coreInitializeProjectState, setError]
+  
+  const initializeProjectState = withErrorHandling(
+    coreInitializeProjectState,
+    'INITIALIZE_PROJECT',
+    setError
   );
 
   // --- Calculate derived state from combined state ---
@@ -384,41 +430,69 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
   const canRedo = historyState.currentIndex < historyState.history.length - 1;
 
   // --- Memoized Context Value --- 
-  const contextValue = useMemo(() => {
-    const current = historyState.history[historyState.currentIndex];
-    //console.log(`ProjectContext: Providing value - Components: ${current.components.length} Wires: ${current.wires.length}`);
-    return {
-      components: current.components,
-      wires: current.wires,
-      code: current.code,
-      draggingComponentType: draggingComponentType,
-      // Actions:
-      handleComponentsChange: withErrorHandling(coreHandleComponentsChange, 'UPDATE_COMPONENTS', setError),
-      handleWiresChange: withErrorHandling(coreHandleWiresChange, 'UPDATE_WIRES', setError),
-      updateCode: withErrorHandling(coreUpdateCode, 'UPDATE_CODE', setError),
-      setCode: withErrorHandling(coreUpdateCode, 'UPDATE_CODE', setError),
-      handleUpdateComponentAttributes: withErrorHandling(coreUpdateComponentAttributes, 'UPDATE_ATTRIBUTES', setError),
-      rotateComponent: withErrorHandling(coreRotateComponent, 'ROTATE_COMPONENT', setError),
-      setDraggingComponentType: coreSetDraggingComponentType, // No error handling needed
-      undoLastAction: withErrorHandling(coreUndoLastAction, 'UNDO', setError),
-      redoLastAction: withErrorHandling(coreRedoLastAction, 'REDO', setError),
-      clearCircuitState: withErrorHandling(() => {
-          // Wrap the state reset logic for error handling if needed, though unlikely to fail
-          setHistoryState(initialHistoryState);
-          toast.info('Circuit cleared.');
-      }, 'CLEAR_CIRCUIT', setError),
-      saveProject: withErrorHandling(coreSaveProject, 'SAVE_PROJECT', setError),
-      exportProject: withErrorHandling(coreExportProject, 'EXPORT_PROJECT', setError),
-      importProject: withErrorHandling(coreImportProject, 'IMPORT_PROJECT', setError),
-      initializeProjectState: withErrorHandling(coreInitializeProjectState, 'INITIALIZE_PROJECT', setError),
-      // History flags:
-      canUndo: historyState.currentIndex > 0,
-      canRedo: historyState.currentIndex < historyState.history.length - 1,
-    };
-  }, [historyState, draggingComponentType, setError, coreUndoLastAction, coreRedoLastAction, coreInitializeProjectState, coreSaveProject, coreExportProject, coreImportProject]);
+  const value = useMemo(() => ({
+    // Current state values
+    components: currentState.components,
+    wires: currentState.wires,
+    code: currentState.code,
+    
+    // Drag state
+    draggingComponentType,
+    
+    // Remove direct setters
+    // Replace with the new handlers
+    setCode: (newCode) => coreUpdateCode(newCode), // Compatibility wrapper
+    
+    // Action handlers
+    handleComponentsChange,
+    handleWiresChange,
+    updateCode,
+    handleUpdateComponentAttributes,
+    rotateComponent,
+    updateComponent, // Add individual component update
+    
+    // Drag actions
+    setDraggingComponentType,
+    
+    // History actions
+    undoLastAction,
+    redoLastAction,
+    canUndo: historyState.currentIndex > 0,
+    canRedo: historyState.currentIndex < historyState.history.length - 1,
+    clearCircuitState,
+    
+    // Other actions
+    saveProject,
+    exportProject,
+    importProject,
+    
+    // Initialize project
+    initializeProjectState,
+  }), [
+    currentState.components, 
+    currentState.wires, 
+    currentState.code,
+    draggingComponentType,
+    handleComponentsChange,
+    handleWiresChange,
+    updateCode,
+    handleUpdateComponentAttributes,
+    rotateComponent,
+    updateComponent, // Add to dependency array
+    setDraggingComponentType,
+    undoLastAction,
+    redoLastAction,
+    historyState.currentIndex,
+    historyState.history.length,
+    clearCircuitState,
+    saveProject,
+    exportProject,
+    importProject,
+    initializeProjectState
+  ]);
 
   return (
-    <ProjectContext.Provider value={contextValue}>
+    <ProjectContext.Provider value={value}>
       {children}
     </ProjectContext.Provider>
   );

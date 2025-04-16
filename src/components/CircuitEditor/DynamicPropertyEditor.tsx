@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -108,18 +107,22 @@ const DynamicPropertyEditor: React.FC<PropertyEditorProps> = ({
     );
   };
 
+  // Get regular properties (excluding animation properties)
+  const regularProperties = Object.entries(properties || {})
+    .filter(([key]) => key !== 'animatableElements' && key !== 'stateRules');
+
   return (
     <div className="space-y-4">
       <h3 className="text-lg font-medium">Component Properties</h3>
       
-      {Object.keys(properties).length === 0 && (
+      {regularProperties.length === 0 && (
         <div className="text-gray-500 text-sm p-4 border border-dashed border-gray-200 rounded-md bg-gray-50">
           No properties defined. Add properties below.
         </div>
       )}
       
       <div className="space-y-2">
-        {Object.entries(properties).map(([key, value]) => (
+        {regularProperties.map(([key, value]) => (
           <div key={key} className="flex items-center gap-2 p-2 border border-gray-100 rounded bg-gray-50">
             <div className="w-1/3 font-medium">{key}:</div>
             <div className="flex-grow">

@@ -200,10 +200,7 @@ const ComponentAdmin = () => {
       if (!prev) return prev;
       return {
         ...prev,
-        properties: {
-          ...(prev.properties || {}),
-          ...properties
-        }
+        properties: properties
       };
     });
   };

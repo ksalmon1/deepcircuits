@@ -38,7 +38,9 @@ const CircuitEditorContent = () => {
     exportProject,
     importProject,
     code,
-    setCode
+    setCode,
+    wires,
+    handleWiresChange
   } = useProject();
   
   const {
@@ -68,6 +70,7 @@ const CircuitEditorContent = () => {
   const prevCodeRef = useRef(code);
   const prevComponentsRef = useRef(components);
   const prevSerialOutputRef = useRef(serialOutput);
+  const prevWiresRef = useRef(wires);
   
   // Callback for tab change
   const handleTabChange = useCallback((value: string) => {
@@ -85,13 +88,25 @@ const CircuitEditorContent = () => {
   }, [code, setCode]);
   
   const canvasProps = useMemo(() => {
-    // Only update if components have changed
-    if (prevComponentsRef.current !== components) {
+    // Only update if components or wires have changed
+    if (prevComponentsRef.current !== components || prevWiresRef.current !== wires) {
       prevComponentsRef.current = components;
-      return { components, onComponentsChange: handleComponentsChange };
+      prevWiresRef.current = wires;
+      return { 
+        components, 
+        onComponentsChange: handleComponentsChange,
+        wireConnections: wires,
+        onWiresChange: handleWiresChange
+      };
     }
-    return { components: prevComponentsRef.current, onComponentsChange: handleComponentsChange };
-  }, [components, handleComponentsChange]);
+    // Return previous props if no change
+    return { 
+      components: prevComponentsRef.current, 
+      onComponentsChange: handleComponentsChange,
+      wireConnections: prevWiresRef.current,
+      onWiresChange: handleWiresChange
+    };
+  }, [components, handleComponentsChange, wires, handleWiresChange]);
   
   const serialMonitorProps = useMemo(() => {
     // Only update if serial output has changed
