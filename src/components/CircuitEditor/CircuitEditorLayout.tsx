@@ -34,7 +34,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { getProjectById } from '@/integrations/supabase/projectsApi';
-import { runSpiceSimulation, SimulationResults } from '@/simulation/spiceService';
+import { SimulationResults } from '@/simulation/spiceService';
 import type { AppComponentModel, AppConnectionModel } from '@/simulation/appStateTypes';
 import { Node, Edge } from '@xyflow/react';
 import { useProject } from '@/context/ProjectContext';
@@ -291,9 +291,6 @@ const CircuitEditorLayoutContent = ({
   // State for panel sizes - Keep this internal to the content component
   const [mainLayout, setMainLayout] = useState<number[]>([73, 27]); 
   const [editorMonitorLayout, setEditorMonitorLayout] = useState<number[]>([50, 50]);
-  const [isSimulating, setIsSimulating] = useState<boolean>(false);
-  const [simulationResult, setSimulationResult] = useState<SimulationResults | null>(null);
-  const [simulationError, setSimulationError] = useState<string | null>(null);
 
   const loadedProjectIdRef = useRef<string | null>(null); 
   const isInitializingRef = useRef<boolean>(false); 
@@ -397,185 +394,8 @@ const CircuitEditorLayoutContent = ({
     };
   }, [circuitName]);
 
-  const handleSimulate = async () => {
-    // If already simulating, stop simulation
-    if (isSimulating) {
-      console.log('User stopped the simulation.');
-      setIsSimulating(false);
-      
-      // Reset all component states by updating them with null simulationState
-      const updatedComponents = projectComponents.map(component => 
-        component.simulationState ? { ...component, simulationState: null, activeStates: [] } : component
-      );
-      handleComponentsChange(updatedComponents);
-      
-      // Clear simulation results
-      setSimulationResult(null);
-      setSimulationError(null);
-      toast.success('Simulation stopped. Circuit is now off.');
-      return;
-    }
-
-    // Otherwise, start a new simulation
-    setIsSimulating(true);
-    setSimulationResult(null);
-    setSimulationError(null);
-    setShowSerialMonitor(true);
-    console.log('Component Definitions Map:', componentsDetailsMap);
-
-    // Clear previous serial output before starting new simulation
-    clearSerialOutput();
-
-    try {
-      // 1. Map project components to AppComponentModel
-      const initialAppComponents: AppComponentModel[] = projectComponents.map((instance) => {
-        const definition = Object.values(componentsDetailsMap).find(def => (def as any).type === instance.type) as any;
-        if (!definition) {
-          throw new Error(`Component definition not found for type: ${instance.type} (ID: ${instance.id})`);
-        }
-        const definitionPins = definition.pins?.map(pin => ({ ...pin, id: pin.handle_id || pin.id })) || [];
-        if (definitionPins.some(p => !p.id)) {
-           throw new Error(`Pin definitions for component type ${instance.type} are missing required IDs (handle_id).`);
-        }
-        return {
-          id: instance.id,
-          type: instance.type,
-          properties: { ...(definition.properties || {}), ...(instance.attributes || {}) },
-          pins: definitionPins,
-        };
-      });
-
-      // 2. Map project wires to AppConnectionModel
-      const appConnections: AppConnectionModel[] = projectWires.map((edge) => ({
-        id: edge.id,
-        from: { componentId: edge.source, pinId: edge.sourceHandle || '' },
-        to: { componentId: edge.target, pinId: edge.targetHandle || '' },
-      }));
-      
-      // --- 3. Perform SPICE Node Mapping --- 
-      const pinToNodeMap: PinToSpiceNodeMap = new Map();
-      const nextNodeCounter = { value: 1 };
-      
-      // Initial pass to assign preliminary nodes based on pins
-      initialAppComponents.forEach(comp => {
-          comp.pins?.forEach(pin => {
-              const pinKey = `${comp.id}_${pin.id}`;
-              getSpiceNode(pinKey, comp, pinToNodeMap, nextNodeCounter); // Assign initial nodes
-          });
-      });
-      
-      // Find connected groups of pins using graph traversal
-      const connectedGroups = findConnectedGroups(appConnections, initialAppComponents);
-      
-      // Add more detailed logging
-      console.log('Debug: Found connected pin groups:', connectedGroups);
-      // Log the details of each group for better visibility
-      connectedGroups.forEach((group, index) => {
-        console.log(`Group ${index} contains pins:`, Array.from(group));
-      });
-      
-      // Log detailed connection information
-      console.log('Debug: Connection details:');
-      appConnections.forEach((conn, index) => {
-        const fromKey = `${conn.from.componentId}_${conn.from.pinId}`;
-        const toKey = `${conn.to.componentId}_${conn.to.pinId}`;
-        console.log(`Connection ${index}: ${fromKey} ↔ ${toKey}`);
-      });
-      
-      // Pre-assign the same node to all pins in each group
-      connectedGroups.forEach(group => {
-        let representativeNode = null;
-        
-        // First pass: find ground or existing node
-        for (const pinKey of group) {
-          if (pinToNodeMap.has(pinKey)) {
-            const node = pinToNodeMap.get(pinKey);
-            if (node === '0' || !representativeNode) {
-              representativeNode = node;
-              if (node === '0') break; // Ground takes precedence
-            } else if (representativeNode && parseInt(node!, 10) < parseInt(representativeNode, 10)) {
-              // Use the lower node number if not ground
-              representativeNode = node;
-            }
-          }
-        }
-        
-        // If no node found, create a new one
-        if (!representativeNode) {
-          representativeNode = String(nextNodeCounter.value++);
-        }
-        
-        // Assign the same node to all pins in the group
-        for (const pinKey of group) {
-          pinToNodeMap.set(pinKey, representativeNode!);
-        }
-      });
-      
-      // Log the state before merging
-      console.log('Debug: appConnections before mergeNodes:', appConnections);
-      console.log('Debug: pinToNodeMap before mergeNodes:', new Map(pinToNodeMap)); 
-
-      // Run mergeNodes as a backup to ensure all connections are properly merged
-      // This should be redundant with our group-based assignment but serves as a safety net
-      mergeNodes(appConnections, pinToNodeMap);
-      
-      // --- 4. Augment Components with Final SPICE Connections --- 
-      const componentsForSpice = initialAppComponents.map(comp => {
-          const spiceConnections = comp.pins?.map(pin => {
-              const pinKey = `${comp.id}_${pin.id}`;
-              const nodeName = pinToNodeMap.get(pinKey);
-              if (nodeName === undefined) {
-                  // This should ideally not happen after merging if all pins are connected
-                  // or explicitly grounded in the definition.
-                  console.error(`FATAL: Pin ${pinKey} has no assigned SPICE node after mapping!`);
-                  // Assign a floating node as fallback? Or throw? Let's throw.
-                  throw new Error(`Pin ${pin.id} ('${pin.name}') on component ${comp.id} (${comp.type}) could not be mapped to a SPICE node. Is it connected?`);
-              }
-              return nodeName; // Return the final assigned SPICE node name (e.g., '0', '1', '2', ...)
-          }) || []; // Default to empty array if no pins
-          
-          // Add the spiceConnections array to the component object
-          return {
-              ...comp,
-              spiceConnections: spiceConnections 
-          };
-      });
-
-      // 5. Run simulation with augmented components
-      // All serial output will be handled by spiceService
-      const results = await runSpiceSimulation(componentsForSpice, addSerialOutput); 
-      
-      if (results?.error) {
-          console.error('Simulation failed:', results.error);
-          toast.error(results.error);
-          setSimulationError(results.error);
-          
-          // Only set isSimulating to false on error
-          setIsSimulating(false);
-          toast.error('Circuit turned off due to simulation error');
-      } else if (results) {
-          setSimulationResult(results);
-          toast.success('Circuit is now running');
-          // Keep isSimulating true after successful simulation
-      } else {
-          setSimulationError('Simulation failed to return results.');
-          toast.error('Simulation failed to return results.');
-          
-          // Only set isSimulating to false when no results returned
-          setIsSimulating(false);
-          toast.error('Circuit turned off due to simulation failure');
-      }
-    } catch (error: any) {
-      console.error('Simulation setup or execution error:', error);
-      const errorMessage = `Simulation error: ${error.message || String(error)}`;
-      toast.error(errorMessage);
-      setSimulationError(errorMessage);
-      addSerialOutput(`Simulation Error: ${error.message || String(error)}`);
-      
-      // Only set to false on error
-      setIsSimulating(false);
-      toast.error('Circuit turned off due to simulation error');
-    }
+  const handleSimulate = () => {
+    toggleSimulation();
   };
 
   const handleClearCircuit = () => {
@@ -804,12 +624,12 @@ const CircuitEditorLayoutContent = ({
             size="sm"
             onClick={handleSimulate}
           >
-            {isSimulating ? (
+            {isSimulationRunning ? (
               <Square className="mr-1 h-4 w-4" />
             ) : (
               <Play className="mr-1 h-4 w-4" />
             )}
-            {isSimulating ? 'Stop' : 'Start'}
+            {isSimulationRunning ? 'Stop' : 'Start'}
           </Button>
         </div>
       </div>

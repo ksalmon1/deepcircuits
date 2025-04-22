@@ -4,7 +4,7 @@
  * Uses the Emscripten Module factory config to run _main in batch mode (-b).
  */
 
-import SpiceModuleFactory from './spice.mjs';
+import SpiceModuleFactory from '../../public/models/spice.mjs';
 import type { AppComponentModel } from './appStateTypes';
 
 interface SpiceModuleInstance {
@@ -35,7 +35,7 @@ let mainHasRun = false;
 let outputEndMarkerSeen = false;
 let outputComplete = false;
 
-function generateNetlist(componentsWithNodes: ComponentWithSpiceConnections[]): string {
+export function generateNetlist(componentsWithNodes: ComponentWithSpiceConnections[]): string {
     // Remove verbose logging
     // console.log("Generating netlist using pre-mapped SPICE nodes:", JSON.stringify(componentsWithNodes, null, 2));
     let netlist = `* Auto-generated netlist for batch mode (-b)\n`;
@@ -327,7 +327,7 @@ function parseSimulationResults(stdout: string, stderr: string): SimulationResul
  * @param componentsWithNodes The circuit components with their node connections
  * @returns A formatted string with circuit path information
  */
-function formatSimulationResults(results: SimulationResults, componentsWithNodes: ComponentWithSpiceConnections[]): string {
+export function formatSimulationResults(results: SimulationResults, componentsWithNodes: ComponentWithSpiceConnections[]): string {
     if (results.error) {
         return `Simulation Error: ${results.error}`;
     }
@@ -366,9 +366,14 @@ function formatSimulationResults(results: SimulationResults, componentsWithNodes
     
     // Try different possible key formats with proper case (lowercase v)
     const sourceId = source.id.replace(/-/g, '');
-    const sourceCurrent = results.currents[`vpower${sourceId}`] || 
-                          results.currents[`v${sourceId}`] || 
-                          Object.values(results.currents)[0]; // Fallback to first current value
+    // Log available current keys for debugging
+    console.log('Available current keys:', Object.keys(results.currents));
+    // Try to find a current key that matches the voltage source
+    let sourceCurrent = results.currents[`vpower${sourceId}`] || results.currents[`v${sourceId}`];
+    // If not found, fallback to the first available current value
+    if (sourceCurrent === undefined) {
+        sourceCurrent = Object.values(results.currents)[0] || 0;
+    }
     
     // Calculate current value in mA
     const currentValue = Math.abs(sourceCurrent || 0) * 1000;
@@ -512,7 +517,7 @@ function formatSimulationResults(results: SimulationResults, componentsWithNodes
         comp.spiceConnections?.forEach((node, index) => {
             const pinName = comp.pins?.[index]?.name || `Pin ${index}`;
             const nodeVoltage = results.voltages[node];
-            let voltageText = node === '0' ? '0V' : 
+            const voltageText = node === '0' ? '0V' : 
                 (nodeVoltage !== undefined ? `${nodeVoltage.toFixed(2)}V` : '?V');
             
             output += `  ${pinName}: ${voltageText}\n`;

@@ -50,6 +50,9 @@ import { useComponentLibrary } from '@/hooks/useComponentLibrary';
 // Import the circuit editor context with correct path
 import { useCircuitEditor } from '@/context/CircuitEditorContext';
 
+// Import the simulation context
+import { useSimulation } from '@/context/SimulationContext';
+
 /**
  * The main canvas component for the circuit editor.
  * 
@@ -119,6 +122,73 @@ const createComponentId = (type: string): string => {
   return generateComponentId(type);
 };
 
+// Utility to get wired component IDs
+function getWiredComponentIds(components, wires) {
+  // Build AppComponentModel and AppConnectionModel for compatibility with findConnectedGroups
+  const appComponents = components.map(comp => ({
+    id: comp.id,
+    type: comp.type,
+    properties: comp.properties || comp.attributes || {},
+    pins: (comp.pins || []).map(pin => ({ id: pin.handle_id || pin.id, name: pin.name })),
+  }));
+  const appConnections = (wires || []).map(edge => ({
+    id: edge.id,
+    from: { componentId: edge.source, pinId: edge.sourceHandle || '' },
+    to: { componentId: edge.target, pinId: edge.targetHandle || '' },
+  }));
+  // Inline findConnectedGroups (copied from SimulationContext)
+  const graph = new Map();
+  appComponents.forEach(comp => {
+    comp.pins?.forEach(pin => {
+      const pinKey = `${comp.id}_${pin.id}`;
+      if (!graph.has(pinKey)) graph.set(pinKey, new Set());
+    });
+  });
+  appConnections.forEach(conn => {
+    const fromKey = `${conn.from.componentId}_${conn.from.pinId}`;
+    const toKey = `${conn.to.componentId}_${conn.to.pinId}`;
+    if (graph.has(fromKey) && graph.has(toKey)) {
+      graph.get(fromKey).add(toKey);
+      graph.get(toKey).add(fromKey);
+    }
+  });
+  const visited = new Set();
+  const connectedGroups = [];
+  graph.forEach((_, pinKey) => {
+    if (visited.has(pinKey)) return;
+    const group = new Set();
+    const queue = [pinKey];
+    visited.add(pinKey);
+    group.add(pinKey);
+    while (queue.length > 0) {
+      const current = queue.shift();
+      graph.get(current)?.forEach(neighbor => {
+        if (!visited.has(neighbor)) {
+          visited.add(neighbor);
+          group.add(neighbor);
+          queue.push(neighbor);
+        }
+      });
+    }
+    connectedGroups.push(group);
+  });
+  // Only include components that are in a group with pins from more than one component
+  const wiredComponentIds = new Set();
+  connectedGroups.forEach(group => {
+    // Get all component IDs in this group
+    const compIds = new Set();
+    group.forEach(pinKey => {
+      const compId = pinKey.split('_')[0];
+      compIds.add(compId);
+    });
+    if (compIds.size > 1) {
+      // Only add if this group connects more than one component
+      compIds.forEach(id => wiredComponentIds.add(id));
+    }
+  });
+  return wiredComponentIds;
+}
+
 const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
   circuitComponents,
   wireConnections,
@@ -136,6 +206,14 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
   const { components: libraryComponents, componentsDetailsMap } = useComponentLibrary();
   // Get context state/functions
   const { draggingComponentType, selectComponent, viewport, setViewport } = useCircuitEditor();
+  // Add simulation context
+  const { isSimulationRunning, notifyCircuitChanged } = useSimulation();
+
+  // --- Track previous wire and wired component state ---
+  const prevStateRef = useRef({
+    wireIds: new Set(),
+    wiredComponentIds: new Set(),
+  });
 
   // --- Viewport Persistence --- 
   
@@ -211,6 +289,50 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
     setEdges(flowEdges);
   }, [wireConnections, setEdges]);
 
+  // Helper to call onModified
+  const handleModified = useCallback(() => {
+    onModified?.();
+  }, [onModified]);
+
+  // --- Topology change detection for simulation rerun ---
+  useEffect(() => {
+    if (!isSimulationRunning) return;
+    // Compute current sets
+    const currentWireIds = new Set(wireConnections.map(w => w.id));
+    const currentWiredComponentIds = getWiredComponentIds(circuitComponents, wireConnections);
+    // Compare to previous
+    const prevWireIds = prevStateRef.current.wireIds;
+    const prevWiredComponentIds = prevStateRef.current.wiredComponentIds;
+
+    // Debug logs
+    console.log('[TOPOLOGY EFFECT]');
+    console.log('currentWireIds:', [...currentWireIds]);
+    console.log('prevWireIds:', [...prevWireIds]);
+    console.log('currentWiredComponentIds:', [...currentWiredComponentIds]);
+    console.log('prevWiredComponentIds:', [...prevWiredComponentIds]);
+
+    let wireChanged = false;
+    let wiredComponentChanged = false;
+    if (currentWireIds.size !== prevWireIds.size || [...currentWireIds].some(id => !prevWireIds.has(id))) {
+      wireChanged = true;
+    }
+    if (currentWiredComponentIds.size !== prevWiredComponentIds.size || [...currentWiredComponentIds].some(id => !prevWiredComponentIds.has(id))) {
+      wiredComponentChanged = true;
+    }
+    // Only notify if a wire or wired component set changed
+    if (wireChanged || wiredComponentChanged) {
+      console.log('[TOPOLOGY EFFECT] Topology changed, rerunning simulation.');
+      notifyCircuitChanged();
+      // Update previous state
+      prevStateRef.current = {
+        wireIds: currentWireIds,
+        wiredComponentIds: currentWiredComponentIds,
+      };
+    } else {
+      console.log('[TOPOLOGY EFFECT] No topology change, no rerun.');
+    }
+  }, [circuitComponents, wireConnections, isSimulationRunning, notifyCircuitChanged]);
+
   // --- Interaction Handlers ---
 
   const onConnect: OnConnect = useCallback((connection: Connection) => {
@@ -265,9 +387,9 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
       console.log('Creating new WireEdge:', newWire);
       // Update the external state via the callback prop
       onWiresChange([...wireConnections, newWire]);
-      onModified?.();
+      handleModified();
     },
-    [circuitComponents, wireConnections, onWiresChange, onModified]
+    [circuitComponents, wireConnections, onWiresChange, handleModified]
   );
 
   const onNodeDragStop = useCallback((event: React.MouseEvent, node: Node) => {
@@ -281,9 +403,9 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
       );
       
       onComponentsChange(updatedComponents);
-      onModified?.(); // Notify about modification
+      handleModified();
     },
-    [circuitComponents, onComponentsChange, onModified]
+    [circuitComponents, onComponentsChange, handleModified]
   );
 
   // --- React Flow Selection Handlers ---
@@ -296,14 +418,14 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
       console.warn('Clicked node data is not a valid CircuitComponent:', node.data);
       selectComponent(null); // Clear selection if data is invalid
     }
-    onModified?.();
-  }, [selectComponent, onModified]);
+    handleModified();
+  }, [selectComponent, handleModified]);
 
   const handlePaneClick = useCallback((event: React.MouseEvent) => {
     console.log('Pane clicked, clearing selection.');
     selectComponent(null);
-    onModified?.();
-  }, [selectComponent, onModified]);
+    handleModified();
+  }, [selectComponent, handleModified]);
 
   // --- React Flow Drag and Drop Handlers ---
   const onDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => {
@@ -388,10 +510,10 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
       // Log after calling the state update function
       // console.log('[onDrop] onComponentsChange called.');
       
-      onModified?.();
+      handleModified();
     },
     // Update dependencies to include draggingComponentType
-    [reactFlowInstance, circuitComponents, onComponentsChange, libraryComponents, componentsDetailsMap, draggingComponentType, onModified]
+    [reactFlowInstance, circuitComponents, onComponentsChange, libraryComponents, componentsDetailsMap, draggingComponentType, handleModified]
   );
   // ----------------------------------------------------
 
@@ -408,9 +530,9 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
       );
       onComponentsChange(remainingComponents);
       onWiresChange(remainingWires);
-      onModified?.();
+      handleModified();
     },
-    [circuitComponents, wireConnections, onComponentsChange, onWiresChange, onModified]
+    [circuitComponents, wireConnections, onComponentsChange, onWiresChange, handleModified]
   );
 
   const onEdgesDelete = useCallback(
@@ -420,9 +542,9 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
       // Remove wires corresponding to deleted edges
       const remainingWires = wireConnections.filter(wire => !deletedEdgeIds.has(wire.id));
       onWiresChange(remainingWires);
-      onModified?.();
+      handleModified();
     },
-    [wireConnections, onWiresChange, onModified]
+    [wireConnections, onWiresChange, handleModified]
   );
 
   // Add edge deletion handling
@@ -440,10 +562,10 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
           edge => !removedEdgeIds.includes(edge.id)
         );
         onWiresChange(updatedEdges);
-        onModified?.();
+        handleModified();
       }
     },
-    [wireConnections, onWiresChange, onModified]
+    [wireConnections, onWiresChange, handleModified]
   );
 
   // Handle React Flow instance initialization

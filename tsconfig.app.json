@@ -26,5 +26,5 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src"]
+  "include": ["src", "public/models/spice.mjs", "public/models/SpiceWorker.ts"]
 }

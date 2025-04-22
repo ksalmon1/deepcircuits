@@ -19,17 +19,6 @@ const UniversalComponentRenderer: React.FC<{data: CircuitComponent}> = ({ data }
   const activeStates = data.simulationState?.activeStates || [];
   const pinVoltages = data.simulationState?.pinVoltages;
 
-  // DEBUG: log LED component data for troubleshooting
-  if (data.type.toLowerCase() === 'led') {
-    console.log(`[LED Debug] Component ${data.id}: `, {
-      isOn,
-      activeStates,
-      pinVoltages,
-      attributes: data.attributes,
-      animatableElements: data.attributes?.animatableElements
-    });
-  }
-
   // ADDED: Calculate active states directly if we have pinVoltages but no activeStates
   const calculatedActiveStates = React.useMemo(() => {
     if (data.type.toLowerCase() === 'led') {
@@ -46,17 +35,10 @@ const UniversalComponentRenderer: React.FC<{data: CircuitComponent}> = ({ data }
         
         // Look for component current
         const ledCurrent = currentResults[`Dled${componentNumber}`];
-        
-        console.log(`[LED Debug] Checking simulation results for LED ${ledId}:`, {
-          voltageResults,
-          ledCurrent
-        });
       }
       
       // Regular calculation from pinVoltages if available
       if (pinVoltages && Object.keys(pinVoltages).length > 0) {
-        console.log(`[Renderer] Component ${data.id} (${data.type}): Calculating activeStates directly`);
-        
         // Calculate voltage for LED
         let calculatedVoltage = 0;
         
@@ -64,22 +46,8 @@ const UniversalComponentRenderer: React.FC<{data: CircuitComponent}> = ({ data }
         const anodePin = data.pins?.find(p => p.name?.toLowerCase().includes('anode') || p.type === 'anode' || p.name?.includes('(+)'));
         const cathodePin = data.pins?.find(p => p.name?.toLowerCase().includes('cathode') || p.type === 'cathode' || p.name?.includes('(-)'));
         
-        console.log(`[LED Debug] Pins:`, { 
-          pins: data.pins,
-          anodePin, 
-          cathodePin
-        });
-        
         if (anodePin && cathodePin && pinVoltages[anodePin.id] !== undefined && pinVoltages[cathodePin.id] !== undefined) {
           calculatedVoltage = pinVoltages[anodePin.id] - pinVoltages[cathodePin.id];
-          console.log(`[Renderer] LED ${data.id}: Calculated voltage ${calculatedVoltage.toFixed(2)}V (${anodePin.id}: ${pinVoltages[anodePin.id].toFixed(2)}V - ${cathodePin.id}: ${pinVoltages[cathodePin.id].toFixed(2)}V)`);
-        } else {
-          console.warn(`[LED Debug] Missing anode/cathode or voltage data for LED ${data.id}`, {
-            anodePinId: anodePin?.id,
-            cathodePinId: cathodePin?.id,
-            anodeVoltage: anodePin ? pinVoltages[anodePin.id] : undefined,
-            cathodeVoltage: cathodePin ? pinVoltages[cathodePin.id] : undefined
-          });
         }
       }
       
@@ -94,7 +62,6 @@ const UniversalComponentRenderer: React.FC<{data: CircuitComponent}> = ({ data }
         
         if (match && match[1]) {
           const dropVoltage = parseFloat(match[1]);
-          console.log(`[LED Debug] Found LED ${data.id} in circuit summary with voltage drop: ${dropVoltage}V`);
           
           // No hardcoded voltage threshold - check stateRules
           // The calculated states we'll return
@@ -103,7 +70,6 @@ const UniversalComponentRenderer: React.FC<{data: CircuitComponent}> = ({ data }
           // Check state rules if defined in attributes
           const stateRules = data.attributes?.stateRules as Record<string, string> | undefined;
           if (stateRules) {
-            console.log(`[Renderer] Found stateRules for ${data.id}:`, stateRules);
             
             // Apply custom rules
             Object.entries(stateRules).forEach(([stateName, rule]) => {
@@ -126,14 +92,9 @@ const UniversalComponentRenderer: React.FC<{data: CircuitComponent}> = ({ data }
                 
                 if (conditionMet) {
                   directActiveStates.push(stateName);
-                  console.log(`[Renderer] ${data.type} ${data.id}: State "${stateName}" is active (voltage ${dropVoltage.toFixed(2)}V ${operator} ${threshold}V)`);
-                } else {
-                  console.log(`[Renderer] ${data.type} ${data.id}: State "${stateName}" is NOT active (voltage ${dropVoltage.toFixed(2)}V ${operator} ${threshold}V)`);
                 }
               }
             });
-          } else {
-            console.log(`[LED Debug] No stateRules found for LED ${data.id} - cannot determine active states`);
           }
           
           if (directActiveStates.length > 0) {
@@ -145,8 +106,6 @@ const UniversalComponentRenderer: React.FC<{data: CircuitComponent}> = ({ data }
       // No voltage or couldn't calculate
       return [];
     } else if (pinVoltages && Object.keys(pinVoltages).length > 0 && activeStates.length === 0) {
-      console.log(`[Renderer] Component ${data.id} (${data.type}): Calculating activeStates directly`);
-      
       // Calculate voltage for other components
       let calculatedVoltage = 0;
       
@@ -156,7 +115,6 @@ const UniversalComponentRenderer: React.FC<{data: CircuitComponent}> = ({ data }
         const pin2 = data.pins[1];
         if (pin1 && pin2 && pinVoltages[pin1.id] !== undefined && pinVoltages[pin2.id] !== undefined) {
           calculatedVoltage = Math.abs(pinVoltages[pin1.id] - pinVoltages[pin2.id]);
-          console.log(`[Renderer] ${data.type} ${data.id}: Calculated voltage ${calculatedVoltage.toFixed(2)}V (${pin1.id}: ${pinVoltages[pin1.id].toFixed(2)}V - ${pin2.id}: ${pinVoltages[pin2.id].toFixed(2)}V)`);
         }
       }
       
@@ -166,7 +124,6 @@ const UniversalComponentRenderer: React.FC<{data: CircuitComponent}> = ({ data }
       // Check state rules if defined in attributes
       const stateRules = data.attributes?.stateRules as Record<string, string> | undefined;
       if (stateRules) {
-        console.log(`[Renderer] Found stateRules for ${data.id}:`, stateRules);
         
         // Apply custom rules
         Object.entries(stateRules).forEach(([stateName, rule]) => {
@@ -189,9 +146,6 @@ const UniversalComponentRenderer: React.FC<{data: CircuitComponent}> = ({ data }
             
             if (conditionMet) {
               directActiveStates.push(stateName);
-              console.log(`[Renderer] ${data.type} ${data.id}: State "${stateName}" is active (voltage ${calculatedVoltage.toFixed(2)}V ${operator} ${threshold}V)`);
-            } else {
-              console.log(`[Renderer] ${data.type} ${data.id}: State "${stateName}" is NOT active (voltage ${calculatedVoltage.toFixed(2)}V ${operator} ${threshold}V)`);
             }
           }
         });
@@ -206,38 +160,18 @@ const UniversalComponentRenderer: React.FC<{data: CircuitComponent}> = ({ data }
   const combinedActiveStates = [...activeStates, ...calculatedActiveStates];
   
   if (combinedActiveStates.length > 0) {
-    console.log(`[Renderer] ${data.type} ${data.id}: Active states:`, combinedActiveStates);
   }
 
   // Effect to update the SVG after it's rendered
   useEffect(() => {
     if (!svgContainerRef.current) return;
     
-    // Log for debugging
-    if (data.type.toLowerCase() === 'led') {
-      console.log(`[LED Debug] Running useEffect for LED ${data.id}:`, {
-        svgContainerRef: svgContainerRef.current,
-        hasAnimatableElements: !!data.attributes?.animatableElements,
-        combinedActiveStates
-      });
-    }
-    
     // If we have animation data, apply it to the SVG elements
     if (data.attributes?.animatableElements) {
       const animatableElements = data.attributes.animatableElements as Record<string, AnimatableElement>;
       
-      console.log(`[Renderer] Component ${data.id} (${data.type}): Processing animations with activeStates:`, combinedActiveStates);
-      
       Object.entries(animatableElements).forEach(([elementId, animatableElement]) => {
         const svgElement = svgContainerRef.current?.querySelector(`#${elementId}`);
-        
-        if (data.type.toLowerCase() === 'led') {
-          console.log(`[LED Debug] Looking for element #${elementId} in LED ${data.id}:`, {
-            found: !!svgElement,
-            properties: animatableElement.properties,
-            svgHTML: svgContainerRef.current?.innerHTML
-          });
-        }
         
         if (svgElement) {
           // Process each property for this element
@@ -256,8 +190,6 @@ const UniversalComponentRenderer: React.FC<{data: CircuitComponent}> = ({ data }
                 const activeState = combinedActiveStates[activeStateIndex];
                 const value = propValues[activeState];
                 
-                console.log(`[Renderer] Element #${elementId} animation: Setting ${propName}="${value}" for state "${activeState}"`);
-                
                 // Apply the property - generic handling for any component type
                 if (propName === 'fill' && value.startsWith('#')) {
                   svgElement.setAttribute(propName, `url(${value})`);
@@ -269,7 +201,6 @@ const UniversalComponentRenderer: React.FC<{data: CircuitComponent}> = ({ data }
               } else if (propValues['default'] !== undefined) {
                 // Use default value if no active state matches
                 const defaultValue = propValues['default'];
-                console.log(`[Renderer] Element #${elementId} animation: Setting ${propName}="${defaultValue}" (default)`);
                 
                 // Apply default - generic handling for any component type
                 if (propName === 'fill' && defaultValue.startsWith('#')) {
@@ -282,10 +213,8 @@ const UniversalComponentRenderer: React.FC<{data: CircuitComponent}> = ({ data }
               }
             });
           } else {
-            console.warn(`[Renderer] Element #${elementId} has invalid properties format. Expected array.`);
           }
         } else {
-          console.warn(`[Renderer] Could not find SVG element #${elementId} for animation`);
         }
       });
     }
@@ -311,14 +240,6 @@ const UniversalComponentRenderer: React.FC<{data: CircuitComponent}> = ({ data }
     if (pinVoltages && Object.keys(pinVoltages).length > 0) {
       Object.entries(pinVoltages).forEach(([pinId, voltage]) => {
         svg.setAttribute(`data-pin-${pinId}-voltage`, voltage.toFixed(2));
-      });
-    }
-
-    // For LED components, log SVG content
-    if (data.type.toLowerCase() === 'led') {
-      console.log(`[LED Debug] Rendering SVG for LED ${data.id}:`, {
-        svgContent: svg.outerHTML.slice(0, 200) + '...',
-        elementIds: Array.from(svg.querySelectorAll('[id]')).map(el => el.id)
       });
     }
 
