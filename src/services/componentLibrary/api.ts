@@ -1,6 +1,10 @@
 import { supabase } from '@/integrations/supabase/client';
 import { ComponentLibraryItem, ComponentMetadata } from '@/types/component';
 import { ComponentPin } from '@/types/pin';
+import { normalizePins } from '@/utils/pinUtils';
+import type { Database, Json } from '@/integrations/supabase/types';
+
+type ComponentLibraryRow = Database['public']['Tables']['component_library']['Row'];
 
 /**
  * Fetch all components from the library
@@ -123,8 +127,9 @@ export async function getComponentWithDetails(id: string): Promise<ComponentLibr
 
     const { data: rpcData, error: rpcError } = await supabase.rpc(
       'get_component_with_details', 
-      // Use type assertion to tell TypeScript this is intentional
-      { component_id_input: id } as any
+      // The deployed RPC expects `component_id_input`, but the generated types
+      // declare `component_id`; keep the runtime payload and satisfy the types.
+      { component_id_input: id } as unknown as { component_id: string }
     );
 
     if (rpcError) {
@@ -143,9 +148,9 @@ export async function getComponentWithDetails(id: string): Promise<ComponentLibr
     }
 
     const rpcDataObj = rpcData as unknown as {
-      component: Record<string, any> | null;
+      component: ComponentLibraryRow | null;
       pins: ComponentPin[] | null;
-      properties: Record<string, any> | null;
+      properties: Record<string, unknown> | null;
     };
     
     const componentData = rpcDataObj.component;
@@ -173,14 +178,7 @@ export async function getComponentWithDetails(id: string): Promise<ComponentLibr
       svgPath: componentData.svg_path,
       enabled: componentData.enabled,
       isOriginal: componentData.is_original,
-      pins: pins.map(pin => ({
-        id: pin.id,
-        name: pin.name,
-        x: pin.x,
-        y: pin.y,
-        signals: pin.signals,
-        handle_id: pin.handle_id
-      })),
+      pins: normalizePins(pins),
       properties: properties,
       createdAt: componentData.created_at,
       updatedAt: componentData.updated_at
@@ -359,7 +357,7 @@ async function updatePins(componentId: string, pins: ComponentPin[]): Promise<vo
 }
 
 // Helper functions for component properties
-async function insertProperties(componentId: string, properties: Record<string, any>): Promise<void> {
+async function insertProperties(componentId: string, properties: Record<string, unknown>): Promise<void> {
   try {
     if (!properties || Object.keys(properties).length === 0) {
       return;
@@ -368,7 +366,7 @@ async function insertProperties(componentId: string, properties: Record<string, 
     const propertiesToInsert = Object.entries(properties).map(([key, value]) => ({
       component_id: componentId,
       property_key: key,
-      property_value: value
+      property_value: value as Json
     }));
 
     const { error } = await supabase
@@ -385,7 +383,7 @@ async function insertProperties(componentId: string, properties: Record<string, 
   }
 }
 
-async function updateProperties(componentId: string, properties: Record<string, any>): Promise<void> {
+async function updateProperties(componentId: string, properties: Record<string, unknown>): Promise<void> {
   try {
     // Delete existing properties
     const { error: deleteError } = await supabase

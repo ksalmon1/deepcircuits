@@ -6,9 +6,9 @@
 // Base error class for application-wide errors
 export class AppError extends Error {
   code: string;
-  details?: any;
+  details?: unknown;
 
-  constructor(message: string, code: string = 'UNKNOWN_ERROR', details?: any) {
+  constructor(message: string, code: string = 'UNKNOWN_ERROR', details?: unknown) {
     super(message);
     this.name = 'AppError';
     this.code = code;
@@ -18,7 +18,7 @@ export class AppError extends Error {
 
 // Specific error for component-related issues
 export class ComponentError extends AppError {
-  constructor(message: string, code: string = 'COMPONENT_ERROR', details?: any) {
+  constructor(message: string, code: string = 'COMPONENT_ERROR', details?: unknown) {
     super(message, code, details);
     this.name = 'ComponentError';
   }
@@ -26,7 +26,7 @@ export class ComponentError extends AppError {
 
 // Specific error for pin-related issues
 export class PinError extends AppError {
-  constructor(message: string, code: string = 'PIN_ERROR', details?: any) {
+  constructor(message: string, code: string = 'PIN_ERROR', details?: unknown) {
     super(message, code, details);
     this.name = 'PinError';
   }
@@ -34,7 +34,7 @@ export class PinError extends AppError {
 
 // Specific error for circuit-related issues
 export class CircuitError extends AppError {
-  constructor(message: string, code: string = 'CIRCUIT_ERROR', details?: any) {
+  constructor(message: string, code: string = 'CIRCUIT_ERROR', details?: unknown) {
     super(message, code, details);
     this.name = 'CircuitError';
   }
@@ -42,7 +42,7 @@ export class CircuitError extends AppError {
 
 // Specific error for simulation-related issues
 export class SimulationError extends AppError {
-  constructor(message: string, code: string = 'SIMULATION_ERROR', details?: any) {
+  constructor(message: string, code: string = 'SIMULATION_ERROR', details?: unknown) {
     super(message, code, details);
     this.name = 'SimulationError';
   }
@@ -84,7 +84,7 @@ export const formatErrorMessage = (error: unknown): string => {
 export const logError = (
   error: unknown,
   context?: string,
-  additionalInfo?: any
+  additionalInfo?: unknown
 ): void => {
   const errorMessage = formatErrorMessage(error);
   
@@ -102,7 +102,7 @@ export const logError = (
  * @param setErrorFn The function to call when an error occurs
  * @returns A wrapped function that handles errors
  */
-export function withErrorHandling<Args extends any[], Result>(
+export function withErrorHandling<Args extends unknown[], Result>(
   operation: (...args: Args) => Result,
   context: string,
   setErrorFn: (error: Error, context: string, code?: string) => void
@@ -131,7 +131,7 @@ export function withErrorHandling<Args extends any[], Result>(
  * @param setErrorFn The function to call when an error occurs
  * @returns A wrapped async function that handles errors
  */
-export function withAsyncErrorHandling<Args extends any[], Result>(
+export function withAsyncErrorHandling<Args extends unknown[], Result>(
   asyncOperation: (...args: Args) => Promise<Result>,
   context: string,
   setErrorFn: (error: Error, context: string, code?: string) => void

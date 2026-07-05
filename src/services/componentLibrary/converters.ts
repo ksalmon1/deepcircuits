@@ -1,12 +1,15 @@
 import { ComponentLibraryItem, CircuitComponent } from "@/types/component";
 import { Node } from "@xyflow/react";
 import { CircuitNodeData } from "@/types/circuit";
-import { ComponentPin } from "@/types/pin";
+import type { Database } from "@/integrations/supabase/types";
+import { normalizePins } from "@/utils/pinUtils";
+
+type ComponentLibraryRow = Database["public"]["Tables"]["component_library"]["Row"];
 
 /**
  * Maps a database component record to our application model
  */
-export const mapComponentFromDb = (dbComponent: any): ComponentLibraryItem => {
+export const mapComponentFromDb = (dbComponent: ComponentLibraryRow): ComponentLibraryItem => {
   console.log(`Mapping component from DB: ${dbComponent.name}, type=${dbComponent.type}, svgPath=${dbComponent.svg_path ? 'exists' : 'missing'}`);
   
   return {
@@ -34,13 +37,7 @@ export const convertLibraryItemToCircuitComponent = (item: ComponentLibraryItem)
     top: 0,
     left: 0,
     attributes: {},
-    pins: item.pins ? item.pins.map(pin => ({
-      id: pin.id || `pin-${crypto.randomUUID().slice(0, 8)}`,
-      name: pin.name,
-      x: pin.x,
-      y: pin.y,
-      signals: pin.signals || []
-    })) : [], 
+    pins: normalizePins(item.pins),
     svgPath: item.svgPath,
     isOriginal: item.isOriginal
   };
@@ -58,13 +55,7 @@ export const componentToNode = (component: CircuitComponent): Node => {
       type: component.type,
       label: component.name || component.type,
       attributes: component.attributes || {},
-      pins: component.pins ? component.pins.map(pin => ({
-        id: pin.id || `pin-${crypto.randomUUID().slice(0, 8)}`,
-        name: pin.name,
-        x: pin.x,
-        y: pin.y,
-        signals: pin.signals || []
-      })) : [],
+      pins: normalizePins(component.pins),
       svgPath: component.svgPath,
       isOriginal: component.isOriginal,
     } as CircuitNodeData,
@@ -85,13 +76,7 @@ export const nodeToCircuitComponent = (node: Node): CircuitComponent => {
     top: node.position.y,
     left: node.position.x,
     attributes: nodeData.attributes || {},
-    pins: (nodeData.pins || []).map(pin => ({
-      id: pin.id || `pin-${crypto.randomUUID().slice(0, 8)}`,
-      name: pin.name,
-      x: pin.x,
-      y: pin.y,
-      signals: pin.signals || []
-    })),
+    pins: normalizePins(nodeData.pins),
     svgPath: nodeData.svgPath,
     isOriginal: nodeData.isOriginal
   };

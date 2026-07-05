@@ -35,7 +35,7 @@ export type Component = {
   project_id: string;
   type: string;
   name: string;
-  properties: Record<string, any>;
+  properties: Record<string, unknown>;
   position: {
     x: number;
     y: number;
@@ -47,7 +47,7 @@ export type Component = {
 
 export type UserSettings = {
   user_id: string;
-  preferences: Record<string, any>;
+  preferences: Record<string, unknown>;
   theme: string;
   created_at: string;
   updated_at: string;
@@ -57,16 +57,8 @@ export type VersionHistory = {
   id: string;
   project_id: string;
   version_number: number;
-  snapshot: Record<string, any>;
+  snapshot: Record<string, unknown>;
   created_at: string;
   created_by: string;
-};
-
-export type ComponentPin = {
-  id?: string;
-  name: string;
-  x: number;
-  y: number;
-  signals: string[];
 };
 

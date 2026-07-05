@@ -78,7 +78,7 @@ export const getUserProfileAndRoles = async (userId: string): Promise<{
       profile: profileData as Profile, 
       roles: roleArray as UserRole[] 
     };
-  } catch (error: any) {
+  } catch (error) {
     console.error("User data fetch error:", error);
     return { profile: null, roles: [] };
   }
@@ -176,7 +176,7 @@ export const getUserById = async (userId: string): Promise<UserWithProfile | nul
 export const updateProfile = async (
   userId: string,
   updates: Partial<Profile>
-): Promise<{ success: boolean; error?: any; data?: Profile | null }> => {
+): Promise<{ success: boolean; error?: unknown; data?: Profile | null }> => {
   if (!userId) {
     console.error("User ID is required to update profile");
     return { 

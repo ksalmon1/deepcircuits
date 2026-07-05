@@ -11,7 +11,7 @@ export interface AppComponentModel {
     type: string;
     // Component-specific properties (e.g., resistance, voltage, model parameters)
     // Structure might vary per component type.
-    properties: Record<string, any>;
+    properties: Record<string, unknown>;
     // Defines the connection points (pins/terminals) available on this component.
     // Used for mapping connections and potentially for special handling (e.g., GND pin name).
     pins: { id: string; name?: string }[];

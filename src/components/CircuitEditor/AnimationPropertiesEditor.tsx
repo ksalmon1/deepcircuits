@@ -13,9 +13,25 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
+export interface AnimatableElementProperty {
+  name: string;
+  states: Record<string, string>;
+}
+
+export interface AnimatableElementConfig {
+  transition?: string;
+  properties?: AnimatableElementProperty[];
+}
+
+export interface AnimationProperties {
+  animatableElements?: Record<string, AnimatableElementConfig>;
+  stateRules?: Record<string, string>;
+  [key: string]: unknown;
+}
+
 interface AnimationPropertiesEditorProps {
-  properties: Record<string, any>;
-  onChange: (properties: Record<string, any>) => void;
+  properties: AnimationProperties;
+  onChange: (properties: AnimationProperties) => void;
   errorMessage: string | null;
   setErrorMessage: (message: string | null) => void;
   svgPath?: string; // Add property to receive SVG path from parent component
@@ -954,7 +970,7 @@ const AnimationPropertiesEditor: React.FC<AnimationPropertiesEditorProps> = ({
                     </div>
                   ) : (
                     <Accordion type="multiple" className="w-full space-y-4">
-                      {Object.entries(properties.animatableElements || {}).map(([elementId, config]: [string, any]) => (
+                      {Object.entries(properties.animatableElements || {}).map(([elementId, config]) => (
                         <AccordionItem key={elementId} value={elementId} className="border rounded-md overflow-hidden bg-white">
                           <AccordionTrigger className="bg-gray-50 hover:no-underline py-3 px-4">
                             <div className="flex items-center justify-between w-full pr-4"> {/* Added w-full and pr-4 for spacing */}
@@ -1369,8 +1385,13 @@ const AnimationPropertiesEditor: React.FC<AnimationPropertiesEditorProps> = ({
 };
 
 // Component for testing animations
-const AnimationTestingPanel = ({ properties, svgPath }) => {
-  const [currentState, setCurrentState] = useState<Record<string, any>>({});
+interface TestState {
+  voltage?: number;
+  [key: string]: string | number | boolean | undefined;
+}
+
+const AnimationTestingPanel = ({ properties, svgPath }: { properties: AnimationProperties; svgPath?: string }) => {
+  const [currentState, setCurrentState] = useState<TestState>({});
   const [previewKey, setPreviewKey] = useState(0); // For forcing re-render
   const previewRef = useRef(null);
   
@@ -1466,7 +1487,7 @@ const AnimationTestingPanel = ({ properties, svgPath }) => {
   
   // Initialize state with relevant values
   useEffect(() => {
-    const initialState: Record<string, any> = {};
+    const initialState: TestState = {};
     relevantStates.forEach(stateName => {
       initialState[String(stateName)] = defaultStateValues[String(stateName)] !== undefined 
         ? defaultStateValues[String(stateName)] 
@@ -1490,7 +1511,7 @@ const AnimationTestingPanel = ({ properties, svgPath }) => {
     Object.entries(animatableElements).forEach(([elementId, config]) => {
       const element = svgDoc.getElementById(elementId);
       if (!element) return;
-      const transitionValue = (config as any)?.transition || 'all 0.3s ease-in-out';
+      const transitionValue = config?.transition || 'all 0.3s ease-in-out';
       element.style.transition = transitionValue;
     });
     
@@ -1504,9 +1525,9 @@ const AnimationTestingPanel = ({ properties, svgPath }) => {
         if (!element) return;
         
         // For each property defined on this element
-        const properties = (config as any)?.properties || [];
-        
-        properties.forEach((property) => {
+        const elementProperties = config?.properties || [];
+
+        elementProperties.forEach((property) => {
           const applicableStates = activeStates.filter(stateName => 
             property.states && stateName in property.states
           );
@@ -1523,10 +1544,11 @@ const AnimationTestingPanel = ({ properties, svgPath }) => {
               case 'transform': element.style.transform = stateValue; break;
               case 'stroke-width': element.style.strokeWidth = stateValue; break;
               case 'filter': element.style.filter = stateValue; break;
-              default:
+              default: {
                 const camelCaseProperty = property.name.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
                 element.style[camelCaseProperty] = stateValue;
                 break;
+              }
             }
           } else {
             // **Reset the style if no state is active for this property**
@@ -1537,19 +1559,20 @@ const AnimationTestingPanel = ({ properties, svgPath }) => {
               case 'transform': element.style.transform = ''; break;
               case 'stroke-width': element.style.strokeWidth = ''; break;
               case 'filter': element.style.filter = ''; break;
-              default:
+              default: {
                 const camelCaseProperty = property.name.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
                 // Check if property exists before setting to empty string
                 if (element.style[camelCaseProperty] !== undefined) {
                   element.style[camelCaseProperty] = '';
                 }
                 break;
+              }
             }
           }
         });
       });
     }, 10); // Small delay to ensure transitions are applied first
-  }, [svgPath, currentState, properties, calculatedActiveStates]); // Add calculatedActiveStates dependency
+  }, [svgPath, properties, calculatedActiveStates]);
   
   // Apply animations when state changes
   useEffect(() => {
@@ -1664,7 +1687,7 @@ const AnimationTestingPanel = ({ properties, svgPath }) => {
                       const element = svgDoc.getElementById(elementId);
                       if (element) {
                         // Ensure transition is set correctly
-                        element.style.transition = (config as any).transition || 'all 0.3s ease-in-out';
+                        element.style.transition = config.transition || 'all 0.3s ease-in-out';
                       }
                     });
                   }
@@ -1735,7 +1758,7 @@ const AnimationTestingPanel = ({ properties, svgPath }) => {
                       Object.entries(animatableElements).forEach(([elementId, config]) => {
                         const element = svgDoc.getElementById(elementId);
                         if (element) {
-                          element.style.transition = (config as any).transition || 'all 0.3s ease-in-out';
+                          element.style.transition = config.transition || 'all 0.3s ease-in-out';
                         }
                       });
                     }
@@ -1825,7 +1848,7 @@ const AnimationTestingPanel = ({ properties, svgPath }) => {
                         // Then reapply transition for next animation
                         setTimeout(() => {
                           if (element) {
-                            element.style.transition = (config as any).transition || 'all 0.3s ease-in-out';
+                            element.style.transition = config.transition || 'all 0.3s ease-in-out';
                           }
                         }, 50);
                       }

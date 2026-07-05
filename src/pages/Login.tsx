@@ -35,8 +35,8 @@ const Login = () => {
         toast.success("Login Successful");
         navigate("/dashboard");
       }
-    } catch (error: any) {
-      toast.error(error.message || "An unexpected error occurred");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "An unexpected error occurred");
     } finally {
       setIsLoading(false);
     }
@@ -45,8 +45,8 @@ const Login = () => {
   const handleSocialLogin = async (provider: 'github' | 'google') => {
     try {
       await signInWithProvider(provider);
-    } catch (error: any) {
-      toast.error(error.message || "Failed to authenticate with social provider");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to authenticate with social provider");
     }
   };
 

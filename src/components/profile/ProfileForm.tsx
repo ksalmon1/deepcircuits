@@ -66,21 +66,22 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ user, profile, updateProfile:
   async function onSubmit(data: ProfileFormValues) {
     if (!user || !session) return;
 
+    setIsLoading(true);
     const updates = {
       id: user.id,
-      username: data.display_name,
-      full_name: data.display_name,
-      website: data.avatar_url,
-      updated_at: new Date(),
+      display_name: data.display_name,
+      avatar_url: data.avatar_url || null,
+      updated_at: new Date().toISOString(),
     };
 
     const { error } = await supabase.from('profiles').upsert(updates);
+    setIsLoading(false);
 
     if (error) {
       toast.error("Failed to update profile: " + error.message);
     } else {
       toast.success("Profile updated successfully!");
-      setProfileData(updates as Profile);
+      setProfileData({ ...(profile as Profile), ...updates });
     }
   }
 

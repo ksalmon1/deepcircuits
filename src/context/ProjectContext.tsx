@@ -38,7 +38,7 @@ interface ProjectContextType {
   handleComponentsChange: (updatedComponents: CircuitComponent[]) => void;
   handleWiresChange: (updatedWires: WireEdge[]) => void;
   updateCode: (newCode: string) => void; // New handler for code changes
-  handleUpdateComponentAttributes: (componentId: string, attributes: Record<string, any>) => void;
+  handleUpdateComponentAttributes: (componentId: string, attributes: Record<string, unknown>) => void;
   rotateComponent: (componentId: string, angleIncrement?: number) => void;
   updateComponent: (updatedComponent: CircuitComponent) => void; // Add individual component update
   
@@ -143,7 +143,7 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
     });
   };
   
-  const coreUpdateComponentAttributes = (componentId: string, attributes: Record<string, any>) => {
+  const coreUpdateComponentAttributes = (componentId: string, attributes: Record<string, unknown>) => {
     if (!componentId) throw new ComponentError('Invalid component ID', 'INVALID_COMPONENT_ID');
     if (!attributes || typeof attributes !== 'object') throw new ComponentError('Invalid attributes', 'INVALID_ATTRIBUTES');
     

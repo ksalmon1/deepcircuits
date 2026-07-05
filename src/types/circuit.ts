@@ -34,7 +34,7 @@ export interface CustomWireEdgeProps extends Omit<EdgeProps, 'data'> {
   data?: WireData;
   onDelete?: (id: string) => void;
   // Allow for more flexible style types to match React Flow's expectations
-  style?: Record<string, any>;
+  style?: React.CSSProperties;
 }
 
 /**
@@ -54,7 +54,7 @@ export interface WireConnectionState {
 export interface CircuitNodeData extends Record<string, unknown> {
   label: string;
   type: string;
-  attributes: Record<string, any>;
+  attributes: Record<string, unknown>;
   pins: ComponentPin[];
   svgPath?: string;
   isOriginal?: boolean;

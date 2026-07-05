@@ -2,6 +2,7 @@
 import { ComponentLibraryItem } from '@/types/component';
 import { supabase } from '@/integrations/supabase/client';
 import { ComponentError } from '@/utils/errorHandling';
+import type { Json } from '@/integrations/supabase/types';
 
 /**
  * Create a new component in the library
@@ -54,7 +55,7 @@ export async function createComponent(component: ComponentLibraryItem): Promise<
       const propsToInsert = Object.entries(component.properties).map(([key, value]) => ({
         component_id: componentId,
         property_key: key,
-        property_value: value
+        property_value: value as Json
       }));
       
       const { error: propsError } = await supabase
@@ -157,7 +158,7 @@ export async function updateComponent(component: ComponentLibraryItem): Promise<
         const propsToInsert = Object.entries(component.properties).map(([key, value]) => ({
           component_id: component.id,
           property_key: key,
-          property_value: value
+          property_value: value as Json
         }));
         
         const { error: propsError } = await supabase

@@ -149,7 +149,7 @@ const Dashboard = () => {
   };
 
   const filteredProjects = useMemo(() => {
-    let result = projects.filter(project => 
+    const result = projects.filter(project => 
       project.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
       (project.description && project.description.toLowerCase().includes(searchQuery.toLowerCase()))
     );

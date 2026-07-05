@@ -19,7 +19,7 @@ export interface AddComponentDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   newComponent: Partial<ComponentLibraryItem>;
-  onNewComponentChange: (field: string, value: any) => void;
+  onNewComponentChange: (field: string, value: unknown) => void;
   onAddComponent: () => void;
   isCreatingComponent: boolean;
 }

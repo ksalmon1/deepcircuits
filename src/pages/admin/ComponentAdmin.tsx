@@ -19,6 +19,7 @@ import {
   TableRow 
 } from "@/components/ui/table";
 import { ComponentLibraryItem } from '@/types/component';
+import { ComponentPin } from '@/types/pin';
 import { toast } from "sonner";
 import { getComponentWithDetails } from "@/services/componentLibrary/api";
 import { useComponentLibrary } from "@/hooks/useComponentLibrary";
@@ -111,7 +112,7 @@ const ComponentAdmin = () => {
     return matchesSearch && matchesCategory && matchesType;
   });
 
-  const handleNewComponentChange = (field: string, value: any) => {
+  const handleNewComponentChange = (field: string, value: unknown) => {
     setNewComponent(prev => ({
       ...prev,
       [field]: value
@@ -181,7 +182,7 @@ const ComponentAdmin = () => {
     refetchLibrary();
   };
 
-  const updateComponentProperty = (property: string, value: any) => {
+  const updateComponentProperty = (property: string, value: unknown) => {
     if (!editedComponent) return;
     
     setEditedComponent(prev => {
@@ -193,7 +194,7 @@ const ComponentAdmin = () => {
     });
   };
 
-  const updateComponentProperties = (properties: Record<string, any>) => {
+  const updateComponentProperties = (properties: Record<string, unknown>) => {
     if (!editedComponent) return;
     
     setEditedComponent(prev => {
@@ -205,7 +206,7 @@ const ComponentAdmin = () => {
     });
   };
 
-  const updatePinConfiguration = (pinConfig: any[]) => {
+  const updatePinConfiguration = (pinConfig: ComponentPin[]) => {
     if (!editedComponent) return;
     
     setEditedComponent(prev => {

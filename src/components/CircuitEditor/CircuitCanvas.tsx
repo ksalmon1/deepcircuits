@@ -218,7 +218,7 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
   // --- Viewport Persistence --- 
   
   // Use onMoveEnd to save the final viewport state to context
-  const handleMoveEnd = useCallback((event: any, vp: Viewport) => {
+  const handleMoveEnd = useCallback((_event: MouseEvent | TouchEvent | null, vp: Viewport) => {
     // console.log('Move ended, saving viewport:', vp); // Optional debug log
     setViewport(vp);
   }, [setViewport]);

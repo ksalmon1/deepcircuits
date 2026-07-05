@@ -63,7 +63,7 @@ export function generateComponentId(type: string): string {
 export function createCircuitComponent(
   type: string,
   position: { left: number; top: number },
-  attributes: Record<string, any> = {},
+  attributes: Record<string, unknown> = {},
   svgPath?: string | null,
   isOriginal?: boolean
 ): CircuitComponent {

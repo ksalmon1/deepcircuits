@@ -16,7 +16,7 @@ export interface ComponentRenderer {
   /**
    * Render the component into the provided HTMLElement
    */
-  render(element: HTMLElement, componentType: string, options?: any): void;
+  render(element: HTMLElement, componentType: string, options?: Record<string, unknown>): void;
   
   /**
    * Get pin information for a component type
@@ -52,7 +52,7 @@ class ComponentRegistry {
   /**
    * Render a component into an element
    */
-  renderComponent(element: HTMLElement, componentType: string, options?: any): void {
+  renderComponent(element: HTMLElement, componentType: string, options?: Record<string, unknown>): void {
     const renderer = this.getRendererForComponent(componentType);
     if (renderer) {
       renderer.render(element, componentType, options);

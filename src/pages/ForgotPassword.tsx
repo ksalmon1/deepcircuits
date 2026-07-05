@@ -35,8 +35,8 @@ const ForgotPassword = () => {
           description: "Check your email for password reset instructions",
         });
       }
-    } catch (error: any) {
-      toast.error(error.message || "An unexpected error occurred");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "An unexpected error occurred");
     } finally {
       setIsLoading(false);
     }

@@ -7,8 +7,8 @@ import { Separator } from '@/components/ui/separator';
 import { PlusCircle, Trash2 } from 'lucide-react';
 
 export interface PropertyEditorProps {
-  properties: Record<string, any>;
-  onChange: (properties: Record<string, any>) => void;
+  properties: Record<string, unknown>;
+  onChange: (properties: Record<string, unknown>) => void;
   componentType: string;
 }
 
@@ -27,7 +27,7 @@ const DynamicPropertyEditor: React.FC<PropertyEditorProps> = ({
     onChange(newProperties);
   };
 
-  const handlePropertyValueChange = (key: string, value: any) => {
+  const handlePropertyValueChange = (key: string, value: unknown) => {
     onChange({
       ...properties,
       [key]: value
@@ -55,7 +55,7 @@ const DynamicPropertyEditor: React.FC<PropertyEditorProps> = ({
     setErrorMessage(null);
   };
 
-  const getPropertyEditor = (key: string, value: any) => {
+  const getPropertyEditor = (key: string, value: unknown) => {
     // Special handling for boolean values - show as switch
     if (typeof value === 'boolean') {
       return (
@@ -91,7 +91,7 @@ const DynamicPropertyEditor: React.FC<PropertyEditorProps> = ({
       return (
         <Input 
           type="number" 
-          value={value} 
+          value={Number(value)} 
           onChange={(e) => handlePropertyValueChange(key, Number(e.target.value))}
         />
       );
@@ -101,7 +101,7 @@ const DynamicPropertyEditor: React.FC<PropertyEditorProps> = ({
     return (
       <Input 
         type="text" 
-        value={value} 
+        value={String(value ?? '')} 
         onChange={(e) => handlePropertyValueChange(key, e.target.value)}
       />
     );

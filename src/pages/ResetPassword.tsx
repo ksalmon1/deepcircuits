@@ -59,8 +59,8 @@ const ResetPassword = () => {
         toast.success("Password updated successfully!");
         navigate("/login");
       }
-    } catch (err: any) {
-      toast.error(err.message || "An unexpected error occurred");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "An unexpected error occurred");
     } finally {
       setIsLoading(false);
     }

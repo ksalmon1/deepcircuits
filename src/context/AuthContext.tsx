@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { Session, User, Provider } from "@supabase/supabase-js";
+import { AuthError, Session, User, Provider } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -10,18 +10,18 @@ type AuthContextType = {
   user: User | null;
   isLoading: boolean;
   signUp: (email: string, password: string, username?: string) => Promise<{
-    error: any | null;
-    data: any | null;
+    error: AuthError | null;
+    data: { user: User | null; session: Session | null } | null;
   }>;
   signIn: (email: string, password: string) => Promise<{
-    error: any | null;
-    data: any | null;
+    error: AuthError | null;
+    data: { user: User | null; session: Session | null } | null;
   }>;
   signInWithProvider: (provider: Provider) => Promise<void>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{
-    error: any | null;
-    data: any | null;
+    error: AuthError | null;
+    data: Record<string, never> | null;
   }>;
 };
 
@@ -114,9 +114,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         },
       });
       if (error) throw error;
-    } catch (error: any) {
+    } catch (error) {
       console.error("Social login error:", error);
-      toast.error(error.message || "Social login failed. Please try again.");
+      toast.error(error instanceof Error ? error.message : "Social login failed. Please try again.");
       setIsLoading(false);
     }
   };

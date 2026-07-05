@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { ComponentLibraryItem } from "@/services/componentLibraryService";
-import { ComponentPin } from "@/types/database";
+import { ComponentPin } from "@/types/pin";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -45,9 +45,9 @@ interface EditComponentDialogProps {
   isLoadingDetails: boolean;
   detailsError: Error | null;
   onSave: () => void;
-  onPinUpdate: (pins: any[]) => void; 
-  onPropertyUpdate: (properties: Record<string, any>) => void;
-  updateComponentProperty: (property: string, value: any) => void;
+  onPinUpdate: (pins: ComponentPin[]) => void;
+  onPropertyUpdate: (properties: Record<string, unknown>) => void;
+  updateComponentProperty: (property: string, value: unknown) => void;
   activeTab: string;
   setActiveTab: (tab: string) => void;
 }
@@ -146,6 +146,7 @@ const EditComponentDialog = ({
     if (!editedComponent) return;
     const nextPinIndex = (editedComponent.pins || []).length;
     const newPin: ComponentPin = {
+      id: `pin-${nextPinIndex}`,
       name: `Pin ${nextPinIndex + 1}`,
       x: 10,
       y: nextPinIndex * 15 + 10,

@@ -69,7 +69,7 @@ export const ComponentLibraryProvider: React.FC<ComponentLibraryProviderProps> =
       setComponentsDetailsMap(detailsMap);
       //console.log(`ComponentLibraryProvider: Finished fetching details.`);
       
-    } catch (fetchError: any) {
+    } catch (fetchError) {
       console.error("ComponentLibraryProvider: Error fetching component library:", fetchError);
       setError(fetchError instanceof Error ? fetchError : new Error('Failed to load component library'));
       toast.error("Failed to load component library");

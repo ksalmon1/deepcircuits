@@ -16,7 +16,11 @@ const UniversalComponentRenderer: React.FC<{data: CircuitComponent}> = ({ data }
   
   // Get simulation state
   const isOn = data.simulationState?.isOn || false;
-  const activeStates = data.simulationState?.activeStates || [];
+  const simulationActiveStates = data.simulationState?.activeStates;
+  const activeStates = React.useMemo(
+    () => simulationActiveStates || [],
+    [simulationActiveStates]
+  );
   const pinVoltages = data.simulationState?.pinVoltages;
 
   // ADDED: Calculate active states directly if we have pinVoltages but no activeStates
@@ -157,10 +161,10 @@ const UniversalComponentRenderer: React.FC<{data: CircuitComponent}> = ({ data }
   }, [data, pinVoltages, activeStates]);
   
   // Only use explicit state rules, no hardcoded values
-  const combinedActiveStates = [...activeStates, ...calculatedActiveStates];
-  
-  if (combinedActiveStates.length > 0) {
-  }
+  const combinedActiveStates = React.useMemo(
+    () => [...activeStates, ...calculatedActiveStates],
+    [activeStates, calculatedActiveStates]
+  );
 
   // Effect to update the SVG after it's rendered
   useEffect(() => {
@@ -212,9 +216,7 @@ const UniversalComponentRenderer: React.FC<{data: CircuitComponent}> = ({ data }
                 }
               }
             });
-          } else {
           }
-        } else {
         }
       });
     }
@@ -268,10 +270,10 @@ const UniversalComponentRenderer: React.FC<{data: CircuitComponent}> = ({ data }
       {data.type.charAt(0).toUpperCase() + data.type.slice(1)}
       {isOn !== undefined && ` (${isOn ? 'ON' : 'OFF'})`}
       {combinedActiveStates.length > 0 && ` - ${combinedActiveStates.join(', ')}`}
-      {data.attributes?.value && 
+      {data.attributes?.value !== undefined && data.attributes.value !== null &&
         <div style={{ fontSize: '0.8em', marginTop: '2px' }}>
-          {data.attributes.value}
-          {data.attributes?.unit && data.attributes.unit}
+          {String(data.attributes.value)}
+          {data.attributes?.unit ? String(data.attributes.unit) : null}
         </div>
       }
     </div>

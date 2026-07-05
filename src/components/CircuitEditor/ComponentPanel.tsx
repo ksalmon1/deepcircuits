@@ -3,14 +3,10 @@ import { CircuitComponent } from '@/types/component';
 import { useComponentLibrary } from '@/hooks/useComponentLibrary';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ComponentLibraryItem } from '@/types/component';
-import { convertLibraryItemToCircuitComponent } from '@/services/componentLibrary/utils';
+import { convertLibraryItemToCircuitComponent } from '@/services/componentLibrary/converters';
 import { useCircuitEditor } from '@/context/CircuitEditorContext';
 
-export interface ComponentPanelProps {
-  // onComponentSelect: (component: CircuitComponent) => void; // No longer needed?
-}
-
-const ComponentPanel: React.FC<ComponentPanelProps> = (/*{ onComponentSelect }*/) => {
+const ComponentPanel: React.FC = () => {
   const { components, isLoadingComponents, componentsDetailsMap } = useComponentLibrary();
   const { setDraggingComponentType } = useCircuitEditor();
   const [categorizedComponents, setCategorizedComponents] = useState<Record<string, ComponentLibraryItem[]>>({});

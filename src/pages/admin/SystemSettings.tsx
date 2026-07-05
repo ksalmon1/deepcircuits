@@ -91,7 +91,7 @@ const SystemSettings = () => {
     return <Navigate to="/login" />;
   }
 
-  const handleSave = (category: string, settings: any) => {
+  const handleSave = (category: string, settings: Record<string, unknown>) => {
     console.log(`Saving ${category} settings:`, settings);
     toast.success(`${category.charAt(0).toUpperCase() + category.slice(1)} settings saved successfully!`);
   };

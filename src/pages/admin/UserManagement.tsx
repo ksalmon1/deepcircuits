@@ -127,7 +127,7 @@ const UserManagement = () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       setIsEditDialogOpen(false);
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(error.message || "An error occurred while updating the user.");
     }
   });

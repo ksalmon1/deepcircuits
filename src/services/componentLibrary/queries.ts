@@ -1,5 +1,6 @@
 import { ComponentLibraryItem } from '@/types/component';
 import { mapComponentFromDb } from './converters';
+import { normalizePins } from '@/utils/pinUtils';
 import { supabase } from '@/integrations/supabase/client';
 import { ComponentError } from '@/utils/errorHandling';
 
@@ -103,17 +104,11 @@ export async function getComponentWithDetails(id: string): Promise<ComponentLibr
     // Map pins and properties to component
     const componentWithDetails = {
       ...component,
-      pins: pinsData.map(p => ({
-        id: p.id || `pin-${crypto.randomUUID().slice(0, 8)}`,
-        name: p.name,
-        x: p.x,
-        y: p.y,
-        signals: p.signals || []
-      })),
+      pins: normalizePins(pinsData),
       properties: propsData.reduce((acc, prop) => {
         acc[prop.property_key] = prop.property_value;
         return acc;
-      }, {} as Record<string, any>)
+      }, {} as Record<string, unknown>)
     };
 
     console.log(`Got details for ${component.name} (${component.type}):`, componentWithDetails);

@@ -29,7 +29,7 @@ const SerialMonitor = React.memo(({ isSimulationRunning, serialOutput, clearSeri
     // Limit the number of lines to prevent performance issues
     const limitedOutput = serialOutput.slice(-MAX_LINES);
     return limitedOutput.join('\n');
-  }, [serialOutput.length, serialOutput]);
+  }, [serialOutput]);
 
   // Only scroll when new output is added
   useEffect(() => {

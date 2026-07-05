@@ -22,7 +22,7 @@ export interface ComponentLibraryItem extends BaseComponent {
   svgPath?: string;
   enabled: boolean;
   isOriginal: boolean;
-  properties?: Record<string, any>;
+  properties?: Record<string, unknown>;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -34,12 +34,12 @@ export interface CircuitComponent extends BaseComponent {
   id: string;
   top: number;
   left: number;
-  attributes: Record<string, any>;
+  attributes: Record<string, unknown>;
   svgPath?: string | null;
   isOriginal?: boolean;
   rotation?: number;
   simulationState?: ComponentSimulationState | null;
-  activeStates?: any[];
+  activeStates?: string[];
 }
 
 /**
@@ -47,7 +47,7 @@ export interface CircuitComponent extends BaseComponent {
  */
 export interface ComponentProperty {
   key: string;
-  value: any;
+  value: unknown;
   type?: 'string' | 'number' | 'boolean' | 'color' | 'select';
   label?: string;
   description?: string;
@@ -89,8 +89,8 @@ export interface ComponentRenderOptions {
  */
 export interface ComponentInstance {
   component: CircuitComponent;
-  state: Record<string, any>;
-  pinStates: Record<number, any>;
+  state: Record<string, unknown>;
+  pinStates: Record<number, unknown>;
   update: (delta: number) => void;
 }
 
@@ -105,7 +105,7 @@ export interface ExtendedComponentDetails {
   description?: string;
   svgPath?: string;
   pins?: ComponentPin[];
-  properties?: Record<string, any>;
+  properties?: Record<string, unknown>;
   isOriginal?: boolean;
 }
 

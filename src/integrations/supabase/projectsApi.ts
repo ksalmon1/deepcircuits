@@ -1,5 +1,7 @@
 import { supabase } from './client'; // Assuming client is exported from client.ts
-import { type Project } from './types'; // Assuming Project type covers the data structure
+import { type Project, type Json } from './types'; // Assuming Project type covers the data structure
+import type { CircuitComponent } from '@/types/component';
+import type { WireEdge } from '@/types/circuit';
 
 // Define the structure of the data we expect to save, matching the table columns
 // We might need to adjust this based on the exact structure used in ProjectContext
@@ -8,8 +10,8 @@ interface ProjectSaveData {
     user_id: string; // User UUID
     name: string;
     description?: string | null;
-    components?: any | null; // Using 'any' for now, refine if specific type exists
-    wires?: any | null; // Using 'any' for now, refine if specific type exists
+    components?: CircuitComponent[] | null;
+    wires?: WireEdge[] | null;
     code?: string | null;
     // created_at is handled by db default
     // updated_at should be updated automatically by db trigger or handled here if needed
@@ -40,9 +42,12 @@ export async function saveProjectToSupabase(projectData: ProjectSaveData): Promi
         throw new Error("Project ID and User ID are required for saving.");
     }
 
-    // Explicitly set updated_at to the current time
+    // Explicitly set updated_at to the current time.
+    // Components and wires are stored as JSON columns, so cast at the DB boundary.
     const dataToSave = {
         ...projectData,
+        components: (projectData.components ?? []) as unknown as Json,
+        wires: (projectData.wires ?? []) as unknown as Json,
         updated_at: new Date().toISOString(), // Ensure updated_at is set
     };
 
@@ -60,7 +65,7 @@ export async function saveProjectToSupabase(projectData: ProjectSaveData): Promi
     }
 
     console.log('Project saved successfully:', data);
-    return data as Project | null; // Cast might be needed depending on Supabase client version/types
+    return data as unknown as Project | null; // JSON columns are cast back to app types
 }
 
 /**
@@ -112,7 +117,7 @@ export async function getProjectById(projectId: string): Promise<Project | null>
         components: data?.components ?? [],
         wires: data?.wires ?? [],
         code: data?.code ?? '' // Provide a default empty string for code if null
-    } as Project | null;
+    } as unknown as Project | null;
 }
 
 /**
@@ -223,5 +228,5 @@ export async function createProject(projectId: string, userId: string, name: str
     }
 
     //console.log('Project created successfully in Supabase:', data);
-    return data as Project | null;
+    return data as unknown as Project | null;
 } 

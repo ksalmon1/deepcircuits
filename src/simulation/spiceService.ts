@@ -4,14 +4,38 @@
  * Uses the Emscripten Module factory config to run _main in batch mode (-b).
  */
 
-import SpiceModuleFactory from '../../public/models/spice.mjs';
 import type { AppComponentModel } from './appStateTypes';
 
+interface SpiceFileSystem {
+    mkdir: (path: string) => void;
+    writeFile: (path: string, data: string) => void;
+    readFile: (path: string, opts: { encoding: 'utf8' }) => string;
+}
+
 interface SpiceModuleInstance {
-    FS: any;
+    FS: SpiceFileSystem;
     print?: (text: string) => void;
     printErr?: (text: string) => void;
-    [key: string]: any;
+    [key: string]: unknown;
+}
+
+type SpiceModuleFactoryFn = (config: Record<string, unknown>) => Promise<SpiceModuleInstance>;
+
+// The Emscripten-compiled ngspice module lives in public/models and is not
+// bundled with the app, so it is loaded lazily at runtime from its public URL.
+const SPICE_MODULE_URL = '/models/spice.mjs';
+let spiceModuleFactoryPromise: Promise<SpiceModuleFactoryFn> | null = null;
+
+function loadSpiceModuleFactory(): Promise<SpiceModuleFactoryFn> {
+    if (!spiceModuleFactoryPromise) {
+        spiceModuleFactoryPromise = import(/* @vite-ignore */ SPICE_MODULE_URL)
+            .then((mod) => mod.default as SpiceModuleFactoryFn)
+            .catch((err) => {
+                spiceModuleFactoryPromise = null;
+                throw err;
+            });
+    }
+    return spiceModuleFactoryPromise;
 }
 
 export interface SimulationResults {
@@ -71,7 +95,7 @@ export function generateNetlist(componentsWithNodes: ComponentWithSpiceConnectio
                 valueString = props.inductance !== undefined ? ` ${props.inductance}` : ' 1m';
                 break;
             case 'voltagesource':
-            case 'power':
+            case 'power': {
                 prefix = 'V';
                 let dcVal = '0';
                 if (typeof props.voltage === 'number') dcVal = String(props.voltage);
@@ -79,6 +103,7 @@ export function generateNetlist(componentsWithNodes: ComponentWithSpiceConnectio
                 else if (typeof props.dcValue === 'number') dcVal = String(props.dcValue);
                 valueString = ` DC ${dcVal}`;
                 break;
+            }
             case 'led':
             case 'diode':
                 prefix = 'D';
@@ -258,7 +283,7 @@ function parseSimulationResults(stdout: string, stderr: string): SimulationResul
             // Handle both i(device) and @device[i] syntax
             let currentPart = trimmed.match(/i\(([^)]+)\)\s*=\s*([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)/i);
             if (!currentPart) {
-                currentPart = trimmed.match(/@([^\[]+)\[i\]\s*=\s*([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)/i);
+                currentPart = trimmed.match(/@([^[]+)\[i\]\s*=\s*([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)/i);
             }
             
             if (currentPart) {
@@ -552,40 +577,6 @@ export function formatSimulationResults(results: SimulationResults, componentsWi
     return output;
 }
 
-// Helper function to split long text into multiple lines
-function splitLongText(text: string, maxLength: number): string[] {
-    if (text.length <= maxLength) {
-        return [text];
-    }
-    
-    const lines: string[] = [];
-    let currentIndex = 0;
-    
-    while (currentIndex < text.length) {
-        // Find a good place to break the line
-        let breakIndex = currentIndex + maxLength;
-        if (breakIndex < text.length) {
-            // Look backwards for a space to break cleanly
-            const lastSpace = text.lastIndexOf(' ', breakIndex);
-            if (lastSpace > currentIndex && lastSpace - currentIndex >= maxLength / 2) {
-                breakIndex = lastSpace;
-            }
-        } else {
-            breakIndex = text.length;
-        }
-        
-        lines.push(text.substring(currentIndex, breakIndex));
-        currentIndex = breakIndex;
-        
-        // Skip the space at the beginning of the next line
-        if (text[currentIndex] === ' ') {
-            currentIndex++;
-        }
-    }
-    
-    return lines;
-}
-
 export function runSpiceSimulation(
   componentsWithNodes: ComponentWithSpiceConnections[],
   addToSerialOutput?: (message: string) => void
@@ -603,7 +594,7 @@ export function runSpiceSimulation(
     outputEndMarkerSeen = false;
     outputComplete = false;
 
-    currentSimulationPromise = new Promise(async (resolve) => {
+    currentSimulationPromise = new Promise((resolve) => {
         simulationResolve = resolve;
         const inputFilename = '/input.cir';
         
@@ -738,7 +729,7 @@ export function runSpiceSimulation(
                     setTimeout(checkOutputComplete, checkInterval);
                 }
             ],
-            onAbort: (reason: any) => {
+            onAbort: (reason: unknown) => {
                 console.error("WASM Module aborted! Reason:", reason);
                 if (!mainHasRun && simulationResolve) {
                     simulationResolve({ voltages: {}, currents: {}, analysisType: 'op', rawOutput: capturedStdoutLines.join('\n') + '\n' + capturedStderrLines.join('\n'), error: `WASM aborted: ${reason}` });
@@ -752,14 +743,17 @@ export function runSpiceSimulation(
             noExitRuntime: true
         };
 
+        (async () => {
         try {
             // console.log("Initializing Spice WASM module with config...");
-            await SpiceModuleFactory(config);
+            const spiceModuleFactory = await loadSpiceModuleFactory();
+            await spiceModuleFactory(config);
             // console.log("SpiceModuleFactory call completed. Waiting for postRun to resolve promise...");
-        } catch (error: any) {
-            console.error('Error during SpiceModuleFactory execution:', error);
+        } catch (rawError) {
+            const error = rawError as { name?: string; status?: number; errno?: number } | null;
+            console.error('Error during SpiceModuleFactory execution:', rawError);
             let errorMessage = 'Module factory/execution failed.';
-            
+
             // Handle specific error types
             if (error?.name === 'ExitStatus') {
                 errorMessage = `ngspice exited unexpectedly with status ${error.status}.`;
@@ -789,16 +783,17 @@ export function runSpiceSimulation(
                 errorMessage += ' Try simplifying your circuit or refreshing the page.';
             }
             
-            simulationResolve?.({ 
-                voltages: {}, 
-                currents: {}, 
-                analysisType: 'op', 
-                rawOutput: capturedStdoutLines.join('\n') + '\n' + capturedStderrLines.join('\n'), 
-                error: `${errorMessage}\n${error}` 
+            simulationResolve?.({
+                voltages: {},
+                currents: {},
+                analysisType: 'op',
+                rawOutput: capturedStdoutLines.join('\n') + '\n' + capturedStderrLines.join('\n'),
+                error: `${errorMessage}\n${rawError}`
             });
             currentSimulationPromise = null;
             simulationResolve = null;
         }
+        })();
     });
 
     return currentSimulationPromise;

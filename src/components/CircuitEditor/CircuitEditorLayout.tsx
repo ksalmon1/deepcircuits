@@ -122,8 +122,8 @@ function mergeNodes(connections: AppConnectionModel[], pinToNodeMap: PinToSpiceN
         continue;
       }
 
-      let node1 = pinToNodeMap.get(fromKey)!;
-      let node2 = pinToNodeMap.get(toKey)!;
+      const node1 = pinToNodeMap.get(fromKey)!;
+      const node2 = pinToNodeMap.get(toKey)!;
 
       // Determine the representative node (Ground '0' takes priority, then lower number)
       let representativeNode = node1;

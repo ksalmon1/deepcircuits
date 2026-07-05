@@ -1,4 +1,4 @@
-import { ComponentPin } from '@/types/pin';
+import { ComponentPin, SIGNAL_COLOR_MAP } from '@/types/pin';
 
 /**
  * Checks if a point is within a specified distance of a pin
@@ -153,19 +153,23 @@ export const deletePin = (
  */
 export const getSignalColor = (signal?: string): string => {
   if (!signal) return '#4BC0C0'; // Default to teal if no signal
-  
-  const signalColorMap: Record<string, string> = {
-    'power': '#ff0000',
-    'ground': '#000000',
-    'analog': '#4BC0C0',
-    'digital': '#9b87f5',
-    'clock': '#ffcc00',
-    'data': '#36A2EB',
-    'i2c': '#8A65D4',
-    'spi': '#4CAF50',
-    'uart': '#FF9800',
-    'pwm': '#E91E63'
-  };
-  
-  return signalColorMap[signal.toLowerCase()] || '#9b87f5'; // Default to purple if unknown signal
+
+  return SIGNAL_COLOR_MAP[signal.toLowerCase()] || '#9b87f5'; // Default to purple if unknown signal
 };
+
+/**
+ * Ensures every pin has an id and a signals array, preserving all other fields
+ * @param pins - Possibly missing/partial pins from the DB or a flow node
+ * @returns Normalized array of pins
+ */
+export const normalizePins = (pins?: ComponentPin[] | null): ComponentPin[] =>
+  (pins || []).map(pin => ({
+    id: pin.id || `pin-${crypto.randomUUID().slice(0, 8)}`,
+    name: pin.name,
+    x: pin.x,
+    y: pin.y,
+    type: pin.type,
+    spiceNodeNumber: pin.spiceNodeNumber,
+    signals: pin.signals || [],
+    handle_id: pin.handle_id
+  }));
