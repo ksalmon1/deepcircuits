@@ -1,30 +1,28 @@
 import { defineConfig } from "vite";
+import laravel from "laravel-vite-plugin";
 import react from "@vitejs/plugin-react-swc";
-import path from "path";
-import { componentTagger } from "lovable-tagger";
 import wasm from "vite-plugin-wasm";
+import path from "path";
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => ({
-  server: {
-    host: "::",
-    port: 8080,
-  },
+export default defineConfig({
   plugins: [
+    laravel({
+      input: "resources/js/app.tsx",
+      refresh: true,
+    }),
     wasm(),
     react(),
-    mode === 'development' &&
-    componentTagger(),
-  ].filter(Boolean),
+  ],
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
+      "@": path.resolve(__dirname, "./resources/js"),
     },
   },
   build: {
     target: "esnext",
   },
   optimizeDeps: {
-    exclude: ['@/simulation/spice.js']
-  }
-}));
+    exclude: ["@/simulation/spice.js"],
+  },
+});

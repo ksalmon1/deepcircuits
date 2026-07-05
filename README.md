@@ -12,84 +12,60 @@ DeepCircuits is a web-based interactive circuit simulator for designing, testing
 
 ## Technology Stack
 
-- **Frontend**:
-  - React 18 with TypeScript
-  - Vite for fast builds
-  - Tailwind CSS for styling
-  - shadcn/ui components
-  - React Flow for circuit canvas
-  
-- **Simulation Engine**:
-  - Custom-compiled ngspice/WASM integration
-  - SPICE simulation for accurate circuit analysis
-  
-- **Authentication & Backend**:
-  - Supabase for authentication and database
-  - React Query for data fetching
+- **Backend**: Laravel 13 (PHP 8.3+) with Inertia.js and Breeze session auth
+- **Frontend**: React 18 + TypeScript, Vite, Tailwind CSS, shadcn/ui, React Flow
+- **Simulation Engine**: custom-compiled ngspice/WASM running fully client-side
+- **Database**: any Laravel-supported driver (SQLite out of the box; JSON columns hold circuit documents)
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js (v16 or higher)
-- npm or yarn
+- PHP 8.3+ and Composer
+- Node.js 20+
 
-### Installation
+### Setup
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/ksalmon1/deepcircuits.git
-   cd deepcircuits
-   ```
+```bash
+composer install
+npm install
 
-2. Install dependencies:
-   ```bash
-   npm install
-   # or
-   yarn install
-   ```
+cp .env.example .env
+php artisan key:generate
+touch database/database.sqlite
+php artisan migrate --seed
+```
 
-3. Start the development server:
-   ```bash
-   npm run dev
-   # or
-   yarn dev
-   ```
-   
-## Architecture
+The seeder creates an admin account (`admin@deepcircuits.test` / `password`) and a
+starter component library (resistor, LED, battery, ground).
 
-DeepCircuits uses a modular architecture:
+### Development
 
-1. **User Interface Layer**: React components for the circuit editor, component library, and simulation controls
-2. **Simulation Layer**: SPICE simulation engine integrated via WebAssembly
-3. **Data Management Layer**: State management with React Context and components data structures
-4. **Backend Integration**: Data persistence via Supabase
+```bash
+composer run dev   # serves PHP + Vite + queue together, or:
+php artisan serve  # in one terminal
+npm run dev        # in another
+```
 
-## SPICE Simulation Details
+### Production build
 
-The simulation engine in DeepCircuits is powered by ngspice compiled to WebAssembly. 
+```bash
+npm run build
+```
 
-See [deepcircuits-ngspice-wasm](https://github.com/ksalmon1/deepcircuits-ngspice-wasm)
+### Simulation engine assets
 
-The core simulation process:
+The Emscripten-compiled ngspice module (`spice.mjs` / `spice.wasm`) is not
+committed. Drop the artifacts into `public/models/` on deploy; the app loads
+them lazily at runtime from that URL.
 
-1. **Component Definition**: Components like resistors, capacitors, diodes, and voltage sources are defined with their properties
-2. **Netlist Generation**: Circuit connections are converted to a SPICE-compatible netlist format
-3. **Simulation Execution**: The ngspice WASM module processes the netlist and runs the simulation
-4. **Result Processing**: Simulation outputs (node voltages and branch currents) are parsed and displayed
+## Architecture notes
 
-The `spiceService.ts` module handles:
-- Converting components to SPICE models and element lines
-- Adding appropriate control statements for simulation
-- Processing and displaying simulation results
-- Error handling and diagnostics
-
-## License
-
-This project is licensed under the MIT License.
-
-## Acknowledgments
-
-- [ngspice](http://ngspice.sourceforge.net/) - The open source SPICE circuit simulator
-- [React Flow](https://reactflow.dev/) - Interactive node-based UI for the circuit editor
-- [shadcn/ui](https://ui.shadcn.com/) - UI component system
+- Circuit documents (components/wires/code) are stored as JSON columns on
+  `projects` and edited entirely client-side; the editor saves via
+  `PUT /projects/{id}`.
+- The admin component library lives in `component_library`,
+  `component_pins`, and `component_properties`, served in the frontend's
+  own shape by `ComponentLibraryController`.
+- Roles are a `role` column on `users` (`user` / `admin`); admin routes sit
+  behind the `admin` middleware and `/admin/*` pages.
