@@ -213,6 +213,7 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
   const prevStateRef = useRef({
     wireIds: new Set(),
     wiredComponentIds: new Set(),
+    attributesFingerprint: '',
   });
 
   // --- Viewport Persistence --- 
@@ -313,6 +314,14 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
     console.log('currentWiredComponentIds:', [...currentWiredComponentIds]);
     console.log('prevWiredComponentIds:', [...prevWiredComponentIds]);
 
+    // Electrical attributes of wired components matter too: toggling a
+    // switch or editing a resistance must re-run the live simulation.
+    const currentAttributesFingerprint = JSON.stringify(
+      circuitComponents
+        .filter(comp => currentWiredComponentIds.has(comp.id))
+        .map(comp => [comp.id, comp.attributes])
+    );
+
     let wireChanged = false;
     let wiredComponentChanged = false;
     if (currentWireIds.size !== prevWireIds.size || [...currentWireIds].some(id => !prevWireIds.has(id))) {
@@ -321,17 +330,19 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
     if (currentWiredComponentIds.size !== prevWiredComponentIds.size || [...currentWiredComponentIds].some(id => !prevWiredComponentIds.has(id))) {
       wiredComponentChanged = true;
     }
-    // Only notify if a wire or wired component set changed
-    if (wireChanged || wiredComponentChanged) {
-      console.log('[TOPOLOGY EFFECT] Topology changed, rerunning simulation.');
+    const attributesChanged = currentAttributesFingerprint !== prevStateRef.current.attributesFingerprint;
+    // Only notify if a wire, wired component set, or electrical attribute changed
+    if (wireChanged || wiredComponentChanged || attributesChanged) {
+      console.log('[TOPOLOGY EFFECT] Circuit changed, rerunning simulation.');
       notifyCircuitChanged();
       // Update previous state
       prevStateRef.current = {
         wireIds: currentWireIds,
         wiredComponentIds: currentWiredComponentIds,
+        attributesFingerprint: currentAttributesFingerprint,
       };
     } else {
-      console.log('[TOPOLOGY EFFECT] No topology change, no rerun.');
+      console.log('[TOPOLOGY EFFECT] No circuit change, no rerun.');
     }
   }, [circuitComponents, wireConnections, isSimulationRunning, notifyCircuitChanged]);
 
@@ -409,6 +420,23 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
     },
     [circuitComponents, onComponentsChange, handleModified]
   );
+
+  // --- Interactive components: double-click toggles a switch ---
+  const TOGGLEABLE_TYPES = ['switch'];
+  const handleNodeDoubleClick = useCallback((event: React.MouseEvent, node: Node) => {
+    const component = circuitComponents.find(comp => comp.id === node.id);
+    if (!component || !TOGGLEABLE_TYPES.includes(component.type.toLowerCase())) return;
+    event.stopPropagation();
+    const isClosed = component.attributes?.closed === true || component.attributes?.closed === 'true';
+    const updatedComponents = circuitComponents.map(comp =>
+      comp.id === node.id
+        ? { ...comp, attributes: { ...comp.attributes, closed: !isClosed } }
+        : comp
+    );
+    onComponentsChange(updatedComponents);
+    handleModified();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [circuitComponents, onComponentsChange, handleModified]);
 
   // --- React Flow Selection Handlers ---
   const handleNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
@@ -626,6 +654,8 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
           deleteKeyCode={['Backspace', 'Delete']}
           onDrop={onDrop}
           onDragOver={onDragOver}
+          onNodeDoubleClick={handleNodeDoubleClick}
+          zoomOnDoubleClick={false}
           // Set initial viewport only if explicitly needed and not restoring
           // defaultViewport={viewport} // Let useEffect handle restore
         >

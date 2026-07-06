@@ -6,7 +6,7 @@ DeepCircuits is a web-based interactive circuit simulator for designing, testing
 
 - **Interactive Circuit Editor**: Drag-and-drop circuit components with intuitive wiring
 - **Real-time Simulation**: Analyze circuit behavior with accurate voltage and current calculations
-- **Component Library**: Access a variety of electronic components including resistors, capacitors, diodes, LEDs, and voltage sources
+- **Component Library**: Resistor, capacitor, inductor, diode, zener, LED, lamp, buzzer, fuse, switch (double-click to toggle live), potentiometer, photoresistor, thermistor, battery, current source, and ground
 - **Custom SPICE Integration**: Powered by ngspice compiled to WebAssembly for accurate circuit simulations
 - **Responsive Design**: Works across desktop and tablet devices
 

@@ -9,7 +9,11 @@ import { test, expect, Page } from '@playwright/test';
 
 /** Drag a component out of the library panel and drop it on the canvas. */
 async function dragComponentToCanvas(page: Page, name: string, canvasX: number, canvasY: number) {
-  const source = page.locator('div[draggable]', { hasText: name }).first();
+  // Exact-match the label: 'Resistor' must not match 'Photoresistor (LDR)'.
+  const source = page
+    .locator('div[draggable]')
+    .filter({ has: page.getByText(name, { exact: true }) })
+    .first();
   await expect(source).toBeVisible();
   const pane = page.locator('.react-flow__pane');
   const paneBox = (await pane.boundingBox())!;
