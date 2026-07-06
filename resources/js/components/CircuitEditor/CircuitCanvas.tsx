@@ -285,17 +285,84 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
     }
   }, [nodes, circuitComponents, onComponentsChange]);
 
-  // Convert wireConnections (WireEdge[]) to React Flow edges using the utility function
-  useEffect(() => {
-    //console.log("CircuitCanvas: useEffect for wireConnections running. Count:", wireConnections.length);
-    const flowEdges = wireConnections.map(wireEdgeToFlowEdge);
-    setEdges(flowEdges);
-  }, [wireConnections, setEdges]);
-
   // Helper to call onModified
   const handleModified = useCallback(() => {
     onModified?.();
   }, [onModified]);
+
+  // Persist a wire's edited bend points back into project state.
+  const handleWaypointsChange = useCallback((wireId: string, waypoints: Array<{ x: number; y: number }>) => {
+    onWiresChange(wireConnections.map(wire =>
+      wire.id === wireId
+        ? { ...wire, data: { ...wire.data, routingPoints: waypoints } }
+        : wire
+    ));
+    handleModified();
+  }, [wireConnections, onWiresChange, handleModified]);
+
+  // How many wires attach to each component pin; a pin with exactly one
+  // wire carries precisely that wire's current.
+  const wireDegree = useMemo(() => {
+    const counts = new Map<string, number>();
+    wireConnections.forEach(w => {
+      const a = `${w.source}:${w.data?.sourcePinIndex}`;
+      const b = `${w.target}:${w.data?.targetPinIndex}`;
+      counts.set(a, (counts.get(a) ?? 0) + 1);
+      counts.set(b, (counts.get(b) ?? 0) + 1);
+    });
+    return counts;
+  }, [wireConnections]);
+
+  /**
+   * Which way energy flows along a wire and how much, from the simulated
+   * per-pin currents of the attached components. Prefer an endpoint whose
+   * pin has a single wire (its device current IS the wire current); at
+   * junctions where both pins are shared, the smaller magnitude is the
+   * better approximation of this wire's share.
+   */
+  const wireFlow = useCallback((wire: WireEdge): { direction: 'forward' | 'reverse'; current: number } | undefined => {
+    const THRESHOLD = 1e-7;
+    const fromSide = (componentId: string, pinIndex: number | undefined, entering: boolean) => {
+      if (pinIndex === undefined) return undefined;
+      const enteringCurrent = simulationState?.[componentId]?.pinCurrents?.[pinIndex];
+      if (enteringCurrent === undefined || Math.abs(enteringCurrent) < THRESHOLD) return undefined;
+      // Along the wire, source->target is positive when current leaves the
+      // source component or enters the target component.
+      const alongWire = entering ? enteringCurrent : -enteringCurrent;
+      return {
+        direction: alongWire > 0 ? ('forward' as const) : ('reverse' as const),
+        current: Math.abs(enteringCurrent),
+      };
+    };
+    const sourceSide = fromSide(wire.source, wire.data?.sourcePinIndex, false);
+    const targetSide = fromSide(wire.target, wire.data?.targetPinIndex, true);
+    if (sourceSide && targetSide) {
+      const sourceDegree = wireDegree.get(`${wire.source}:${wire.data?.sourcePinIndex}`) ?? 1;
+      const targetDegree = wireDegree.get(`${wire.target}:${wire.data?.targetPinIndex}`) ?? 1;
+      if (sourceDegree === 1 && targetDegree > 1) return sourceSide;
+      if (targetDegree === 1 && sourceDegree > 1) return targetSide;
+      return targetSide.current < sourceSide.current ? targetSide : sourceSide;
+    }
+    return sourceSide ?? targetSide;
+  }, [simulationState, wireDegree]);
+
+  // Convert wireConnections (WireEdge[]) to React Flow edges, enriched with
+  // runtime-only data: the waypoint editor callback and the flow direction.
+  // Selection state lives on the flow edges, so carry it across rebuilds.
+  useEffect(() => {
+    setEdges(previousEdges => wireConnections.map(wire => {
+      const edge = wireEdgeToFlowEdge(wire);
+      const flow = wireFlow(wire);
+      edge.data = {
+        ...edge.data,
+        onWaypointsChange: handleWaypointsChange,
+        flowDirection: flow?.direction,
+        flowCurrent: flow?.current,
+      };
+      edge.selected = previousEdges.find(prev => prev.id === edge.id)?.selected ?? false;
+      return edge;
+    }));
+  }, [wireConnections, setEdges, handleWaypointsChange, wireFlow]);
 
   // --- Topology change detection for simulation rerun ---
   useEffect(() => {
@@ -421,8 +488,8 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
     [circuitComponents, onComponentsChange, handleModified]
   );
 
-  // --- Interactive components: double-click toggles a switch ---
-  const TOGGLEABLE_TYPES = ['switch'];
+  // --- Interactive components: double-click toggles a switch/button ---
+  const TOGGLEABLE_TYPES = ['switch', 'pushbutton', 'pushbutton-6mm', 'slide-switch', 'wokwi-pushbutton'];
   const handleNodeDoubleClick = useCallback((event: React.MouseEvent, node: Node) => {
     const component = circuitComponents.find(comp => comp.id === node.id);
     if (!component || !TOGGLEABLE_TYPES.includes(component.type.toLowerCase())) return;

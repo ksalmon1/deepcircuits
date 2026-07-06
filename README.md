@@ -6,14 +6,15 @@ DeepCircuits is a web-based interactive circuit simulator for designing, testing
 
 - **Interactive Circuit Editor**: Drag-and-drop circuit components with intuitive wiring
 - **Real-time Simulation**: Analyze circuit behavior with accurate voltage and current calculations
-- **Component Library**: Resistor, capacitor, inductor, diode, zener, LED, lamp, buzzer, fuse, switch (double-click to toggle live), potentiometer, photoresistor, thermistor, battery, current source, and ground
+- **Component Library**: 60+ realistic parts across Basic, Power, Passive, Input Controls, Output & Actuators, Displays, Sensors, and Boards — LEDs (incl. RGB), resistors with live color bands, pushbuttons, slide switches, potentiometers with draggable knobs, buzzer, servos, displays, sensor modules, and dev boards — with searchable, categorized, live-preview part cards. Most parts render via [@wokwi/elements](https://github.com/wokwi/wokwi-elements) web components (internal detail); electrically-core parts wokwi lacks (battery, ground, capacitor, inductor, diode, zener, fuse, lamp, photoresistor, thermistor, current source) keep SVG artwork. Parts with SPICE models simulate; the rest are placeable visuals for now
+- **Wokwi-style Wiring**: Pins stay hidden until hovered so wires meet the part legs directly; wires auto-route orthogonally and follow the cursor while connecting; select a wire to drag out bend points (persisted with the project); hovering a wire after a run animates dashes in the direction of conventional current, faster for larger currents
 - **Custom SPICE Integration**: Powered by ngspice compiled to WebAssembly for accurate circuit simulations
 - **Responsive Design**: Works across desktop and tablet devices
 
 ## Technology Stack
 
 - **Backend**: Laravel 13 (PHP 8.3+) with Inertia.js and Breeze session auth
-- **Frontend**: React 18 + TypeScript, Vite, Tailwind CSS, shadcn/ui, React Flow
+- **Frontend**: React 18 + TypeScript, Vite, Tailwind CSS, shadcn/ui, React Flow, @wokwi/elements (Lit web components) for realistic part visuals
 - **Simulation Engine**: custom-compiled ngspice/WASM running fully client-side
 - **Database**: any Laravel-supported driver (SQLite out of the box; JSON columns hold circuit documents)
 
@@ -90,5 +91,20 @@ npm run test:e2e      # starts php artisan serve itself if not running
 - The admin component library lives in `component_library`,
   `component_pins`, and `component_properties`, served in the frontend's
   own shape by `ComponentLibraryController`.
+- Pins are identified by their library `handle_id` (wire endpoints and the
+  SPICE pin→node mapping both resolve through `pinHandleId`), and electrical
+  roles (ground, source polarity) come from `pin_type`/`signals` — display
+  names are only a fallback for legacy pins without typed metadata.
+- Element-rendered parts have no stored SVG; the renderer in
+  `resources/js/integrations/wokwi/` mounts the matching `@wokwi/elements`
+  web component and pushes simulation state onto it (LED glow, button
+  press, knob angle, RGB channels). Their `spiceType` property tells the
+  netlist generator which electrical model to use; parts without one are
+  visual-only and skipped by the netlist. The part list is generated:
+  `node scripts/build-parts-manifest.mjs` rebuilds
+  `resources/data/wokwi-parts.json` (single source of truth for both the
+  TS catalog and the seeder) from the extracted element pin data. Reseed
+  with `php artisan db:seed --class=ComponentLibrarySeeder` (replaces the
+  library).
 - Roles are a `role` column on `users` (`user` / `admin`); admin routes sit
   behind the `admin` middleware and `/admin/*` pages.

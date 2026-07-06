@@ -13,8 +13,10 @@ export interface AppComponentModel {
     // Structure might vary per component type.
     properties: Record<string, unknown>;
     // Defines the connection points (pins/terminals) available on this component.
-    // Used for mapping connections and potentially for special handling (e.g., GND pin name).
-    pins: { id: string; name?: string }[];
+    // Used for mapping connections and for electrical semantics: 'type' and
+    // 'signals' identify ground/power pins; the display name is only a legacy
+    // fallback for pins that carry no typed metadata.
+    pins: { id: string; name?: string; type?: string; signals?: string[] }[];
     // Optional: Position, dimensions, or other UI-specific data if needed
     position?: { x: number; y: number };
 }

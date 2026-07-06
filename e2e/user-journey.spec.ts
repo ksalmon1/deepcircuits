@@ -74,10 +74,11 @@ test('a new user builds, simulates, and saves an LED circuit', async ({ page }) 
   await dragComponentToCanvas(page, 'LED', 520, 260);
   await expect(page.locator('.react-flow__node')).toHaveCount(3);
 
-  // Resolve the generated node ids by their rendered SVG component type.
+  // Resolve the generated node ids by their rendered component type
+  // (SVG parts and element-rendered parts both carry the data attribute).
   const nodeId = async (type: string) =>
     (await page
-      .locator(`.react-flow__node:has(svg[data-component-type="${type}"], div.${type}-fallback)`)
+      .locator(`.react-flow__node:has([data-component-type="${type}"])`)
       .first()
       .getAttribute('data-id'))!;
   const batteryId = await nodeId('voltagesource');
@@ -92,9 +93,9 @@ test('a new user builds, simulates, and saves an LED circuit', async ({ page }) 
 
   // 5. Run the simulation and watch the LED light up.
   await page.getByRole('button', { name: 'Start' }).click();
-  const ledSvg = page.locator(`svg[data-component-id="${ledId}"]`);
-  await expect(ledSvg).toHaveAttribute('data-is-on', 'true', { timeout: 60_000 });
-  await expect(page.locator(`svg[data-component-id="${ledId}"] #led-body`)).toHaveAttribute('fill', '#ff2020');
+  const ledLit = () =>
+    page.locator('.react-flow wokwi-led').evaluate((el) => (el as HTMLElement & { value: boolean }).value);
+  await expect.poll(ledLit, { timeout: 60_000 }).toBe(true);
 
   // Open the serial monitor and check the human-readable summary.
   await page.getByRole('button', { name: 'Serial' }).click();
@@ -112,7 +113,5 @@ test('a new user builds, simulates, and saves an LED circuit', async ({ page }) 
   await expect(page.locator('.react-flow__edge')).toHaveCount(3);
 
   await page.getByRole('button', { name: 'Start' }).click();
-  await expect(page.locator(`svg[data-component-id="${ledId}"]`)).toHaveAttribute('data-is-on', 'true', {
-    timeout: 60_000,
-  });
+  await expect.poll(ledLit, { timeout: 60_000 }).toBe(true);
 });

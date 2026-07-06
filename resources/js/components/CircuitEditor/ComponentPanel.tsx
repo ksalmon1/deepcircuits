@@ -1,43 +1,64 @@
-import React, { useEffect, useState } from 'react';
-import { CircuitComponent } from '@/types/component';
+import React, { useMemo, useState } from 'react';
+import { Search } from 'lucide-react';
 import { useComponentLibrary } from '@/hooks/useComponentLibrary';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Input } from '@/components/ui/input';
 import { ComponentLibraryItem } from '@/types/component';
-import { convertLibraryItemToCircuitComponent } from '@/services/componentLibrary/converters';
 import { useCircuitEditor } from '@/context/CircuitEditorContext';
+import PartPreview from './PartPreview';
+
+/** Display order for library categories; unknown ones sort last. */
+const CATEGORY_ORDER = [
+  'Basic',
+  'Power',
+  'Passive',
+  'Input Controls',
+  'Output & Actuators',
+  'Displays',
+  'Sensors',
+  'Boards',
+];
+
+const categoryRank = (category: string): number => {
+  const index = CATEGORY_ORDER.indexOf(category);
+  return index === -1 ? CATEGORY_ORDER.length : index;
+};
 
 const ComponentPanel: React.FC = () => {
-  const { components, isLoadingComponents, componentsDetailsMap } = useComponentLibrary();
+  const { components, isLoadingComponents } = useComponentLibrary();
   const { setDraggingComponentType } = useCircuitEditor();
-  const [categorizedComponents, setCategorizedComponents] = useState<Record<string, ComponentLibraryItem[]>>({});
-  
-  useEffect(() => {
-    if (components && components.length > 0) {
-      // Filter enabled components and group them by category
-      const enabledComponents = components.filter(comp => comp.enabled);
-      
-      // Group components by category
-      const grouped = enabledComponents.reduce((acc, component) => {
-        const category = component.category || 'Uncategorized';
-        if (!acc[category]) {
-          acc[category] = [];
-        }
-        acc[category].push(component);
-        return acc;
-      }, {} as Record<string, ComponentLibraryItem[]>);
+  const [search, setSearch] = useState('');
 
-      setCategorizedComponents(grouped);
+  const categorized = useMemo(() => {
+    const enabled = (components ?? []).filter((comp) => comp.enabled);
+    const needle = search.trim().toLowerCase();
+    const visible = needle
+      ? enabled.filter(
+          (comp) =>
+            comp.name.toLowerCase().includes(needle) ||
+            comp.type.toLowerCase().includes(needle) ||
+            (comp.description ?? '').toLowerCase().includes(needle) ||
+            (comp.category ?? '').toLowerCase().includes(needle),
+        )
+      : enabled;
+
+    const groups = new Map<string, ComponentLibraryItem[]>();
+    for (const comp of visible) {
+      const category = comp.category || 'Other';
+      if (!groups.has(category)) groups.set(category, []);
+      groups.get(category)!.push(comp);
     }
-  }, [components]);
+    return [...groups.entries()]
+      .sort(([a], [b]) => categoryRank(a) - categoryRank(b) || a.localeCompare(b))
+      .map(([category, items]) => [category, items.sort((a, b) => a.name.localeCompare(b.name))] as const);
+  }, [components, search]);
 
   const handleDragStart = (e: React.DragEvent, component: ComponentLibraryItem) => {
-    console.log(`Drag start for component: ${component.name} (${component.type})`);
-    e.dataTransfer.effectAllowed = 'copy'; 
+    e.dataTransfer.effectAllowed = 'copy';
     setDraggingComponentType(component.type);
   };
 
   const handleDragEnd = () => {
-    console.log("Drag end");
     setDraggingComponentType(null);
   };
 
@@ -49,9 +70,9 @@ const ComponentPanel: React.FC = () => {
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="space-y-2 mb-6">
               <Skeleton className="h-4 w-24" />
-              <div className="grid grid-cols-1 gap-2">
-                {Array.from({ length: 3 }).map((_, j) => (
-                  <Skeleton key={j} className="h-16 w-full" />
+              <div className="grid grid-cols-2 gap-2">
+                {Array.from({ length: 4 }).map((_, j) => (
+                  <Skeleton key={j} className="h-20 w-full" />
                 ))}
               </div>
             </div>
@@ -63,31 +84,52 @@ const ComponentPanel: React.FC = () => {
 
   return (
     <div className="h-full flex flex-col">
-      <h2 className="text-lg font-semibold p-4 pb-2">Components</h2>
-      
-      <div className="flex-1 overflow-auto p-4 pt-2">
-        {Object.entries(categorizedComponents).map(([category, categoryComponents]) => (
-          <div key={category} className="mb-6">
-            <h3 className="text-sm font-medium text-gray-600 mb-2">{category}</h3>
-            <div className="grid grid-cols-1 gap-2">
-              {categoryComponents.map((component) => (
+      <div className="p-4 pb-2 space-y-2">
+        <h2 className="text-lg font-semibold">Components</h2>
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search parts..."
+            className="pl-8 h-9"
+          />
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-auto px-4 pb-4">
+        {categorized.map(([category, items]) => (
+          <div key={category} className="mb-5">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2 sticky top-0 bg-inherit">
+              {category}
+            </h3>
+            <div className="grid grid-cols-2 gap-2">
+              {items.map((component) => (
                 <div
                   key={component.id}
-                  className="bg-white border rounded p-2 cursor-grab hover:bg-blue-50 hover:border-blue-300 transition-colors"
+                  className="group bg-white border rounded-lg p-2 cursor-grab select-none
+                             hover:border-blue-400 hover:shadow-sm transition-all
+                             flex flex-col items-center gap-1.5"
                   draggable
                   onDragStart={(e) => handleDragStart(e, component)}
                   onDragEnd={handleDragEnd}
+                  title={component.description || component.name}
                 >
-                  <div className="text-sm font-medium">{component.name}</div>
+                  <div className="flex items-center justify-center rounded bg-gray-50 group-hover:bg-blue-50/60 transition-colors p-1.5">
+                    <PartPreview type={component.type} svgPath={component.svgPath} size={44} />
+                  </div>
+                  <div className="text-[11px] font-medium text-center leading-tight text-gray-700">
+                    {component.name}
+                  </div>
                 </div>
               ))}
             </div>
           </div>
         ))}
-        
-        {Object.keys(categorizedComponents).length === 0 && !isLoadingComponents && (
-          <div className="text-center text-gray-500 mt-8">
-            No components available. Please contact an administrator.
+
+        {categorized.length === 0 && (
+          <div className="text-center text-gray-500 mt-8 text-sm">
+            {search ? `No parts match "${search}".` : 'No components available.'}
           </div>
         )}
       </div>
