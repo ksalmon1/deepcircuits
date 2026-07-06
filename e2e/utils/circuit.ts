@@ -123,26 +123,33 @@ export interface SimResults {
   currents: Record<string, number>;
 }
 
-/** Open the editor for a project, run the simulation, and return the results. */
-export async function runSimulation(page: Page, projectId: string): Promise<SimResults> {
-  await page.goto(`/circuit-editor/${projectId}`);
-  // Wait for the canvas and library to be ready.
-  await expect(page.locator('.react-flow')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Start' })).toBeEnabled();
-  // Clear any stale results from a previous run in this tab.
+/** Clear stale results, then wait for the next run to publish fresh ones. */
+export async function clearSimResults(page: Page): Promise<void> {
   await page.evaluate(() => {
     window.simulationResults = undefined;
     window.lastCircuitSummary = undefined;
   });
-  await page.getByRole('button', { name: 'Start' }).click();
-  await expect(page.getByRole('button', { name: 'Stop' })).toBeVisible();
-  // The formatter stores results on window when the run completes.
+}
+
+export async function waitForSimResults(page: Page): Promise<SimResults> {
   await page.waitForFunction(
     () => window.simulationResults && Object.keys(window.simulationResults.voltages || {}).length > 0,
     undefined,
     { timeout: 60_000 },
   );
   return page.evaluate(() => window.simulationResults as { voltages: Record<string, number>; currents: Record<string, number> });
+}
+
+/** Open the editor for a project, run the simulation, and return the results. */
+export async function runSimulation(page: Page, projectId: string): Promise<SimResults> {
+  await page.goto(`/circuit-editor/${projectId}`);
+  // Wait for the canvas and library to be ready.
+  await expect(page.locator('.react-flow')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Start' })).toBeEnabled();
+  await clearSimResults(page);
+  await page.getByRole('button', { name: 'Start' }).click();
+  await expect(page.getByRole('button', { name: 'Stop' })).toBeVisible();
+  return waitForSimResults(page);
 }
 
 declare global {

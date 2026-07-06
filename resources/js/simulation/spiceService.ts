@@ -59,6 +59,27 @@ let mainHasRun = false;
 let outputEndMarkerSeen = false;
 let outputComplete = false;
 
+/**
+ * Parse a SPICE-style number with magnitude suffix ('10k', '4.7meg', '100n').
+ * Note SPICE conventions: m = milli, meg = mega.
+ */
+export function parseSpiceNumber(value: unknown, fallback = 0): number {
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+    if (typeof value !== 'string') return fallback;
+    const match = value.trim().toLowerCase().match(/^([-+]?\d*\.?\d+(?:e[-+]?\d+)?)\s*(meg|[tgkmunpf])?/);
+    if (!match || match[1] === undefined || match[1] === '') return fallback;
+    const base = parseFloat(match[1]);
+    const suffix = match[2];
+    const scale: Record<string, number> = {
+        t: 1e12, g: 1e9, meg: 1e6, k: 1e3, m: 1e-3, u: 1e-6, n: 1e-9, p: 1e-12, f: 1e-15,
+    };
+    return suffix ? base * scale[suffix] : base;
+}
+
+// Component types that behave as plain resistors at DC. Lamp, buzzer, fuse,
+// photoresistor, and thermistor differ only in artwork and state rules.
+const RESISTIVE_TYPES = new Set(['resistor', 'photoresistor', 'thermistor', 'lamp', 'buzzer', 'fuse']);
+
 export function generateNetlist(componentsWithNodes: ComponentWithSpiceConnections[]): string {
     // Remove verbose logging
     // console.log("Generating netlist using pre-mapped SPICE nodes:", JSON.stringify(componentsWithNodes, null, 2));
@@ -81,11 +102,14 @@ export function generateNetlist(componentsWithNodes: ComponentWithSpiceConnectio
         const spiceId = comp.id.replace(/-/g, '');
         let prefix = '?';
 
-        switch (comp.type.toLowerCase()) {
-            case 'resistor':
-                prefix = 'R';
-                valueString = props.resistance !== undefined ? ` ${props.resistance}` : ' 1k';
-                break;
+        const type = comp.type.toLowerCase();
+
+        if (RESISTIVE_TYPES.has(type)) {
+            deviceLines += `R${spiceId} ${nodes} ${props.resistance !== undefined ? props.resistance : '1k'}\n`;
+            return;
+        }
+
+        switch (type) {
             case 'capacitor':
                 prefix = 'C';
                 valueString = props.capacitance !== undefined ? ` ${props.capacitance}` : ' 1u';
@@ -94,6 +118,37 @@ export function generateNetlist(componentsWithNodes: ComponentWithSpiceConnectio
                 prefix = 'L';
                 valueString = props.inductance !== undefined ? ` ${props.inductance}` : ' 1m';
                 break;
+            case 'switch': {
+                // DC model of an ideal switch: near-zero ohms closed, 1G open.
+                const closed = props.closed === true || props.closed === 'true';
+                deviceLines += `R${spiceId} ${nodes} ${closed ? '1e-3' : '1e9'}\n`;
+                return;
+            }
+            case 'potentiometer': {
+                // Three pins: A (0), Wiper (1), B (2). Splits the track
+                // resistance according to the wiper position (0 = at A).
+                const total = parseSpiceNumber(props.resistance, 10000);
+                const position = Math.min(Math.max(parseSpiceNumber(props.position, 0.5), 0), 1);
+                const rAw = Math.max(total * position, 1e-3);
+                const rWb = Math.max(total * (1 - position), 1e-3);
+                const [nodeA, nodeW, nodeB] = comp.spiceConnections;
+                if (nodeA === undefined || nodeW === undefined || nodeB === undefined) {
+                    console.warn(`Potentiometer ${comp.id} needs 3 pins. Skipping.`);
+                    return;
+                }
+                deviceLines += `R${spiceId}aw ${nodeA} ${nodeW} ${rAw}\n`;
+                deviceLines += `R${spiceId}wb ${nodeW} ${nodeB} ${rWb}\n`;
+                return;
+            }
+            case 'currentsource': {
+                // Pins are (+ output, - return). SPICE drives current out of
+                // the N- terminal, so swap the node order to make current
+                // flow out of the '+' pin into the circuit.
+                const amps = parseSpiceNumber(props.current, 0.01);
+                const [nPlus, nMinus] = comp.spiceConnections;
+                deviceLines += `I${spiceId} ${nMinus} ${nPlus} DC ${amps}\n`;
+                return;
+            }
             case 'voltagesource':
             case 'power': {
                 prefix = 'V';
@@ -106,8 +161,11 @@ export function generateNetlist(componentsWithNodes: ComponentWithSpiceConnectio
             }
             case 'led':
             case 'diode':
+            case 'zener':
                 prefix = 'D';
-                modelName = `${comp.type.toUpperCase()}_MODEL`;
+                // One model per device so differently-parameterized diodes
+                // in the same circuit don't silently share the first model.
+                modelName = `${comp.type.toUpperCase()}_${spiceId}`;
                 valueString = ` ${modelName}`;
                 if (!addedModels.has(modelName)) {
                     // Get the model parameters, using provided values or defaults
@@ -125,6 +183,8 @@ export function generateNetlist(componentsWithNodes: ComponentWithSpiceConnectio
                     if (props.Cjo !== undefined) additionalParams += ` Cjo=${props.Cjo}`;
                     // Emission coefficient alternative naming
                     if (props.N !== undefined && props.n === undefined) additionalParams += ` n=${props.N}`;
+                    // Zener/breakdown region
+                    if (props.BV !== undefined) additionalParams += ` BV=${props.BV} IBV=${props.IBV !== undefined ? props.IBV : '1m'}`;
                     
                     modelStatements += `.model ${modelName} D(${Is} ${n}${additionalParams})\n`;
                     addedModels.add(modelName);
@@ -137,7 +197,7 @@ export function generateNetlist(componentsWithNodes: ComponentWithSpiceConnectio
                 console.warn(`Netlist generation: Unhandled type '${comp.type}'. Using prefix '${prefix}'.`);
                 valueString = props.value !== undefined && props.value !== null ? ` ${props.value}` : '';
         }
-        deviceLines += `${prefix}${spiceId} ${nodes}${valueString}\n`;
+                deviceLines += `${prefix}${spiceId} ${nodes}${valueString}\n`;
     });
 
     if (addedModels.size > 0) {
@@ -356,6 +416,16 @@ export function formatSimulationResults(results: SimulationResults, componentsWi
     if (results.error) {
         return `Simulation Error: ${results.error}`;
     }
+
+    // Publish the raw results immediately so component renderers (and
+    // tests) can read them even when the summary below bails out early
+    // (e.g. a circuit powered only by a current source).
+    if (typeof window !== 'undefined') {
+        window.simulationResults = {
+            voltages: results.voltages,
+            currents: results.currents
+        };
+    }
     
     // Create a mapping of nodes to components for easier lookup
     const nodeToComponentMap = new Map<string, {
@@ -378,13 +448,13 @@ export function formatSimulationResults(results: SimulationResults, componentsWi
         });
     });
     
-    // Find the voltage source as the starting point
+    // Find a source as the starting point for the walk-through summary.
     const voltageSources = componentsWithNodes.filter(
-        comp => comp.type.toLowerCase() === 'voltagesource' || comp.type.toLowerCase() === 'power'
+        comp => ['voltagesource', 'power', 'currentsource'].includes(comp.type.toLowerCase())
     );
-    
+
     if (voltageSources.length === 0) {
-        return "Cannot create analysis: No voltage source found in circuit.";
+        return "Cannot create analysis: No source found in circuit.";
     }
     
     const source = voltageSources[0];

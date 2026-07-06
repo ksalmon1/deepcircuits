@@ -205,10 +205,26 @@ const UniversalComponentRenderer: React.FC<{data: CircuitComponent}> = ({ data }
     return [];
   }, [data, pinVoltages, activeStates]);
   
+  // States driven directly by component attributes (e.g. a switch's
+  // 'closed' flag), independent of any simulation run. The spec maps an
+  // attribute name to { stringifiedValue: stateName }.
+  const attributeStatesSpec = data.attributes?.attributeStates as
+    | Record<string, Record<string, string>>
+    | undefined;
+  const attributeDrivenStates = React.useMemo(() => {
+    if (!attributeStatesSpec) return [] as string[];
+    const states: string[] = [];
+    Object.entries(attributeStatesSpec).forEach(([attributeName, mapping]) => {
+      const state = mapping[String(data.attributes?.[attributeName] ?? '')];
+      if (state) states.push(state);
+    });
+    return states;
+  }, [attributeStatesSpec, data.attributes]);
+
   // Only use explicit state rules, no hardcoded values
   const combinedActiveStates = React.useMemo(
-    () => [...activeStates, ...calculatedActiveStates],
-    [activeStates, calculatedActiveStates]
+    () => [...activeStates, ...calculatedActiveStates, ...attributeDrivenStates],
+    [activeStates, calculatedActiveStates, attributeDrivenStates]
   );
 
   // Effect to update the SVG after it's rendered
