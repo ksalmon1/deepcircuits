@@ -238,6 +238,10 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
   const handleWorkerMessage = useCallback((e: MessageEvent) => {
     const msg = e.data;
     console.log('[handleWorkerMessage] called with msg:', msg);
+    if (msg.type === 'ready') {
+      console.log(`[SimulationContext] Simulation engine ready (fetched in ${msg.fetchMs}ms).`);
+      return;
+    }
     if (msg.type === 'debug') {
       console.log('[SpiceWorker DEBUG] capturedStdout:', msg.capturedStdout);
       return;
@@ -329,28 +333,36 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
     }, 50); // Debounce rapid changes
   }, [isSimulationRunning, rerunSimulation]);
 
+  // --- Persistent worker: created once, kept warm across Start/Stop ---
+  // The worker compiles spice.wasm as soon as it boots, so the engine is
+  // ready before the user ever presses Start.
+  const ensureWorker = useCallback((): Worker => {
+    if (!workerRef.current) {
+      workerRef.current = new Worker('/models/SpiceWorker.js', { type: 'module' });
+    }
+    return workerRef.current;
+  }, []);
+
+  // Preload the engine on editor mount and keep the message handler current.
+  useEffect(() => {
+    const worker = ensureWorker();
+    worker.onmessage = handleWorkerMessage;
+  }, [ensureWorker, handleWorkerMessage]);
+
   // --- Start simulation ---
   const startSimulation = useCallback(() => {
-    if (workerRef.current) {
-      workerRef.current.terminate();
-      workerRef.current = null;
-    }
-    // Use the correct path for your build system
-    const worker = new Worker('/models/SpiceWorker.js', { type: 'module' });
-    workerRef.current = worker;
+    const worker = ensureWorker();
     worker.onmessage = handleWorkerMessage;
     setIsSimulationRunning(true);
     clearSerialOutput();
-  }, [handleWorkerMessage, clearSerialOutput]);
+  }, [ensureWorker, handleWorkerMessage, clearSerialOutput]);
 
   // --- Stop simulation ---
   const stopSimulation = useCallback(() => {
-    if (workerRef.current) {
-      // Send stop message to worker for cleanup
-      workerRef.current.postMessage({ type: 'stop' });
-      workerRef.current.terminate();
-      workerRef.current = null;
-    }
+    // Keep the worker (and its compiled engine) alive for the next run;
+    // just stop tracking results.
+    workerRef.current?.postMessage({ type: 'stop' });
+    latestRunIdRef.current = ++runIdRef.current; // invalidate in-flight runs
     setIsSimulationRunning(false);
     setSimulationState(null);
     addSerialOutput('[Simulation stopped]');
