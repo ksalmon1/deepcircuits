@@ -10,6 +10,49 @@ interface AnimatableElement {
   transition?: string;
 }
 
+/**
+ * Evaluate "voltage > x"-style state rules against a measured voltage and
+ * return the names of the states whose condition holds.
+ */
+function evaluateVoltageStateRules(voltage: number, stateRules?: Record<string, string>): string[] {
+  const active: string[] = [];
+  if (!stateRules) return active;
+  Object.entries(stateRules).forEach(([stateName, rule]) => {
+    const match = String(rule).match(/voltage\s*(>|>=|<|<=|==|!=)\s*([0-9.]+)/);
+    if (!match) return;
+    const operator = match[1];
+    const threshold = parseFloat(match[2]);
+    let conditionMet = false;
+    switch (operator) {
+      case '>': conditionMet = voltage > threshold; break;
+      case '>=': conditionMet = voltage >= threshold; break;
+      case '<': conditionMet = voltage < threshold; break;
+      case '<=': conditionMet = voltage <= threshold; break;
+      case '==': conditionMet = voltage === threshold; break;
+      case '!=': conditionMet = voltage !== threshold; break;
+    }
+    if (conditionMet) active.push(stateName);
+  });
+  return active;
+}
+
+/**
+ * Apply an animated SVG attribute value. Plain colors are applied directly;
+ * bare element references (e.g. '#ledGradientOn') become url(#...) paint
+ * server references, and filters are normalized the same way.
+ */
+const HEX_COLOR = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
+
+function applyAnimatedAttribute(element: Element, name: string, value: string): void {
+  if (name === 'fill' && value.startsWith('#') && !HEX_COLOR.test(value)) {
+    element.setAttribute(name, `url(${value})`);
+  } else if (name === 'filter' && !value.startsWith('url(') && !HEX_COLOR.test(value)) {
+    element.setAttribute(name, `url(#${value.replace(/^#/, '')})`);
+  } else {
+    element.setAttribute(name, value);
+  }
+}
+
 // Universal ComponentRenderer
 const UniversalComponentRenderer: React.FC<{data: CircuitComponent}> = ({ data }) => {
   const svgContainerRef = useRef<HTMLDivElement>(null);
@@ -43,15 +86,17 @@ const UniversalComponentRenderer: React.FC<{data: CircuitComponent}> = ({ data }
       
       // Regular calculation from pinVoltages if available
       if (pinVoltages && Object.keys(pinVoltages).length > 0) {
-        // Calculate voltage for LED
-        let calculatedVoltage = 0;
-        
         // For LEDs, find anode and cathode pins
         const anodePin = data.pins?.find(p => p.name?.toLowerCase().includes('anode') || p.type === 'anode' || p.name?.includes('(+)'));
         const cathodePin = data.pins?.find(p => p.name?.toLowerCase().includes('cathode') || p.type === 'cathode' || p.name?.includes('(-)'));
-        
+
         if (anodePin && cathodePin && pinVoltages[anodePin.id] !== undefined && pinVoltages[cathodePin.id] !== undefined) {
-          calculatedVoltage = pinVoltages[anodePin.id] - pinVoltages[cathodePin.id];
+          const calculatedVoltage = pinVoltages[anodePin.id] - pinVoltages[cathodePin.id];
+          const stateRules = data.attributes?.stateRules as Record<string, string> | undefined;
+          const statesFromPins = evaluateVoltageStateRules(calculatedVoltage, stateRules);
+          if (statesFromPins.length > 0) {
+            return statesFromPins;
+          }
         }
       }
       
@@ -195,25 +240,13 @@ const UniversalComponentRenderer: React.FC<{data: CircuitComponent}> = ({ data }
                 const value = propValues[activeState];
                 
                 // Apply the property - generic handling for any component type
-                if (propName === 'fill' && value.startsWith('#')) {
-                  svgElement.setAttribute(propName, `url(${value})`);
-                } else if (propName === 'filter' && !value.startsWith('url(')) {
-                  svgElement.setAttribute(propName, `url(#${value})`);
-                } else {
-                  svgElement.setAttribute(propName, value);
-                }
+                applyAnimatedAttribute(svgElement, propName, value);
               } else if (propValues['default'] !== undefined) {
                 // Use default value if no active state matches
                 const defaultValue = propValues['default'];
                 
                 // Apply default - generic handling for any component type
-                if (propName === 'fill' && defaultValue.startsWith('#')) {
-                  svgElement.setAttribute(propName, `url(${defaultValue})`);
-                } else if (propName === 'filter' && !defaultValue.startsWith('url(')) {
-                  svgElement.setAttribute(propName, `url(#${defaultValue})`);
-                } else {
-                  svgElement.setAttribute(propName, defaultValue);
-                }
+                applyAnimatedAttribute(svgElement, propName, defaultValue);
               }
             });
           }

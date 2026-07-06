@@ -207,7 +207,7 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
   // Get context state/functions
   const { draggingComponentType, selectComponent, viewport, setViewport } = useCircuitEditor();
   // Add simulation context
-  const { isSimulationRunning, notifyCircuitChanged } = useSimulation();
+  const { isSimulationRunning, notifyCircuitChanged, simulationState } = useSimulation();
 
   // --- Track previous wire and wired component state ---
   const prevStateRef = useRef({
@@ -241,14 +241,16 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
   // Convert circuitComponents to React Flow nodes and update the internal nodes state
   useEffect(() => {
     const flowNodes = circuitComponents.map(comp => ({
-      ...circuitComponentToNode(comp),
+      // Attach the live simulation state so component renderers can
+      // animate from real pin voltages.
+      ...circuitComponentToNode({ ...comp, simulationState: simulationState?.[comp.id] ?? null }),
       // Ensure these properties are explicitly set for proper initialization
       draggable: true,
       selectable: true,
       connectable: true
     }));
     setNodes(flowNodes);
-  }, [circuitComponents, setNodes]);
+  }, [circuitComponents, setNodes, simulationState]);
 
   // Sync nodes changes back to parent component - with debounce to avoid conflicts
   useEffect(() => {

@@ -56,8 +56,31 @@ npm run build
 ### Simulation engine assets
 
 The Emscripten-compiled ngspice module (`spice.mjs` / `spice.wasm`) is not
-committed. Drop the artifacts into `public/models/` on deploy; the app loads
-them lazily at runtime from that URL.
+committed. It is built by
+[ksalmon1/deepcircuits-ngspice-wasm](https://github.com/ksalmon1/deepcircuits-ngspice-wasm)
+and can be pulled into `public/models/` with:
+
+```bash
+npm run fetch:spice
+```
+
+The simulation runs entirely client-side: the editor generates a SPICE
+netlist, a Web Worker (`public/models/SpiceWorker.js`) runs ngspice in
+batch mode, and node voltages/branch currents are mapped back onto each
+component pin to drive the serial monitor and component animations.
+
+### End-to-end tests
+
+A Playwright suite drives the real app in Chromium — registering, creating
+projects, dragging components onto the canvas, wiring pins with the mouse,
+and running simulations — then checks the results against analytic values
+(voltage divider, parallel resistors, LED forward drop, diode drop,
+capacitor DC-block, inductor DC-short):
+
+```bash
+npm run fetch:spice   # once, to install the simulation engine
+npm run test:e2e      # starts php artisan serve itself if not running
+```
 
 ## Architecture notes
 

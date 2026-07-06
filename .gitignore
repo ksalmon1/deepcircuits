@@ -47,3 +47,7 @@ spice.mjs
 spice.wasm
 CircuitSim - *
 /database/*.sqlite*
+
+# Playwright
+/test-results
+/playwright-report

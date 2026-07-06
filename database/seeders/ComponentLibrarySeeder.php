@@ -39,6 +39,8 @@ class ComponentLibrarySeeder extends Seeder
                 'properties' => [
                     'color' => 'red',
                     'Vf' => 1.8,
+                    'Is' => 1.0e-18,
+                    'n' => 1.8,
                     'stateRules' => ['on' => 'voltage > 1.5'],
                     'animatableElements' => [
                         'led-body' => [
@@ -61,6 +63,42 @@ class ComponentLibrarySeeder extends Seeder
                     ['name' => 'Negative (-)', 'x' => 32, 'y' => 0, 'signals' => ['ground'], 'handle_id' => 'pin-1', 'pin_type' => 'ground'],
                 ],
                 'properties' => ['voltage' => 9, 'unit' => 'V'],
+            ],
+            [
+                'name' => 'Capacitor',
+                'type' => 'capacitor',
+                'category' => 'Passive',
+                'description' => 'Fixed capacitor (open circuit at DC)',
+                'svg_path' => '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="32" viewBox="0 0 64 32"><line x1="0" y1="16" x2="26" y2="16" stroke="#333" stroke-width="2"/><line x1="26" y1="4" x2="26" y2="28" stroke="#333" stroke-width="3"/><line x1="38" y1="4" x2="38" y2="28" stroke="#333" stroke-width="3"/><line x1="38" y1="16" x2="64" y2="16" stroke="#333" stroke-width="2"/></svg>',
+                'pins' => [
+                    ['name' => 'Pin 1', 'x' => 0, 'y' => 16, 'signals' => ['passive'], 'handle_id' => 'pin-0'],
+                    ['name' => 'Pin 2', 'x' => 64, 'y' => 16, 'signals' => ['passive'], 'handle_id' => 'pin-1'],
+                ],
+                'properties' => ['capacitance' => '10u', 'unit' => 'F'],
+            ],
+            [
+                'name' => 'Inductor',
+                'type' => 'inductor',
+                'category' => 'Passive',
+                'description' => 'Fixed inductor (short circuit at DC)',
+                'svg_path' => '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="24" viewBox="0 0 80 24"><line x1="0" y1="16" x2="14" y2="16" stroke="#333" stroke-width="2"/><path d="M14 16 a6 6 0 0 1 13 0 a6 6 0 0 1 13 0 a6 6 0 0 1 13 0 a6 6 0 0 1 13 0" fill="none" stroke="#333" stroke-width="2"/><line x1="66" y1="16" x2="80" y2="16" stroke="#333" stroke-width="2"/></svg>',
+                'pins' => [
+                    ['name' => 'Pin 1', 'x' => 0, 'y' => 16, 'signals' => ['passive'], 'handle_id' => 'pin-0'],
+                    ['name' => 'Pin 2', 'x' => 80, 'y' => 16, 'signals' => ['passive'], 'handle_id' => 'pin-1'],
+                ],
+                'properties' => ['inductance' => '10m', 'unit' => 'H'],
+            ],
+            [
+                'name' => 'Diode',
+                'type' => 'diode',
+                'category' => 'Passive',
+                'description' => 'Silicon diode (~0.6-0.7V forward drop)',
+                'svg_path' => '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="32" viewBox="0 0 64 32"><line x1="0" y1="16" x2="22" y2="16" stroke="#333" stroke-width="2"/><polygon points="22,6 22,26 40,16" fill="#333"/><line x1="40" y1="6" x2="40" y2="26" stroke="#333" stroke-width="3"/><line x1="40" y1="16" x2="64" y2="16" stroke="#333" stroke-width="2"/></svg>',
+                'pins' => [
+                    ['name' => 'Anode (+)', 'x' => 0, 'y' => 16, 'signals' => ['passive'], 'handle_id' => 'pin-0', 'pin_type' => 'anode'],
+                    ['name' => 'Cathode (-)', 'x' => 64, 'y' => 16, 'signals' => ['passive'], 'handle_id' => 'pin-1', 'pin_type' => 'cathode'],
+                ],
+                'properties' => ['Is' => 1.0e-14, 'n' => 1],
             ],
             [
                 'name' => 'Ground',

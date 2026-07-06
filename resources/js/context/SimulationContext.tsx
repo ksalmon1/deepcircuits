@@ -130,6 +130,82 @@ function findConnectedGroups(connections: AppConnectionModel[], components: AppC
   return connectedGroups;
 }
 
+/**
+ * Build the pin -> SPICE-node assignment for the current circuit and the
+ * component list augmented with per-pin node names. Shared by netlist
+ * generation and by result mapping so both always agree.
+ */
+function buildSpiceMapping(components: CircuitComponentLike[], wires: WireLike[]) {
+  const initialAppComponents: AppComponentModel[] = components.map((instance) => ({
+    id: instance.id,
+    type: instance.type,
+    properties: { ...(instance.attributes || {}) },
+    pins: (instance.pins || []).map(pin => ({ id: pin.handle_id || pin.id, name: pin.name })),
+  }));
+  const appConnections: AppConnectionModel[] = (wires || []).map((edge) => ({
+    id: edge.id,
+    from: { componentId: edge.source, pinId: edge.sourceHandle || '' },
+    to: { componentId: edge.target, pinId: edge.targetHandle || '' },
+  }));
+  const pinToNodeMap: PinToSpiceNodeMap = new Map();
+  const nextNodeCounter = { value: 1 };
+  initialAppComponents.forEach(comp => {
+    comp.pins?.forEach(pin => {
+      const pinKey = `${comp.id}_${pin.id}`;
+      getSpiceNode(pinKey, comp, pinToNodeMap, nextNodeCounter);
+    });
+  });
+  const connectedGroups = findConnectedGroups(appConnections, initialAppComponents);
+  connectedGroups.forEach(group => {
+    let representativeNode: string | null = null;
+    for (const pinKey of group) {
+      if (pinToNodeMap.has(pinKey)) {
+        const node = pinToNodeMap.get(pinKey)!;
+        if (node === '0' || !representativeNode) {
+          representativeNode = node;
+          if (node === '0') break;
+        } else if (representativeNode && parseInt(node, 10) < parseInt(representativeNode, 10)) {
+          representativeNode = node;
+        }
+      }
+    }
+    if (!representativeNode) {
+      representativeNode = String(nextNodeCounter.value++);
+    }
+    for (const pinKey of group) {
+      pinToNodeMap.set(pinKey, representativeNode);
+    }
+  });
+  mergeNodes(appConnections, pinToNodeMap);
+  const componentsForSpice = initialAppComponents.map(comp => {
+    const spiceConnections = comp.pins?.map(pin => {
+      const pinKey = `${comp.id}_${pin.id}`;
+      const nodeName = pinToNodeMap.get(pinKey);
+      if (nodeName === undefined) {
+        throw new Error(`Pin ${pin.id} ('${pin.name}') on component ${comp.id} (${comp.type}) could not be mapped to a SPICE node.`);
+      }
+      return nodeName;
+    }) || [];
+    return { ...comp, spiceConnections };
+  });
+  return { componentsForSpice, pinToNodeMap };
+}
+
+interface CircuitComponentLike {
+  id: string;
+  type: string;
+  attributes?: Record<string, unknown>;
+  pins?: Array<{ id: string; handle_id?: string; name?: string }>;
+}
+
+interface WireLike {
+  id: string;
+  source: string;
+  target: string;
+  sourceHandle?: string;
+  targetHandle?: string;
+}
+
 export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children }) => {
   const [isSimulationRunning, setIsSimulationRunning] = useState<boolean>(false);
   const [serialOutput, setSerialOutput] = useState<string[]>([]);
@@ -146,65 +222,7 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
 
   // --- Utility: Generate netlist for wired components only ---
   const generateNetlist = useCallback((): string => {
-    // 1. Map CircuitComponent to AppComponentModel
-    const initialAppComponents: AppComponentModel[] = components.map((instance) => {
-      return {
-        id: instance.id,
-        type: instance.type,
-        properties: { ...(instance.attributes || {}) },
-        pins: (instance.pins || []).map(pin => ({ id: pin.handle_id || pin.id, name: pin.name })),
-      };
-    });
-    // 2. Map wires to AppConnectionModel
-    const appConnections: AppConnectionModel[] = (wires || []).map((edge) => ({
-      id: edge.id,
-      from: { componentId: edge.source, pinId: edge.sourceHandle || '' },
-      to: { componentId: edge.target, pinId: edge.targetHandle || '' },
-    }));
-    // 3. Node mapping
-    const pinToNodeMap: PinToSpiceNodeMap = new Map();
-    const nextNodeCounter = { value: 1 };
-    initialAppComponents.forEach(comp => {
-      comp.pins?.forEach(pin => {
-        const pinKey = `${comp.id}_${pin.id}`;
-        getSpiceNode(pinKey, comp, pinToNodeMap, nextNodeCounter);
-      });
-    });
-    const connectedGroups = findConnectedGroups(appConnections, initialAppComponents);
-    connectedGroups.forEach(group => {
-      let representativeNode = null;
-      for (const pinKey of group) {
-        if (pinToNodeMap.has(pinKey)) {
-          const node = pinToNodeMap.get(pinKey);
-          if (node === '0' || !representativeNode) {
-            representativeNode = node;
-            if (node === '0') break;
-          } else if (representativeNode && parseInt(node!, 10) < parseInt(representativeNode, 10)) {
-            representativeNode = node;
-          }
-        }
-      }
-      if (!representativeNode) {
-        representativeNode = String(nextNodeCounter.value++);
-      }
-      for (const pinKey of group) {
-        pinToNodeMap.set(pinKey, representativeNode!);
-      }
-    });
-    mergeNodes(appConnections, pinToNodeMap);
-    // 4. Augment components with spiceConnections
-    const componentsForSpice = initialAppComponents.map(comp => {
-      const spiceConnections = comp.pins?.map(pin => {
-        const pinKey = `${comp.id}_${pin.id}`;
-        const nodeName = pinToNodeMap.get(pinKey);
-        if (nodeName === undefined) {
-          throw new Error(`Pin ${pin.id} ('${pin.name}') on component ${comp.id} (${comp.type}) could not be mapped to a SPICE node.`);
-        }
-        return nodeName;
-      }) || [];
-      return { ...comp, spiceConnections };
-    });
-    // 5. Generate netlist
+    const { componentsForSpice } = buildSpiceMapping(components, wires || []);
     return realGenerateNetlist(componentsForSpice);
   }, [components, wires]);
 
@@ -255,77 +273,24 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
         });
       }
       // --- User-friendly formatted output ---
-      // Reconstruct componentsForSpice for formatting
-      const initialAppComponents: AppComponentModel[] = components.map((instance) => {
-        return {
-          id: instance.id,
-          type: instance.type,
-          properties: { ...(instance.attributes || {}) },
-          pins: (instance.pins || []).map(pin => ({ id: pin.handle_id || pin.id, name: pin.name })),
-        };
-      });
-      const appConnections: AppConnectionModel[] = (wires || []).map((edge) => ({
-        id: edge.id,
-        from: { componentId: edge.source, pinId: edge.sourceHandle || '' },
-        to: { componentId: edge.target, pinId: edge.targetHandle || '' },
-      }));
-      const pinToNodeMap: PinToSpiceNodeMap = new Map();
-      const nextNodeCounter = { value: 1 };
-      initialAppComponents.forEach(comp => {
-        comp.pins?.forEach(pin => {
-          const pinKey = `${comp.id}_${pin.id}`;
-          getSpiceNode(pinKey, comp, pinToNodeMap, nextNodeCounter);
-        });
-      });
-      const connectedGroups = findConnectedGroups(appConnections, initialAppComponents);
-      connectedGroups.forEach(group => {
-        let representativeNode = null;
-        for (const pinKey of group) {
-          if (pinToNodeMap.has(pinKey)) {
-            const node = pinToNodeMap.get(pinKey);
-            if (node === '0' || !representativeNode) {
-              representativeNode = node;
-              if (node === '0') break;
-            } else if (representativeNode && parseInt(node!, 10) < parseInt(representativeNode, 10)) {
-              representativeNode = node;
-            }
-          }
-        }
-        if (!representativeNode) {
-          representativeNode = String(nextNodeCounter.value++);
-        }
-        for (const pinKey of group) {
-          pinToNodeMap.set(pinKey, representativeNode!);
-        }
-      });
-      mergeNodes(appConnections, pinToNodeMap);
-      const componentsForSpice = initialAppComponents.map(comp => {
-        const spiceConnections = comp.pins?.map(pin => {
-          const pinKey = `${comp.id}_${pin.id}`;
-          const nodeName = pinToNodeMap.get(pinKey);
-          if (nodeName === undefined) {
-            throw new Error(`Pin ${pin.id} ('${pin.name}') on component ${comp.id} (${comp.type}) could not be mapped to a SPICE node.`);
-          }
-          return nodeName;
-        }) || [];
-        return { ...comp, spiceConnections };
-      });
+      const { componentsForSpice, pinToNodeMap } = buildSpiceMapping(components, wires || []);
       // Format and add the user-friendly summary
       const formatted = formatSimulationResults(msg.data, componentsForSpice);
       addSerialOutput(formatted);
-      // Map result arrays to SimulationState
-      const pinVoltagesByNode: { [node: string]: number } = {};
-      v.forEach((voltage, idx) => {
-        pinVoltagesByNode[String(idx + 1)] = voltage;
-      });
+      // Map node voltages back onto each component pin using the same
+      // pin -> node assignment that produced the netlist. Ground is 0V and
+      // is never printed by ngspice.
+      const nodeVoltages: { [node: string]: number } = msg.data.voltages || {};
       const simState: SimulationState = {};
       components.forEach(comp => {
         const pinVoltages: PinVoltages = {};
-        (comp.pins || []).forEach((pin, idx) => {
+        (comp.pins || []).forEach((pin) => {
           const pinKey = `${comp.id}_${pin.handle_id || pin.id}`;
-          const nodeName = String(idx + 1);
-          if (pinVoltagesByNode[nodeName] !== undefined) {
-            pinVoltages[pin.id] = pinVoltagesByNode[nodeName];
+          const nodeName = pinToNodeMap.get(pinKey);
+          if (nodeName === '0') {
+            pinVoltages[pin.id] = 0;
+          } else if (nodeName !== undefined && nodeVoltages[nodeName] !== undefined) {
+            pinVoltages[pin.id] = nodeVoltages[nodeName];
           }
         });
         simState[comp.id] = { pinVoltages };
