@@ -51,6 +51,12 @@ export async function createProject(name: string, description?: string): Promise
   return data;
 }
 
+/** Copy a viewable project (own or public example) into the user's account. */
+export async function cloneProject(projectId: string): Promise<Project> {
+  const { data } = await http.post<Project>(`/projects/${projectId}/clone`);
+  return data;
+}
+
 /** Delete a project owned by the current user. */
 export async function deleteProject(projectId: string): Promise<void> {
   await http.delete(`/projects/${projectId}`);

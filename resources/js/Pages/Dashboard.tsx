@@ -5,6 +5,7 @@ import { useProfile } from "@/hooks/use-profile";
 import { Button } from "@/components/ui/button";
 import { Plus, Search, ArrowUpDown } from "lucide-react";
 import ProjectCard from "@/components/common/ProjectCard";
+import ExampleCard from "@/components/common/ExampleCard";
 import { toast } from "sonner";
 import { useNavigate } from '@/lib/router';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -26,15 +27,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { DashboardProject, deleteProject, createProject } from "@/services/projectsApi";
+import { DashboardProject, deleteProject, createProject, cloneProject } from "@/services/projectsApi";
 
 type SortOption = "name-asc" | "name-desc" | "date-asc" | "date-desc";
 
 interface DashboardProps {
   projects?: DashboardProject[];
+  examples?: DashboardProject[];
 }
 
-const Dashboard = ({ projects: initialProjects = [] }: DashboardProps) => {
+const Dashboard = ({ projects: initialProjects = [], examples = [] }: DashboardProps) => {
   const { user } = useAuth();
   const { profile } = useProfile();
   const navigate = useNavigate();
@@ -47,6 +49,7 @@ const Dashboard = ({ projects: initialProjects = [] }: DashboardProps) => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState<boolean>(false);
   const [projectToDeleteId, setProjectToDeleteId] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState<boolean>(false);
+  const [cloningExampleId, setCloningExampleId] = useState<string | null>(null);
 
   // The project list arrives as an Inertia page prop; keep local state in
   // sync so create/delete can update the UI optimistically.
@@ -86,6 +89,24 @@ const Dashboard = ({ projects: initialProjects = [] }: DashboardProps) => {
       });
     } finally {
       setIsCreating(false);
+    }
+  };
+
+  const handleUseExample = async (id: string) => {
+    if (cloningExampleId) return;
+    setCloningExampleId(id);
+    try {
+      const copy = await cloneProject(id);
+      toast.success("Example added to your projects", {
+        description: "Opening editor...",
+      });
+      navigate(`/circuit-editor/${copy.id}`);
+    } catch (err) {
+      console.error("Dashboard: Error cloning example:", err);
+      toast.error("Failed to open example", {
+        description: err instanceof Error ? err.message : "An unknown error occurred.",
+      });
+      setCloningExampleId(null);
     }
   };
 
@@ -249,6 +270,27 @@ const Dashboard = ({ projects: initialProjects = [] }: DashboardProps) => {
                 <p>No projects match your search criteria. Try adjusting your filters.</p>
               </div>
             )}
+          </div>
+        )}
+
+        {examples.length > 0 && (
+          <div className="mt-12">
+            <div className="mb-2 flex items-center gap-2">
+              <h2 className="text-xl font-semibold">Example Projects</h2>
+            </div>
+            <p className="mb-6 text-sm text-slate-500">
+              Ready-made circuits to explore. Opening one adds an editable copy to your projects.
+            </p>
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {examples.map((example) => (
+                <ExampleCard
+                  key={example.id}
+                  example={example}
+                  onUse={handleUseExample}
+                  isCloning={cloningExampleId === example.id}
+                />
+              ))}
+            </div>
           </div>
         )}
       </div>

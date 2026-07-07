@@ -100,7 +100,7 @@ const ComponentPanel: React.FC = () => {
       <div className="flex-1 overflow-auto px-4 pb-4">
         {categorized.map(([category, items]) => (
           <div key={category} className="mb-5">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2 sticky top-0 bg-inherit">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2 sticky top-0 bg-gray-50 py-1 -my-1 z-10">
               {category}
             </h3>
             <div className="grid grid-cols-2 gap-2">

@@ -240,6 +240,35 @@ export function generateNetlist(componentsWithNodes: ComponentWithSpiceConnectio
             }
             case 'ground':
                 return;
+            case 'arduino-uno':
+            case 'arduino-nano': {
+                // Emulated control board: the AVR emulator's pin report is
+                // injected as __boardDirectives (see simulation/avr/
+                // boardModel.ts). Every non-ground pin gets a device so all
+                // of its nodes are solvable: driven pins and power rails
+                // become DC sources, INPUT_PULLUP pins a resistor to an
+                // internal 5V rail, everything else a weak pulldown.
+                const directives = props.__boardDirectives as
+                    | Array<{ volts?: number; pullup?: boolean } | null>
+                    | undefined;
+                let railNode = '';
+                comp.spiceConnections.forEach((node, pinIndex) => {
+                    if (node === '0') return;
+                    const directive = directives?.[pinIndex];
+                    if (directive?.volts !== undefined) {
+                        deviceLines += `V${spiceId}p${pinIndex} ${node} 0 DC ${directive.volts}\n`;
+                    } else if (directive?.pullup) {
+                        if (!railNode) {
+                            railNode = `rail${spiceId}`;
+                            deviceLines += `V${spiceId}rail ${railNode} 0 DC 5\n`;
+                        }
+                        deviceLines += `R${spiceId}p${pinIndex} ${railNode} ${node} 35k\n`;
+                    } else {
+                        deviceLines += `R${spiceId}p${pinIndex} ${node} 0 10meg\n`;
+                    }
+                });
+                return;
+            }
             default:
                 // Visual-only parts (displays, boards, sensor modules, ...)
                 // have no electrical model yet: leave them out of the
@@ -529,9 +558,14 @@ export function formatSimulationResults(results: SimulationResults, componentsWi
     });
     
     // Find a source as the starting point for the walk-through summary.
-    const voltageSources = componentsWithNodes.filter(
+    // An emulated control board powers the circuit too, but a conventional
+    // source makes for a more readable walk-through, so prefer those.
+    let voltageSources = componentsWithNodes.filter(
         comp => ['voltagesource', 'power', 'currentsource'].includes(resolveSpiceType(comp))
     );
+    if (voltageSources.length === 0) {
+        voltageSources = componentsWithNodes.filter(comp => ['arduino-uno', 'arduino-nano'].includes(resolveSpiceType(comp)));
+    }
 
     if (voltageSources.length === 0) {
         return "Cannot create analysis: No source found in circuit.";

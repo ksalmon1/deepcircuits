@@ -934,7 +934,7 @@
     "tag": "wokwi-arduino-nano",
     "name": "Arduino Nano",
     "category": "Boards",
-    "description": "Arduino Nano (visual only for now)",
+    "description": "Arduino Nano (ATmega328p, fully emulated): write a sketch, wire the pins, and run",
     "pins": [
       {
         "signals": [
@@ -1273,7 +1273,7 @@
     "tag": "wokwi-arduino-uno",
     "name": "Arduino Uno",
     "category": "Boards",
-    "description": "Arduino Uno (visual only for now)",
+    "description": "Arduino Uno (ATmega328p, fully emulated): write a sketch, wire the pins, and run",
     "pins": [
       {
         "signals": [
@@ -4245,7 +4245,7 @@
     "tag": "wokwi-pushbutton",
     "name": "Pushbutton",
     "category": "Input Controls",
-    "description": "Momentary pushbutton - double-click on the canvas to toggle",
+    "description": "Momentary pushbutton - click and hold to press",
     "pins": [
       {
         "signals": [
@@ -4283,7 +4283,7 @@
     "tag": "wokwi-pushbutton-6mm",
     "name": "Pushbutton (6mm)",
     "category": "Input Controls",
-    "description": "Compact 6mm pushbutton - double-click on the canvas to toggle",
+    "description": "Compact 6mm pushbutton - click and hold to press",
     "pins": [
       {
         "signals": [

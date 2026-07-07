@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\ComponentLibraryController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\SketchCompileController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -20,12 +21,16 @@ Route::middleware('auth')->group(function () {
     // Circuit editor page + project JSON API
     Route::get('/circuit-editor/{project}', [ProjectController::class, 'editor'])->name('projects.editor');
     Route::post('/projects', [ProjectController::class, 'store'])->name('projects.store');
+    Route::post('/projects/{project}/clone', [ProjectController::class, 'clone'])->name('projects.clone');
     Route::get('/projects/{project}', [ProjectController::class, 'show'])->name('projects.show');
     Route::put('/projects/{project}', [ProjectController::class, 'update'])->name('projects.update');
     Route::delete('/projects/{project}', [ProjectController::class, 'destroy'])->name('projects.destroy');
 
     Route::get('/api/components', [ComponentLibraryController::class, 'index'])->name('components.index');
     Route::get('/api/components/{component}', [ComponentLibraryController::class, 'show'])->name('components.show');
+
+    // Local sketch compilation (arduino-cli on this server; code stays local)
+    Route::post('/api/compile', [SketchCompileController::class, 'compile'])->name('sketch.compile');
 
     // Profile
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
