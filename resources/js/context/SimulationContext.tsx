@@ -5,6 +5,7 @@ import { useProject } from './ProjectContext';
 import { SimulationState, ComponentSimulationState, PinVoltages } from '@/utils/simulationUtils';
 import type { AppComponentModel, AppConnectionModel } from '@/simulation/appStateTypes';
 import { generateNetlist as realGenerateNetlist, formatSimulationResults } from '@/simulation/spiceService';
+import { pinHandleId } from '@/utils/pinUtils';
 
 // This matches the type needed by our simulation engine
 
@@ -35,13 +36,28 @@ function getSpiceNode(pinKey: string, component: AppComponentModel | undefined, 
   const pinId = pinKey.split('_')[1];
   const pinDefinition = component?.pins?.find(p => p.id === pinId);
   const pinName = pinDefinition?.name?.toUpperCase();
-  if (pinName === 'GND' || pinName === 'GROUND') {
+  const signals = (pinDefinition?.signals || []).map(s => String(s).toLowerCase());
+  // Ground detection is driven by the pin's typed metadata. The display-name
+  // check only applies to legacy pins carrying no type/signals, so a label
+  // like 'A (GND)' on a passive pin can never accidentally ground a net.
+  const hasTypedMetadata = signals.length > 0 || Boolean(pinDefinition?.type);
+  const isGroundPin =
+    pinDefinition?.type === 'ground' ||
+    signals.includes('ground') ||
+    (!hasTypedMetadata && (pinName === 'GND' || pinName === 'GROUND'));
+  if (isGroundPin) {
     pinToNodeMap.set(pinKey, '0');
     return '0';
   }
-  if (component?.type?.toLowerCase() === 'voltagesource' || component?.type?.toLowerCase() === 'power') {
-    if (component.pins && component.pins.length > 1 && pinId === component.pins[1]?.id) {
-      if (pinName !== 'POSITIVE' && pinName !== '+') {
+  const spiceType = typeof component?.properties?.spiceType === 'string'
+    ? component.properties.spiceType.toLowerCase()
+    : component?.type?.toLowerCase();
+  if (spiceType === 'voltagesource' || spiceType === 'power') {
+    if (component!.pins && component!.pins.length > 1 && pinId === component!.pins[1]?.id) {
+      const isPositivePin =
+        pinDefinition?.type === 'power' || signals.includes('power') ||
+        pinName === 'POSITIVE' || pinName === '+';
+      if (!isPositivePin) {
         pinToNodeMap.set(pinKey, '0');
         return '0';
       }
@@ -140,7 +156,12 @@ function buildSpiceMapping(components: CircuitComponentLike[], wires: WireLike[]
     id: instance.id,
     type: instance.type,
     properties: { ...(instance.attributes || {}) },
-    pins: (instance.pins || []).map(pin => ({ id: pin.handle_id || pin.id, name: pin.name })),
+    pins: (instance.pins || []).map((pin, index) => ({
+      id: pinHandleId(pin, index),
+      name: pin.name,
+      type: pin.type,
+      signals: pin.signals,
+    })),
   }));
   const appConnections: AppConnectionModel[] = (wires || []).map((edge) => ({
     id: edge.id,
@@ -195,7 +216,7 @@ interface CircuitComponentLike {
   id: string;
   type: string;
   attributes?: Record<string, unknown>;
-  pins?: Array<{ id: string; handle_id?: string; name?: string }>;
+  pins?: Array<{ id: string; handle_id?: string; name?: string; type?: string; signals?: string[] }>;
 }
 
 interface WireLike {
@@ -285,11 +306,12 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
       // pin -> node assignment that produced the netlist. Ground is 0V and
       // is never printed by ngspice.
       const nodeVoltages: { [node: string]: number } = msg.data.voltages || {};
+      const deviceCurrents: { [device: string]: number } = msg.data.currents || {};
       const simState: SimulationState = {};
-      components.forEach(comp => {
+      components.forEach((comp) => {
         const pinVoltages: PinVoltages = {};
-        (comp.pins || []).forEach((pin) => {
-          const pinKey = `${comp.id}_${pin.handle_id || pin.id}`;
+        (comp.pins || []).forEach((pin, pinIndex) => {
+          const pinKey = `${comp.id}_${pinHandleId(pin, pinIndex)}`;
           const nodeName = pinToNodeMap.get(pinKey);
           if (nodeName === '0') {
             pinVoltages[pin.id] = 0;
@@ -297,7 +319,46 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
             pinVoltages[pin.id] = nodeVoltages[nodeName];
           }
         });
-        simState[comp.id] = { pinVoltages };
+        // Per-pin entering currents from device branch currents (ngspice
+        // lowercases device names in output). SPICE convention: positive
+        // branch current enters the device's first node.
+        const spiceId = comp.id.replace(/-/g, '').toLowerCase();
+        let pinCurrents: { [pinIndex: number]: number } | undefined;
+        const branchCurrent =
+          deviceCurrents[`r${spiceId}`] ??
+          deviceCurrents[`d${spiceId}`] ??
+          deviceCurrents[`l${spiceId}`] ??
+          deviceCurrents[`v${spiceId}`];
+        if (branchCurrent !== undefined && (comp.pins || []).length === 2) {
+          pinCurrents = { 0: branchCurrent, 1: -branchCurrent };
+        }
+        // Potentiometer: two track halves A-W and W-B; KCL at the wiper
+        // gives the current entering from the external wire.
+        const trackAw = deviceCurrents[`r${spiceId}aw`];
+        const trackWb = deviceCurrents[`r${spiceId}wb`];
+        if (trackAw !== undefined && trackWb !== undefined) {
+          pinCurrents = { 0: trackAw, 1: trackWb - trackAw, 2: -trackWb };
+        }
+        // Slide switch: same two-half topology around the common pin.
+        const sideA = deviceCurrents[`r${spiceId}a`];
+        const sideB = deviceCurrents[`r${spiceId}b`];
+        if (sideA !== undefined && sideB !== undefined) {
+          pinCurrents = { 0: sideA, 1: sideB - sideA, 2: -sideB };
+        }
+        // RGB LED: three diodes into the common cathode (pin 1).
+        const chanR = deviceCurrents[`d${spiceId}r`];
+        const chanG = deviceCurrents[`d${spiceId}g`];
+        const chanB = deviceCurrents[`d${spiceId}b`];
+        if (chanR !== undefined && chanG !== undefined && chanB !== undefined) {
+          pinCurrents = { 0: chanR, 1: -(chanR + chanG + chanB), 2: chanG, 3: chanB };
+        }
+        // Current source: the netlist lists its nodes swapped (- then +) so
+        // current flows out of the + pin; invert the convention to match.
+        const sourceDc = deviceCurrents[`i${spiceId}`];
+        if (sourceDc !== undefined && (comp.pins || []).length === 2) {
+          pinCurrents = { 0: -sourceDc, 1: sourceDc };
+        }
+        simState[comp.id] = { pinVoltages, pinCurrents };
       });
       setSimulationState(simState);
     } else if (msg.type === 'error') {
@@ -365,6 +426,11 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
     latestRunIdRef.current = ++runIdRef.current; // invalidate in-flight runs
     setIsSimulationRunning(false);
     setSimulationState(null);
+    // Clear the result globals too: component renderers fall back to them
+    // (e.g. the LED's circuit-summary check), so leaving them around keeps
+    // parts lit after the simulation has stopped.
+    window.simulationResults = undefined;
+    window.lastCircuitSummary = undefined;
     addSerialOutput('[Simulation stopped]');
   }, [addSerialOutput]);
 

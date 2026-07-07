@@ -38,3 +38,66 @@
   background-color: #3b82f6 !important; /* Use same blue as selection outline */
   border: 1px solid white !important; /* Add a border for contrast, override default */
 }
+
+/* --- Pins: invisible until needed so wires look attached to the legs --- */
+.react-flow__handle.circuit-pin-handle {
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+/* Reveal on component hover, while dragging a new wire, or when highlighted */
+.react-flow__node:hover .react-flow__handle.circuit-pin-handle,
+.react-flow:has(.react-flow__connectionline) .react-flow__handle.circuit-pin-handle,
+.react-flow__handle.circuit-pin-handle.pin-highlighted {
+  opacity: 1;
+}
+
+/* --- Wire energy-flow indicator: animated dashes while the sim runs --- */
+/* The path only renders when the simulation knows the wire's current, so
+   it is always subtly visible during a run and brightens on hover. */
+.wire-flow-indicator {
+  stroke: #fbbf24;
+  stroke-width: 2.5;
+  stroke-dasharray: 5 9;
+  stroke-linecap: round;
+  opacity: 0.5;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+  animation: wire-flow-dash 0.7s linear infinite;
+}
+.react-flow__edge:hover .wire-flow-indicator {
+  opacity: 0.95;
+}
+@keyframes wire-flow-dash {
+  from { stroke-dashoffset: 28; }
+  to { stroke-dashoffset: 0; }
+}
+
+/* --- Library panel part previews (classic SVG parts) --- */
+.part-preview-svg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.part-preview-svg svg {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+}
+
+/* --- Wire bend editing dots (visible when the wire is selected) --- */
+.wire-waypoint {
+  fill: #8b5cf6;
+  stroke: #fff;
+  stroke-width: 1.5;
+  cursor: grab;
+  pointer-events: all;
+}
+.wire-midpoint {
+  fill: #fff;
+  stroke: #8b5cf6;
+  stroke-width: 1.5;
+  opacity: 0.75;
+  cursor: copy;
+  pointer-events: all;
+}

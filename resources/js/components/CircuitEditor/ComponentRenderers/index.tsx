@@ -1,5 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { CircuitComponent } from '@/types/component';
+import { getWokwiPart, WokwiPart } from '@/integrations/wokwi';
 
 // Define the interface for animatable elements
 interface AnimatableElement {
@@ -68,7 +69,8 @@ const UniversalComponentRenderer: React.FC<{data: CircuitComponent}> = ({ data }
 
   // ADDED: Calculate active states directly if we have pinVoltages but no activeStates
   const calculatedActiveStates = React.useMemo(() => {
-    if (data.type.toLowerCase() === 'led') {
+    // Wokwi parts reuse the same state logic as their plain equivalents.
+    if (data.type.toLowerCase().replace(/^wokwi-/, '') === 'led') {
       // For LEDs, we'll check the simulationState
       // If pinVoltages is unavailable, we can extract component ID and check nodes from data
       const ledId = data.id;
@@ -91,12 +93,12 @@ const UniversalComponentRenderer: React.FC<{data: CircuitComponent}> = ({ data }
         const cathodePin = data.pins?.find(p => p.name?.toLowerCase().includes('cathode') || p.type === 'cathode' || p.name?.includes('(-)'));
 
         if (anodePin && cathodePin && pinVoltages[anodePin.id] !== undefined && pinVoltages[cathodePin.id] !== undefined) {
+          // The signed anode-cathode voltage is authoritative: a reverse-
+          // biased LED must stay dark, so never fall through to the
+          // absolute-value circuit-summary heuristic below.
           const calculatedVoltage = pinVoltages[anodePin.id] - pinVoltages[cathodePin.id];
           const stateRules = data.attributes?.stateRules as Record<string, string> | undefined;
-          const statesFromPins = evaluateVoltageStateRules(calculatedVoltage, stateRules);
-          if (statesFromPins.length > 0) {
-            return statesFromPins;
-          }
+          return evaluateVoltageStateRules(calculatedVoltage, stateRules);
         }
       }
       
@@ -270,6 +272,11 @@ const UniversalComponentRenderer: React.FC<{data: CircuitComponent}> = ({ data }
       });
     }
   }, [data, combinedActiveStates]);
+
+  // Wokwi parts render as @wokwi/elements web components
+  if (getWokwiPart(data.type)) {
+    return <WokwiPart data={data} activeStates={combinedActiveStates} />;
+  }
 
   // If we have an SVG path, use it
   if (data.svgPath && typeof data.svgPath === 'string' && data.svgPath.trim().startsWith('<svg')) {

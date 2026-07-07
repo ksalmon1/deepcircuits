@@ -7,6 +7,7 @@ import './CircuitCanvas/CircuitComponentNode.css';
 import { useCircuitEditor } from '@/context/CircuitEditorContext';
 import { isValidConnection } from '@/domain/connectionRules';
 import { renderComponent } from './ComponentRenderers';
+import { pinHandleId } from '@/utils/pinUtils';
 
 /**
  * A node component that represents a circuit component in the editor.
@@ -51,7 +52,7 @@ const CircuitComponentNode: React.FC<CustomNodeProps> = ({
   // Log the received props, especially width and height
   // console.log(`[Node ${sourceNodeId}] Rendering with props:`, { id: sourceNodeId, data, selected, width, height });
 
-  const handleSize = 8;
+  const handleSize = 10;
   // Get context for highlighting
   const { highlightedPins, setHighlightedPins } = useCircuitEditor();
   // Get all current nodes on the canvas
@@ -131,13 +132,18 @@ const CircuitComponentNode: React.FC<CustomNodeProps> = ({
       position: 'absolute',
       left: `${finalX - offsetX}px`,
       top: `${finalY - offsetY}px`,
-      background: '#555',
+      // React Flow's stock handle CSS shifts handles by half their size
+      // (translate(50%, -50%) for Position.Right); neutralize it so the
+      // handle centers exactly on the pin coordinate.
+      transform: 'none',
+      background: '#22c55e',
       width: `${handleSize}px`,
       height: `${handleSize}px`,
       borderRadius: '50%',
       zIndex: 10,
       cursor: 'crosshair',
-      border: 'none',
+      border: '1.5px solid #fff',
+      boxSizing: 'border-box',
     };
   }, [handleSize]);
 
@@ -159,8 +165,8 @@ const CircuitComponentNode: React.FC<CustomNodeProps> = ({
 
         return (
           <Handle
-            key={`pin-${index}`}
-            id={`pin-${index}`}
+            key={pinHandleId(pin, index)}
+            id={pinHandleId(pin, index)}
             type="source"
             position={Position.Right} // Position doesn't matter as we're using custom styles
             style={getHandleStyle(pin)}
