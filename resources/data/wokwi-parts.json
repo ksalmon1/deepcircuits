@@ -934,7 +934,7 @@
     "tag": "wokwi-arduino-nano",
     "name": "Arduino Nano",
     "category": "Boards",
-    "description": "Arduino Nano (visual only for now)",
+    "description": "Arduino Nano (ATmega328p, fully emulated): write a sketch, wire the pins, and run",
     "pins": [
       {
         "signals": [

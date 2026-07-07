@@ -6,15 +6,22 @@
 // the lifetime of the worker, so every simulation run only pays for
 // instantiation (milliseconds) instead of download + compile (seconds).
 //
+// Runs are serialized: ngspice batch main() is one-shot and the Emscripten
+// print callback streams stdout, so two overlapping Module() instances would
+// interleave their output. An emulated board re-solves on every GPIO change
+// (tens of times per second), so overlap is the common case, not the
+// exception. We therefore run one solve at a time and coalesce queued runs to
+// the latest pending netlist (older ones are stale by the time we're free).
+//
 // NOTE: /models/spice.mjs and /models/spice.wasm must be present in
 // public/models/ for this worker to function (npm run fetch:spice).
 import Module from '/models/spice.mjs';
 
 let wasmBytesPromise = null;
-let netlist = '';
-let runId = null;
-let capturedStdout = [];
-let capturedStderr = [];
+let isRunning = false;
+// The most recent run requested while a solve is in progress. Only the
+// latest matters; intermediate circuit states are already superseded.
+let pendingRun = null;
 
 /** Fetch the wasm binary exactly once and keep the bytes in memory. */
 function getWasmBytes() {
@@ -46,7 +53,8 @@ getWasmBytes().catch((err) => {
   self.postMessage({ type: 'error', runId: null, message: `Failed to load simulation engine: ${err.message || err}` });
 });
 
-function parseAndPostResult() {
+/** Parse one run's captured stdout into the SimulationResults shape. */
+function parseResult(capturedStdout) {
   const lines = capturedStdout.slice();
   const t = [];
   const v = [];
@@ -100,7 +108,7 @@ function parseAndPostResult() {
     currents[currentDeviceNames[idx] || `device${idx + 1}`] = current;
   });
 
-  const result = {
+  return {
     t: new Float32Array(t),
     v: new Float32Array(v),
     i: new Float32Array(i),
@@ -110,58 +118,83 @@ function parseAndPostResult() {
     analysisType: 'op',
     rawOutput: lines.join('\n'),
   };
-
-  self.postMessage({ type: 'result', runId, data: result });
 }
 
-self.onmessage = async (e) => {
-  const { type, runId: msgRunId, netlist: msgNetlist } = e.data;
-  if (type === 'stop') return;
-  if (type === 'run') {
-    netlist = msgNetlist;
-    runId = msgRunId;
-    capturedStdout = [];
-    capturedStderr = [];
-    const runStarted = performance.now();
+/**
+ * Execute a single ngspice solve to completion. All capture state is local
+ * to this call so concurrent invocations can never corrupt one another (and
+ * the serialization below ensures there aren't any).
+ */
+async function runSolve(runId, netlist) {
+  const capturedStdout = [];
+  let posted = false;
+  const runStarted = performance.now();
 
-    try {
-      const wasmBytes = await getWasmBytes();
-      // A fresh ngspice runtime per run (batch-mode main() is one-shot),
-      // instantiated from the cached in-memory binary. Compilation from
-      // bytes takes ~tens of milliseconds; the expensive part (network
-      // fetch of the 6MB binary) happens only once per session.
-      await Module({
-        wasmBinary: wasmBytes,
-        arguments: ['-b', 'input.cir'],
-        print: (text) => {
-          text.split('\n').forEach((line) => {
-            if (line.trim() !== '') {
-              capturedStdout.push(line);
-              if (line.includes('--- END SIMULATION RESULTS ---')) {
-                console.log(`[SpiceWorker] run ${runId} finished in ${Math.round(performance.now() - runStarted)}ms`);
-                parseAndPostResult();
-              }
-            }
-          });
-        },
-        printErr: (text) => {
-          text.split('\n').forEach((line) => {
-            if (line.trim() !== '') {
-              capturedStderr.push(line);
-            }
-          });
-        },
-        preRun: [
-          (mod) => {
-            mod.FS.writeFile('/input.cir', netlist);
-          },
-        ],
-        postRun: [],
-        locateFile: (path) => (path.endsWith('.wasm') ? '/models/spice.wasm' : path),
+  const wasmBytes = await getWasmBytes();
+  // A fresh ngspice runtime per run (batch-mode main() is one-shot),
+  // instantiated from the cached in-memory binary. Compilation from bytes
+  // takes ~tens of milliseconds; the expensive part (network fetch of the
+  // 6MB binary) happens only once per session.
+  await Module({
+    wasmBinary: wasmBytes,
+    arguments: ['-b', 'input.cir'],
+    print: (text) => {
+      text.split('\n').forEach((line) => {
+        if (line.trim() !== '') {
+          capturedStdout.push(line);
+          if (line.includes('--- END SIMULATION RESULTS ---') && !posted) {
+            posted = true;
+            console.log(`[SpiceWorker] run ${runId} finished in ${Math.round(performance.now() - runStarted)}ms`);
+            self.postMessage({ type: 'result', runId, data: parseResult(capturedStdout) });
+          }
+        }
       });
-    } catch (err) {
-      console.error('[SpiceWorker] Error during simulation:', err);
-      self.postMessage({ type: 'error', runId, message: err.message || String(err) });
+    },
+    printErr: () => {},
+    preRun: [
+      (mod) => {
+        mod.FS.writeFile('/input.cir', netlist);
+      },
+    ],
+    postRun: [],
+    locateFile: (path) => (path.endsWith('.wasm') ? '/models/spice.wasm' : path),
+  });
+}
+
+/**
+ * Run `next`, then drain whatever run was queued while it executed. Only the
+ * newest queued run survives; the circuit has moved on from the rest.
+ */
+async function processRun(next) {
+  isRunning = true;
+  try {
+    await runSolve(next.runId, next.netlist);
+  } catch (err) {
+    console.error('[SpiceWorker] Error during simulation:', err);
+    self.postMessage({ type: 'error', runId: next.runId, message: err.message || String(err) });
+  } finally {
+    isRunning = false;
+    const queued = pendingRun;
+    pendingRun = null;
+    if (queued) {
+      void processRun(queued);
+    }
+  }
+}
+
+self.onmessage = (e) => {
+  const { type, runId, netlist } = e.data;
+  if (type === 'stop') {
+    // Drop any queued run; the in-flight solve finishes but its result will
+    // be ignored by the main thread (stale runId).
+    pendingRun = null;
+    return;
+  }
+  if (type === 'run') {
+    if (isRunning) {
+      pendingRun = { runId, netlist }; // coalesce to the latest request
+    } else {
+      void processRun({ runId, netlist });
     }
   }
 };

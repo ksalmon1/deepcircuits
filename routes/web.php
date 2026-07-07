@@ -21,6 +21,7 @@ Route::middleware('auth')->group(function () {
     // Circuit editor page + project JSON API
     Route::get('/circuit-editor/{project}', [ProjectController::class, 'editor'])->name('projects.editor');
     Route::post('/projects', [ProjectController::class, 'store'])->name('projects.store');
+    Route::post('/projects/{project}/clone', [ProjectController::class, 'clone'])->name('projects.clone');
     Route::get('/projects/{project}', [ProjectController::class, 'show'])->name('projects.show');
     Route::put('/projects/{project}', [ProjectController::class, 'update'])->name('projects.update');
     Route::delete('/projects/{project}', [ProjectController::class, 'destroy'])->name('projects.destroy');

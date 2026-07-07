@@ -240,7 +240,8 @@ export function generateNetlist(componentsWithNodes: ComponentWithSpiceConnectio
             }
             case 'ground':
                 return;
-            case 'arduino-uno': {
+            case 'arduino-uno':
+            case 'arduino-nano': {
                 // Emulated control board: the AVR emulator's pin report is
                 // injected as __boardDirectives (see simulation/avr/
                 // boardModel.ts). Every non-ground pin gets a device so all
@@ -563,7 +564,7 @@ export function formatSimulationResults(results: SimulationResults, componentsWi
         comp => ['voltagesource', 'power', 'currentsource'].includes(resolveSpiceType(comp))
     );
     if (voltageSources.length === 0) {
-        voltageSources = componentsWithNodes.filter(comp => resolveSpiceType(comp) === 'arduino-uno');
+        voltageSources = componentsWithNodes.filter(comp => ['arduino-uno', 'arduino-nano'].includes(resolveSpiceType(comp)));
     }
 
     if (voltageSources.length === 0) {

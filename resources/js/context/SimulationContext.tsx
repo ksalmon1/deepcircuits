@@ -8,7 +8,7 @@ import { generateNetlist as realGenerateNetlist, formatSimulationResults } from 
 import { pinHandleId } from '@/utils/pinUtils';
 import { AVRRunner } from '@/simulation/avr/AVRRunner';
 import { compileSketch, CompileError } from '@/simulation/avr/compile';
-import { isBoardType, computeBoardDirectives, boardPinRole } from '@/simulation/avr/boardModel';
+import { isBoardType, computeBoardDirectives, boardPinRole, isAnalogOnlyPin } from '@/simulation/avr/boardModel';
 
 // This matches the type needed by our simulation engine
 
@@ -260,6 +260,12 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
   const workerRef = useRef<Worker | null>(null);
   const runIdRef = useRef<number>(0);
   const latestRunIdRef = useRef<number>(0);
+  // The newest runId whose result we have applied. Results are gated on this
+  // (not on the most-recently-*requested* run) so that when the board
+  // re-solves continuously — a fresh run is always queued before the last
+  // one finishes — each completed result still lands instead of being
+  // perpetually rejected as stale. The worker returns results in runId order.
+  const lastAppliedRunIdRef = useRef<number>(0);
   const lastNetlistRef = useRef<string>('');
   const rerunPendingRef = useRef<boolean>(false);
 
@@ -424,7 +430,10 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
       return;
     }
     if (msg.type === 'result') {
-      if (msg.runId !== latestRunIdRef.current) return; // Ignore stale
+      // Apply any result newer than the last one we applied; drop only truly
+      // out-of-order or post-stop runs (see lastAppliedRunIdRef).
+      if (msg.runId <= lastAppliedRunIdRef.current) return;
+      lastAppliedRunIdRef.current = msg.runId;
       const { componentsForSpice, pinToNodeMap } = buildSpiceMapping(components, wires || []);
       // With a board on the canvas the monitor belongs to the sketch: the
       // circuit re-solves continuously (every GPIO change), and compile /
@@ -530,13 +539,16 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
           if (role.arduinoPin >= 14) {
             runner.setAnalogVoltage(role.arduinoPin - 14, volts);
           }
-          if (runner.getPinMode(role.arduinoPin) !== 'output') {
+          // A6/A7 are ADC-only pads with no GPIO register — never drive them
+          // as digital inputs (arduinoPin 20/21 would alias onto PC6/reset).
+          if (!isAnalogOnlyPin(role.arduinoPin) && runner.getPinMode(role.arduinoPin) !== 'output') {
             runner.setDigitalInput(role.arduinoPin, volts > 2.5);
           }
         });
       }
     } else if (msg.type === 'error') {
-      if (msg.runId !== latestRunIdRef.current) return;
+      if (msg.runId <= lastAppliedRunIdRef.current) return;
+      lastAppliedRunIdRef.current = msg.runId;
       addSerialOutput(`[Error] ${msg.message}`);
       toast.error(`Simulation error: ${msg.message}`);
       setIsSimulationRunning(false);
@@ -551,7 +563,6 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
     lastNetlistRef.current = netlist;
     const runId = ++runIdRef.current;
     latestRunIdRef.current = runId;
-    console.log('[SimulationContext] rerunSimulation called. Sending netlist for runId', runId, netlist);
     workerRef.current.postMessage({ type: 'run', runId, netlist });
   }, [generateNetlist]);
 
@@ -605,7 +616,10 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
     // Keep the worker (and its compiled engine) alive for the next run;
     // just stop tracking results.
     workerRef.current?.postMessage({ type: 'stop' });
-    latestRunIdRef.current = ++runIdRef.current; // invalidate in-flight runs
+    // Invalidate in-flight runs: bump the counter and mark everything up to
+    // it as applied so any straggler result posted after stop is rejected.
+    latestRunIdRef.current = ++runIdRef.current;
+    lastAppliedRunIdRef.current = runIdRef.current;
     setIsSimulationRunning(false);
     setSimulationState(null);
     // Clear the result globals too: component renderers fall back to them

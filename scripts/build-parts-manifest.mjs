@@ -101,6 +101,7 @@ const DESCRIPTIONS = {
   'rgb-led': 'Common-cathode RGB LED: each color channel lights independently',
   resistor: 'Axial resistor with live color bands',
   'arduino-uno': 'Arduino Uno (ATmega328p, fully emulated): write a sketch, wire the pins, and run',
+  'arduino-nano': 'Arduino Nano (ATmega328p, fully emulated): write a sketch, wire the pins, and run',
   pushbutton: 'Momentary pushbutton - click and hold to press',
   'pushbutton-6mm': 'Compact 6mm pushbutton - click and hold to press',
   'slide-switch': 'SPDT slide switch - double-click on the canvas to toggle',

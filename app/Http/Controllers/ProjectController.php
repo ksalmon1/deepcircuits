@@ -19,14 +19,45 @@ class ProjectController extends Controller
             ->latest('updated_at')
             ->get(['id', 'name', 'description', 'updated_at']);
 
+        // Public example projects (owned by anyone but the current user) are
+        // offered to every user as ready-made starting points.
+        $examples = Project::query()
+            ->where('is_public', true)
+            ->where('user_id', '!=', $request->user()->id)
+            ->orderBy('created_at')
+            ->get(['id', 'name', 'description', 'updated_at']);
+
+        $toCard = fn (Project $project) => [
+            'id' => $project->id,
+            'name' => $project->name,
+            'description' => $project->description,
+            'updated_at' => $project->updated_at?->toISOString(),
+        ];
+
         return Inertia::render('Dashboard', [
-            'projects' => $projects->map(fn (Project $project) => [
-                'id' => $project->id,
-                'name' => $project->name,
-                'description' => $project->description,
-                'updated_at' => $project->updated_at?->toISOString(),
-            ]),
+            'projects' => $projects->map($toCard),
+            'examples' => $examples->map($toCard),
         ]);
+    }
+
+    /**
+     * Copy a project the user is allowed to view (their own or a public
+     * example) into a new project they own and can edit freely.
+     */
+    public function clone(Request $request, Project $project): JsonResponse
+    {
+        $this->authorize('view', $project);
+
+        $copy = $request->user()->projects()->create([
+            'name' => $project->name,
+            'description' => $project->description,
+            'components' => $project->components ?? [],
+            'wires' => $project->wires ?? [],
+            'code' => $project->code ?? '',
+            'is_public' => false,
+        ]);
+
+        return response()->json($copy->toClientArray(), 201);
     }
 
     public function store(Request $request): JsonResponse

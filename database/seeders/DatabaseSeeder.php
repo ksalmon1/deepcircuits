@@ -21,5 +21,6 @@ class DatabaseSeeder extends Seeder
         );
 
         $this->call(ComponentLibrarySeeder::class);
+        $this->call(ProjectExampleSeeder::class);
     }
 }
