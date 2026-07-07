@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\ComponentLibraryController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\SketchCompileController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -26,6 +27,9 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/api/components', [ComponentLibraryController::class, 'index'])->name('components.index');
     Route::get('/api/components/{component}', [ComponentLibraryController::class, 'show'])->name('components.show');
+
+    // Local sketch compilation (arduino-cli on this server; code stays local)
+    Route::post('/api/compile', [SketchCompileController::class, 'compile'])->name('sketch.compile');
 
     // Profile
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

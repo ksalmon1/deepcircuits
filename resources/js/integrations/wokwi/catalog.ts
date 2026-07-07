@@ -11,6 +11,7 @@
  */
 import '@wokwi/elements';
 
+import type { ArduinoUnoElement } from '@wokwi/elements/dist/esm/arduino-uno-element';
 import type { LEDElement } from '@wokwi/elements/dist/esm/led-element';
 import type { RGBLedElement } from '@wokwi/elements/dist/esm/rgb-led-element';
 import type { ResistorElement } from '@wokwi/elements/dist/esm/resistor-element';
@@ -63,6 +64,21 @@ export interface WokwiPartSpec {
   ) => () => void;
 }
 
+/** Momentary press/release wiring shared by the pushbutton variants. */
+function bindPressEvents(
+  element: HTMLElement,
+  updateAttributes: (patch: Record<string, unknown>) => void,
+): () => void {
+  const press = () => updateAttributes({ closed: true });
+  const release = () => updateAttributes({ closed: false });
+  element.addEventListener('button-press', press);
+  element.addEventListener('button-release', release);
+  return () => {
+    element.removeEventListener('button-press', press);
+    element.removeEventListener('button-release', release);
+  };
+}
+
 /**
  * Interactive behaviours for the parts whose visuals react to simulation
  * state or whose controls write back into component attributes.
@@ -110,10 +126,25 @@ const behaviors: Record<string, Pick<WokwiPartSpec, 'applyState' | 'bindEvents'>
         button.color = attributes.color;
       }
     },
+    bindEvents: bindPressEvents,
   },
   'pushbutton-6mm': {
     applyState(element, _attributes, activeStates) {
       (element as Pushbutton6mmElement).pressed = activeStates.includes('closed');
+    },
+    bindEvents: bindPressEvents,
+  },
+  'arduino-uno': {
+    // The emulated board's own indicators: the pin-13 LED follows the
+    // solved voltage on pin 13, and the power LED lights whenever the
+    // simulation has produced results for the board.
+    applyState(element, _attributes, _activeStates, pinVoltages, pins) {
+      const uno = element as ArduinoUnoElement;
+      const powered = !!pinVoltages && Object.keys(pinVoltages).length > 0;
+      uno.ledPower = powered;
+      const pin13 = pins?.find((pin) => pin.name === '13');
+      const volts = pin13 ? pinVoltages?.[pin13.id] : undefined;
+      uno.led13 = powered && volts !== undefined && volts > 2.5;
     },
   },
   'slide-switch': {

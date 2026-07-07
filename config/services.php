@@ -35,4 +35,13 @@ return [
         ],
     ],
 
+    // Local Arduino sketch compiler (never sends code off this machine).
+    // data_dir points at the Arduino15 directory holding the installed
+    // cores; setting it explicitly lets the compiler run even when the
+    // server process has no resolvable home directory.
+    'arduino_cli' => [
+        'path' => env('ARDUINO_CLI_PATH', 'arduino-cli'),
+        'data_dir' => env('ARDUINO_CLI_DATA_DIR'),
+    ],
+
 ];
