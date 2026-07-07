@@ -729,6 +729,16 @@ const CircuitCanvasInner: React.FC<CircuitCanvasProps> = ({
           <Controls />
           <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
         </ReactFlow>
+        {circuitComponents.length === 0 && (
+          <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
+            <div className="rounded-lg border border-dashed border-gray-300 bg-white/85 px-6 py-4 text-center shadow-sm">
+              <p className="text-sm font-medium text-gray-600">Your canvas is empty</p>
+              <p className="mt-1 text-sm text-gray-500">
+                Drag a part from the library on the left to get started.
+              </p>
+            </div>
+          </div>
+        )}
       </ReactFlowProvider>
     </div>
   );

@@ -97,7 +97,11 @@
     box-sizing: border-box;
   }
 
-  html, body, #root {
+  /* Inertia mounts into #app (see @inertia in app.blade.php); #root only
+     existed in the pre-Laravel SPA. Without #app here the editor's h-full
+     chain resolves against content height and the canvas overflows the
+     viewport instead of filling it. */
+  html, body, #app, #root {
     height: 100%;
     width: 100%;
   }
