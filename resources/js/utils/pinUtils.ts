@@ -158,6 +158,18 @@ export const getSignalColor = (signal?: string): string => {
 };
 
 /**
+ * The identity of a pin for wiring and simulation: the stable handle_id from
+ * the component library when present, otherwise the pin's position index.
+ * Wire endpoints (React Flow handles) and the SPICE pin->node mapping must
+ * both resolve pins through this so they always agree.
+ * @param pin - The pin (may lack handle_id for admin-created components)
+ * @param index - The pin's index within its component
+ * @returns The handle id string, e.g. 'pin-0'
+ */
+export const pinHandleId = (pin: { handle_id?: string }, index: number): string =>
+  pin.handle_id || `pin-${index}`;
+
+/**
  * Ensures every pin has an id and a signals array, preserving all other fields
  * @param pins - Possibly missing/partial pins from the DB or a flow node
  * @returns Normalized array of pins

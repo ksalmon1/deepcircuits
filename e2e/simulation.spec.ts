@@ -22,6 +22,11 @@ function sourceCurrent(currents: Record<string, number>): number {
   return Math.abs(values[0]);
 }
 
+/** The LED element's 'value' property drives its glow. */
+function ledValue(page: Page) {
+  return page.locator('.react-flow wokwi-led').evaluate((el) => (el as HTMLElement & { value: boolean }).value);
+}
+
 test('voltage divider: 9V across 1k + 2k gives 6V midpoint and 3mA', async ({ page }) => {
   const b = new CircuitBuilder();
   await b.load(page.request);
@@ -96,11 +101,8 @@ test('LED + 1k resistor on 9V: realistic forward drop and lit LED', async ({ pag
   const expectedCurrent = (9 - (anodeVoltage as number)) / 1000;
   expect(Math.abs(current - expectedCurrent)).toBeLessThanOrEqual(0.0003);
 
-  // The LED SVG must actually light up: state rule 'on: voltage > 1.5'.
-  const ledSvg = page.locator(`svg[data-component-id="${led.id}"]`);
-  await expect(ledSvg).toHaveAttribute('data-is-on', 'true', { timeout: 15_000 });
-  // And its animatable body must switch to the lit fill.
-  await expect(page.locator(`svg[data-component-id="${led.id}"] #led-body`)).toHaveAttribute('fill', '#ff2020');
+  // The LED must actually light up: state rule 'on: voltage > 1.5'.
+  await expect.poll(() => ledValue(page), { timeout: 15_000 }).toBe(true);
 });
 
 test('capacitor blocks DC: no current, full supply across the cap', async ({ page }) => {
@@ -180,6 +182,59 @@ test('silicon diode: ~0.55-0.75V forward drop in series with 1k on 5V', async ({
   expect(Math.abs(current - (cathode as number) / 1000)).toBeLessThanOrEqual(0.0002);
 });
 
+test('stopping the simulation turns everything off: LED dark, no flow', async ({ page }) => {
+  const b = new CircuitBuilder();
+  await b.load(page.request);
+
+  const bat = b.place('voltagesource', { top: 300, left: 150 });
+  const r = b.place('resistor', { top: 100, left: 150 }, { resistance: '1k' });
+  const led = b.place('led', { top: 100, left: 450 });
+  const wires = [
+    wire(bat, 0, r, 0),
+    wire(r, 1, led, 0),
+    wire(led, 1, bat, 1),
+  ];
+
+  const projectId = await createCircuitProject(page, 'E2E stop clears', [bat, r, led], wires);
+  await runSimulation(page, projectId);
+
+  await expect.poll(() => ledValue(page), { timeout: 15_000 }).toBe(true);
+  await expect(page.locator('.wire-flow-indicator')).toHaveCount(3);
+
+  // Stop: the LED must go dark (no stale window.lastCircuitSummary
+  // fallback) and the flow indicators must disappear.
+  await page.getByRole('button', { name: 'Stop' }).click();
+  await expect.poll(() => ledValue(page), { timeout: 10_000 }).toBe(false);
+  await expect(page.locator('.wire-flow-indicator')).toHaveCount(0);
+});
+
+test('a reversed LED blocks the circuit: dark LED, no current, no flow', async ({ page }) => {
+  const b = new CircuitBuilder();
+  await b.load(page.request);
+
+  const bat = b.place('voltagesource', { top: 300, left: 150 });
+  const r = b.place('resistor', { top: 100, left: 150 }, { resistance: '1k' });
+  const led = b.place('led', { top: 100, left: 450 });
+
+  // Backwards: resistor into the cathode, anode to battery negative.
+  const wires = [
+    wire(bat, 0, r, 0),
+    wire(r, 1, led, 1), // resistor -> CATHODE
+    wire(led, 0, bat, 1), // ANODE -> battery negative
+  ];
+
+  const projectId = await createCircuitProject(page, 'E2E reversed led', [bat, r, led], wires);
+  const results = await runSimulation(page, projectId);
+
+  // Only diode leakage flows (picoamps).
+  expect(sourceCurrent(results.currents)).toBeLessThanOrEqual(1e-9);
+
+  // The LED must stay dark - the abs-voltage summary fallback used to
+  // light it - and no wire may claim energy flow.
+  await expect.poll(() => ledValue(page)).toBe(false);
+  await expect(page.locator('.wire-flow-indicator')).toHaveCount(0);
+});
+
 test('LED stays dark below threshold: 1V supply cannot light a 1.8V LED', async ({ page }) => {
   const b = new CircuitBuilder();
   await b.load(page.request);
@@ -200,6 +255,5 @@ test('LED stays dark below threshold: 1V supply cannot light a 1.8V LED', async 
   expectNode(results.voltages, 1, 0.02);
   // Nearly no current flows; the LED must stay dark.
   expect(sourceCurrent(results.currents)).toBeLessThanOrEqual(0.0005);
-  const ledSvg = page.locator(`svg[data-component-id="${led.id}"]`);
-  await expect(ledSvg).toHaveAttribute('data-is-on', 'false');
+  await expect.poll(() => ledValue(page)).toBe(false);
 });

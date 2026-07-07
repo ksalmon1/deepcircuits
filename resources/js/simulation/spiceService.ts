@@ -80,6 +80,17 @@ export function parseSpiceNumber(value: unknown, fallback = 0): number {
 // photoresistor, and thermistor differ only in artwork and state rules.
 const RESISTIVE_TYPES = new Set(['resistor', 'photoresistor', 'thermistor', 'lamp', 'buzzer', 'fuse']);
 
+/**
+ * Resolve the type used for SPICE modelling. Components whose visual type
+ * differs from their electrical behaviour (e.g. Wokwi parts like
+ * 'wokwi-pushbutton') carry a 'spiceType' property naming the model to use.
+ */
+function resolveSpiceType(comp: AppComponentModel): string {
+    const spiceType = comp.properties?.spiceType;
+    if (typeof spiceType === 'string' && spiceType) return spiceType.toLowerCase();
+    return comp.type.toLowerCase();
+}
+
 export function generateNetlist(componentsWithNodes: ComponentWithSpiceConnections[]): string {
     // Remove verbose logging
     // console.log("Generating netlist using pre-mapped SPICE nodes:", JSON.stringify(componentsWithNodes, null, 2));
@@ -102,7 +113,7 @@ export function generateNetlist(componentsWithNodes: ComponentWithSpiceConnectio
         const spiceId = comp.id.replace(/-/g, '');
         let prefix = '?';
 
-        const type = comp.type.toLowerCase();
+        const type = resolveSpiceType(comp);
 
         if (RESISTIVE_TYPES.has(type)) {
             deviceLines += `R${spiceId} ${nodes} ${props.resistance !== undefined ? props.resistance : '1k'}\n`;
@@ -165,7 +176,9 @@ export function generateNetlist(componentsWithNodes: ComponentWithSpiceConnectio
                 prefix = 'D';
                 // One model per device so differently-parameterized diodes
                 // in the same circuit don't silently share the first model.
-                modelName = `${comp.type.toUpperCase()}_${spiceId}`;
+                // Use the resolved type: SPICE model names must not contain
+                // hyphens (e.g. 'wokwi-led' models as LED).
+                modelName = `${type.toUpperCase()}_${spiceId}`;
                 valueString = ` ${modelName}`;
                 if (!addedModels.has(modelName)) {
                     // Get the model parameters, using provided values or defaults
@@ -190,12 +203,49 @@ export function generateNetlist(componentsWithNodes: ComponentWithSpiceConnectio
                     addedModels.add(modelName);
                 }
                 break;
+            case 'slideswitch': {
+                // SPDT slide switch, pins [1, Common, 2]: the common pin
+                // connects to side 1 when open ('closed' false) or side 2
+                // when toggled.
+                const closed = props.closed === true || props.closed === 'true';
+                const [n1, nCom, n2] = comp.spiceConnections;
+                if (n1 === undefined || nCom === undefined || n2 === undefined) {
+                    console.warn(`Slide switch ${comp.id} needs 3 pins. Skipping.`);
+                    return;
+                }
+                deviceLines += `R${spiceId}a ${n1} ${nCom} ${closed ? '1e9' : '1e-3'}\n`;
+                deviceLines += `R${spiceId}b ${nCom} ${n2} ${closed ? '1e-3' : '1e9'}\n`;
+                return;
+            }
+            case 'rgbled': {
+                // Common-cathode RGB LED, pins [R, Common, G, B]: three
+                // diodes sharing one model.
+                const [nR, nCom, nG, nB] = comp.spiceConnections;
+                if (nR === undefined || nCom === undefined || nG === undefined || nB === undefined) {
+                    console.warn(`RGB LED ${comp.id} needs 4 pins. Skipping.`);
+                    return;
+                }
+                modelName = `RGBLED_${spiceId}`;
+                if (!addedModels.has(modelName)) {
+                    const Is = props.Is !== undefined ? `Is=${props.Is}` : 'Is=1e-18';
+                    const n = props.n !== undefined ? `n=${props.n}` : 'n=1.8';
+                    const Vj = props.Vf !== undefined ? ` Vj=${props.Vf}` : '';
+                    modelStatements += `.model ${modelName} D(${Is} ${n}${Vj})\n`;
+                    addedModels.add(modelName);
+                }
+                deviceLines += `D${spiceId}r ${nR} ${nCom} ${modelName}\n`;
+                deviceLines += `D${spiceId}g ${nG} ${nCom} ${modelName}\n`;
+                deviceLines += `D${spiceId}b ${nB} ${nCom} ${modelName}\n`;
+                return;
+            }
             case 'ground':
                 return;
             default:
-                prefix = comp.type.charAt(0).toUpperCase();
-                console.warn(`Netlist generation: Unhandled type '${comp.type}'. Using prefix '${prefix}'.`);
-                valueString = props.value !== undefined && props.value !== null ? ` ${props.value}` : '';
+                // Visual-only parts (displays, boards, sensor modules, ...)
+                // have no electrical model yet: leave them out of the
+                // netlist rather than emitting a bogus device line.
+                console.warn(`Netlist generation: no SPICE model for type '${comp.type}'. Skipping.`);
+                return;
         }
                 deviceLines += `${prefix}${spiceId} ${nodes}${valueString}\n`;
     });
@@ -240,7 +290,7 @@ export function generateNetlist(componentsWithNodes: ComponentWithSpiceConnectio
     netlist += "echo \"DEVICE CURRENTS:\"\n";
     // This assumes the voltage source has a specific ID from above
     const vsrcIds = componentsWithNodes
-        .filter(comp => comp.type.toLowerCase() === 'voltagesource' || comp.type.toLowerCase() === 'power')
+        .filter(comp => resolveSpiceType(comp) === 'voltagesource' || resolveSpiceType(comp) === 'power')
         .map(comp => {
             const prefix = 'V';
             const spiceId = comp.id.replace(/-/g, '');
@@ -253,7 +303,36 @@ export function generateNetlist(componentsWithNodes: ComponentWithSpiceConnectio
             netlist += `print @${id}[i]\n`;  // Use @device[i] syntax for device current
         });
     }
-    
+
+    // Branch currents for two-terminal devices (after the sources, so the
+    // first parsed current stays the source current). These drive the
+    // energy-flow direction shown on wires.
+    componentsWithNodes.forEach(comp => {
+        const type = resolveSpiceType(comp);
+        const spiceId = comp.id.replace(/-/g, '');
+        if (RESISTIVE_TYPES.has(type) || type === 'switch') {
+            netlist += `print @R${spiceId}[i]\n`;
+        } else if (type === 'led' || type === 'diode' || type === 'zener') {
+            netlist += `print @D${spiceId}[id]\n`;
+        } else if (type === 'potentiometer') {
+            // Both halves of the track, so each of the three pins gets a current.
+            netlist += `print @R${spiceId}aw[i]\n`;
+            netlist += `print @R${spiceId}wb[i]\n`;
+        } else if (type === 'slideswitch') {
+            netlist += `print @R${spiceId}a[i]\n`;
+            netlist += `print @R${spiceId}b[i]\n`;
+        } else if (type === 'rgbled') {
+            netlist += `print @D${spiceId}r[id]\n`;
+            netlist += `print @D${spiceId}g[id]\n`;
+            netlist += `print @D${spiceId}b[id]\n`;
+        } else if (type === 'inductor') {
+            // Inductors get an MNA branch vector, printable via i().
+            netlist += `print i(L${spiceId})\n`;
+        } else if (type === 'currentsource') {
+            netlist += `print @I${spiceId}[dc]\n`;
+        }
+    });
+
     // End output section
     netlist += "echo \"--- END SIMULATION RESULTS ---\"\n";
     netlist += ".endc\n";
@@ -343,7 +422,8 @@ function parseSimulationResults(stdout: string, stderr: string): SimulationResul
             // Handle both i(device) and @device[i] syntax
             let currentPart = trimmed.match(/i\(([^)]+)\)\s*=\s*([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)/i);
             if (!currentPart) {
-                currentPart = trimmed.match(/@([^[]+)\[i\]\s*=\s*([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)/i);
+                // @dev[i] for R/V devices, @dev[id] for diodes, @dev[dc] for current sources
+                currentPart = trimmed.match(/@([^[]+)\[(?:id?|dc)\]\s*=\s*([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)/i);
             }
             
             if (currentPart) {
@@ -450,7 +530,7 @@ export function formatSimulationResults(results: SimulationResults, componentsWi
     
     // Find a source as the starting point for the walk-through summary.
     const voltageSources = componentsWithNodes.filter(
-        comp => ['voltagesource', 'power', 'currentsource'].includes(comp.type.toLowerCase())
+        comp => ['voltagesource', 'power', 'currentsource'].includes(resolveSpiceType(comp))
     );
 
     if (voltageSources.length === 0) {

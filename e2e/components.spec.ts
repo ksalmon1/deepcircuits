@@ -91,12 +91,12 @@ test('zener diode regulates a 9V supply down to ~5.1V', async ({ page }) => {
   expect(Math.abs(current - (9 - (cathode as number)) / 1000)).toBeLessThanOrEqual(0.0005);
 });
 
-test('switch: double-click closes the circuit and lights the lamp live', async ({ page }) => {
+test('pushbutton: double-click closes the circuit and lights the lamp live', async ({ page }) => {
   const b = new CircuitBuilder();
   await b.load(page.request);
 
   const bat = b.place('voltagesource', { top: 100, left: 100 });
-  const sw = b.place('switch', { top: 100, left: 300 });
+  const sw = b.place('pushbutton', { top: 100, left: 300 });
   const lamp = b.place('lamp', { top: 100, left: 500 });
 
   const wires = [
@@ -105,26 +105,57 @@ test('switch: double-click closes the circuit and lights the lamp live', async (
     wire(lamp, 1, bat, 1),
   ];
 
-  const projectId = await createCircuitProject(page, 'E2E switch', [bat, sw, lamp], wires);
+  const projectId = await createCircuitProject(page, 'E2E pushbutton lamp', [bat, sw, lamp], wires);
   const results = await runSimulation(page, projectId);
 
-  // Switch is open: essentially no current, lamp dark, lever shown open.
+  // Button is open: essentially no current, lamp dark, button released.
   expect(Math.abs(Object.values(results.currents)[0] ?? 0)).toBeLessThanOrEqual(1e-6);
   const lampSvg = page.locator(`svg[data-component-id="${lamp.id}"]`);
   await expect(lampSvg).toHaveAttribute('data-is-on', 'false');
-  await expect(page.locator(`svg[data-component-id="${sw.id}"] #sw-lever-closed`)).toHaveAttribute('opacity', '0');
+  const pressed = () =>
+    page.locator('.react-flow wokwi-pushbutton').evaluate((el) => (el as HTMLElement & { pressed: boolean }).pressed);
+  expect(await pressed()).toBe(false);
 
-  // Double-click the switch on the canvas: the simulation is live, so the
+  // Double-click the button on the canvas: the simulation is live, so the
   // circuit re-runs and the lamp lights up.
   await clearSimResults(page);
   await page.locator(`.react-flow__node[data-id="${sw.id}"]`).dblclick();
-  await expect(page.locator(`svg[data-component-id="${sw.id}"] #sw-lever-closed`)).toHaveAttribute('opacity', '1');
+  await expect.poll(pressed).toBe(true);
 
   const closedResults = await waitForSimResults(page);
   // 9V across the 100Ω lamp: 90mA.
   expect(Math.abs(Math.abs(Object.values(closedResults.currents)[0] ?? 0) - 0.09)).toBeLessThanOrEqual(0.001);
   await expect(lampSvg).toHaveAttribute('data-is-on', 'true', { timeout: 30_000 });
   await expect(page.locator(`svg[data-component-id="${lamp.id}"] #lamp-bulb`)).toHaveAttribute('fill', '#ffd93b');
+});
+
+test('slide switch: routes the common pin between its two sides', async ({ page }) => {
+  const b = new CircuitBuilder();
+  await b.load(page.request);
+
+  const bat = b.place('voltagesource', { top: 100, left: 100 });
+  const sw = b.place('slide-switch', { top: 100, left: 300 });
+  const r = b.place('resistor', { top: 100, left: 500 }, { resistance: '1k' });
+
+  // Battery+ -> Pin 1 (side 1); Common -> load. Open state connects
+  // Common to side 1, so current flows; toggled it switches to side 2.
+  const wires = [
+    wire(bat, 0, sw, 0), // + -> Pin 1
+    wire(sw, 1, r, 0), // Common -> load
+    wire(r, 1, bat, 1),
+  ];
+
+  const projectId = await createCircuitProject(page, 'E2E slide switch', [bat, sw, r], wires);
+  const results = await runSimulation(page, projectId);
+
+  // Common connected to side 1: I = 9V / 1k = 9mA.
+  expect(Math.abs(Math.abs(Object.values(results.currents)[0] ?? 0) - 0.009)).toBeLessThanOrEqual(0.0002);
+
+  // Toggle: common moves to side 2 (unwired) and the circuit opens.
+  await clearSimResults(page);
+  await page.locator(`.react-flow__node[data-id="${sw.id}"]`).dblclick();
+  const toggledResults = await waitForSimResults(page);
+  expect(Math.abs(Object.values(toggledResults.currents)[0] ?? 0)).toBeLessThanOrEqual(1e-6);
 });
 
 test('buzzer activates above its 1V threshold', async ({ page }) => {
@@ -146,9 +177,12 @@ test('buzzer activates above its 1V threshold', async ({ page }) => {
 
   // Divider: 9 * 100 / 570 = 1.58V across the buzzer -> above threshold.
   expectNode(results.voltages, 1.58, 0.02);
-  const buzzerSvg = page.locator(`svg[data-component-id="${buz.id}"]`);
-  await expect(buzzerSvg).toHaveAttribute('data-active-states', /on/, { timeout: 30_000 });
-  await expect(page.locator(`svg[data-component-id="${buz.id}"] #buzzer-waves`)).toHaveAttribute('opacity', '1');
+  // The buzzer element's hasSignal property drives its "sounding" visual.
+  await expect
+    .poll(async () => page.locator('.react-flow wokwi-buzzer').evaluate((el) => (el as HTMLElement & { hasSignal: boolean }).hasSignal), {
+      timeout: 30_000,
+    })
+    .toBe(true);
 });
 
 test('fuse shows blown above its 1A rating', async ({ page }) => {

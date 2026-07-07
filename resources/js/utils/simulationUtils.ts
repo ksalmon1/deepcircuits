@@ -18,7 +18,13 @@ export type PinVoltages = {
 
 export type ComponentSimulationState = {
   pinVoltages?: PinVoltages;
-  // pinCurrents?: PinCurrents; // Future
+  /**
+   * Current entering the component at each pin (keyed by pin index), in
+   * amps. Positive means current flows from the wire into the component.
+   * Derived from device branch currents (SPICE convention: positive branch
+   * current enters the device's first node).
+   */
+  pinCurrents?: { [pinIndex: number]: number };
   // Add other component-specific states if needed, e.g., 'isOn' for LED
   isOn?: boolean;
   activeStates?: string[]; // Animation states that are currently active

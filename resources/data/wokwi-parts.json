@@ -1,0 +1,4778 @@
+[
+  {
+    "type": "7segment",
+    "tag": "wokwi-7segment",
+    "name": "7-Segment Display",
+    "category": "Displays",
+    "description": "7-Segment Display (visual only for now)",
+    "pins": [
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "COM.1",
+        "x": 23.72,
+        "y": 71.82,
+        "handle_id": "pin-0"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "COM.2",
+        "x": 23.72,
+        "y": 3.78,
+        "handle_id": "pin-1"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "A",
+        "x": 33.32,
+        "y": 3.78,
+        "handle_id": "pin-2"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "B",
+        "x": 42.92,
+        "y": 3.78,
+        "handle_id": "pin-3"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "C",
+        "x": 33.32,
+        "y": 71.82,
+        "handle_id": "pin-4"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "D",
+        "x": 14.12,
+        "y": 71.82,
+        "handle_id": "pin-5"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "E",
+        "x": 4.52,
+        "y": 71.82,
+        "handle_id": "pin-6"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "F",
+        "x": 14.12,
+        "y": 3.78,
+        "handle_id": "pin-7"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "G",
+        "x": 4.52,
+        "y": 3.78,
+        "handle_id": "pin-8"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "DP",
+        "x": 42.92,
+        "y": 71.82,
+        "handle_id": "pin-9"
+      }
+    ],
+    "properties": {}
+  },
+  {
+    "type": "analog-joystick",
+    "tag": "wokwi-analog-joystick",
+    "name": "Analog Joystick",
+    "category": "Input Controls",
+    "description": "Analog Joystick (visual only for now)",
+    "pins": [
+      {
+        "signals": [
+          "power"
+        ],
+        "name": "VCC",
+        "x": 33,
+        "y": 115.8,
+        "handle_id": "pin-0"
+      },
+      {
+        "signals": [
+          "analog"
+        ],
+        "name": "VERT",
+        "x": 42.6,
+        "y": 115.8,
+        "handle_id": "pin-1"
+      },
+      {
+        "signals": [
+          "analog"
+        ],
+        "name": "HORZ",
+        "x": 52.2,
+        "y": 115.8,
+        "handle_id": "pin-2"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "SEL",
+        "x": 61.8,
+        "y": 115.8,
+        "handle_id": "pin-3"
+      },
+      {
+        "signals": [
+          "ground"
+        ],
+        "name": "GND",
+        "x": 71.4,
+        "y": 115.8,
+        "handle_id": "pin-4"
+      }
+    ],
+    "properties": {}
+  },
+  {
+    "type": "arduino-mega",
+    "tag": "wokwi-arduino-mega",
+    "name": "Arduino Mega",
+    "category": "Boards",
+    "description": "Arduino Mega (visual only for now)",
+    "pins": [
+      {
+        "signals": [
+          "i2c"
+        ],
+        "name": "SCL",
+        "x": 90,
+        "y": 9,
+        "handle_id": "pin-0"
+      },
+      {
+        "signals": [
+          "i2c"
+        ],
+        "name": "SDA",
+        "x": 100,
+        "y": 9,
+        "handle_id": "pin-1"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "AREF",
+        "x": 109,
+        "y": 9,
+        "handle_id": "pin-2"
+      },
+      {
+        "signals": [
+          "ground"
+        ],
+        "name": "GND.1",
+        "x": 119,
+        "y": 9,
+        "handle_id": "pin-3"
+      },
+      {
+        "signals": [
+          "pwm"
+        ],
+        "name": "13",
+        "x": 129,
+        "y": 9,
+        "handle_id": "pin-4"
+      },
+      {
+        "signals": [
+          "pwm"
+        ],
+        "name": "12",
+        "x": 138,
+        "y": 9,
+        "handle_id": "pin-5"
+      },
+      {
+        "signals": [
+          "pwm"
+        ],
+        "name": "11",
+        "x": 148,
+        "y": 9,
+        "handle_id": "pin-6"
+      },
+      {
+        "signals": [
+          "pwm"
+        ],
+        "name": "10",
+        "x": 157.5,
+        "y": 9,
+        "handle_id": "pin-7"
+      },
+      {
+        "signals": [
+          "pwm"
+        ],
+        "name": "9",
+        "x": 167.5,
+        "y": 9,
+        "handle_id": "pin-8"
+      },
+      {
+        "signals": [
+          "pwm"
+        ],
+        "name": "8",
+        "x": 177,
+        "y": 9,
+        "handle_id": "pin-9"
+      },
+      {
+        "signals": [
+          "pwm"
+        ],
+        "name": "7",
+        "x": 190,
+        "y": 9,
+        "handle_id": "pin-10"
+      },
+      {
+        "signals": [
+          "pwm"
+        ],
+        "name": "6",
+        "x": 200,
+        "y": 9,
+        "handle_id": "pin-11"
+      },
+      {
+        "signals": [
+          "pwm"
+        ],
+        "name": "5",
+        "x": 209.5,
+        "y": 9,
+        "handle_id": "pin-12"
+      },
+      {
+        "signals": [
+          "pwm"
+        ],
+        "name": "4",
+        "x": 219,
+        "y": 9,
+        "handle_id": "pin-13"
+      },
+      {
+        "signals": [
+          "pwm"
+        ],
+        "name": "3",
+        "x": 228.5,
+        "y": 9,
+        "handle_id": "pin-14"
+      },
+      {
+        "signals": [
+          "pwm"
+        ],
+        "name": "2",
+        "x": 238,
+        "y": 9,
+        "handle_id": "pin-15"
+      },
+      {
+        "signals": [
+          "usart"
+        ],
+        "name": "1",
+        "x": 247.5,
+        "y": 9,
+        "handle_id": "pin-16"
+      },
+      {
+        "signals": [
+          "usart"
+        ],
+        "name": "0",
+        "x": 257.5,
+        "y": 9,
+        "handle_id": "pin-17"
+      },
+      {
+        "signals": [
+          "usart"
+        ],
+        "name": "14",
+        "x": 270.5,
+        "y": 9,
+        "handle_id": "pin-18"
+      },
+      {
+        "signals": [
+          "usart"
+        ],
+        "name": "15",
+        "x": 280,
+        "y": 9,
+        "handle_id": "pin-19"
+      },
+      {
+        "signals": [
+          "usart"
+        ],
+        "name": "16",
+        "x": 289.5,
+        "y": 9,
+        "handle_id": "pin-20"
+      },
+      {
+        "signals": [
+          "usart"
+        ],
+        "name": "17",
+        "x": 299,
+        "y": 9,
+        "handle_id": "pin-21"
+      },
+      {
+        "signals": [
+          "usart"
+        ],
+        "name": "18",
+        "x": 308.5,
+        "y": 9,
+        "handle_id": "pin-22"
+      },
+      {
+        "signals": [
+          "usart"
+        ],
+        "name": "19",
+        "x": 318.5,
+        "y": 9,
+        "handle_id": "pin-23"
+      },
+      {
+        "signals": [
+          "i2c"
+        ],
+        "name": "20",
+        "x": 328,
+        "y": 9,
+        "handle_id": "pin-24"
+      },
+      {
+        "signals": [
+          "i2c"
+        ],
+        "name": "21",
+        "x": 337.5,
+        "y": 9,
+        "handle_id": "pin-25"
+      },
+      {
+        "signals": [
+          "power"
+        ],
+        "name": "5V.1",
+        "x": 361,
+        "y": 8,
+        "handle_id": "pin-26"
+      },
+      {
+        "signals": [
+          "power"
+        ],
+        "name": "5V.2",
+        "x": 371,
+        "y": 8,
+        "handle_id": "pin-27"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "22",
+        "x": 361,
+        "y": 17.5,
+        "handle_id": "pin-28"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "23",
+        "x": 371,
+        "y": 17.5,
+        "handle_id": "pin-29"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "24",
+        "x": 361,
+        "y": 27.25,
+        "handle_id": "pin-30"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "25",
+        "x": 371,
+        "y": 27.25,
+        "handle_id": "pin-31"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "26",
+        "x": 361,
+        "y": 36.75,
+        "handle_id": "pin-32"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "27",
+        "x": 371,
+        "y": 36.75,
+        "handle_id": "pin-33"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "28",
+        "x": 361,
+        "y": 46.25,
+        "handle_id": "pin-34"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "29",
+        "x": 371,
+        "y": 46.25,
+        "handle_id": "pin-35"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "30",
+        "x": 361,
+        "y": 56,
+        "handle_id": "pin-36"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "31",
+        "x": 371,
+        "y": 56,
+        "handle_id": "pin-37"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "32",
+        "x": 361,
+        "y": 65.5,
+        "handle_id": "pin-38"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "33",
+        "x": 371,
+        "y": 65.5,
+        "handle_id": "pin-39"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "34",
+        "x": 361,
+        "y": 75,
+        "handle_id": "pin-40"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "35",
+        "x": 371,
+        "y": 75,
+        "handle_id": "pin-41"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "36",
+        "x": 361,
+        "y": 84.5,
+        "handle_id": "pin-42"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "37",
+        "x": 371,
+        "y": 84.5,
+        "handle_id": "pin-43"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "38",
+        "x": 361,
+        "y": 94.25,
+        "handle_id": "pin-44"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "39",
+        "x": 371,
+        "y": 94.25,
+        "handle_id": "pin-45"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "40",
+        "x": 361,
+        "y": 103.75,
+        "handle_id": "pin-46"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "41",
+        "x": 371,
+        "y": 103.75,
+        "handle_id": "pin-47"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "42",
+        "x": 361,
+        "y": 113.5,
+        "handle_id": "pin-48"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "43",
+        "x": 371,
+        "y": 113.5,
+        "handle_id": "pin-49"
+      },
+      {
+        "signals": [
+          "pwm"
+        ],
+        "name": "44",
+        "x": 361,
+        "y": 123,
+        "handle_id": "pin-50"
+      },
+      {
+        "signals": [
+          "pwm"
+        ],
+        "name": "45",
+        "x": 371,
+        "y": 123,
+        "handle_id": "pin-51"
+      },
+      {
+        "signals": [
+          "pwm"
+        ],
+        "name": "46",
+        "x": 361,
+        "y": 132.75,
+        "handle_id": "pin-52"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "47",
+        "x": 371,
+        "y": 132.75,
+        "handle_id": "pin-53"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "48",
+        "x": 361,
+        "y": 142.25,
+        "handle_id": "pin-54"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "49",
+        "x": 371,
+        "y": 142.25,
+        "handle_id": "pin-55"
+      },
+      {
+        "signals": [
+          "spi"
+        ],
+        "name": "50",
+        "x": 361,
+        "y": 152,
+        "handle_id": "pin-56"
+      },
+      {
+        "signals": [
+          "spi"
+        ],
+        "name": "51",
+        "x": 371,
+        "y": 152,
+        "handle_id": "pin-57"
+      },
+      {
+        "signals": [
+          "spi"
+        ],
+        "name": "52",
+        "x": 361,
+        "y": 161.5,
+        "handle_id": "pin-58"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "53",
+        "x": 371,
+        "y": 161.5,
+        "handle_id": "pin-59"
+      },
+      {
+        "signals": [
+          "ground"
+        ],
+        "name": "GND.4",
+        "x": 361,
+        "y": 171.25,
+        "handle_id": "pin-60"
+      },
+      {
+        "signals": [
+          "ground"
+        ],
+        "name": "GND.5",
+        "x": 371,
+        "y": 171.25,
+        "handle_id": "pin-61"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "IOREF",
+        "x": 136,
+        "y": 184.5,
+        "handle_id": "pin-62"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "RESET",
+        "x": 145.5,
+        "y": 184.5,
+        "handle_id": "pin-63"
+      },
+      {
+        "signals": [
+          "power"
+        ],
+        "name": "3.3V",
+        "x": 155,
+        "y": 184.5,
+        "handle_id": "pin-64"
+      },
+      {
+        "signals": [
+          "power"
+        ],
+        "name": "5V",
+        "x": 164.5,
+        "y": 184.5,
+        "handle_id": "pin-65"
+      },
+      {
+        "signals": [
+          "ground"
+        ],
+        "name": "GND.2",
+        "x": 174.25,
+        "y": 184.5,
+        "handle_id": "pin-66"
+      },
+      {
+        "signals": [
+          "ground"
+        ],
+        "name": "GND.3",
+        "x": 183.75,
+        "y": 184.5,
+        "handle_id": "pin-67"
+      },
+      {
+        "signals": [
+          "power"
+        ],
+        "name": "VIN",
+        "x": 193.5,
+        "y": 184.5,
+        "handle_id": "pin-68"
+      },
+      {
+        "signals": [
+          "analog"
+        ],
+        "name": "A0",
+        "x": 208.5,
+        "y": 184.5,
+        "handle_id": "pin-69"
+      },
+      {
+        "signals": [
+          "analog"
+        ],
+        "name": "A1",
+        "x": 218,
+        "y": 184.5,
+        "handle_id": "pin-70"
+      },
+      {
+        "signals": [
+          "analog"
+        ],
+        "name": "A2",
+        "x": 227.5,
+        "y": 184.5,
+        "handle_id": "pin-71"
+      },
+      {
+        "signals": [
+          "analog"
+        ],
+        "name": "A3",
+        "x": 237.25,
+        "y": 184.5,
+        "handle_id": "pin-72"
+      },
+      {
+        "signals": [
+          "analog"
+        ],
+        "name": "A4",
+        "x": 246.75,
+        "y": 184.5,
+        "handle_id": "pin-73"
+      },
+      {
+        "signals": [
+          "analog"
+        ],
+        "name": "A5",
+        "x": 256.25,
+        "y": 184.5,
+        "handle_id": "pin-74"
+      },
+      {
+        "signals": [
+          "analog"
+        ],
+        "name": "A6",
+        "x": 266,
+        "y": 184.5,
+        "handle_id": "pin-75"
+      },
+      {
+        "signals": [
+          "analog"
+        ],
+        "name": "A7",
+        "x": 275.5,
+        "y": 184.5,
+        "handle_id": "pin-76"
+      },
+      {
+        "signals": [
+          "analog"
+        ],
+        "name": "A8",
+        "x": 290.25,
+        "y": 184.5,
+        "handle_id": "pin-77"
+      },
+      {
+        "signals": [
+          "analog"
+        ],
+        "name": "A9",
+        "x": 300,
+        "y": 184.5,
+        "handle_id": "pin-78"
+      },
+      {
+        "signals": [
+          "analog"
+        ],
+        "name": "A10",
+        "x": 309.5,
+        "y": 184.5,
+        "handle_id": "pin-79"
+      },
+      {
+        "signals": [
+          "analog"
+        ],
+        "name": "A11",
+        "x": 319.25,
+        "y": 184.5,
+        "handle_id": "pin-80"
+      },
+      {
+        "signals": [
+          "analog"
+        ],
+        "name": "A12",
+        "x": 328.75,
+        "y": 184.5,
+        "handle_id": "pin-81"
+      },
+      {
+        "signals": [
+          "analog"
+        ],
+        "name": "A13",
+        "x": 338.5,
+        "y": 184.5,
+        "handle_id": "pin-82"
+      },
+      {
+        "signals": [
+          "analog"
+        ],
+        "name": "A14",
+        "x": 348,
+        "y": 184.5,
+        "handle_id": "pin-83"
+      },
+      {
+        "signals": [
+          "analog"
+        ],
+        "name": "A15",
+        "x": 357.75,
+        "y": 184.5,
+        "handle_id": "pin-84"
+      }
+    ],
+    "properties": {}
+  },
+  {
+    "type": "arduino-nano",
+    "tag": "wokwi-arduino-nano",
+    "name": "Arduino Nano",
+    "category": "Boards",
+    "description": "Arduino Nano (visual only for now)",
+    "pins": [
+      {
+        "signals": [
+          "spi"
+        ],
+        "name": "12",
+        "x": 19.7,
+        "y": 4.8,
+        "handle_id": "pin-0"
+      },
+      {
+        "signals": [
+          "spi",
+          "pwm"
+        ],
+        "name": "11",
+        "x": 29.3,
+        "y": 4.8,
+        "handle_id": "pin-1"
+      },
+      {
+        "signals": [
+          "spi",
+          "pwm"
+        ],
+        "name": "10",
+        "x": 38.9,
+        "y": 4.8,
+        "handle_id": "pin-2"
+      },
+      {
+        "signals": [
+          "pwm"
+        ],
+        "name": "9",
+        "x": 48.5,
+        "y": 4.8,
+        "handle_id": "pin-3"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "8",
+        "x": 58.1,
+        "y": 4.8,
+        "handle_id": "pin-4"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "7",
+        "x": 67.7,
+        "y": 4.8,
+        "handle_id": "pin-5"
+      },
+      {
+        "signals": [
+          "pwm"
+        ],
+        "name": "6",
+        "x": 77.3,
+        "y": 4.8,
+        "handle_id": "pin-6"
+      },
+      {
+        "signals": [
+          "pwm"
+        ],
+        "name": "5",
+        "x": 86.9,
+        "y": 4.8,
+        "handle_id": "pin-7"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "4",
+        "x": 96.5,
+        "y": 4.8,
+        "handle_id": "pin-8"
+      },
+      {
+        "signals": [
+          "pwm"
+        ],
+        "name": "3",
+        "x": 106.1,
+        "y": 4.8,
+        "handle_id": "pin-9"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "2",
+        "x": 115.7,
+        "y": 4.8,
+        "handle_id": "pin-10"
+      },
+      {
+        "signals": [
+          "ground"
+        ],
+        "name": "GND.2",
+        "x": 125.3,
+        "y": 4.8,
+        "handle_id": "pin-11"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "RESET.2",
+        "x": 134.9,
+        "y": 4.8,
+        "handle_id": "pin-12"
+      },
+      {
+        "signals": [
+          "usart"
+        ],
+        "name": "0",
+        "x": 144.5,
+        "y": 4.8,
+        "handle_id": "pin-13"
+      },
+      {
+        "signals": [
+          "usart"
+        ],
+        "name": "1",
+        "x": 154.1,
+        "y": 4.8,
+        "handle_id": "pin-14"
+      },
+      {
+        "signals": [
+          "spi"
+        ],
+        "name": "13",
+        "x": 19.7,
+        "y": 62.4,
+        "handle_id": "pin-15"
+      },
+      {
+        "signals": [
+          "power"
+        ],
+        "name": "3.3V",
+        "x": 29.3,
+        "y": 62.4,
+        "handle_id": "pin-16"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "AREF",
+        "x": 38.9,
+        "y": 62.4,
+        "handle_id": "pin-17"
+      },
+      {
+        "signals": [
+          "analog"
+        ],
+        "name": "A0",
+        "x": 48.5,
+        "y": 62.4,
+        "handle_id": "pin-18"
+      },
+      {
+        "signals": [
+          "analog"
+        ],
+        "name": "A1",
+        "x": 58.1,
+        "y": 62.4,
+        "handle_id": "pin-19"
+      },
+      {
+        "signals": [
+          "analog"
+        ],
+        "name": "A2",
+        "x": 67.7,
+        "y": 62.4,
+        "handle_id": "pin-20"
+      },
+      {
+        "signals": [
+          "analog"
+        ],
+        "name": "A3",
+        "x": 77.3,
+        "y": 62.4,
+        "handle_id": "pin-21"
+      },
+      {
+        "signals": [
+          "analog",
+          "i2c"
+        ],
+        "name": "A4",
+        "x": 86.9,
+        "y": 62.4,
+        "handle_id": "pin-22"
+      },
+      {
+        "signals": [
+          "analog",
+          "i2c"
+        ],
+        "name": "A5",
+        "x": 96.5,
+        "y": 62.4,
+        "handle_id": "pin-23"
+      },
+      {
+        "signals": [
+          "analog"
+        ],
+        "name": "A6",
+        "x": 106.1,
+        "y": 62.4,
+        "handle_id": "pin-24"
+      },
+      {
+        "signals": [
+          "analog"
+        ],
+        "name": "A7",
+        "x": 115.7,
+        "y": 62.4,
+        "handle_id": "pin-25"
+      },
+      {
+        "signals": [
+          "power"
+        ],
+        "name": "5V",
+        "x": 125.3,
+        "y": 62.4,
+        "handle_id": "pin-26"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "RESET",
+        "x": 134.9,
+        "y": 62.4,
+        "handle_id": "pin-27"
+      },
+      {
+        "signals": [
+          "ground"
+        ],
+        "name": "GND.1",
+        "x": 144.5,
+        "y": 62.4,
+        "handle_id": "pin-28"
+      },
+      {
+        "signals": [
+          "power"
+        ],
+        "name": "VIN",
+        "x": 154.1,
+        "y": 62.4,
+        "handle_id": "pin-29"
+      },
+      {
+        "signals": [
+          "spi"
+        ],
+        "name": "12.2",
+        "x": 163.7,
+        "y": 43.2,
+        "handle_id": "pin-30"
+      },
+      {
+        "signals": [
+          "power"
+        ],
+        "name": "5V.2",
+        "x": 154.1,
+        "y": 43.2,
+        "handle_id": "pin-31"
+      },
+      {
+        "signals": [
+          "spi"
+        ],
+        "name": "13.2",
+        "x": 163.7,
+        "y": 33.6,
+        "handle_id": "pin-32"
+      },
+      {
+        "signals": [
+          "spi",
+          "pwm"
+        ],
+        "name": "11.2",
+        "x": 154.1,
+        "y": 33.6,
+        "handle_id": "pin-33"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "RESET.3",
+        "x": 163.7,
+        "y": 24,
+        "handle_id": "pin-34"
+      },
+      {
+        "signals": [
+          "ground"
+        ],
+        "name": "GND.3",
+        "x": 154.1,
+        "y": 24,
+        "handle_id": "pin-35"
+      }
+    ],
+    "properties": {}
+  },
+  {
+    "type": "arduino-uno",
+    "tag": "wokwi-arduino-uno",
+    "name": "Arduino Uno",
+    "category": "Boards",
+    "description": "Arduino Uno (visual only for now)",
+    "pins": [
+      {
+        "signals": [
+          "analog",
+          "i2c"
+        ],
+        "name": "A5.2",
+        "x": 87,
+        "y": 9,
+        "handle_id": "pin-0"
+      },
+      {
+        "signals": [
+          "analog",
+          "i2c"
+        ],
+        "name": "A4.2",
+        "x": 97,
+        "y": 9,
+        "handle_id": "pin-1"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "AREF",
+        "x": 106,
+        "y": 9,
+        "handle_id": "pin-2"
+      },
+      {
+        "signals": [
+          "ground"
+        ],
+        "name": "GND.1",
+        "x": 115.5,
+        "y": 9,
+        "handle_id": "pin-3"
+      },
+      {
+        "signals": [
+          "spi"
+        ],
+        "name": "13",
+        "x": 125,
+        "y": 9,
+        "handle_id": "pin-4"
+      },
+      {
+        "signals": [
+          "spi"
+        ],
+        "name": "12",
+        "x": 134.5,
+        "y": 9,
+        "handle_id": "pin-5"
+      },
+      {
+        "signals": [
+          "spi",
+          "pwm"
+        ],
+        "name": "11",
+        "x": 144,
+        "y": 9,
+        "handle_id": "pin-6"
+      },
+      {
+        "signals": [
+          "spi",
+          "pwm"
+        ],
+        "name": "10",
+        "x": 153.5,
+        "y": 9,
+        "handle_id": "pin-7"
+      },
+      {
+        "signals": [
+          "pwm"
+        ],
+        "name": "9",
+        "x": 163,
+        "y": 9,
+        "handle_id": "pin-8"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "8",
+        "x": 173,
+        "y": 9,
+        "handle_id": "pin-9"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "7",
+        "x": 189,
+        "y": 9,
+        "handle_id": "pin-10"
+      },
+      {
+        "signals": [
+          "pwm"
+        ],
+        "name": "6",
+        "x": 198.5,
+        "y": 9,
+        "handle_id": "pin-11"
+      },
+      {
+        "signals": [
+          "pwm"
+        ],
+        "name": "5",
+        "x": 208,
+        "y": 9,
+        "handle_id": "pin-12"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "4",
+        "x": 217.5,
+        "y": 9,
+        "handle_id": "pin-13"
+      },
+      {
+        "signals": [
+          "pwm"
+        ],
+        "name": "3",
+        "x": 227,
+        "y": 9,
+        "handle_id": "pin-14"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "2",
+        "x": 236.5,
+        "y": 9,
+        "handle_id": "pin-15"
+      },
+      {
+        "signals": [
+          "usart"
+        ],
+        "name": "1",
+        "x": 246,
+        "y": 9,
+        "handle_id": "pin-16"
+      },
+      {
+        "signals": [
+          "usart"
+        ],
+        "name": "0",
+        "x": 255.5,
+        "y": 9,
+        "handle_id": "pin-17"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "IOREF",
+        "x": 131,
+        "y": 191.5,
+        "handle_id": "pin-18"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "RESET",
+        "x": 140.5,
+        "y": 191.5,
+        "handle_id": "pin-19"
+      },
+      {
+        "signals": [
+          "power"
+        ],
+        "name": "3.3V",
+        "x": 150,
+        "y": 191.5,
+        "handle_id": "pin-20"
+      },
+      {
+        "signals": [
+          "power"
+        ],
+        "name": "5V",
+        "x": 160,
+        "y": 191.5,
+        "handle_id": "pin-21"
+      },
+      {
+        "signals": [
+          "ground"
+        ],
+        "name": "GND.2",
+        "x": 169.5,
+        "y": 191.5,
+        "handle_id": "pin-22"
+      },
+      {
+        "signals": [
+          "ground"
+        ],
+        "name": "GND.3",
+        "x": 179,
+        "y": 191.5,
+        "handle_id": "pin-23"
+      },
+      {
+        "signals": [
+          "power"
+        ],
+        "name": "VIN",
+        "x": 188.5,
+        "y": 191.5,
+        "handle_id": "pin-24"
+      },
+      {
+        "signals": [
+          "analog"
+        ],
+        "name": "A0",
+        "x": 208,
+        "y": 191.5,
+        "handle_id": "pin-25"
+      },
+      {
+        "signals": [
+          "analog"
+        ],
+        "name": "A1",
+        "x": 217.5,
+        "y": 191.5,
+        "handle_id": "pin-26"
+      },
+      {
+        "signals": [
+          "analog"
+        ],
+        "name": "A2",
+        "x": 227,
+        "y": 191.5,
+        "handle_id": "pin-27"
+      },
+      {
+        "signals": [
+          "analog"
+        ],
+        "name": "A3",
+        "x": 236.5,
+        "y": 191.5,
+        "handle_id": "pin-28"
+      },
+      {
+        "signals": [
+          "analog",
+          "i2c"
+        ],
+        "name": "A4",
+        "x": 246,
+        "y": 191.5,
+        "handle_id": "pin-29"
+      },
+      {
+        "signals": [
+          "analog",
+          "i2c"
+        ],
+        "name": "A5",
+        "x": 255.5,
+        "y": 191.5,
+        "handle_id": "pin-30"
+      }
+    ],
+    "properties": {}
+  },
+  {
+    "type": "biaxial-stepper",
+    "tag": "wokwi-biaxial-stepper",
+    "name": "Biaxial Stepper",
+    "category": "Output & Actuators",
+    "description": "Biaxial Stepper (visual only for now)",
+    "pins": [
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "A1-",
+        "x": 45,
+        "y": 109.24,
+        "handle_id": "pin-0"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "A1+",
+        "x": 45,
+        "y": 118.84,
+        "handle_id": "pin-1"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "B1+",
+        "x": 45,
+        "y": 128.44,
+        "handle_id": "pin-2"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "B1-",
+        "x": 45,
+        "y": 138.05,
+        "handle_id": "pin-3"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "A2-",
+        "x": 45,
+        "y": 147.65,
+        "handle_id": "pin-4"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "A2+",
+        "x": 45,
+        "y": 157.25,
+        "handle_id": "pin-5"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "B2+",
+        "x": 45,
+        "y": 166.85,
+        "handle_id": "pin-6"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "B2-",
+        "x": 45,
+        "y": 176.45,
+        "handle_id": "pin-7"
+      }
+    ],
+    "properties": {}
+  },
+  {
+    "type": "big-sound-sensor",
+    "tag": "wokwi-big-sound-sensor",
+    "name": "Sound Sensor (Big)",
+    "category": "Sensors",
+    "description": "Sound Sensor (Big) (visual only for now)",
+    "pins": [
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "AOUT",
+        "x": 0,
+        "y": 11,
+        "handle_id": "pin-0"
+      },
+      {
+        "signals": [
+          "ground"
+        ],
+        "name": "GND",
+        "x": 0,
+        "y": 20.5,
+        "handle_id": "pin-1"
+      },
+      {
+        "signals": [
+          "power"
+        ],
+        "name": "VCC",
+        "x": 0,
+        "y": 30.5,
+        "handle_id": "pin-2"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "DOUT",
+        "x": 0,
+        "y": 40.5,
+        "handle_id": "pin-3"
+      }
+    ],
+    "properties": {}
+  },
+  {
+    "type": "buzzer",
+    "tag": "wokwi-buzzer",
+    "name": "Buzzer",
+    "category": "Output & Actuators",
+    "description": "Piezo buzzer (100 ohm): sounds above 1V",
+    "pins": [
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "Positive (+)",
+        "x": 27,
+        "y": 84,
+        "handle_id": "pin-0"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "Negative (-)",
+        "x": 37,
+        "y": 84,
+        "handle_id": "pin-1"
+      }
+    ],
+    "properties": {
+      "spiceType": "buzzer",
+      "resistance": 100,
+      "stateRules": {
+        "on": "voltage > 1"
+      }
+    }
+  },
+  {
+    "type": "dht22",
+    "tag": "wokwi-dht22",
+    "name": "Temp & Humidity Sensor",
+    "category": "Sensors",
+    "description": "Temp & Humidity Sensor (visual only for now)",
+    "pins": [
+      {
+        "signals": [
+          "power"
+        ],
+        "name": "VCC",
+        "x": 15,
+        "y": 114.9,
+        "handle_id": "pin-0"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "SDA",
+        "x": 24.5,
+        "y": 114.9,
+        "handle_id": "pin-1"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "NC",
+        "x": 34.1,
+        "y": 114.9,
+        "handle_id": "pin-2"
+      },
+      {
+        "signals": [
+          "ground"
+        ],
+        "name": "GND",
+        "x": 43.8,
+        "y": 114.9,
+        "handle_id": "pin-3"
+      }
+    ],
+    "properties": {}
+  },
+  {
+    "type": "dip-switch-8",
+    "tag": "wokwi-dip-switch-8",
+    "name": "DIP Switch (8x)",
+    "category": "Input Controls",
+    "description": "DIP Switch (8x) (visual only for now)",
+    "pins": [
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "1a",
+        "x": 8.1,
+        "y": 51.3,
+        "handle_id": "pin-0"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "2a",
+        "x": 17.7,
+        "y": 51.3,
+        "handle_id": "pin-1"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "3a",
+        "x": 27.3,
+        "y": 51.3,
+        "handle_id": "pin-2"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "4a",
+        "x": 36.9,
+        "y": 51.3,
+        "handle_id": "pin-3"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "5a",
+        "x": 46.5,
+        "y": 51.3,
+        "handle_id": "pin-4"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "6a",
+        "x": 56.1,
+        "y": 51.3,
+        "handle_id": "pin-5"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "7a",
+        "x": 65.7,
+        "y": 51.3,
+        "handle_id": "pin-6"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "8a",
+        "x": 75.3,
+        "y": 51.3,
+        "handle_id": "pin-7"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "8b",
+        "x": 75.3,
+        "y": 3,
+        "handle_id": "pin-8"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "7b",
+        "x": 65.7,
+        "y": 3,
+        "handle_id": "pin-9"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "6b",
+        "x": 56.1,
+        "y": 3,
+        "handle_id": "pin-10"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "5b",
+        "x": 46.5,
+        "y": 3,
+        "handle_id": "pin-11"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "4b",
+        "x": 36.9,
+        "y": 3,
+        "handle_id": "pin-12"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "3b",
+        "x": 27.3,
+        "y": 3,
+        "handle_id": "pin-13"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "2b",
+        "x": 17.7,
+        "y": 3,
+        "handle_id": "pin-14"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "1b",
+        "x": 8.1,
+        "y": 3,
+        "handle_id": "pin-15"
+      }
+    ],
+    "properties": {}
+  },
+  {
+    "type": "ds1307",
+    "tag": "wokwi-ds1307",
+    "name": "RTC Module (DS1307)",
+    "category": "Sensors",
+    "description": "RTC Module (DS1307) (visual only for now)",
+    "pins": [
+      {
+        "signals": [
+          "ground"
+        ],
+        "name": "GND",
+        "x": 9.5,
+        "y": 15,
+        "handle_id": "pin-0"
+      },
+      {
+        "signals": [
+          "power"
+        ],
+        "name": "5V",
+        "x": 9.5,
+        "y": 25,
+        "handle_id": "pin-1"
+      },
+      {
+        "signals": [
+          "i2c"
+        ],
+        "name": "SDA",
+        "x": 9.5,
+        "y": 34.5,
+        "handle_id": "pin-2"
+      },
+      {
+        "signals": [
+          "i2c"
+        ],
+        "name": "SCL",
+        "x": 9.5,
+        "y": 44,
+        "handle_id": "pin-3"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "SQW",
+        "x": 9.5,
+        "y": 54,
+        "handle_id": "pin-4"
+      }
+    ],
+    "properties": {}
+  },
+  {
+    "type": "esp32-devkit-v1",
+    "tag": "wokwi-esp32-devkit-v1",
+    "name": "ESP32 DevKit",
+    "category": "Boards",
+    "description": "ESP32 DevKit (visual only for now)",
+    "pins": [
+      {
+        "signals": [
+          "power"
+        ],
+        "name": "VIN",
+        "x": 5,
+        "y": 158.5,
+        "handle_id": "pin-0"
+      },
+      {
+        "signals": [
+          "ground"
+        ],
+        "name": "GND.2",
+        "x": 5,
+        "y": 149,
+        "handle_id": "pin-1"
+      },
+      {
+        "signals": [
+          "spi",
+          "pwm"
+        ],
+        "name": "D13",
+        "x": 5,
+        "y": 139.5,
+        "handle_id": "pin-2"
+      },
+      {
+        "signals": [
+          "spi",
+          "pwm"
+        ],
+        "name": "D12",
+        "x": 5,
+        "y": 130.4,
+        "handle_id": "pin-3"
+      },
+      {
+        "signals": [
+          "spi",
+          "pwm"
+        ],
+        "name": "D14",
+        "x": 5,
+        "y": 120,
+        "handle_id": "pin-4"
+      },
+      {
+        "signals": [
+          "pwm"
+        ],
+        "name": "D27",
+        "x": 5,
+        "y": 110.8,
+        "handle_id": "pin-5"
+      },
+      {
+        "signals": [
+          "pwm"
+        ],
+        "name": "D26",
+        "x": 5,
+        "y": 101,
+        "handle_id": "pin-6"
+      },
+      {
+        "signals": [
+          "pwm"
+        ],
+        "name": "D25",
+        "x": 5,
+        "y": 91.3,
+        "handle_id": "pin-7"
+      },
+      {
+        "signals": [
+          "pwm"
+        ],
+        "name": "D33",
+        "x": 5,
+        "y": 81.7,
+        "handle_id": "pin-8"
+      },
+      {
+        "signals": [
+          "pwm"
+        ],
+        "name": "D32",
+        "x": 5,
+        "y": 72.2,
+        "handle_id": "pin-9"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "D35",
+        "x": 5,
+        "y": 62.9,
+        "handle_id": "pin-10"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "D34",
+        "x": 5,
+        "y": 53.1,
+        "handle_id": "pin-11"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "VN",
+        "x": 5,
+        "y": 44,
+        "handle_id": "pin-12"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "VP",
+        "x": 5,
+        "y": 34,
+        "handle_id": "pin-13"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "EN",
+        "x": 5,
+        "y": 24,
+        "handle_id": "pin-14"
+      },
+      {
+        "signals": [
+          "power"
+        ],
+        "name": "3V3",
+        "x": 101.3,
+        "y": 158.5,
+        "handle_id": "pin-15"
+      },
+      {
+        "signals": [
+          "ground"
+        ],
+        "name": "GND.1",
+        "x": 101.3,
+        "y": 149,
+        "handle_id": "pin-16"
+      },
+      {
+        "signals": [
+          "spi",
+          "pwm"
+        ],
+        "name": "D15",
+        "x": 101.3,
+        "y": 139.5,
+        "handle_id": "pin-17"
+      },
+      {
+        "signals": [
+          "pwm"
+        ],
+        "name": "D2",
+        "x": 101.3,
+        "y": 130.4,
+        "handle_id": "pin-18"
+      },
+      {
+        "signals": [
+          "pwm"
+        ],
+        "name": "D4",
+        "x": 101.3,
+        "y": 120,
+        "handle_id": "pin-19"
+      },
+      {
+        "signals": [
+          "usart",
+          "pwm"
+        ],
+        "name": "RX2",
+        "x": 101.3,
+        "y": 110.8,
+        "handle_id": "pin-20"
+      },
+      {
+        "signals": [
+          "usart",
+          "pwm"
+        ],
+        "name": "TX2",
+        "x": 101.3,
+        "y": 101,
+        "handle_id": "pin-21"
+      },
+      {
+        "signals": [
+          "spi",
+          "pwm"
+        ],
+        "name": "D5",
+        "x": 101.3,
+        "y": 91.3,
+        "handle_id": "pin-22"
+      },
+      {
+        "signals": [
+          "spi",
+          "pwm"
+        ],
+        "name": "D18",
+        "x": 101.3,
+        "y": 81.7,
+        "handle_id": "pin-23"
+      },
+      {
+        "signals": [
+          "spi",
+          "pwm"
+        ],
+        "name": "D19",
+        "x": 101.3,
+        "y": 72.2,
+        "handle_id": "pin-24"
+      },
+      {
+        "signals": [
+          "i2c",
+          "pwm"
+        ],
+        "name": "D21",
+        "x": 101.3,
+        "y": 62.9,
+        "handle_id": "pin-25"
+      },
+      {
+        "signals": [
+          "usart",
+          "pwm"
+        ],
+        "name": "RX0",
+        "x": 101.3,
+        "y": 53.1,
+        "handle_id": "pin-26"
+      },
+      {
+        "signals": [
+          "usart",
+          "pwm"
+        ],
+        "name": "TX0",
+        "x": 101.3,
+        "y": 44,
+        "handle_id": "pin-27"
+      },
+      {
+        "signals": [
+          "i2c",
+          "pwm"
+        ],
+        "name": "D22",
+        "x": 101.3,
+        "y": 34,
+        "handle_id": "pin-28"
+      },
+      {
+        "signals": [
+          "spi",
+          "pwm"
+        ],
+        "name": "D23",
+        "x": 101.3,
+        "y": 24,
+        "handle_id": "pin-29"
+      }
+    ],
+    "properties": {}
+  },
+  {
+    "type": "flame-sensor",
+    "tag": "wokwi-flame-sensor",
+    "name": "Flame Sensor",
+    "category": "Sensors",
+    "description": "Flame Sensor (visual only for now)",
+    "pins": [
+      {
+        "signals": [
+          "power"
+        ],
+        "name": "VCC",
+        "x": 199,
+        "y": 14.6,
+        "handle_id": "pin-0"
+      },
+      {
+        "signals": [
+          "ground"
+        ],
+        "name": "GND",
+        "x": 199,
+        "y": 24.3,
+        "handle_id": "pin-1"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "DOUT",
+        "x": 199,
+        "y": 34,
+        "handle_id": "pin-2"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "AOUT",
+        "x": 199,
+        "y": 43.7,
+        "handle_id": "pin-3"
+      }
+    ],
+    "properties": {}
+  },
+  {
+    "type": "franzininho",
+    "tag": "wokwi-franzininho",
+    "name": "Franzininho",
+    "category": "Boards",
+    "description": "Franzininho (visual only for now)",
+    "pins": [
+      {
+        "signals": [
+          "ground"
+        ],
+        "name": "GND.1",
+        "x": 218.5,
+        "y": 23.3,
+        "handle_id": "pin-0"
+      },
+      {
+        "signals": [
+          "power"
+        ],
+        "name": "VCC.1",
+        "x": 218.5,
+        "y": 32.9,
+        "handle_id": "pin-1"
+      },
+      {
+        "signals": [
+          "analog",
+          "pwm"
+        ],
+        "name": "PB4",
+        "x": 218.5,
+        "y": 42.5,
+        "handle_id": "pin-2"
+      },
+      {
+        "signals": [
+          "analog"
+        ],
+        "name": "PB5",
+        "x": 218.5,
+        "y": 52.2,
+        "handle_id": "pin-3"
+      },
+      {
+        "signals": [
+          "analog"
+        ],
+        "name": "PB3",
+        "x": 218.5,
+        "y": 61.7,
+        "handle_id": "pin-4"
+      },
+      {
+        "signals": [
+          "spi",
+          "i2c",
+          "analog"
+        ],
+        "name": "PB2",
+        "x": 218.5,
+        "y": 71.2,
+        "handle_id": "pin-5"
+      },
+      {
+        "signals": [
+          "spi",
+          "pwm"
+        ],
+        "name": "PB1",
+        "x": 218.5,
+        "y": 80.9,
+        "handle_id": "pin-6"
+      },
+      {
+        "signals": [
+          "spi",
+          "i2c",
+          "pwm"
+        ],
+        "name": "PB0",
+        "x": 218.5,
+        "y": 90.5,
+        "handle_id": "pin-7"
+      },
+      {
+        "signals": [
+          "power"
+        ],
+        "name": "VIN",
+        "x": 132.7,
+        "y": 8.1,
+        "handle_id": "pin-8"
+      },
+      {
+        "signals": [
+          "ground"
+        ],
+        "name": "GND.2",
+        "x": 142.9,
+        "y": 8.1,
+        "handle_id": "pin-9"
+      },
+      {
+        "signals": [
+          "power"
+        ],
+        "name": "VCC.2",
+        "x": 153,
+        "y": 8.1,
+        "handle_id": "pin-10"
+      }
+    ],
+    "properties": {}
+  },
+  {
+    "type": "gas-sensor",
+    "tag": "wokwi-gas-sensor",
+    "name": "Gas Sensor",
+    "category": "Sensors",
+    "description": "Gas Sensor (visual only for now)",
+    "pins": [
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "AOUT",
+        "x": 137,
+        "y": 16.5,
+        "handle_id": "pin-0"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "DOUT",
+        "x": 137,
+        "y": 26.4,
+        "handle_id": "pin-1"
+      },
+      {
+        "signals": [
+          "ground"
+        ],
+        "name": "GND",
+        "x": 137,
+        "y": 36.5,
+        "handle_id": "pin-2"
+      },
+      {
+        "signals": [
+          "power"
+        ],
+        "name": "VCC",
+        "x": 137,
+        "y": 46.2,
+        "handle_id": "pin-3"
+      }
+    ],
+    "properties": {}
+  },
+  {
+    "type": "hc-sr04",
+    "tag": "wokwi-hc-sr04",
+    "name": "Ultrasonic Sensor",
+    "category": "Sensors",
+    "description": "Ultrasonic Sensor (visual only for now)",
+    "pins": [
+      {
+        "signals": [
+          "power"
+        ],
+        "name": "VCC",
+        "x": 71.3,
+        "y": 94.5,
+        "handle_id": "pin-0"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "TRIG",
+        "x": 81.3,
+        "y": 94.5,
+        "handle_id": "pin-1"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "ECHO",
+        "x": 91.3,
+        "y": 94.5,
+        "handle_id": "pin-2"
+      },
+      {
+        "signals": [
+          "ground"
+        ],
+        "name": "GND",
+        "x": 101.3,
+        "y": 94.5,
+        "handle_id": "pin-3"
+      }
+    ],
+    "properties": {}
+  },
+  {
+    "type": "heart-beat-sensor",
+    "tag": "wokwi-heart-beat-sensor",
+    "name": "Heartbeat Sensor",
+    "category": "Sensors",
+    "description": "Heartbeat Sensor (visual only for now)",
+    "pins": [
+      {
+        "signals": [
+          "ground"
+        ],
+        "name": "GND",
+        "x": 87,
+        "y": 17.8,
+        "handle_id": "pin-0"
+      },
+      {
+        "signals": [
+          "power"
+        ],
+        "name": "VCC",
+        "x": 87,
+        "y": 27.5,
+        "handle_id": "pin-1"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "OUT",
+        "x": 87,
+        "y": 37.5,
+        "handle_id": "pin-2"
+      }
+    ],
+    "properties": {}
+  },
+  {
+    "type": "hx711",
+    "tag": "wokwi-hx711",
+    "name": "Load Cell Amplifier",
+    "category": "Sensors",
+    "description": "Load Cell Amplifier (visual only for now)",
+    "pins": [
+      {
+        "signals": [
+          "power"
+        ],
+        "name": "VCC",
+        "x": 7,
+        "y": 55,
+        "handle_id": "pin-0"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "DT",
+        "x": 7,
+        "y": 36.3,
+        "handle_id": "pin-1"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "SCK",
+        "x": 7,
+        "y": 46.2,
+        "handle_id": "pin-2"
+      },
+      {
+        "signals": [
+          "ground"
+        ],
+        "name": "GND",
+        "x": 7,
+        "y": 26.5,
+        "handle_id": "pin-3"
+      }
+    ],
+    "properties": {}
+  },
+  {
+    "type": "ili9341",
+    "tag": "wokwi-ili9341",
+    "name": "TFT Display (ILI9341)",
+    "category": "Displays",
+    "description": "TFT Display (ILI9341) (visual only for now)",
+    "pins": [
+      {
+        "signals": [
+          "power"
+        ],
+        "name": "VCC",
+        "x": 48.3,
+        "y": 287.2,
+        "handle_id": "pin-0"
+      },
+      {
+        "signals": [
+          "ground"
+        ],
+        "name": "GND",
+        "x": 57.9,
+        "y": 287.2,
+        "handle_id": "pin-1"
+      },
+      {
+        "signals": [
+          "spi"
+        ],
+        "name": "CS",
+        "x": 67.5,
+        "y": 287.2,
+        "handle_id": "pin-2"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "RST",
+        "x": 77.1,
+        "y": 287.2,
+        "handle_id": "pin-3"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "D/C",
+        "x": 86.7,
+        "y": 287.2,
+        "handle_id": "pin-4"
+      },
+      {
+        "signals": [
+          "spi"
+        ],
+        "name": "MOSI",
+        "x": 96.31,
+        "y": 287.2,
+        "handle_id": "pin-5"
+      },
+      {
+        "signals": [
+          "spi"
+        ],
+        "name": "SCK",
+        "x": 105.91,
+        "y": 287.2,
+        "handle_id": "pin-6"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "LED",
+        "x": 115.51,
+        "y": 287.2,
+        "handle_id": "pin-7"
+      },
+      {
+        "signals": [
+          "spi"
+        ],
+        "name": "MISO",
+        "x": 125.11,
+        "y": 287.2,
+        "handle_id": "pin-8"
+      }
+    ],
+    "properties": {}
+  },
+  {
+    "type": "ir-receiver",
+    "tag": "wokwi-ir-receiver",
+    "name": "IR Receiver",
+    "category": "Sensors",
+    "description": "IR Receiver (visual only for now)",
+    "pins": [
+      {
+        "signals": [
+          "ground"
+        ],
+        "name": "GND",
+        "x": 20.98,
+        "y": 87.75,
+        "handle_id": "pin-0"
+      },
+      {
+        "signals": [
+          "power"
+        ],
+        "name": "VCC",
+        "x": 30.58,
+        "y": 87.75,
+        "handle_id": "pin-1"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "DAT",
+        "x": 40.18,
+        "y": 87.75,
+        "handle_id": "pin-2"
+      }
+    ],
+    "properties": {}
+  },
+  {
+    "type": "ir-remote",
+    "tag": "wokwi-ir-remote",
+    "name": "IR Remote",
+    "category": "Input Controls",
+    "description": "IR Remote (visual only for now)",
+    "pins": [],
+    "properties": {}
+  },
+  {
+    "type": "ks2e-m-dc5",
+    "tag": "wokwi-ks2e-m-dc5",
+    "name": "Relay (DPDT)",
+    "category": "Output & Actuators",
+    "description": "Relay (DPDT) (visual only for now)",
+    "pins": [
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "NO2",
+        "x": 5.5,
+        "y": 5.1,
+        "handle_id": "pin-0"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "NC2",
+        "x": 25,
+        "y": 5.1,
+        "handle_id": "pin-1"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "P2",
+        "x": 45,
+        "y": 5.1,
+        "handle_id": "pin-2"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "COIL2",
+        "x": 74,
+        "y": 5.1,
+        "handle_id": "pin-3"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "NO1",
+        "x": 5.5,
+        "y": 32.7,
+        "handle_id": "pin-4"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "NC1",
+        "x": 25,
+        "y": 32.7,
+        "handle_id": "pin-5"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "P1",
+        "x": 45,
+        "y": 32.7,
+        "handle_id": "pin-6"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "COIL1",
+        "x": 74,
+        "y": 32.7,
+        "handle_id": "pin-7"
+      }
+    ],
+    "properties": {}
+  },
+  {
+    "type": "ky-040",
+    "tag": "wokwi-ky-040",
+    "name": "Rotary Encoder",
+    "category": "Input Controls",
+    "description": "Rotary Encoder (visual only for now)",
+    "pins": [
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "CLK",
+        "x": 116,
+        "y": 7.9,
+        "handle_id": "pin-0"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "DT",
+        "x": 116,
+        "y": 17.4,
+        "handle_id": "pin-1"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "SW",
+        "x": 116,
+        "y": 27,
+        "handle_id": "pin-2"
+      },
+      {
+        "signals": [
+          "power"
+        ],
+        "name": "VCC",
+        "x": 116,
+        "y": 36.3,
+        "handle_id": "pin-3"
+      },
+      {
+        "signals": [
+          "ground"
+        ],
+        "name": "GND",
+        "x": 116,
+        "y": 45.5,
+        "handle_id": "pin-4"
+      }
+    ],
+    "properties": {}
+  },
+  {
+    "type": "lcd1602",
+    "tag": "wokwi-lcd1602",
+    "name": "LCD 16x2",
+    "category": "Displays",
+    "description": "LCD 16x2 (visual only for now)",
+    "pins": [
+      {
+        "signals": [
+          "ground"
+        ],
+        "name": "VSS",
+        "x": 32,
+        "y": 130.97,
+        "handle_id": "pin-0"
+      },
+      {
+        "signals": [
+          "power"
+        ],
+        "name": "VDD",
+        "x": 41.5,
+        "y": 130.97,
+        "handle_id": "pin-1"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "V0",
+        "x": 51.5,
+        "y": 130.97,
+        "handle_id": "pin-2"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "RS",
+        "x": 60.5,
+        "y": 130.97,
+        "handle_id": "pin-3"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "RW",
+        "x": 70.5,
+        "y": 130.97,
+        "handle_id": "pin-4"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "E",
+        "x": 80,
+        "y": 130.97,
+        "handle_id": "pin-5"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "D0",
+        "x": 89.5,
+        "y": 130.97,
+        "handle_id": "pin-6"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "D1",
+        "x": 99.5,
+        "y": 130.97,
+        "handle_id": "pin-7"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "D2",
+        "x": 109,
+        "y": 130.97,
+        "handle_id": "pin-8"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "D3",
+        "x": 118.5,
+        "y": 130.97,
+        "handle_id": "pin-9"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "D4",
+        "x": 128,
+        "y": 130.97,
+        "handle_id": "pin-10"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "D5",
+        "x": 137.5,
+        "y": 130.97,
+        "handle_id": "pin-11"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "D6",
+        "x": 147,
+        "y": 130.97,
+        "handle_id": "pin-12"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "D7",
+        "x": 156.5,
+        "y": 130.97,
+        "handle_id": "pin-13"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "A",
+        "x": 166.5,
+        "y": 130.97,
+        "handle_id": "pin-14"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "K",
+        "x": 176,
+        "y": 130.97,
+        "handle_id": "pin-15"
+      }
+    ],
+    "properties": {}
+  },
+  {
+    "type": "lcd2004",
+    "tag": "wokwi-lcd2004",
+    "name": "LCD 20x4",
+    "category": "Displays",
+    "description": "LCD 20x4 (visual only for now)",
+    "pins": [
+      {
+        "signals": [
+          "ground"
+        ],
+        "name": "VSS",
+        "x": 32,
+        "y": 174.44,
+        "handle_id": "pin-0"
+      },
+      {
+        "signals": [
+          "power"
+        ],
+        "name": "VDD",
+        "x": 41.5,
+        "y": 174.44,
+        "handle_id": "pin-1"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "V0",
+        "x": 51.5,
+        "y": 174.44,
+        "handle_id": "pin-2"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "RS",
+        "x": 60.5,
+        "y": 174.44,
+        "handle_id": "pin-3"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "RW",
+        "x": 70.5,
+        "y": 174.44,
+        "handle_id": "pin-4"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "E",
+        "x": 80,
+        "y": 174.44,
+        "handle_id": "pin-5"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "D0",
+        "x": 89.5,
+        "y": 174.44,
+        "handle_id": "pin-6"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "D1",
+        "x": 99.5,
+        "y": 174.44,
+        "handle_id": "pin-7"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "D2",
+        "x": 109,
+        "y": 174.44,
+        "handle_id": "pin-8"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "D3",
+        "x": 118.5,
+        "y": 174.44,
+        "handle_id": "pin-9"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "D4",
+        "x": 128,
+        "y": 174.44,
+        "handle_id": "pin-10"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "D5",
+        "x": 137.5,
+        "y": 174.44,
+        "handle_id": "pin-11"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "D6",
+        "x": 147,
+        "y": 174.44,
+        "handle_id": "pin-12"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "D7",
+        "x": 156.5,
+        "y": 174.44,
+        "handle_id": "pin-13"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "A",
+        "x": 166.5,
+        "y": 174.44,
+        "handle_id": "pin-14"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "K",
+        "x": 176,
+        "y": 174.44,
+        "handle_id": "pin-15"
+      }
+    ],
+    "properties": {}
+  },
+  {
+    "type": "led",
+    "tag": "wokwi-led",
+    "name": "LED",
+    "category": "Basic",
+    "description": "Standard LED: lights when forward voltage exceeds ~1.5V",
+    "pins": [
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "Anode (+)",
+        "x": 25,
+        "y": 42,
+        "pin_type": "anode",
+        "handle_id": "pin-0"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "Cathode (-)",
+        "x": 15,
+        "y": 42,
+        "pin_type": "cathode",
+        "handle_id": "pin-1"
+      }
+    ],
+    "properties": {
+      "spiceType": "led",
+      "color": "red",
+      "Vf": 1.8,
+      "Is": 1e-18,
+      "n": 1.8,
+      "stateRules": {
+        "on": "voltage > 1.5"
+      }
+    }
+  },
+  {
+    "type": "led-bar-graph",
+    "tag": "wokwi-led-bar-graph",
+    "name": "LED Bar Graph",
+    "category": "Output & Actuators",
+    "description": "LED Bar Graph (visual only for now)",
+    "pins": [
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "A1",
+        "x": 4.8,
+        "y": 4.8,
+        "handle_id": "pin-0"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "A2",
+        "x": 4.8,
+        "y": 14.4,
+        "handle_id": "pin-1"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "A3",
+        "x": 4.8,
+        "y": 24,
+        "handle_id": "pin-2"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "A4",
+        "x": 4.8,
+        "y": 33.6,
+        "handle_id": "pin-3"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "A5",
+        "x": 4.8,
+        "y": 43.21,
+        "handle_id": "pin-4"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "A6",
+        "x": 4.8,
+        "y": 52.81,
+        "handle_id": "pin-5"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "A7",
+        "x": 4.8,
+        "y": 62.41,
+        "handle_id": "pin-6"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "A8",
+        "x": 4.8,
+        "y": 72.01,
+        "handle_id": "pin-7"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "A9",
+        "x": 4.8,
+        "y": 81.61,
+        "handle_id": "pin-8"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "A10",
+        "x": 4.8,
+        "y": 91.21,
+        "handle_id": "pin-9"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "C1",
+        "x": 33.38,
+        "y": 4.8,
+        "handle_id": "pin-10"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "C2",
+        "x": 33.38,
+        "y": 14.4,
+        "handle_id": "pin-11"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "C3",
+        "x": 33.38,
+        "y": 24,
+        "handle_id": "pin-12"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "C4",
+        "x": 33.38,
+        "y": 33.6,
+        "handle_id": "pin-13"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "C5",
+        "x": 33.38,
+        "y": 43.21,
+        "handle_id": "pin-14"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "C6",
+        "x": 33.38,
+        "y": 52.81,
+        "handle_id": "pin-15"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "C7",
+        "x": 33.38,
+        "y": 62.41,
+        "handle_id": "pin-16"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "C8",
+        "x": 33.38,
+        "y": 72.01,
+        "handle_id": "pin-17"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "C9",
+        "x": 33.38,
+        "y": 81.61,
+        "handle_id": "pin-18"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "C10",
+        "x": 33.38,
+        "y": 91.21,
+        "handle_id": "pin-19"
+      }
+    ],
+    "properties": {}
+  },
+  {
+    "type": "led-ring",
+    "tag": "wokwi-led-ring",
+    "name": "LED Ring",
+    "category": "Output & Actuators",
+    "description": "LED Ring (visual only for now)",
+    "pins": [
+      {
+        "signals": [
+          "ground"
+        ],
+        "name": "GND",
+        "x": 56.41,
+        "y": 152.96,
+        "handle_id": "pin-0"
+      },
+      {
+        "signals": [
+          "power"
+        ],
+        "name": "VCC",
+        "x": 66.01,
+        "y": 152.96,
+        "handle_id": "pin-1"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "DIN",
+        "x": 75.61,
+        "y": 152.96,
+        "handle_id": "pin-2"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "DOUT",
+        "x": 85.21,
+        "y": 152.96,
+        "handle_id": "pin-3"
+      }
+    ],
+    "properties": {}
+  },
+  {
+    "type": "membrane-keypad",
+    "tag": "wokwi-membrane-keypad",
+    "name": "Membrane Keypad",
+    "category": "Input Controls",
+    "description": "Membrane Keypad (visual only for now)",
+    "pins": [
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "R1",
+        "x": 100,
+        "y": 338,
+        "handle_id": "pin-0"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "R2",
+        "x": 110,
+        "y": 338,
+        "handle_id": "pin-1"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "R3",
+        "x": 119.5,
+        "y": 338,
+        "handle_id": "pin-2"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "R4",
+        "x": 129,
+        "y": 338,
+        "handle_id": "pin-3"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "C1",
+        "x": 138.5,
+        "y": 338,
+        "handle_id": "pin-4"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "C2",
+        "x": 148,
+        "y": 338,
+        "handle_id": "pin-5"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "C3",
+        "x": 157.75,
+        "y": 338,
+        "handle_id": "pin-6"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "C4",
+        "x": 167.5,
+        "y": 338,
+        "handle_id": "pin-7"
+      }
+    ],
+    "properties": {}
+  },
+  {
+    "type": "microsd-card",
+    "tag": "wokwi-microsd-card",
+    "name": "MicroSD Module",
+    "category": "Sensors",
+    "description": "MicroSD Module (visual only for now)",
+    "pins": [
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "CD",
+        "x": 76.73,
+        "y": 9.37,
+        "handle_id": "pin-0"
+      },
+      {
+        "signals": [
+          "spi"
+        ],
+        "name": "DO",
+        "x": 76.73,
+        "y": 18.86,
+        "handle_id": "pin-1"
+      },
+      {
+        "signals": [
+          "ground"
+        ],
+        "name": "GND",
+        "x": 76.73,
+        "y": 28.46,
+        "handle_id": "pin-2"
+      },
+      {
+        "signals": [
+          "spi"
+        ],
+        "name": "SCK",
+        "x": 76.73,
+        "y": 38.18,
+        "handle_id": "pin-3"
+      },
+      {
+        "signals": [
+          "power"
+        ],
+        "name": "VCC",
+        "x": 76.73,
+        "y": 47.63,
+        "handle_id": "pin-4"
+      },
+      {
+        "signals": [
+          "spi"
+        ],
+        "name": "DI",
+        "x": 76.73,
+        "y": 57.46,
+        "handle_id": "pin-5"
+      },
+      {
+        "signals": [
+          "spi"
+        ],
+        "name": "CS",
+        "x": 76.73,
+        "y": 66.91,
+        "handle_id": "pin-6"
+      }
+    ],
+    "properties": {}
+  },
+  {
+    "type": "mpu6050",
+    "tag": "wokwi-mpu6050",
+    "name": "IMU (MPU6050)",
+    "category": "Sensors",
+    "description": "IMU (MPU6050) (visual only for now)",
+    "pins": [
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "INT",
+        "x": 7.28,
+        "y": 5.78,
+        "handle_id": "pin-0"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "AD0",
+        "x": 16.9,
+        "y": 5.78,
+        "handle_id": "pin-1"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "XCL",
+        "x": 26.4,
+        "y": 5.78,
+        "handle_id": "pin-2"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "XDA",
+        "x": 36,
+        "y": 5.78,
+        "handle_id": "pin-3"
+      },
+      {
+        "signals": [
+          "i2c"
+        ],
+        "name": "SDA",
+        "x": 45.6,
+        "y": 5.78,
+        "handle_id": "pin-4"
+      },
+      {
+        "signals": [
+          "i2c"
+        ],
+        "name": "SCL",
+        "x": 55.2,
+        "y": 5.78,
+        "handle_id": "pin-5"
+      },
+      {
+        "signals": [
+          "ground"
+        ],
+        "name": "GND",
+        "x": 64.8,
+        "y": 5.78,
+        "handle_id": "pin-6"
+      },
+      {
+        "signals": [
+          "power"
+        ],
+        "name": "VCC",
+        "x": 74.4,
+        "y": 5.78,
+        "handle_id": "pin-7"
+      }
+    ],
+    "properties": {}
+  },
+  {
+    "type": "nano-rp2040-connect",
+    "tag": "wokwi-nano-rp2040-connect",
+    "name": "Nano RP2040 Connect",
+    "category": "Boards",
+    "description": "Nano RP2040 Connect (visual only for now)",
+    "pins": [
+      {
+        "signals": [
+          "spi",
+          "pwm"
+        ],
+        "name": "D12",
+        "x": 20.1,
+        "y": 1,
+        "handle_id": "pin-0"
+      },
+      {
+        "signals": [
+          "spi",
+          "pwm"
+        ],
+        "name": "D11",
+        "x": 29.8,
+        "y": 1,
+        "handle_id": "pin-1"
+      },
+      {
+        "signals": [
+          "pwm"
+        ],
+        "name": "D10",
+        "x": 39.3,
+        "y": 1,
+        "handle_id": "pin-2"
+      },
+      {
+        "signals": [
+          "pwm"
+        ],
+        "name": "D9",
+        "x": 48.9,
+        "y": 1,
+        "handle_id": "pin-3"
+      },
+      {
+        "signals": [
+          "pwm"
+        ],
+        "name": "D8",
+        "x": 58.5,
+        "y": 1,
+        "handle_id": "pin-4"
+      },
+      {
+        "signals": [
+          "pwm"
+        ],
+        "name": "D7",
+        "x": 68.1,
+        "y": 1,
+        "handle_id": "pin-5"
+      },
+      {
+        "signals": [
+          "pwm"
+        ],
+        "name": "D6",
+        "x": 77.7,
+        "y": 1,
+        "handle_id": "pin-6"
+      },
+      {
+        "signals": [
+          "pwm"
+        ],
+        "name": "D5",
+        "x": 87.3,
+        "y": 1,
+        "handle_id": "pin-7"
+      },
+      {
+        "signals": [
+          "pwm"
+        ],
+        "name": "D4",
+        "x": 96.9,
+        "y": 1,
+        "handle_id": "pin-8"
+      },
+      {
+        "signals": [
+          "pwm"
+        ],
+        "name": "D3",
+        "x": 106.5,
+        "y": 1,
+        "handle_id": "pin-9"
+      },
+      {
+        "signals": [
+          "pwm"
+        ],
+        "name": "D2",
+        "x": 116.1,
+        "y": 1,
+        "handle_id": "pin-10"
+      },
+      {
+        "signals": [
+          "ground"
+        ],
+        "name": "GND.1",
+        "x": 125.2,
+        "y": 1,
+        "handle_id": "pin-11"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "RESET",
+        "x": 135.3,
+        "y": 1,
+        "handle_id": "pin-12"
+      },
+      {
+        "signals": [
+          "usart"
+        ],
+        "name": "RX",
+        "x": 153.9,
+        "y": 1,
+        "handle_id": "pin-13"
+      },
+      {
+        "signals": [
+          "usart"
+        ],
+        "name": "TX",
+        "x": 144.5,
+        "y": 1,
+        "handle_id": "pin-14"
+      },
+      {
+        "signals": [
+          "spi"
+        ],
+        "name": "D13",
+        "x": 20.1,
+        "y": 67.5,
+        "handle_id": "pin-15"
+      },
+      {
+        "signals": [
+          "power"
+        ],
+        "name": "3.3V",
+        "x": 29.7,
+        "y": 67.5,
+        "handle_id": "pin-16"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "AREF",
+        "x": 39.3,
+        "y": 67.5,
+        "handle_id": "pin-17"
+      },
+      {
+        "signals": [
+          "analog"
+        ],
+        "name": "A0",
+        "x": 48.8,
+        "y": 67.5,
+        "handle_id": "pin-18"
+      },
+      {
+        "signals": [
+          "analog"
+        ],
+        "name": "A1",
+        "x": 58.5,
+        "y": 67.5,
+        "handle_id": "pin-19"
+      },
+      {
+        "signals": [
+          "analog"
+        ],
+        "name": "A2",
+        "x": 68,
+        "y": 67.5,
+        "handle_id": "pin-20"
+      },
+      {
+        "signals": [
+          "analog"
+        ],
+        "name": "A3",
+        "x": 77.6,
+        "y": 67.5,
+        "handle_id": "pin-21"
+      },
+      {
+        "signals": [
+          "analog"
+        ],
+        "name": "A4",
+        "x": 87.3,
+        "y": 67.5,
+        "handle_id": "pin-22"
+      },
+      {
+        "signals": [
+          "analog"
+        ],
+        "name": "A5",
+        "x": 96.9,
+        "y": 67.5,
+        "handle_id": "pin-23"
+      },
+      {
+        "signals": [
+          "analog"
+        ],
+        "name": "A6",
+        "x": 106.5,
+        "y": 67.5,
+        "handle_id": "pin-24"
+      },
+      {
+        "signals": [
+          "analog"
+        ],
+        "name": "A7",
+        "x": 116.1,
+        "y": 67.5,
+        "handle_id": "pin-25"
+      },
+      {
+        "signals": [
+          "power"
+        ],
+        "name": "5V",
+        "x": 125.5,
+        "y": 67.5,
+        "handle_id": "pin-26"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "RESET.2",
+        "x": 134.9,
+        "y": 67.5,
+        "handle_id": "pin-27"
+      },
+      {
+        "signals": [
+          "ground"
+        ],
+        "name": "GND.2",
+        "x": 145.3,
+        "y": 67.5,
+        "handle_id": "pin-28"
+      },
+      {
+        "signals": [
+          "power"
+        ],
+        "name": "VIN",
+        "x": 154.1,
+        "y": 67.5,
+        "handle_id": "pin-29"
+      }
+    ],
+    "properties": {}
+  },
+  {
+    "type": "neopixel",
+    "tag": "wokwi-neopixel",
+    "name": "NeoPixel",
+    "category": "Output & Actuators",
+    "description": "NeoPixel (visual only for now)",
+    "pins": [
+      {
+        "signals": [
+          "power"
+        ],
+        "name": "VDD",
+        "x": 1,
+        "y": 3.5,
+        "handle_id": "pin-0"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "DOUT",
+        "x": 1,
+        "y": 14,
+        "handle_id": "pin-1"
+      },
+      {
+        "signals": [
+          "ground"
+        ],
+        "name": "VSS",
+        "x": 21,
+        "y": 14,
+        "handle_id": "pin-2"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "DIN",
+        "x": 21,
+        "y": 3.5,
+        "handle_id": "pin-3"
+      }
+    ],
+    "properties": {}
+  },
+  {
+    "type": "neopixel-matrix",
+    "tag": "wokwi-neopixel-matrix",
+    "name": "NeoPixel Matrix",
+    "category": "Output & Actuators",
+    "description": "NeoPixel Matrix (visual only for now)",
+    "pins": [
+      {
+        "signals": [
+          "ground"
+        ],
+        "name": "GND",
+        "x": 86.3,
+        "y": 181.44,
+        "handle_id": "pin-0"
+      },
+      {
+        "signals": [
+          "power"
+        ],
+        "name": "VCC",
+        "x": 95.9,
+        "y": 181.44,
+        "handle_id": "pin-1"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "DIN",
+        "x": 105.5,
+        "y": 181.44,
+        "handle_id": "pin-2"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "DOUT",
+        "x": 115.1,
+        "y": 181.44,
+        "handle_id": "pin-3"
+      }
+    ],
+    "properties": {}
+  },
+  {
+    "type": "ntc-temperature-sensor",
+    "tag": "wokwi-ntc-temperature-sensor",
+    "name": "Temperature Sensor (NTC)",
+    "category": "Sensors",
+    "description": "Temperature Sensor (NTC) (visual only for now)",
+    "pins": [
+      {
+        "signals": [
+          "ground"
+        ],
+        "name": "GND",
+        "x": 135,
+        "y": 26.2,
+        "handle_id": "pin-0"
+      },
+      {
+        "signals": [
+          "power"
+        ],
+        "name": "VCC",
+        "x": 135,
+        "y": 35.8,
+        "handle_id": "pin-1"
+      },
+      {
+        "signals": [
+          "analog"
+        ],
+        "name": "OUT",
+        "x": 135,
+        "y": 45.5,
+        "handle_id": "pin-2"
+      }
+    ],
+    "properties": {}
+  },
+  {
+    "type": "photoresistor-sensor",
+    "tag": "wokwi-photoresistor-sensor",
+    "name": "Light Sensor (LDR)",
+    "category": "Sensors",
+    "description": "Light Sensor (LDR) (visual only for now)",
+    "pins": [
+      {
+        "signals": [
+          "power"
+        ],
+        "name": "VCC",
+        "x": 172,
+        "y": 16,
+        "handle_id": "pin-0"
+      },
+      {
+        "signals": [
+          "ground"
+        ],
+        "name": "GND",
+        "x": 172,
+        "y": 26,
+        "handle_id": "pin-1"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "DO",
+        "x": 172,
+        "y": 35.8,
+        "handle_id": "pin-2"
+      },
+      {
+        "signals": [
+          "analog"
+        ],
+        "name": "AO",
+        "x": 172,
+        "y": 45.5,
+        "handle_id": "pin-3"
+      }
+    ],
+    "properties": {}
+  },
+  {
+    "type": "pir-motion-sensor",
+    "tag": "wokwi-pir-motion-sensor",
+    "name": "PIR Motion Sensor",
+    "category": "Sensors",
+    "description": "PIR Motion Sensor (visual only for now)",
+    "pins": [
+      {
+        "signals": [
+          "power"
+        ],
+        "name": "VCC",
+        "x": 36.18,
+        "y": 92,
+        "handle_id": "pin-0"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "OUT",
+        "x": 45.92,
+        "y": 92,
+        "handle_id": "pin-1"
+      },
+      {
+        "signals": [
+          "ground"
+        ],
+        "name": "GND",
+        "x": 55.64,
+        "y": 92,
+        "handle_id": "pin-2"
+      }
+    ],
+    "properties": {}
+  },
+  {
+    "type": "potentiometer",
+    "tag": "wokwi-potentiometer",
+    "name": "Potentiometer",
+    "category": "Input Controls",
+    "description": "Rotary potentiometer - drag the knob to set the wiper",
+    "pins": [
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "A (GND)",
+        "x": 29,
+        "y": 68.5,
+        "handle_id": "pin-0"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "Wiper (SIG)",
+        "x": 39,
+        "y": 68.5,
+        "handle_id": "pin-1"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "B (VCC)",
+        "x": 49,
+        "y": 68.5,
+        "handle_id": "pin-2"
+      }
+    ],
+    "properties": {
+      "spiceType": "potentiometer",
+      "resistance": "10k",
+      "position": 0.5,
+      "unit": "Ω"
+    }
+  },
+  {
+    "type": "pushbutton",
+    "tag": "wokwi-pushbutton",
+    "name": "Pushbutton",
+    "category": "Input Controls",
+    "description": "Momentary pushbutton - double-click on the canvas to toggle",
+    "pins": [
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "Pin 1",
+        "x": 0,
+        "y": 13,
+        "handle_id": "pin-0"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "Pin 2",
+        "x": 67,
+        "y": 32,
+        "handle_id": "pin-1"
+      }
+    ],
+    "properties": {
+      "spiceType": "switch",
+      "closed": false,
+      "color": "green",
+      "attributeStates": {
+        "closed": {
+          "true": "closed",
+          "false": "open"
+        }
+      }
+    }
+  },
+  {
+    "type": "pushbutton-6mm",
+    "tag": "wokwi-pushbutton-6mm",
+    "name": "Pushbutton (6mm)",
+    "category": "Input Controls",
+    "description": "Compact 6mm pushbutton - double-click on the canvas to toggle",
+    "pins": [
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "Pin 1",
+        "x": 0,
+        "y": 2.2,
+        "handle_id": "pin-0"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "Pin 2",
+        "x": 28,
+        "y": 21,
+        "handle_id": "pin-1"
+      }
+    ],
+    "properties": {
+      "spiceType": "switch",
+      "closed": false,
+      "attributeStates": {
+        "closed": {
+          "true": "closed",
+          "false": "open"
+        }
+      }
+    }
+  },
+  {
+    "type": "resistor",
+    "tag": "wokwi-resistor",
+    "name": "Resistor",
+    "category": "Basic",
+    "description": "Axial resistor with live color bands",
+    "pins": [
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "Pin 1",
+        "x": 0,
+        "y": 5.65,
+        "handle_id": "pin-0"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "Pin 2",
+        "x": 58.8,
+        "y": 5.65,
+        "handle_id": "pin-1"
+      }
+    ],
+    "properties": {
+      "spiceType": "resistor",
+      "resistance": "1k",
+      "unit": "Ω"
+    }
+  },
+  {
+    "type": "rgb-led",
+    "tag": "wokwi-rgb-led",
+    "name": "RGB LED",
+    "category": "Basic",
+    "description": "Common-cathode RGB LED: each color channel lights independently",
+    "pins": [
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "Red (+)",
+        "x": 8.5,
+        "y": 44,
+        "pin_type": "anode",
+        "handle_id": "pin-0"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "Common (-)",
+        "x": 18,
+        "y": 54,
+        "pin_type": "cathode",
+        "handle_id": "pin-1"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "Green (+)",
+        "x": 26.4,
+        "y": 44,
+        "pin_type": "anode",
+        "handle_id": "pin-2"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "Blue (+)",
+        "x": 35.7,
+        "y": 44,
+        "pin_type": "anode",
+        "handle_id": "pin-3"
+      }
+    ],
+    "properties": {
+      "spiceType": "rgbled",
+      "Vf": 2,
+      "Is": 1e-18,
+      "n": 1.8
+    }
+  },
+  {
+    "type": "rotary-dialer",
+    "tag": "wokwi-rotary-dialer",
+    "name": "Rotary Dialer",
+    "category": "Input Controls",
+    "description": "Rotary Dialer (visual only for now)",
+    "pins": [
+      {
+        "signals": [
+          "ground"
+        ],
+        "name": "GND",
+        "x": 122,
+        "y": 286,
+        "handle_id": "pin-0"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "DIAL",
+        "x": 131.6,
+        "y": 286,
+        "handle_id": "pin-1"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "PULSE",
+        "x": 141.2,
+        "y": 286,
+        "handle_id": "pin-2"
+      }
+    ],
+    "properties": {}
+  },
+  {
+    "type": "servo",
+    "tag": "wokwi-servo",
+    "name": "Servo Motor",
+    "category": "Output & Actuators",
+    "description": "Servo Motor (visual only for now)",
+    "pins": [
+      {
+        "signals": [
+          "ground"
+        ],
+        "name": "GND",
+        "x": 0,
+        "y": 50,
+        "handle_id": "pin-0"
+      },
+      {
+        "signals": [
+          "power"
+        ],
+        "name": "V+",
+        "x": 0,
+        "y": 59.5,
+        "handle_id": "pin-1"
+      },
+      {
+        "signals": [
+          "pwm"
+        ],
+        "name": "PWM",
+        "x": 0,
+        "y": 69,
+        "handle_id": "pin-2"
+      }
+    ],
+    "properties": {}
+  },
+  {
+    "type": "slide-potentiometer",
+    "tag": "wokwi-slide-potentiometer",
+    "name": "Slide Potentiometer",
+    "category": "Input Controls",
+    "description": "Linear potentiometer - drag the slider to set the wiper",
+    "pins": [
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "A (VCC)",
+        "x": 1,
+        "y": 43,
+        "handle_id": "pin-0"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "Wiper (SIG)",
+        "x": 1,
+        "y": 63,
+        "handle_id": "pin-1"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "B (GND)",
+        "x": 207,
+        "y": 43,
+        "handle_id": "pin-2"
+      }
+    ],
+    "properties": {
+      "spiceType": "potentiometer",
+      "resistance": "10k",
+      "position": 0.5,
+      "unit": "Ω"
+    }
+  },
+  {
+    "type": "slide-switch",
+    "tag": "wokwi-slide-switch",
+    "name": "Slide Switch",
+    "category": "Input Controls",
+    "description": "SPDT slide switch - double-click on the canvas to toggle",
+    "pins": [
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "Pin 1",
+        "x": 6.5,
+        "y": 34,
+        "handle_id": "pin-0"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "Common",
+        "x": 16,
+        "y": 34,
+        "handle_id": "pin-1"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "Pin 2",
+        "x": 25.5,
+        "y": 34,
+        "handle_id": "pin-2"
+      }
+    ],
+    "properties": {
+      "spiceType": "slideswitch",
+      "closed": false,
+      "attributeStates": {
+        "closed": {
+          "true": "closed",
+          "false": "open"
+        }
+      }
+    }
+  },
+  {
+    "type": "small-sound-sensor",
+    "tag": "wokwi-small-sound-sensor",
+    "name": "Sound Sensor (Small)",
+    "category": "Sensors",
+    "description": "Sound Sensor (Small) (visual only for now)",
+    "pins": [
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "AOUT",
+        "x": 0,
+        "y": 11,
+        "handle_id": "pin-0"
+      },
+      {
+        "signals": [
+          "ground"
+        ],
+        "name": "GND",
+        "x": 0,
+        "y": 20.5,
+        "handle_id": "pin-1"
+      },
+      {
+        "signals": [
+          "power"
+        ],
+        "name": "VCC",
+        "x": 0,
+        "y": 30.5,
+        "handle_id": "pin-2"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "DOUT",
+        "x": 0,
+        "y": 40.5,
+        "handle_id": "pin-3"
+      }
+    ],
+    "properties": {}
+  },
+  {
+    "type": "ssd1306",
+    "tag": "wokwi-ssd1306",
+    "name": "OLED Display",
+    "category": "Displays",
+    "description": "OLED Display (visual only for now)",
+    "pins": [
+      {
+        "signals": [
+          "i2c"
+        ],
+        "name": "DATA",
+        "x": 36.5,
+        "y": 12.5,
+        "handle_id": "pin-0"
+      },
+      {
+        "signals": [
+          "i2c"
+        ],
+        "name": "CLK",
+        "x": 45.5,
+        "y": 12.5,
+        "handle_id": "pin-1"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "DC",
+        "x": 54.5,
+        "y": 12.5,
+        "handle_id": "pin-2"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "RST",
+        "x": 64.5,
+        "y": 12.5,
+        "handle_id": "pin-3"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "CS",
+        "x": 74.5,
+        "y": 12.5,
+        "handle_id": "pin-4"
+      },
+      {
+        "signals": [
+          "power"
+        ],
+        "name": "3V3",
+        "x": 83.5,
+        "y": 12.5,
+        "handle_id": "pin-5"
+      },
+      {
+        "signals": [
+          "power"
+        ],
+        "name": "VIN",
+        "x": 93.5,
+        "y": 12.5,
+        "handle_id": "pin-6"
+      },
+      {
+        "signals": [
+          "ground"
+        ],
+        "name": "GND",
+        "x": 103.5,
+        "y": 12,
+        "handle_id": "pin-7"
+      }
+    ],
+    "properties": {}
+  },
+  {
+    "type": "stepper-motor",
+    "tag": "wokwi-stepper-motor",
+    "name": "Stepper Motor",
+    "category": "Output & Actuators",
+    "description": "Stepper Motor (visual only for now)",
+    "pins": [
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "A-",
+        "x": 95.12,
+        "y": 235.49,
+        "handle_id": "pin-0"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "A+",
+        "x": 104.72,
+        "y": 235.49,
+        "handle_id": "pin-1"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "B+",
+        "x": 114.32,
+        "y": 235.49,
+        "handle_id": "pin-2"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "B-",
+        "x": 123.93,
+        "y": 235.49,
+        "handle_id": "pin-3"
+      }
+    ],
+    "properties": {}
+  },
+  {
+    "type": "tilt-switch",
+    "tag": "wokwi-tilt-switch",
+    "name": "Tilt Switch",
+    "category": "Sensors",
+    "description": "Tilt Switch (visual only for now)",
+    "pins": [
+      {
+        "signals": [
+          "ground"
+        ],
+        "name": "GND",
+        "x": 88,
+        "y": 18,
+        "handle_id": "pin-0"
+      },
+      {
+        "signals": [
+          "power"
+        ],
+        "name": "VCC",
+        "x": 88,
+        "y": 27.8,
+        "handle_id": "pin-1"
+      },
+      {
+        "signals": [
+          "passive"
+        ],
+        "name": "OUT",
+        "x": 88,
+        "y": 37.5,
+        "handle_id": "pin-2"
+      }
+    ],
+    "properties": {}
+  }
+]
