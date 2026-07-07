@@ -12,10 +12,17 @@ import ComponentPanel from './ComponentPanel';
 import CodeEditor from './CodeEditor';
 import SerialMonitor from './SerialMonitor';
 import { Button } from '@/components/ui/button';
-import { 
-  Play, Save, Undo, Redo, Trash2, ArrowLeft, 
+import { Separator } from '@/components/ui/separator';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import {
+  Play, Save, Undo, Redo, Trash2, ArrowLeft,
   Code, MonitorUp, SplitSquareVertical, SplitSquareHorizontal,
-  RotateCw, Square
+  RotateCw, Square, Loader2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate, useLocation, useBlocker } from '@/lib/router';
@@ -97,9 +104,15 @@ const CircuitEditorLayoutContent = ({
   const { components: projectComponents, wires: projectWires } = useProject();
   const { componentsDetailsMap } = useComponentLibrary();
   
-  // Get the addSerialOutput function from the simulation context
-  const { addSerialOutput, clearSerialOutput } = useSimulation();
-  
+  const { clearSerialOutput, compileAndRun, sendSerialInput } = useSimulation();
+
+  // Serial Monitor input goes to the emulated board's UART (the context
+  // echoes the command into the monitor either way).
+  const handleSerialCommand = useCallback((command: string) => {
+    sendSerialInput(command);
+  }, [sendSerialInput]);
+
+
   // Internal state for the content layout and UI toggles
   const [showCodeEditor, setShowCodeEditor] = useState<boolean>(false);
   const [showSerialMonitor, setShowSerialMonitor] = useState<boolean>(false);
@@ -225,9 +238,10 @@ const CircuitEditorLayoutContent = ({
     navigate('/dashboard'); 
   };
 
-  const handleCompileCode = async (codeToCompile: string) => {
-    console.log('Compiling code:', codeToCompile);
-    toast.success('Code compiled and uploaded to simulated microcontroller');
+  const handleCompileCode = async (_codeToCompile: string) => {
+    // The context compiles the project's current sketch locally and boots
+    // it on the emulated board (starting the simulation if needed).
+    await compileAndRun();
   };
 
   const handleCodeChange = (newCode: string) => {
@@ -330,28 +344,79 @@ const CircuitEditorLayoutContent = ({
     };
   }, [saveHandlerRef, handleSaveCircuitInternal]);
 
+  // Editor keyboard shortcuts: Ctrl/Cmd+S save, Ctrl/Cmd+Z undo,
+  // Ctrl/Cmd+Shift+Z or Ctrl/Cmd+Y redo, R rotate selection.
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const isEditableTarget = !!target && (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable ||
+        !!target.closest('.monaco-editor')
+      );
+      const mod = event.ctrlKey || event.metaKey;
+      const key = event.key.toLowerCase();
+
+      if (mod && key === 's') {
+        // Always swallow Ctrl+S so the browser save dialog never appears.
+        event.preventDefault();
+        if (!isSaving && isModifiedRef.current) {
+          void handleSaveCircuitInternal();
+        }
+        return;
+      }
+
+      // Leave native undo/redo/typing behavior alone inside text fields.
+      if (isEditableTarget) return;
+
+      if (mod && key === 'z') {
+        event.preventDefault();
+        if (event.shiftKey) {
+          redoLastAction();
+        } else {
+          undoLastAction();
+        }
+        return;
+      }
+      if (mod && key === 'y') {
+        event.preventDefault();
+        redoLastAction();
+        return;
+      }
+      if (!mod && !event.altKey && key === 'r') {
+        handleRotateSelectedComponent();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleSaveCircuitInternal, undoLastAction, redoLastAction, handleRotateSelectedComponent, isSaving]);
+
   if (isLoadingProject) {
     return (
-        <div className="flex h-screen items-center justify-center">
-          <p>Loading project...</p>
+        <div className="flex h-screen flex-col items-center justify-center gap-3 text-muted-foreground">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-sm">Loading project…</p>
         </div>
     );
   }
 
   return (
     <div className="h-full flex flex-col">
-      <div className="bg-white border-b p-2 flex items-center justify-between">
-        <div className="flex items-center">
-          <Button 
-            variant="ghost" 
-            size="sm" 
+      <TooltipProvider delayDuration={300}>
+      <div className="bg-white border-b px-2 py-1.5 flex items-center justify-between gap-2">
+        <div className="flex items-center min-w-0">
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={handleBackToDashboard}
-            className="mr-2"
+            className="mr-1 shrink-0"
           >
             <ArrowLeft className="h-4 w-4 mr-1" />
             Dashboard
           </Button>
-          <div className="text-lg font-semibold text-primary mr-4">Circuit Editor</div>
+          <Separator orientation="vertical" className="h-6 mx-1 shrink-0" />
           <input
             type="text"
             value={circuitName}
@@ -359,102 +424,184 @@ const CircuitEditorLayoutContent = ({
               setCircuitName(e.target.value);
               setIsModified(true);
             }}
-            className="border rounded px-2 py-1 text-sm w-64"
+            aria-label="Project name"
+            title="Rename project"
+            className="min-w-0 w-64 truncate rounded border border-transparent bg-transparent px-2 py-1 text-sm font-medium
+                       transition-colors hover:border-input focus:border-input focus:outline-none focus:ring-1 focus:ring-ring"
           />
-          {isModified && <span className="ml-2 text-xs text-amber-600">●</span>}
+          {isModified && (
+            <span className="ml-2 shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-700">
+              Unsaved
+            </span>
+          )}
         </div>
-        <div className="flex items-center gap-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => setShowCodeEditor(!showCodeEditor)}
-            className={showCodeEditor ? "bg-secondary" : ""}
-          >
-            <Code className="mr-1 h-4 w-4" />
-            Code
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => setShowSerialMonitor(!showSerialMonitor)}
-            className={showSerialMonitor ? "bg-secondary" : ""}
-          >
-            <MonitorUp className="mr-1 h-4 w-4" />
-            Serial
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={toggleOrientation}
-            title={verticalSplit ? "Switch to horizontal layout" : "Switch to vertical layout"}
-          >
-            {verticalSplit ? 
-              <SplitSquareHorizontal className="h-4 w-4" /> : 
-              <SplitSquareVertical className="h-4 w-4" />
-            }
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={handleClearCircuit}
-          >
-            <Trash2 className="mr-1 h-4 w-4" />
-            Clear
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={handleRotateSelectedComponent}
-            disabled={!selectedComponent}
-            title={selectedComponent ? "Rotate Selected Component (R)" : "Select a component to rotate"}
-          >
-            <RotateCw className="mr-1 h-4 w-4" />
-            Rotate
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={undoLastAction} 
-            disabled={!canUndo}
-          >
-            <Undo className="mr-1 h-4 w-4" />
-            Undo
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={redoLastAction} 
-            disabled={!canRedo}
-          >
-            <Redo className="mr-1 h-4 w-4" />
-            Redo
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={handleSaveCircuitInternal}
-            disabled={isSaving || !isModified}
-          >
-            <Save className="mr-1 h-4 w-4" />
-            {isSaving ? 'Saving...' : 'Save'}
-          </Button>
-          <Button 
-            size="sm"
-            onClick={handleSimulate}
-          >
-            {isSimulationRunning ? (
-              <Square className="mr-1 h-4 w-4" />
-            ) : (
-              <Play className="mr-1 h-4 w-4" />
-            )}
-            {isSimulationRunning ? 'Stop' : 'Start'}
-          </Button>
+        <div className="flex items-center gap-1">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowCodeEditor(!showCodeEditor)}
+                className={showCodeEditor ? "bg-secondary" : ""}
+                aria-pressed={showCodeEditor}
+              >
+                <Code className="mr-1 h-4 w-4" />
+                Code
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{showCodeEditor ? 'Hide code editor' : 'Show code editor'}</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowSerialMonitor(!showSerialMonitor)}
+                className={showSerialMonitor ? "bg-secondary" : ""}
+                aria-pressed={showSerialMonitor}
+              >
+                <MonitorUp className="mr-1 h-4 w-4" />
+                Serial
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{showSerialMonitor ? 'Hide serial monitor' : 'Show serial monitor'}</TooltipContent>
+          </Tooltip>
+          {(showCodeEditor || showSerialMonitor) && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={toggleOrientation}
+                  aria-label={verticalSplit ? "Switch to horizontal layout" : "Switch to vertical layout"}
+                >
+                  {verticalSplit ?
+                    <SplitSquareHorizontal className="h-4 w-4" /> :
+                    <SplitSquareVertical className="h-4 w-4" />
+                  }
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{verticalSplit ? 'Switch to horizontal layout' : 'Switch to vertical layout'}</TooltipContent>
+            </Tooltip>
+          )}
+
+          <Separator orientation="vertical" className="h-6 mx-1" />
+
+          <Tooltip>
+            {/* span keeps tooltips working while the button is disabled
+                (disabled buttons get pointer-events: none) */}
+            <TooltipTrigger asChild>
+              <span className="inline-block">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRotateSelectedComponent}
+                  disabled={!selectedComponent}
+                  aria-label="Rotate selected component"
+                >
+                  <RotateCw className="h-4 w-4" />
+                </Button>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>
+              {selectedComponent ? 'Rotate selected component (R)' : 'Select a component to rotate'}
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="inline-block">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={undoLastAction}
+                  disabled={!canUndo}
+                  aria-label="Undo"
+                >
+                  <Undo className="h-4 w-4" />
+                </Button>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>Undo (Ctrl+Z)</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="inline-block">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={redoLastAction}
+                  disabled={!canRedo}
+                  aria-label="Redo"
+                >
+                  <Redo className="h-4 w-4" />
+                </Button>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>Redo (Ctrl+Shift+Z)</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleClearCircuit}
+                aria-label="Clear circuit"
+                className="text-destructive hover:text-destructive"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Clear circuit</TooltipContent>
+          </Tooltip>
+
+          <Separator orientation="vertical" className="h-6 mx-1" />
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="inline-block">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSaveCircuitInternal}
+                  disabled={isSaving || !isModified}
+                >
+                  {isSaving ? (
+                    <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="mr-1 h-4 w-4" />
+                  )}
+                  {isSaving ? 'Saving…' : 'Save'}
+                </Button>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>{isModified ? 'Save project (Ctrl+S)' : 'All changes saved'}</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="sm"
+                variant={isSimulationRunning ? 'destructive' : 'default'}
+                onClick={handleSimulate}
+              >
+                {isSimulationRunning ? (
+                  <Square className="mr-1 h-4 w-4" />
+                ) : (
+                  <Play className="mr-1 h-4 w-4" />
+                )}
+                {isSimulationRunning ? 'Stop' : 'Run'}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{isSimulationRunning ? 'Stop simulation' : 'Run simulation'}</TooltipContent>
+          </Tooltip>
         </div>
       </div>
+      </TooltipProvider>
 
       <ReactFlowProvider>
-        <div className="flex-1 flex">
-          <div className="w-64 border-r bg-gray-50 p-4 overflow-y-auto flex-shrink-0">
+        {/* min-h-0 lets this row shrink to the viewport instead of growing
+            to the sidebar's natural content height (flex min-height:auto). */}
+        <div className="flex-1 flex min-h-0">
+          <div className="w-64 border-r bg-gray-50 flex-shrink-0 overflow-hidden">
             <ComponentPanel />
           </div>
 
@@ -509,10 +656,13 @@ const CircuitEditorLayoutContent = ({
                         minSize={20}
                       >
                         <div className="h-full w-full overflow-hidden">
-                          <CodeEditor 
-                            code={code} 
-                            onChange={handleCodeChange} 
-                            onCompile={handleCompileCode} 
+                          <CodeEditor
+                            code={code}
+                            onChange={handleCodeChange}
+                            onCompile={handleCompileCode}
+                            onSave={handleSaveCircuitInternal}
+                            isModified={isModified}
+                            isSaving={isSaving}
                           />
                         </div>
                       </Panel>
@@ -530,10 +680,11 @@ const CircuitEditorLayoutContent = ({
                         minSize={20}
                       >
                         <div className="h-full w-full overflow-hidden">
-                          <SerialMonitor 
-                            isSimulationRunning={isSimulationRunning} 
-                            serialOutput={serialOutput} 
+                          <SerialMonitor
+                            isSimulationRunning={isSimulationRunning}
+                            serialOutput={serialOutput}
                             clearSerialOutput={clearSerialOutput}
+                            onSendCommand={handleSerialCommand}
                           />
                         </div>
                       </Panel>
@@ -584,6 +735,18 @@ export const CircuitEditorLayout = ({ projectId = null }: { projectId?: string |
     if (blocker.state === "blocked") { setShowNavigationBlockerDialog(true); }
     else { setShowNavigationBlockerDialog(false); }
   }, [blocker.state]);
+
+  // useBlocker only guards in-app navigation; warn on tab close / reload too.
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (isModifiedRef.current) {
+        event.preventDefault();
+        event.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, []);
 
   return (
     <CircuitEditorProvider>

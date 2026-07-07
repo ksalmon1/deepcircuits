@@ -1,13 +1,16 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Play, Save, Clock } from 'lucide-react';
-import Editor, { Monaco } from '@monaco-editor/react';
+import { Play, Save, Check, Loader2 } from 'lucide-react';
+import Editor from '@monaco-editor/react';
 import { editor } from 'monaco-editor';
 
 interface CodeEditorProps {
   code: string;
-  onChange: (value: string | undefined) => void;
+  onChange: (value: string) => void;
   onCompile?: (code: string) => Promise<void>;
+  onSave?: () => Promise<boolean>;
+  isModified?: boolean;
+  isSaving?: boolean;
 }
 
 // Memoize editor options to prevent re-renders
@@ -23,128 +26,79 @@ const editorOptions: editor.IStandaloneEditorConstructionOptions = {
   lineNumbersMinChars: 3,
   glyphMargin: false, // Disable glyph margin for better performance
   folding: false, // Disable code folding for better performance
-}
+};
 
-const CodeEditor: React.FC<CodeEditorProps> = ({ code, onChange, onCompile }) => {
+const CodeEditor: React.FC<CodeEditorProps> = ({ code, onChange, onCompile, onSave, isModified, isSaving }) => {
   const [isCompiling, setIsCompiling] = useState(false);
-  const [lastSaved, setLastSaved] = useState<Date | null>(null);
-  const [currentCode, setCurrentCode] = useState(code);
-  const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
-  const monacoRef = useRef<Monaco | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    setCurrentCode(code);
-    // Update the editor content directly if the editor is already mounted
-    if (editorRef.current && editorRef.current.getValue() !== code) {
-      editorRef.current.setValue(code);
-    }
-  }, [code]);
+  const handleEditorChange = useCallback((value: string | undefined) => {
+    onChange(value ?? '');
+  }, [onChange]);
 
-  // Add resize observer to force layout when container size changes
-  useEffect(() => {
-    if (!containerRef.current || !editorRef.current) return;
-
-    // Create a ResizeObserver to detect changes in the container size
-    const resizeObserver = new ResizeObserver(() => {
-      if (editorRef.current) {
-        // Force the editor to layout on resize
-        editorRef.current.layout();
-      }
-    });
-
-    // Start observing the container
-    resizeObserver.observe(containerRef.current);
-
-    // Clean up the observer when the component unmounts
-    return () => {
-      resizeObserver.disconnect();
-    };
-  }, []);
-
-  const handleCompile = async () => {
-    if (!onCompile || !currentCode) return;
-
+  const handleCompile = useCallback(async () => {
+    if (!onCompile || !code) return;
     setIsCompiling(true);
     try {
-      await onCompile(currentCode);
+      await onCompile(code);
     } catch (error) {
       console.error('Compilation error:', error);
     } finally {
       setIsCompiling(false);
     }
-  };
-
-  const handleSave = useCallback(() => {
-    setLastSaved(new Date());
-  }, []);
-
-  const handleEditorChange = useCallback((value: string | undefined) => {
-    const newCode = value || '';
-    setCurrentCode(newCode);
-    onChange(newCode);
-  }, [onChange]);
-
-  const handleEditorDidMount = useCallback((editor: editor.IStandaloneCodeEditor, monaco: Monaco) => {
-    editorRef.current = editor;
-    monacoRef.current = monaco;
-    
-    // Trigger layout explicitly after mounting
-    setTimeout(() => {
-      editor.layout();
-      // Add extra resize check after a longer delay to handle slow panel transitions
-      setTimeout(() => editor.layout(), 500);
-    }, 100);
-  }, []);
-
-  // Define buttons with memoization to prevent re-renders
-  const saveButton = (
-    <Button 
-      size="sm" 
-      variant="outline" 
-      onClick={handleSave}
-    >
-      <Save className="h-4 w-4 mr-1" />
-      Save
-    </Button>
-  );
-
-  const compileButton = onCompile && (
-    <Button 
-      size="sm"
-      onClick={handleCompile}
-      disabled={isCompiling || !currentCode}
-    >
-      <Play className="h-4 w-4 mr-1" />
-      {isCompiling ? 'Compiling...' : 'Compile & Run'}
-    </Button>
-  );
+  }, [onCompile, code]);
 
   return (
     <div className="h-full flex flex-col bg-gray-50">
-      <div className="p-2 border-b bg-white flex justify-between items-center">
-        <h3 className="font-medium">Arduino Code (C++)</h3>
-        <div className="flex gap-2">
-          {lastSaved && (
-            <div className="text-xs text-gray-500 flex items-center">
-              <Clock className="h-3 w-3 mr-1" />
-              Saved at {lastSaved.toLocaleTimeString()}
-            </div>
+      <div className="px-2 py-1.5 border-b flex justify-between items-center bg-gray-100">
+        <div className="flex items-center gap-2 min-w-0">
+          <h3 className="font-medium text-sm text-gray-800 truncate">Arduino Code (C++)</h3>
+          {isModified && (
+            <span className="flex items-center gap-1 text-xs text-amber-600 shrink-0">
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-500" aria-hidden="true" />
+              Unsaved
+            </span>
           )}
-          {saveButton}
-          {compileButton}
+        </div>
+        <div className="flex gap-2">
+          {onSave && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => void onSave()}
+              disabled={!isModified || isSaving}
+              title="Save project (Ctrl+S)"
+            >
+              {isSaving ? (
+                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+              ) : isModified ? (
+                <Save className="h-4 w-4 mr-1" />
+              ) : (
+                <Check className="h-4 w-4 mr-1" />
+              )}
+              {isSaving ? 'Saving...' : isModified ? 'Save' : 'Saved'}
+            </Button>
+          )}
+          {onCompile && (
+            <Button
+              size="sm"
+              onClick={handleCompile}
+              disabled={isCompiling || !code}
+            >
+              <Play className="h-4 w-4 mr-1" />
+              {isCompiling ? 'Compiling...' : 'Compile & Run'}
+            </Button>
+          )}
         </div>
       </div>
-      
-      <div ref={containerRef} className="flex-1 overflow-hidden relative">
+
+      <div className="flex-1 overflow-hidden relative">
         <Editor
           height="100%"
           language="cpp"
           theme="vs-dark"
-          value={currentCode}
+          value={code}
           onChange={handleEditorChange}
           options={editorOptions}
-          onMount={handleEditorDidMount}
           loading={<div className="p-4 text-center">Loading editor...</div>}
           wrapperProps={{
             className: 'monaco-editor-wrapper h-full',

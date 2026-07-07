@@ -6,18 +6,39 @@ import { SimulationState, ComponentSimulationState, PinVoltages } from '@/utils/
 import type { AppComponentModel, AppConnectionModel } from '@/simulation/appStateTypes';
 import { generateNetlist as realGenerateNetlist, formatSimulationResults } from '@/simulation/spiceService';
 import { pinHandleId } from '@/utils/pinUtils';
+import { AVRRunner } from '@/simulation/avr/AVRRunner';
+import { compileSketch, CompileError } from '@/simulation/avr/compile';
+import { isBoardType, computeBoardDirectives, boardPinRole } from '@/simulation/avr/boardModel';
 
 // This matches the type needed by our simulation engine
+
+// A single line in the Serial Monitor. `time` is the epoch-ms the line was
+// logged so the monitor can render optional timestamps.
+export interface SerialLine {
+  id: number;
+  time: number;
+  text: string;
+}
+
+// Cap the serial buffer here (the single owner of the array) so the monitor
+// never has to defensively re-slice on every render.
+const MAX_SERIAL_LINES = 1000;
 
 interface SimulationContextType {
   isSimulationRunning: boolean;
   setIsSimulationRunning: React.Dispatch<React.SetStateAction<boolean>>;
   toggleSimulation: () => void;
   simulationState: SimulationState | null;
-  serialOutput: string[];
-  addSerialOutput: (message: string) => void;
+  serialOutput: SerialLine[];
+  addSerialOutput: (message: string | string[]) => void;
   clearSerialOutput: () => void;
   notifyCircuitChanged: () => void; // New: call this on relevant circuit changes
+  /** True while a sketch is being compiled for an emulated board. */
+  isCompiling: boolean;
+  /** Compile the project's sketch and (re)start it on the board. */
+  compileAndRun: () => Promise<void>;
+  /** Send a line of text to the emulated board's serial input. */
+  sendSerialInput: (text: string) => void;
 }
 
 const SimulationContext = createContext<SimulationContextType | undefined>(undefined);
@@ -229,10 +250,11 @@ interface WireLike {
 
 export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children }) => {
   const [isSimulationRunning, setIsSimulationRunning] = useState<boolean>(false);
-  const [serialOutput, setSerialOutput] = useState<string[]>([]);
+  const [serialOutput, setSerialOutput] = useState<SerialLine[]>([]);
   const [simulationState, setSimulationState] = useState<SimulationState | null>(null);
+  const [isCompiling, setIsCompiling] = useState<boolean>(false);
   const { setError } = useError();
-  const { components, updateComponent, wires } = useProject();
+  const { components, updateComponent, wires, code } = useProject();
 
   // --- Worker and runId state ---
   const workerRef = useRef<Worker | null>(null);
@@ -241,24 +263,158 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
   const lastNetlistRef = useRef<string>('');
   const rerunPendingRef = useRef<boolean>(false);
 
+  // --- Emulated control board (AVR) state ---
+  const avrRunnerRef = useRef<AVRRunner | null>(null);
+  const boardIdRef = useRef<string | null>(null);
+  // Incremented whenever the board (re)starts or stops, so an in-flight
+  // compile can detect it has been superseded.
+  const boardSessionRef = useRef<number>(0);
+  const serialLineBufferRef = useRef<string>('');
+  const serialFlushTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const notifyCircuitChangedRef = useRef<() => void>(() => {});
+  const codeRef = useRef<string>(code);
+  codeRef.current = code;
+
   // --- Utility: Generate netlist for wired components only ---
   const generateNetlist = useCallback((): string => {
     const { componentsForSpice } = buildSpiceMapping(components, wires || []);
-    return realGenerateNetlist(componentsForSpice);
+    // Inject the emulator's live pin report into board components so the
+    // netlist reflects what the sketch is doing right now. Snapshotting
+    // here (netlist-generation time) also closes each PWM duty window.
+    const runner = avrRunnerRef.current;
+    const snapshot = runner?.isRunning ? runner.snapshotPins() : null;
+    const augmented = componentsForSpice.map((comp) => {
+      if (!isBoardType(comp.type)) return comp;
+      return {
+        ...comp,
+        properties: {
+          ...comp.properties,
+          __boardDirectives: computeBoardDirectives(
+            comp.pins,
+            comp.id === boardIdRef.current ? snapshot : null,
+          ),
+        },
+      };
+    });
+    return realGenerateNetlist(augmented);
   }, [components, wires]);
 
   // --- Serial Monitor helpers ---
-  const addSerialOutput = useCallback((message: string) => {
-    setSerialOutput(prev => [...prev, message]);
+  const serialLineIdRef = useRef<number>(0);
+  const addSerialOutput = useCallback((message: string | string[]) => {
+    // Accept batches and split embedded newlines so every array entry is
+    // exactly one rendered line in the monitor.
+    const texts = (Array.isArray(message) ? message : [message])
+      .flatMap(m => String(m).split('\n'));
+    if (texts.length === 0) return;
+    const time = Date.now();
+    const lines: SerialLine[] = texts.map(text => ({
+      id: ++serialLineIdRef.current,
+      time,
+      text,
+    }));
+    setSerialOutput(prev => {
+      const next = prev.concat(lines);
+      return next.length > MAX_SERIAL_LINES ? next.slice(-MAX_SERIAL_LINES) : next;
+    });
   }, []);
   const clearSerialOutput = useCallback(() => {
     setSerialOutput([]);
   }, []);
 
+  // --- Emulated board: serial TX line buffering ---
+  // Bytes arrive one at a time from the USART; group them into lines, and
+  // flush a partial line after a short pause so Serial.print() without a
+  // newline still shows up.
+  const emitSerialByte = useCallback((byte: number) => {
+    if (serialFlushTimeoutRef.current) {
+      clearTimeout(serialFlushTimeoutRef.current);
+      serialFlushTimeoutRef.current = null;
+    }
+    const char = String.fromCharCode(byte);
+    if (char === '\n') {
+      const line = serialLineBufferRef.current.replace(/\r$/, '');
+      serialLineBufferRef.current = '';
+      addSerialOutput(line);
+      return;
+    }
+    serialLineBufferRef.current += char;
+    serialFlushTimeoutRef.current = setTimeout(() => {
+      if (serialLineBufferRef.current) {
+        addSerialOutput(serialLineBufferRef.current);
+        serialLineBufferRef.current = '';
+      }
+    }, 150);
+  }, [addSerialOutput]);
+
+  // --- Emulated board lifecycle ---
+  const stopBoard = useCallback(() => {
+    boardSessionRef.current++;
+    avrRunnerRef.current?.stop();
+    avrRunnerRef.current = null;
+    serialLineBufferRef.current = '';
+    if (serialFlushTimeoutRef.current) {
+      clearTimeout(serialFlushTimeoutRef.current);
+      serialFlushTimeoutRef.current = null;
+    }
+  }, []);
+
+  /**
+   * Compile the project sketch and boot it on the first board on the
+   * canvas. No board or no code is not an error — the circuit still
+   * simulates, and board power rails stay live via the netlist defaults.
+   */
+  const startBoard = useCallback(async (): Promise<void> => {
+    stopBoard();
+    const session = boardSessionRef.current;
+    const board = components.find((comp) => isBoardType(comp.type));
+    boardIdRef.current = board?.id ?? null;
+    if (!board) return;
+    const sketch = codeRef.current;
+    if (!sketch?.trim()) {
+      addSerialOutput('[Board powered, but there is no sketch code to run]');
+      return;
+    }
+    setIsCompiling(true);
+    addSerialOutput('[Compiling sketch...]');
+    let hex: string;
+    try {
+      const result = await compileSketch(sketch);
+      hex = result.hex;
+      const memoryLine = result.stdout
+        .split('\n')
+        .find((line) => line.includes('bytes of program storage'));
+      if (memoryLine) addSerialOutput(`[${memoryLine.trim()}]`);
+    } catch (err) {
+      const message = err instanceof CompileError ? err.message : String(err);
+      addSerialOutput(`[Error] ${message}`);
+      if (err instanceof CompileError && err.output) {
+        addSerialOutput(err.output);
+      }
+      toast.error(message);
+      return;
+    } finally {
+      setIsCompiling(false);
+    }
+    if (session !== boardSessionRef.current) return; // stopped/restarted meanwhile
+    const runner = new AVRRunner(hex);
+    runner.onSerialByte = emitSerialByte;
+    // GPIO changes rerun SPICE through the existing debounced path.
+    runner.onPinChange = () => notifyCircuitChangedRef.current();
+    avrRunnerRef.current = runner;
+    runner.start();
+    addSerialOutput('[Sketch running]');
+    notifyCircuitChangedRef.current();
+  }, [components, stopBoard, addSerialOutput, emitSerialByte]);
+
+  const sendSerialInput = useCallback((text: string) => {
+    addSerialOutput(`> ${text}`);
+    avrRunnerRef.current?.serialWrite(text + '\n');
+  }, [addSerialOutput]);
+
   // --- Worker message handler ---
   const handleWorkerMessage = useCallback((e: MessageEvent) => {
     const msg = e.data;
-    console.log('[handleWorkerMessage] called with msg:', msg);
     if (msg.type === 'ready') {
       console.log(`[SimulationContext] Simulation engine ready (fetched in ${msg.fetchMs}ms).`);
       return;
@@ -269,39 +425,38 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
     }
     if (msg.type === 'result') {
       if (msg.runId !== latestRunIdRef.current) return; // Ignore stale
-      // Optionally clear Serial Monitor for each new result
-      clearSerialOutput();
-      console.log(`[SerialMonitor] [Simulation run ${msg.runId}]`);
-      addSerialOutput(`[Simulation run ${msg.runId}]`);
-      console.log(`[SerialMonitor] [Result] t: ${msg.data.t.length}, v: ${msg.data.v.length}, i: ${msg.data.i.length}`);
-      addSerialOutput(`[Result] t: ${msg.data.t.length}, v: ${msg.data.v.length}, i: ${msg.data.i.length}`);
-      // Print detailed voltages and currents
-      const { t, v, i } = msg.data;
-      // Voltages
-      if (v && v.length > 0) {
-        addSerialOutput('Node Voltages:');
-        console.log('[SerialMonitor] Node Voltages:');
-        v.forEach((voltage, idx) => {
-          const line = `  Node ${idx + 1}: ${voltage.toFixed(4)} V`;
-          addSerialOutput(line);
-          console.log('[SerialMonitor]', line);
-        });
-      }
-      // Currents
-      if (i && i.length > 0) {
-        addSerialOutput('Device Currents:');
-        console.log('[SerialMonitor] Device Currents:');
-        i.forEach((current, idx) => {
-          const line = `  Device ${idx + 1}: ${current.toExponential(4)} A`;
-          addSerialOutput(line);
-          console.log('[SerialMonitor]', line);
-        });
-      }
-      // --- User-friendly formatted output ---
       const { componentsForSpice, pinToNodeMap } = buildSpiceMapping(components, wires || []);
-      // Format and add the user-friendly summary
-      const formatted = formatSimulationResults(msg.data, componentsForSpice);
-      addSerialOutput(formatted);
+      // With a board on the canvas the monitor belongs to the sketch: the
+      // circuit re-solves continuously (every GPIO change), and compile /
+      // runtime messages must survive, so don't wipe it or flood it with
+      // per-run reports. Without a board, keep the classic behavior:
+      // each result replaces the report.
+      if (components.some((comp) => isBoardType(comp.type))) {
+        // Still refresh the published results for renderer fallbacks.
+        formatSimulationResults(msg.data, componentsForSpice);
+      } else {
+        clearSerialOutput();
+        const { t, v, i } = msg.data;
+        // Collect the whole report and append it in a single state update.
+        const report: string[] = [
+          `[Simulation run ${msg.runId}]`,
+          `[Result] t: ${t.length}, v: ${v.length}, i: ${i.length}`,
+        ];
+        if (v && v.length > 0) {
+          report.push('Node Voltages:');
+          v.forEach((voltage, idx) => {
+            report.push(`  Node ${idx + 1}: ${voltage.toFixed(4)} V`);
+          });
+        }
+        if (i && i.length > 0) {
+          report.push('Device Currents:');
+          i.forEach((current, idx) => {
+            report.push(`  Device ${idx + 1}: ${current.toExponential(4)} A`);
+          });
+        }
+        report.push(formatSimulationResults(msg.data, componentsForSpice));
+        addSerialOutput(report);
+      }
       // Map node voltages back onto each component pin using the same
       // pin -> node assignment that produced the netlist. Ground is 0V and
       // is never printed by ngspice.
@@ -361,6 +516,25 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
         simState[comp.id] = { pinVoltages, pinCurrents };
       });
       setSimulationState(simState);
+      // Close the co-simulation loop: solved node voltages become the
+      // chip's inputs, so digitalRead()/analogRead() see the real circuit.
+      const runner = avrRunnerRef.current;
+      const boardId = boardIdRef.current;
+      if (runner?.isRunning && boardId && simState[boardId]) {
+        const board = components.find((comp) => comp.id === boardId);
+        const pinVoltages = simState[boardId].pinVoltages;
+        (board?.pins || []).forEach((pin) => {
+          const role = boardPinRole(pin.name);
+          const volts = pinVoltages?.[pin.id];
+          if (!role || role.kind !== 'io' || volts === undefined) return;
+          if (role.arduinoPin >= 14) {
+            runner.setAnalogVoltage(role.arduinoPin - 14, volts);
+          }
+          if (runner.getPinMode(role.arduinoPin) !== 'output') {
+            runner.setDigitalInput(role.arduinoPin, volts > 2.5);
+          }
+        });
+      }
     } else if (msg.type === 'error') {
       if (msg.runId !== latestRunIdRef.current) return;
       addSerialOutput(`[Error] ${msg.message}`);
@@ -381,18 +555,23 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
     workerRef.current.postMessage({ type: 'run', runId, netlist });
   }, [generateNetlist]);
 
-  // --- Notify circuit changed (from canvas) ---
+  // --- Notify circuit changed (from canvas or the emulated board) ---
   const notifyCircuitChanged = useCallback(() => {
     if (!isSimulationRunning) return;
     // Debounce: If a run is already pending, skip
     if (rerunPendingRef.current) return;
     rerunPendingRef.current = true;
-    console.log('[SimulationContext] notifyCircuitChanged called. Will rerun simulation in 50ms.');
     setTimeout(() => {
       rerunPendingRef.current = false;
       rerunSimulation();
-    }, 50); // Debounce rapid changes
+    }, 50); // Debounce rapid changes (and GPIO toggle bursts from the board)
   }, [isSimulationRunning, rerunSimulation]);
+
+  // Board callbacks fire from timer slices; route them to the latest
+  // notifyCircuitChanged without rebinding listeners.
+  useEffect(() => {
+    notifyCircuitChangedRef.current = notifyCircuitChanged;
+  }, [notifyCircuitChanged]);
 
   // --- Persistent worker: created once, kept warm across Start/Stop ---
   // The worker compiles spice.wasm as soon as it boots, so the engine is
@@ -416,10 +595,13 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
     worker.onmessage = handleWorkerMessage;
     setIsSimulationRunning(true);
     clearSerialOutput();
-  }, [ensureWorker, handleWorkerMessage, clearSerialOutput]);
+    // Boot the sketch on any board present (async: compiles first).
+    void startBoard();
+  }, [ensureWorker, handleWorkerMessage, clearSerialOutput, startBoard]);
 
   // --- Stop simulation ---
   const stopSimulation = useCallback(() => {
+    stopBoard();
     // Keep the worker (and its compiled engine) alive for the next run;
     // just stop tracking results.
     workerRef.current?.postMessage({ type: 'stop' });
@@ -432,7 +614,7 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
     window.simulationResults = undefined;
     window.lastCircuitSummary = undefined;
     addSerialOutput('[Simulation stopped]');
-  }, [addSerialOutput]);
+  }, [addSerialOutput, stopBoard]);
 
   // --- Toggle simulation ---
   const toggleSimulation = useCallback(() => {
@@ -443,15 +625,29 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
     }
   }, [isSimulationRunning, startSimulation, stopSimulation]);
 
+  // --- Compile & Run (from the code editor) ---
+  const compileAndRun = useCallback(async (): Promise<void> => {
+    if (!components.some((comp) => isBoardType(comp.type))) {
+      toast.error('Add an Arduino Uno to the canvas to run code on it.');
+      return;
+    }
+    if (!isSimulationRunning) {
+      startSimulation(); // boots the board with the current sketch
+      return;
+    }
+    await startBoard(); // recompile (cached when unchanged) and restart
+  }, [components, isSimulationRunning, startSimulation, startBoard]);
+
   // --- Cleanup on unmount ---
   useEffect(() => {
     return () => {
+      stopBoard();
       if (workerRef.current) {
         workerRef.current.terminate();
         workerRef.current = null;
       }
     };
-  }, []);
+  }, [stopBoard]);
 
   // --- Context value ---
   const value: SimulationContextType = {
@@ -463,6 +659,9 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
     addSerialOutput,
     clearSerialOutput,
     notifyCircuitChanged, // Expose for canvas
+    isCompiling,
+    compileAndRun,
+    sendSerialInput,
   };
 
   // Ensure simulation run is triggered after isSimulationRunning is set to true
