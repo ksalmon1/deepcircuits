@@ -88,7 +88,7 @@ const PricingSection = () => {
                   variant={plan.buttonVariant}
                   className="w-full"
                 >
-                  <Link to="/signup">{plan.buttonText}</Link>
+                  <Link to="/register">{plan.buttonText}</Link>
                 </Button>
               </div>
             </div>

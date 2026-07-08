@@ -91,11 +91,11 @@ const Header = () => {
                 <Link to="/login">Sign In</Link>
               </Button>
               <Button asChild className="hidden md:flex">
-                <Link to="/signup">Sign Up</Link>
+                <Link to="/register">Sign Up</Link>
               </Button>
             </>
           )}
-          
+
           {/* Mobile Menu Button */}
           <button 
             className="block md:hidden" 
@@ -176,7 +176,7 @@ const Header = () => {
                   <Link to="/login">Sign In</Link>
                 </Button>
                 <Button asChild className="w-full" onClick={closeMenu}>
-                  <Link to="/signup">Sign Up</Link>
+                  <Link to="/register">Sign Up</Link>
                 </Button>
               </>
             )}
