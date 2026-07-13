@@ -108,3 +108,18 @@ npm run test:e2e      # starts php artisan serve itself if not running
   library).
 - Roles are a `role` column on `users` (`user` / `admin`); admin routes sit
   behind the `admin` middleware and `/admin/*` pages.
+
+## Acknowledgements
+
+DeepCircuits draws inspiration from some excellent projects in the
+electronics-simulation space:
+
+- **[Wokwi](https://wokwi.com/)** — the gold standard for browser-based
+  embedded simulation. Part visuals render through the MIT-licensed
+  [@wokwi/elements](https://github.com/wokwi/wokwi-elements) web components,
+  and boards are emulated with [avr8js](https://github.com/wokwi/avr8js).
+- **[Velxio](https://github.com/davidmonterocrespo24/velxio)** — an
+  open-source circuit simulator whose ideas around mixed-mode co-simulation
+  and pre-run circuit verification informed parts of our design. Velxio is
+  AGPLv3-licensed; DeepCircuits contains no Velxio code — features here are
+  independent implementations built from component datasheets.
