@@ -145,10 +145,20 @@ export async function runSimulation(page: Page, projectId: string): Promise<SimR
   await page.goto(`/circuit-editor/${projectId}`);
   // Wait for the canvas and library to be ready.
   await expect(page.locator('.react-flow')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Start' })).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Run' })).toBeEnabled();
   await clearSimResults(page);
-  await page.getByRole('button', { name: 'Start' }).click();
-  await expect(page.getByRole('button', { name: 'Stop' })).toBeVisible();
+  await page.getByRole('button', { name: 'Run' }).click();
+  // Run performs a pre-flight verification solve first. Some suites simulate
+  // deliberately abusive circuits (e.g. blowing a fuse), which the check
+  // blocks with a modal — always proceed here; verifier.spec.ts covers the
+  // gating behavior itself.
+  const stopButton = page.getByRole('button', { name: 'Stop' });
+  const verifyModal = page.getByTestId('circuit-verification-modal');
+  await expect(stopButton.or(verifyModal)).toBeVisible({ timeout: 30_000 });
+  if (await verifyModal.isVisible()) {
+    await verifyModal.getByRole('button', { name: 'Run anyway' }).click();
+  }
+  await expect(stopButton).toBeVisible({ timeout: 30_000 });
   return waitForSimResults(page);
 }
 

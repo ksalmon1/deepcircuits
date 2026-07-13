@@ -91,7 +91,13 @@ function parseResult(capturedStdout) {
       }
     }
     if (inCurrents) {
-      const m = trimmed.match(/@([^[]+)\[i\]\s*=\s*([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)/);
+      // Match any bracketed measurement — [i] (R/V), [id] (diodes),
+      // [dc] (current sources) — plus inductor i(Ldev). Kept behavior-in-sync
+      // with resources/js/simulation/netlist/parseResults.ts (the worker is
+      // served un-bundled and can't import app modules).
+      const m =
+        trimmed.match(/@([^[]+)\[[a-z]+\]\s*=\s*([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)/) ||
+        trimmed.match(/^i\(([^)]+)\)\s*=\s*([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)/);
       if (m) {
         currentDeviceNames.push(m[1]);
         i.push(parseFloat(m[2]));

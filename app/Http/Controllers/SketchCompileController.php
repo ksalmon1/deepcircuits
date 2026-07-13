@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 /**
  * Compiles Arduino sketches to AVR hex locally with arduino-cli, so user
@@ -15,7 +16,17 @@ use Illuminate\Support\Str;
  */
 class SketchCompileController extends Controller
 {
-    private const FQBN = 'arduino:avr:uno';
+    /**
+     * FQBNs we accept from the client. Allowlisted (never interpolated from
+     * free input) because the value becomes an arduino-cli argument. All are
+     * served by the same locally-installed arduino:avr core.
+     */
+    private const FQBNS = [
+        'arduino:avr:uno',
+        'arduino:avr:nano',
+        'arduino:avr:mega',
+    ];
+    private const DEFAULT_FQBN = 'arduino:avr:uno';
     private const TIMEOUT_SECONDS = 120;
     private const MAX_SKETCH_BYTES = 200_000;
 
@@ -23,10 +34,12 @@ class SketchCompileController extends Controller
     {
         $validated = $request->validate([
             'sketch' => ['required', 'string', 'max:'.self::MAX_SKETCH_BYTES],
+            'fqbn' => ['sometimes', 'string', Rule::in(self::FQBNS)],
         ]);
         $sketch = $validated['sketch'];
+        $fqbn = $validated['fqbn'] ?? self::DEFAULT_FQBN;
 
-        $cacheFile = storage_path('app/sketch-cache/'.sha1(self::FQBN.$sketch).'.json');
+        $cacheFile = storage_path('app/sketch-cache/'.sha1($fqbn.$sketch).'.json');
         if (File::exists($cacheFile)) {
             return response()->json(json_decode(File::get($cacheFile), true));
         }
@@ -54,7 +67,7 @@ class SketchCompileController extends Controller
                 ->env($this->cliEnvironment())
                 ->run([
                     $cli, 'compile',
-                    '--fqbn', self::FQBN,
+                    '--fqbn', $fqbn,
                     '--output-dir', $buildDir,
                     // Explicit build dir: the default derives from the temp /
                     // home directories, which server processes may not have.

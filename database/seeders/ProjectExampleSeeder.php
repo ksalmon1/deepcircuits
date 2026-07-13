@@ -73,6 +73,7 @@ class ProjectExampleSeeder extends Seeder
             $this->blinkExample(),
             $this->buttonControlledLedExample(),
             $this->potentiometerFadeExample(),
+            $this->megaBlinkExample(),
             $this->nanoBlinkExample(),
             $this->nanoButtonExample(),
             $this->nanoPotentiometerExample(),
@@ -251,6 +252,43 @@ class ProjectExampleSeeder extends Seeder
                   Serial.print("  brightness=");
                   Serial.println(brightness);
                   delay(200);
+                }
+                INO,
+        ];
+    }
+
+    // --- Arduino Mega (ATmega2560, different pinout) ---------------------
+    // Mega pin handles: D13=pin-4, GND.1=pin-3.
+
+    private function megaBlinkExample(): array
+    {
+        $b = new CircuitBuilder($this);
+        $mega = $b->add('arduino-mega', 260, 360);
+        $resistor = $b->add('resistor', 400, 150, ['resistance' => 220]);
+        $led = $b->add('led', 600, 210, ['color' => 'red']);
+        $b->wire($mega, 'pin-4', $resistor, 'pin-0');   // D13 -> resistor
+        $b->wire($resistor, 'pin-1', $led, 'pin-0');
+        $b->wire($led, 'pin-1', $mega, 'pin-3');        // -> GND.1
+
+        return [
+            'name' => 'Arduino Mega: Blink',
+            'description' => 'Blink on the Arduino Mega (ATmega2560). The emulated board runs the same sketch as the Uno, toggling an LED on pin 13 once per second.',
+            'components' => $b->components(),
+            'wires' => $b->wires(),
+            'code' => <<<'INO'
+                // Blink: turn an LED on pin 13 on and off once per second.
+
+                void setup() {
+                  pinMode(13, OUTPUT);
+                  Serial.begin(115200);
+                  Serial.println("Mega blink started");
+                }
+
+                void loop() {
+                  digitalWrite(13, HIGH);
+                  delay(500);
+                  digitalWrite(13, LOW);
+                  delay(500);
                 }
                 INO,
         ];
