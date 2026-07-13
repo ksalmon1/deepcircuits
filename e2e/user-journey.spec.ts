@@ -92,7 +92,7 @@ test('a new user builds, simulates, and saves an LED circuit', async ({ page }) 
   await expect(page.locator('.react-flow__edge')).toHaveCount(3);
 
   // 5. Run the simulation and watch the LED light up.
-  await page.getByRole('button', { name: 'Start' }).click();
+  await page.getByRole('button', { name: 'Run' }).click();
   const ledLit = () =>
     page.locator('.react-flow wokwi-led').evaluate((el) => (el as HTMLElement & { value: boolean }).value);
   await expect.poll(ledLit, { timeout: 60_000 }).toBe(true);
@@ -112,6 +112,6 @@ test('a new user builds, simulates, and saves an LED circuit', async ({ page }) 
   await expect(page.locator('.react-flow__node')).toHaveCount(3);
   await expect(page.locator('.react-flow__edge')).toHaveCount(3);
 
-  await page.getByRole('button', { name: 'Start' }).click();
+  await page.getByRole('button', { name: 'Run' }).click();
   await expect.poll(ledLit, { timeout: 60_000 }).toBe(true);
 });

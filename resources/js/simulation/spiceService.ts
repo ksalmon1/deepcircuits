@@ -5,6 +5,8 @@
  */
 
 import type { AppComponentModel } from './appStateTypes';
+import { spiceId as toSpiceId } from './netlist/spiceId';
+import { getSubckt } from './subckt/subcktLibrary';
 
 interface SpiceFileSystem {
     mkdir: (path: string) => void;
@@ -100,6 +102,18 @@ export function generateNetlist(componentsWithNodes: ComponentWithSpiceConnectio
     const addedModels = new Set<string>();
     let deviceLines = `\n* Devices\n`;
 
+    // How many pins across the whole circuit sit on each node. A node used by
+    // only one pin is electrically dangling, so a board needn't emit a weak
+    // pulldown to keep it solvable — which matters for the 85-pin Mega, whose
+    // mostly-unconnected header would otherwise bloat the netlist and stall
+    // ngspice. Ground (node 0) is always present and excluded.
+    const nodeUsage = new Map<string, number>();
+    componentsWithNodes.forEach((comp) => {
+        (comp.spiceConnections || []).forEach((node) => {
+            if (node !== '0') nodeUsage.set(node, (nodeUsage.get(node) || 0) + 1);
+        });
+    });
+
     componentsWithNodes.forEach((comp) => {
         const nodes = comp.spiceConnections?.join(' ') || '';
         if (!nodes) {
@@ -110,7 +124,7 @@ export function generateNetlist(componentsWithNodes: ComponentWithSpiceConnectio
         let valueString = '';
         let modelName = '';
         const props = comp.properties || {};
-        const spiceId = comp.id.replace(/-/g, '');
+        const spiceId = toSpiceId(comp.id);
         let prefix = '?';
 
         const type = resolveSpiceType(comp);
@@ -240,14 +254,38 @@ export function generateNetlist(componentsWithNodes: ComponentWithSpiceConnectio
             }
             case 'ground':
                 return;
+            case 'subckt': {
+                // Analog IC backed by a built-in .subckt macromodel (op-amp,
+                // comparator, 555 — see subckt/subcktLibrary.ts). One block
+                // per used model, one X instance per part; the part's pin
+                // order must match the subckt's port order.
+                const def = getSubckt(props.subckt);
+                if (!def) {
+                    console.warn(`Component ${comp.id}: unknown subckt '${props.subckt}'. Skipping.`);
+                    return;
+                }
+                if (comp.spiceConnections.length !== def.ports) {
+                    console.warn(`Component ${comp.id}: ${def.name} needs ${def.ports} pins, got ${comp.spiceConnections.length}. Skipping.`);
+                    return;
+                }
+                if (!addedModels.has(def.name)) {
+                    modelStatements += `${def.body}\n`;
+                    addedModels.add(def.name);
+                }
+                deviceLines += `X${spiceId} ${nodes} ${def.name}\n`;
+                return;
+            }
             case 'arduino-uno':
-            case 'arduino-nano': {
+            case 'arduino-nano':
+            case 'arduino-mega': {
                 // Emulated control board: the AVR emulator's pin report is
                 // injected as __boardDirectives (see simulation/avr/
-                // boardModel.ts). Every non-ground pin gets a device so all
-                // of its nodes are solvable: driven pins and power rails
-                // become DC sources, INPUT_PULLUP pins a resistor to an
-                // internal 5V rail, everything else a weak pulldown.
+                // boardModel.ts). Driven pins and power rails become DC
+                // sources and INPUT_PULLUP pins a resistor to an internal 5V
+                // rail; a connected but otherwise-floating pin gets a weak
+                // pulldown so its node stays solvable. Unconnected header pins
+                // (common on the 54-pin Mega) are dropped — their dangling
+                // node needs nothing.
                 const directives = props.__boardDirectives as
                     | Array<{ volts?: number; pullup?: boolean } | null>
                     | undefined;
@@ -263,7 +301,7 @@ export function generateNetlist(componentsWithNodes: ComponentWithSpiceConnectio
                             deviceLines += `V${spiceId}rail ${railNode} 0 DC 5\n`;
                         }
                         deviceLines += `R${spiceId}p${pinIndex} ${railNode} ${node} 35k\n`;
-                    } else {
+                    } else if ((nodeUsage.get(node) || 0) > 1) {
                         deviceLines += `R${spiceId}p${pinIndex} ${node} 0 10meg\n`;
                     }
                 });
@@ -298,19 +336,25 @@ export function generateNetlist(componentsWithNodes: ComponentWithSpiceConnectio
     // Print node voltages, but skip node 0 (reference/ground)
     netlist += "echo \"NODE VOLTAGES:\"\n";
 
-    // Get all unique node numbers from all component connections
+    // Print every non-ground node that an emitted device actually references.
+    // Deriving this from the device lines (not from pin counts) keeps nodes
+    // that are internal to a multi-terminal model — e.g. a potentiometer's
+    // wiper, real even when nothing is wired to it — while still dropping the
+    // dozens of dangling header pins skipped for a board like the 85-pin Mega
+    // (printing those just makes ngspice churn through non-existent nodes).
     const allNodes = new Set<string>();
-    componentsWithNodes.forEach(comp => {
-        if (comp.spiceConnections) {
-            comp.spiceConnections.forEach(node => {
-                if (node !== '0') { // Skip node 0 (ground)
-                    allNodes.add(node);
-                }
-            });
-        }
+    deviceLines.split('\n').forEach(line => {
+        const tokens = line.trim().split(/\s+/);
+        if (tokens.length < 3 || !/^[A-Za-z]/.test(tokens[0])) return;
+        // Subckt instances connect every token between the name and the
+        // model: "X<name> <n1> ... <nN> <subckt>". Everything else here is
+        // two-terminal: "<name> <n1> <n2> <value>".
+        const nodeTokens = /^[Xx]/.test(tokens[0]) ? tokens.slice(1, -1) : tokens.slice(1, 3);
+        nodeTokens.forEach(node => {
+            if (node && node !== '0') allNodes.add(node);
+        });
     });
 
-    // Print each non-ground node voltage
     Array.from(allNodes).sort().forEach(node => {
         netlist += `print v(${node})\n`;
     });
@@ -322,7 +366,7 @@ export function generateNetlist(componentsWithNodes: ComponentWithSpiceConnectio
         .filter(comp => resolveSpiceType(comp) === 'voltagesource' || resolveSpiceType(comp) === 'power')
         .map(comp => {
             const prefix = 'V';
-            const spiceId = comp.id.replace(/-/g, '');
+            const spiceId = toSpiceId(comp.id);
             return `${prefix}${spiceId}`;  // Just use the correct device name pattern from above
         });
     
@@ -338,7 +382,7 @@ export function generateNetlist(componentsWithNodes: ComponentWithSpiceConnectio
     // energy-flow direction shown on wires.
     componentsWithNodes.forEach(comp => {
         const type = resolveSpiceType(comp);
-        const spiceId = comp.id.replace(/-/g, '');
+        const spiceId = toSpiceId(comp.id);
         if (RESISTIVE_TYPES.has(type) || type === 'switch') {
             netlist += `print @R${spiceId}[i]\n`;
         } else if (type === 'led' || type === 'diode' || type === 'zener') {
@@ -564,7 +608,7 @@ export function formatSimulationResults(results: SimulationResults, componentsWi
         comp => ['voltagesource', 'power', 'currentsource'].includes(resolveSpiceType(comp))
     );
     if (voltageSources.length === 0) {
-        voltageSources = componentsWithNodes.filter(comp => ['arduino-uno', 'arduino-nano'].includes(resolveSpiceType(comp)));
+        voltageSources = componentsWithNodes.filter(comp => ['arduino-uno', 'arduino-nano', 'arduino-mega'].includes(resolveSpiceType(comp)));
     }
 
     if (voltageSources.length === 0) {
@@ -574,7 +618,7 @@ export function formatSimulationResults(results: SimulationResults, componentsWi
     const source = voltageSources[0];
     
     // Try different possible key formats with proper case (lowercase v)
-    const sourceId = source.id.replace(/-/g, '');
+    const sourceId = toSpiceId(source.id);
     // Log available current keys for debugging
     console.log('Available current keys:', Object.keys(results.currents));
     // Try to find a current key that matches the voltage source

@@ -3,12 +3,19 @@ import { toast } from 'sonner';
 import { useError } from './ErrorContext';
 import { useProject } from './ProjectContext';
 import { SimulationState, ComponentSimulationState, PinVoltages } from '@/utils/simulationUtils';
-import type { AppComponentModel, AppConnectionModel } from '@/simulation/appStateTypes';
 import { generateNetlist as realGenerateNetlist, formatSimulationResults } from '@/simulation/spiceService';
 import { pinHandleId } from '@/utils/pinUtils';
+import { buildSpiceMapping } from '@/simulation/netlist/buildMapping';
+import { spiceIdLower } from '@/simulation/netlist/spiceId';
+import { WorkerSolverAdapter } from '@/simulation/netlist/adapters/WorkerSolverAdapter';
+import { verifyCircuit as runCircuitVerification, type VerificationResult } from '@/simulation/verify/circuitVerifier';
 import { AVRRunner } from '@/simulation/avr/AVRRunner';
 import { compileSketch, CompileError } from '@/simulation/avr/compile';
-import { isBoardType, computeBoardDirectives, boardPinRole, isAnalogOnlyPin } from '@/simulation/avr/boardModel';
+import { isBoardType, getBoardProfile, computeBoardDirectives } from '@/simulation/avr/boardModel';
+import type { BoardProfile } from '@/simulation/avr/boardProfiles';
+import { PinResolver } from '@/simulation/logic/logicFamilies';
+import { connectAnalogInputsToMcu, connectDigitalInputsToMcu } from '@/simulation/mixedMode/mcuCoupling';
+import { MixedModeScheduler } from '@/simulation/mixedMode/MixedModeScheduler';
 
 // This matches the type needed by our simulation engine
 
@@ -39,6 +46,12 @@ interface SimulationContextType {
   compileAndRun: () => Promise<void>;
   /** Send a line of text to the emulated board's serial input. */
   sendSerialInput: (text: string) => void;
+  /**
+   * One-shot pre-Run safety check of the current circuit (short circuits,
+   * LED overcurrent, …). Solves on a dedicated worker so it never disturbs
+   * the live simulation loop. Never throws.
+   */
+  verifyCircuit: () => Promise<VerificationResult>;
 }
 
 const SimulationContext = createContext<SimulationContextType | undefined>(undefined);
@@ -47,206 +60,9 @@ interface SimulationProviderProps {
   children: ReactNode;
 }
 
-// --- Node Mapping Helpers (from CircuitEditorLayout) ---
-type PinToSpiceNodeMap = Map<string, string>; // Map<componentId_pinId, spiceNodeName>
-
-function getSpiceNode(pinKey: string, component: AppComponentModel | undefined, pinToNodeMap: PinToSpiceNodeMap, nextNodeCounter: { value: number }): string {
-  if (pinToNodeMap.has(pinKey)) {
-    return pinToNodeMap.get(pinKey)!;
-  }
-  const pinId = pinKey.split('_')[1];
-  const pinDefinition = component?.pins?.find(p => p.id === pinId);
-  const pinName = pinDefinition?.name?.toUpperCase();
-  const signals = (pinDefinition?.signals || []).map(s => String(s).toLowerCase());
-  // Ground detection is driven by the pin's typed metadata. The display-name
-  // check only applies to legacy pins carrying no type/signals, so a label
-  // like 'A (GND)' on a passive pin can never accidentally ground a net.
-  const hasTypedMetadata = signals.length > 0 || Boolean(pinDefinition?.type);
-  const isGroundPin =
-    pinDefinition?.type === 'ground' ||
-    signals.includes('ground') ||
-    (!hasTypedMetadata && (pinName === 'GND' || pinName === 'GROUND'));
-  if (isGroundPin) {
-    pinToNodeMap.set(pinKey, '0');
-    return '0';
-  }
-  const spiceType = typeof component?.properties?.spiceType === 'string'
-    ? component.properties.spiceType.toLowerCase()
-    : component?.type?.toLowerCase();
-  if (spiceType === 'voltagesource' || spiceType === 'power') {
-    if (component!.pins && component!.pins.length > 1 && pinId === component!.pins[1]?.id) {
-      const isPositivePin =
-        pinDefinition?.type === 'power' || signals.includes('power') ||
-        pinName === 'POSITIVE' || pinName === '+';
-      if (!isPositivePin) {
-        pinToNodeMap.set(pinKey, '0');
-        return '0';
-      }
-    }
-  }
-  const newNodeName = String(nextNodeCounter.value++);
-  pinToNodeMap.set(pinKey, newNodeName);
-  return newNodeName;
-}
-
-function mergeNodes(connections: AppConnectionModel[], pinToNodeMap: PinToSpiceNodeMap): void {
-  let changed = true;
-  let pass = 0;
-  const MAX_PASSES = 20;
-  while (changed && pass < MAX_PASSES) {
-    pass++;
-    changed = false;
-    for (const conn of connections) {
-      const fromKey = `${conn.from.componentId}_${conn.from.pinId}`;
-      const toKey = `${conn.to.componentId}_${conn.to.pinId}`;
-      if (!pinToNodeMap.has(fromKey) || !pinToNodeMap.has(toKey)) continue;
-      const node1 = pinToNodeMap.get(fromKey)!;
-      const node2 = pinToNodeMap.get(toKey)!;
-      let representativeNode = node1;
-      let nodeToMerge = node2;
-      if (node1 === node2) continue;
-      if (node1 === '0') {
-        representativeNode = '0';
-        nodeToMerge = node2;
-      } else if (node2 === '0') {
-        representativeNode = '0';
-        nodeToMerge = node1;
-      } else if (parseInt(node2, 10) < parseInt(node1, 10)) {
-        representativeNode = node2;
-        nodeToMerge = node1;
-      }
-      if (representativeNode === nodeToMerge) continue;
-      pinToNodeMap.forEach((currentNodeName, pinKeyLoop) => {
-        if (currentNodeName === nodeToMerge) {
-          pinToNodeMap.set(pinKeyLoop, representativeNode);
-          changed = true;
-        }
-      });
-    }
-  }
-}
-
-function findConnectedGroups(connections: AppConnectionModel[], components: AppComponentModel[]): Set<string>[] {
-  const graph = new Map<string, Set<string>>();
-  components.forEach(comp => {
-    comp.pins?.forEach(pin => {
-      const pinKey = `${comp.id}_${pin.id}`;
-      if (!graph.has(pinKey)) {
-        graph.set(pinKey, new Set<string>());
-      }
-    });
-  });
-  connections.forEach(conn => {
-    const fromKey = `${conn.from.componentId}_${conn.from.pinId}`;
-    const toKey = `${conn.to.componentId}_${conn.to.pinId}`;
-    if (graph.has(fromKey) && graph.has(toKey)) {
-      graph.get(fromKey)!.add(toKey);
-      graph.get(toKey)!.add(fromKey);
-    }
-  });
-  const visited = new Set<string>();
-  const connectedGroups: Set<string>[] = [];
-  graph.forEach((_, pinKey) => {
-    if (visited.has(pinKey)) return;
-    const group = new Set<string>();
-    const queue = [pinKey];
-    visited.add(pinKey);
-    group.add(pinKey);
-    while (queue.length > 0) {
-      const current = queue.shift()!;
-      graph.get(current)?.forEach(neighbor => {
-        if (!visited.has(neighbor)) {
-          visited.add(neighbor);
-          group.add(neighbor);
-          queue.push(neighbor);
-        }
-      });
-    }
-    connectedGroups.push(group);
-  });
-  return connectedGroups;
-}
-
-/**
- * Build the pin -> SPICE-node assignment for the current circuit and the
- * component list augmented with per-pin node names. Shared by netlist
- * generation and by result mapping so both always agree.
- */
-function buildSpiceMapping(components: CircuitComponentLike[], wires: WireLike[]) {
-  const initialAppComponents: AppComponentModel[] = components.map((instance) => ({
-    id: instance.id,
-    type: instance.type,
-    properties: { ...(instance.attributes || {}) },
-    pins: (instance.pins || []).map((pin, index) => ({
-      id: pinHandleId(pin, index),
-      name: pin.name,
-      type: pin.type,
-      signals: pin.signals,
-    })),
-  }));
-  const appConnections: AppConnectionModel[] = (wires || []).map((edge) => ({
-    id: edge.id,
-    from: { componentId: edge.source, pinId: edge.sourceHandle || '' },
-    to: { componentId: edge.target, pinId: edge.targetHandle || '' },
-  }));
-  const pinToNodeMap: PinToSpiceNodeMap = new Map();
-  const nextNodeCounter = { value: 1 };
-  initialAppComponents.forEach(comp => {
-    comp.pins?.forEach(pin => {
-      const pinKey = `${comp.id}_${pin.id}`;
-      getSpiceNode(pinKey, comp, pinToNodeMap, nextNodeCounter);
-    });
-  });
-  const connectedGroups = findConnectedGroups(appConnections, initialAppComponents);
-  connectedGroups.forEach(group => {
-    let representativeNode: string | null = null;
-    for (const pinKey of group) {
-      if (pinToNodeMap.has(pinKey)) {
-        const node = pinToNodeMap.get(pinKey)!;
-        if (node === '0' || !representativeNode) {
-          representativeNode = node;
-          if (node === '0') break;
-        } else if (representativeNode && parseInt(node, 10) < parseInt(representativeNode, 10)) {
-          representativeNode = node;
-        }
-      }
-    }
-    if (!representativeNode) {
-      representativeNode = String(nextNodeCounter.value++);
-    }
-    for (const pinKey of group) {
-      pinToNodeMap.set(pinKey, representativeNode);
-    }
-  });
-  mergeNodes(appConnections, pinToNodeMap);
-  const componentsForSpice = initialAppComponents.map(comp => {
-    const spiceConnections = comp.pins?.map(pin => {
-      const pinKey = `${comp.id}_${pin.id}`;
-      const nodeName = pinToNodeMap.get(pinKey);
-      if (nodeName === undefined) {
-        throw new Error(`Pin ${pin.id} ('${pin.name}') on component ${comp.id} (${comp.type}) could not be mapped to a SPICE node.`);
-      }
-      return nodeName;
-    }) || [];
-    return { ...comp, spiceConnections };
-  });
-  return { componentsForSpice, pinToNodeMap };
-}
-
-interface CircuitComponentLike {
-  id: string;
-  type: string;
-  attributes?: Record<string, unknown>;
-  pins?: Array<{ id: string; handle_id?: string; name?: string; type?: string; signals?: string[] }>;
-}
-
-interface WireLike {
-  id: string;
-  source: string;
-  target: string;
-  sourceHandle?: string;
-  targetHandle?: string;
-}
+// Pin -> SPICE-node mapping (buildSpiceMapping) now lives in
+// '@/simulation/netlist/buildMapping' so it can be unit-tested in isolation
+// and share one union-find net-merge with any future solver caller.
 
 export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children }) => {
   const [isSimulationRunning, setIsSimulationRunning] = useState<boolean>(false);
@@ -256,22 +72,21 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
   const { setError } = useError();
   const { components, updateComponent, wires, code } = useProject();
 
-  // --- Worker and runId state ---
+  // --- Worker and run sequencing ---
   const workerRef = useRef<Worker | null>(null);
-  const runIdRef = useRef<number>(0);
-  const latestRunIdRef = useRef<number>(0);
-  // The newest runId whose result we have applied. Results are gated on this
-  // (not on the most-recently-*requested* run) so that when the board
-  // re-solves continuously — a fresh run is always queued before the last
-  // one finishes — each completed result still lands instead of being
-  // perpetually rejected as stale. The worker returns results in runId order.
-  const lastAppliedRunIdRef = useRef<number>(0);
-  const lastNetlistRef = useRef<string>('');
-  const rerunPendingRef = useRef<boolean>(false);
+  // Debounce, run-id issuance, and stale-result rejection all live in the
+  // scheduler (see MixedModeScheduler for the sequencing rules).
+  const schedulerRef = useRef<MixedModeScheduler>(new MixedModeScheduler(50));
 
   // --- Emulated control board (AVR) state ---
   const avrRunnerRef = useRef<AVRRunner | null>(null);
   const boardIdRef = useRef<string | null>(null);
+  // Chip profile of the running board (Uno/Nano/Mega): drives its FQBN,
+  // pin map, and analog-channel base for the co-simulation feedback.
+  const boardProfileRef = useRef<BoardProfile | null>(null);
+  // Digital-level resolver for the running board's inputs (holds per-pin
+  // hysteresis state); recreated whenever the board profile changes.
+  const pinResolverRef = useRef<PinResolver | null>(null);
   // Incremented whenever the board (re)starts or stops, so an in-flight
   // compile can detect it has been superseded.
   const boardSessionRef = useRef<number>(0);
@@ -280,6 +95,15 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
   const notifyCircuitChangedRef = useRef<() => void>(() => {});
   const codeRef = useRef<string>(code);
   codeRef.current = code;
+
+  // Dedicated solver for the pre-Run verifier, created lazily and kept warm.
+  const verifySolverRef = useRef<WorkerSolverAdapter | null>(null);
+
+  const verifyCircuit = useCallback(async (): Promise<VerificationResult> => {
+    if (components.length === 0) return { errors: [], warnings: [] };
+    if (!verifySolverRef.current) verifySolverRef.current = new WorkerSolverAdapter();
+    return runCircuitVerification(components, wires || [], verifySolverRef.current);
+  }, [components, wires]);
 
   // --- Utility: Generate netlist for wired components only ---
   const generateNetlist = useCallback((): string => {
@@ -290,7 +114,8 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
     const runner = avrRunnerRef.current;
     const snapshot = runner?.isRunning ? runner.snapshotPins() : null;
     const augmented = componentsForSpice.map((comp) => {
-      if (!isBoardType(comp.type)) return comp;
+      const profile = getBoardProfile(comp.type);
+      if (!profile) return comp;
       return {
         ...comp,
         properties: {
@@ -298,6 +123,7 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
           __boardDirectives: computeBoardDirectives(
             comp.pins,
             comp.id === boardIdRef.current ? snapshot : null,
+            profile,
           ),
         },
       };
@@ -358,6 +184,8 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
     boardSessionRef.current++;
     avrRunnerRef.current?.stop();
     avrRunnerRef.current = null;
+    boardProfileRef.current = null;
+    pinResolverRef.current = null;
     serialLineBufferRef.current = '';
     if (serialFlushTimeoutRef.current) {
       clearTimeout(serialFlushTimeoutRef.current);
@@ -376,6 +204,9 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
     const board = components.find((comp) => isBoardType(comp.type));
     boardIdRef.current = board?.id ?? null;
     if (!board) return;
+    const profile = getBoardProfile(board.type);
+    boardProfileRef.current = profile;
+    if (!profile) return;
     const sketch = codeRef.current;
     if (!sketch?.trim()) {
       addSerialOutput('[Board powered, but there is no sketch code to run]');
@@ -385,7 +216,7 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
     addSerialOutput('[Compiling sketch...]');
     let hex: string;
     try {
-      const result = await compileSketch(sketch);
+      const result = await compileSketch(sketch, profile.fqbn);
       hex = result.hex;
       const memoryLine = result.stdout
         .split('\n')
@@ -403,7 +234,7 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
       setIsCompiling(false);
     }
     if (session !== boardSessionRef.current) return; // stopped/restarted meanwhile
-    const runner = new AVRRunner(hex);
+    const runner = new AVRRunner(hex, profile);
     runner.onSerialByte = emitSerialByte;
     // GPIO changes rerun SPICE through the existing debounced path.
     runner.onPinChange = () => notifyCircuitChangedRef.current();
@@ -431,9 +262,8 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
     }
     if (msg.type === 'result') {
       // Apply any result newer than the last one we applied; drop only truly
-      // out-of-order or post-stop runs (see lastAppliedRunIdRef).
-      if (msg.runId <= lastAppliedRunIdRef.current) return;
-      lastAppliedRunIdRef.current = msg.runId;
+      // out-of-order or post-stop runs (see MixedModeScheduler.accept).
+      if (!schedulerRef.current.accept(msg.runId)) return;
       const { componentsForSpice, pinToNodeMap } = buildSpiceMapping(components, wires || []);
       // With a board on the canvas the monitor belongs to the sketch: the
       // circuit re-solves continuously (every GPIO change), and compile /
@@ -486,7 +316,7 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
         // Per-pin entering currents from device branch currents (ngspice
         // lowercases device names in output). SPICE convention: positive
         // branch current enters the device's first node.
-        const spiceId = comp.id.replace(/-/g, '').toLowerCase();
+        const spiceId = spiceIdLower(comp.id);
         let pinCurrents: { [pinIndex: number]: number } | undefined;
         const branchCurrent =
           deviceCurrents[`r${spiceId}`] ??
@@ -529,26 +359,18 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
       // chip's inputs, so digitalRead()/analogRead() see the real circuit.
       const runner = avrRunnerRef.current;
       const boardId = boardIdRef.current;
-      if (runner?.isRunning && boardId && simState[boardId]) {
+      const profile = boardProfileRef.current;
+      if (runner?.isRunning && boardId && profile && simState[boardId]) {
         const board = components.find((comp) => comp.id === boardId);
         const pinVoltages = simState[boardId].pinVoltages;
-        (board?.pins || []).forEach((pin) => {
-          const role = boardPinRole(pin.name);
-          const volts = pinVoltages?.[pin.id];
-          if (!role || role.kind !== 'io' || volts === undefined) return;
-          if (role.arduinoPin >= 14) {
-            runner.setAnalogVoltage(role.arduinoPin - 14, volts);
-          }
-          // A6/A7 are ADC-only pads with no GPIO register — never drive them
-          // as digital inputs (arduinoPin 20/21 would alias onto PC6/reset).
-          if (!isAnalogOnlyPin(role.arduinoPin) && runner.getPinMode(role.arduinoPin) !== 'output') {
-            runner.setDigitalInput(role.arduinoPin, volts > 2.5);
-          }
-        });
+        const pins = board?.pins || [];
+        const resolver =
+          pinResolverRef.current ?? (pinResolverRef.current = new PinResolver(profile.logicFamily));
+        connectAnalogInputsToMcu(runner, profile, pins, pinVoltages);
+        connectDigitalInputsToMcu(runner, profile, pins, pinVoltages, resolver);
       }
     } else if (msg.type === 'error') {
-      if (msg.runId <= lastAppliedRunIdRef.current) return;
-      lastAppliedRunIdRef.current = msg.runId;
+      if (!schedulerRef.current.accept(msg.runId)) return;
       addSerialOutput(`[Error] ${msg.message}`);
       toast.error(`Simulation error: ${msg.message}`);
       setIsSimulationRunning(false);
@@ -560,22 +382,16 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
   const rerunSimulation = useCallback(() => {
     if (!workerRef.current) return;
     const netlist = generateNetlist();
-    lastNetlistRef.current = netlist;
-    const runId = ++runIdRef.current;
-    latestRunIdRef.current = runId;
+    const runId = schedulerRef.current.begin();
     workerRef.current.postMessage({ type: 'run', runId, netlist });
   }, [generateNetlist]);
 
   // --- Notify circuit changed (from canvas or the emulated board) ---
+  // Debounced by the scheduler: rapid canvas edits and GPIO toggle bursts
+  // from the board coalesce into one solve per window.
   const notifyCircuitChanged = useCallback(() => {
     if (!isSimulationRunning) return;
-    // Debounce: If a run is already pending, skip
-    if (rerunPendingRef.current) return;
-    rerunPendingRef.current = true;
-    setTimeout(() => {
-      rerunPendingRef.current = false;
-      rerunSimulation();
-    }, 50); // Debounce rapid changes (and GPIO toggle bursts from the board)
+    schedulerRef.current.request(rerunSimulation);
   }, [isSimulationRunning, rerunSimulation]);
 
   // Board callbacks fire from timer slices; route them to the latest
@@ -616,10 +432,9 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
     // Keep the worker (and its compiled engine) alive for the next run;
     // just stop tracking results.
     workerRef.current?.postMessage({ type: 'stop' });
-    // Invalidate in-flight runs: bump the counter and mark everything up to
-    // it as applied so any straggler result posted after stop is rejected.
-    latestRunIdRef.current = ++runIdRef.current;
-    lastAppliedRunIdRef.current = runIdRef.current;
+    // Invalidate in-flight runs and drop any pending debounced re-solve so
+    // no straggler result (or ghost run) lands after stop.
+    schedulerRef.current.invalidate();
     setIsSimulationRunning(false);
     setSimulationState(null);
     // Clear the result globals too: component renderers fall back to them
@@ -642,7 +457,7 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
   // --- Compile & Run (from the code editor) ---
   const compileAndRun = useCallback(async (): Promise<void> => {
     if (!components.some((comp) => isBoardType(comp.type))) {
-      toast.error('Add an Arduino Uno to the canvas to run code on it.');
+      toast.error('Add an Arduino board (Uno, Nano, or Mega) to the canvas to run code on it.');
       return;
     }
     if (!isSimulationRunning) {
@@ -660,6 +475,8 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
         workerRef.current.terminate();
         workerRef.current = null;
       }
+      verifySolverRef.current?.dispose();
+      verifySolverRef.current = null;
     };
   }, [stopBoard]);
 
@@ -676,6 +493,7 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
     isCompiling,
     compileAndRun,
     sendSerialInput,
+    verifyCircuit,
   };
 
   // Ensure simulation run is triggered after isSimulationRunning is set to true

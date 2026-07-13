@@ -1,13 +1,18 @@
 /**
- * ATmega328p (Arduino Uno) emulator built on avr8js — the open-source AVR
- * core that powers Wokwi. Executes compiled sketch hex in the browser and
- * exposes exactly what the circuit layer needs:
+ * ATmega emulator built on avr8js — the open-source AVR core that powers
+ * Wokwi. Executes compiled sketch hex in the browser and exposes exactly
+ * what the circuit layer needs:
  *
  *  - snapshotPins(): per-pin drive state (output level, PWM duty, pull-up)
  *    used to inject the board into the SPICE netlist
  *  - setDigitalInput()/setAnalogVoltage(): SPICE node voltages fed back so
  *    digitalRead()/analogRead() see the real circuit
  *  - serial TX/RX callbacks for the Serial Monitor
+ *
+ * The specific chip (ATmega328p for the Uno/Nano, ATmega2560 for the Mega)
+ * is supplied as a BoardProfile: avr8js already ships every port config and
+ * the shared timer/USART peripherals are register-compatible, so switching
+ * boards is pure configuration — no per-chip emulator code lives here.
  */
 import {
   avrInstruction,
@@ -17,25 +22,14 @@ import {
   AVRADC,
   CPU,
   PinState,
-  adcConfig,
-  portBConfig,
-  portCConfig,
-  portDConfig,
-  timer0Config,
-  timer1Config,
-  timer2Config,
-  usart0Config,
 } from 'avr8js';
 import MemoryMap from 'nrf-intel-hex';
+import { BoardProfile, makeIOPorts } from './boardProfiles';
 
-const FLASH_BYTES = 0x8000; // 32KB
 const CLOCK_HZ = 16_000_000;
 // Execute in ~16ms slices so the UI thread stays responsive.
 const SLICE_MS = 16;
 const MAX_CYCLES_PER_SLICE = CLOCK_HZ * 0.05; // never simulate >50ms per slice
-
-/** Arduino digital pin numbering: 0-13 digital, 14-19 = A0-A5. */
-export const ARDUINO_PIN_COUNT = 20;
 
 export type ArduinoPinMode = 'output' | 'input' | 'input_pullup';
 
@@ -52,18 +46,6 @@ export interface ArduinoPinSnapshot {
   pwm: boolean;
 }
 
-interface PortMapping {
-  port: 'B' | 'C' | 'D';
-  bit: number;
-}
-
-/** Map an Arduino pin number to its AVR port and bit. */
-function portMapping(arduinoPin: number): PortMapping {
-  if (arduinoPin < 8) return { port: 'D', bit: arduinoPin };
-  if (arduinoPin < 14) return { port: 'B', bit: arduinoPin - 8 };
-  return { port: 'C', bit: arduinoPin - 14 };
-}
-
 interface PinTracker {
   isHigh: boolean;
   lastChangeCycles: number;
@@ -73,14 +55,12 @@ interface PinTracker {
 }
 
 export class AVRRunner {
-  readonly program = new Uint16Array(FLASH_BYTES / 2);
+  readonly program: Uint16Array;
   readonly cpu: CPU;
   readonly timer0: AVRTimer;
   readonly timer1: AVRTimer;
   readonly timer2: AVRTimer;
-  readonly portB: AVRIOPort;
-  readonly portC: AVRIOPort;
-  readonly portD: AVRIOPort;
+  readonly ports: Record<string, AVRIOPort>;
   readonly usart: AVRUSART;
   readonly adc: AVRADC;
 
@@ -89,28 +69,33 @@ export class AVRRunner {
   /** Called whenever any GPIO pin changes (throttling is the caller's job). */
   onPinChange: (() => void) | null = null;
 
+  private readonly profile: BoardProfile;
   private stopped = true;
   private timeoutId: ReturnType<typeof setTimeout> | null = null;
   private lastSliceWallTime = 0;
   private rxQueue: number[] = [];
   private trackers: PinTracker[] = [];
 
-  constructor(hex: string) {
+  constructor(hex: string, profile: BoardProfile) {
+    this.profile = profile;
+    this.program = new Uint16Array(profile.flashBytes / 2);
     const flash = new Uint8Array(this.program.buffer);
     for (const [address, block] of MemoryMap.fromHex(hex)) {
       flash.set(block, address);
     }
-    this.cpu = new CPU(this.program);
-    this.timer0 = new AVRTimer(this.cpu, timer0Config);
-    this.timer1 = new AVRTimer(this.cpu, timer1Config);
-    this.timer2 = new AVRTimer(this.cpu, timer2Config);
-    this.portB = new AVRIOPort(this.cpu, portBConfig);
-    this.portC = new AVRIOPort(this.cpu, portCConfig);
-    this.portD = new AVRIOPort(this.cpu, portDConfig);
-    this.usart = new AVRUSART(this.cpu, usart0Config, CLOCK_HZ);
-    this.adc = new AVRADC(this.cpu, adcConfig);
+    // Size the CPU's data space to the chip's SRAM: the AVR stack starts at
+    // RAMEND, and on the 2560 that is well past avr8js's default, so an
+    // under-sized data array would corrupt every push/return.
+    this.cpu = new CPU(this.program, profile.sramBytes);
+    const [t0, t1, t2] = profile.timerConfigs;
+    this.timer0 = new AVRTimer(this.cpu, t0);
+    this.timer1 = new AVRTimer(this.cpu, t1);
+    this.timer2 = new AVRTimer(this.cpu, t2);
+    this.ports = makeIOPorts(profile, this.cpu);
+    this.usart = new AVRUSART(this.cpu, profile.usartConfig, CLOCK_HZ);
+    this.adc = new AVRADC(this.cpu, profile.adcConfig);
 
-    for (let pin = 0; pin < ARDUINO_PIN_COUNT; pin++) {
+    for (let pin = 0; pin < profile.pinCount; pin++) {
       this.trackers.push({
         isHigh: false,
         lastChangeCycles: 0,
@@ -125,15 +110,12 @@ export class AVRRunner {
     };
     this.usart.onRxComplete = () => this.flushRxQueue();
 
-    const trackPort = (port: AVRIOPort) => {
+    for (const port of Object.values(this.ports)) {
       port.addListener(() => {
         this.updateTrackers();
         this.onPinChange?.();
       });
-    };
-    trackPort(this.portB);
-    trackPort(this.portC);
-    trackPort(this.portD);
+    }
   }
 
   get isRunning(): boolean {
@@ -165,20 +147,19 @@ export class AVRRunner {
 
   /** Feed a digital input level (from the solved circuit) into the chip. */
   setDigitalInput(arduinoPin: number, high: boolean): void {
-    const { port, bit } = portMapping(arduinoPin);
-    this.portFor(port).setPin(bit, high);
+    const mapping = this.profile.pinMapping[arduinoPin];
+    if (!mapping) return; // ADC-only pad: no GPIO register to drive
+    this.ports[mapping.port]?.setPin(mapping.bit, high);
   }
 
   /** Current mode of a pin, without disturbing the PWM duty window. */
   getPinMode(arduinoPin: number): ArduinoPinMode {
-    const { port, bit } = portMapping(arduinoPin);
-    const state = this.portFor(port).pinState(bit);
-    if (state === PinState.Input) return 'input';
-    if (state === PinState.InputPullUp) return 'input_pullup';
-    return 'output';
+    const mapping = this.profile.pinMapping[arduinoPin];
+    if (!mapping) return 'input';
+    return this.modeFor(this.ports[mapping.port].pinState(mapping.bit));
   }
 
-  /** Feed an analog voltage (volts, from the solved circuit) into ADC channel 0-5. */
+  /** Feed an analog voltage (volts, from the solved circuit) into an ADC channel. */
   setAnalogVoltage(channel: number, volts: number): void {
     if (channel >= 0 && channel < this.adc.channelValues.length) {
       this.adc.channelValues[channel] = Math.max(0, Math.min(5, volts));
@@ -192,9 +173,12 @@ export class AVRRunner {
   snapshotPins(): ArduinoPinSnapshot[] {
     this.updateTrackers();
     const now = this.cpu.cycles;
-    return Array.from({ length: ARDUINO_PIN_COUNT }, (_, pin) => {
-      const { port, bit } = portMapping(pin);
-      const state = this.portFor(port).pinState(bit);
+    return Array.from({ length: this.profile.pinCount }, (_, pin) => {
+      const mapping = this.profile.pinMapping[pin];
+      if (!mapping) {
+        return { mode: 'input' as ArduinoPinMode, level: false, duty: 0, pwm: false };
+      }
+      const state = this.ports[mapping.port].pinState(mapping.bit);
       const tracker = this.trackers[pin];
       // Flush the currently-running level into the window before reading it.
       const sinceChange = now - tracker.lastChangeCycles;
@@ -208,12 +192,8 @@ export class AVRRunner {
       tracker.windowStartCycles = now;
       tracker.lastChangeCycles = now;
 
-      const mode: ArduinoPinMode =
-        state === PinState.Input ? 'input'
-        : state === PinState.InputPullUp ? 'input_pullup'
-        : 'output';
       return {
-        mode,
+        mode: this.modeFor(state),
         level: state === PinState.High,
         duty: Math.max(0, Math.min(1, duty)),
         pwm,
@@ -221,15 +201,18 @@ export class AVRRunner {
     });
   }
 
-  private portFor(port: 'B' | 'C' | 'D'): AVRIOPort {
-    return port === 'B' ? this.portB : port === 'C' ? this.portC : this.portD;
+  private modeFor(state: PinState): ArduinoPinMode {
+    if (state === PinState.Input) return 'input';
+    if (state === PinState.InputPullUp) return 'input_pullup';
+    return 'output';
   }
 
   private updateTrackers(): void {
     const now = this.cpu.cycles;
-    for (let pin = 0; pin < ARDUINO_PIN_COUNT; pin++) {
-      const { port, bit } = portMapping(pin);
-      const isHigh = this.portFor(port).pinState(bit) === PinState.High;
+    for (let pin = 0; pin < this.profile.pinCount; pin++) {
+      const mapping = this.profile.pinMapping[pin];
+      if (!mapping) continue;
+      const isHigh = this.ports[mapping.port].pinState(mapping.bit) === PinState.High;
       const tracker = this.trackers[pin];
       if (isHigh !== tracker.isHigh) {
         const sinceChange = now - tracker.lastChangeCycles;

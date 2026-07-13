@@ -24,6 +24,7 @@ import type { SlideSwitchElement } from '@wokwi/elements/dist/esm/slide-switch-e
 import type { BuzzerElement } from '@wokwi/elements/dist/esm/buzzer-element';
 
 import { parseSpiceNumber } from '@/simulation/spiceService';
+import { isLogicHigh, LOGIC_FAMILIES } from '@/simulation/logic/logicFamilies';
 import type { ComponentPin } from '@/types/pin';
 import partsManifest from '../../../data/wokwi-parts.json';
 
@@ -76,7 +77,7 @@ const applyBoardIndicators: WokwiPartSpec['applyState'] = (element, _attributes,
   board.ledPower = powered;
   const pin13 = pins?.find((pin) => pin.name === '13');
   const volts = pin13 ? pinVoltages?.[pin13.id] : undefined;
-  board.led13 = powered && volts !== undefined && volts > 2.5;
+  board.led13 = powered && volts !== undefined && isLogicHigh(volts, LOGIC_FAMILIES.AVR_5V);
 };
 
 /** Momentary press/release wiring shared by the pushbutton variants. */
@@ -151,6 +152,7 @@ const behaviors: Record<string, Pick<WokwiPartSpec, 'applyState' | 'bindEvents'>
   },
   'arduino-uno': { applyState: applyBoardIndicators },
   'arduino-nano': { applyState: applyBoardIndicators },
+  'arduino-mega': { applyState: applyBoardIndicators },
   'slide-switch': {
     applyState(element, _attributes, activeStates) {
       (element as SlideSwitchElement).value = activeStates.includes('closed') ? 1 : 0;

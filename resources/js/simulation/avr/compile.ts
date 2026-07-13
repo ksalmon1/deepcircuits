@@ -20,16 +20,17 @@ export class CompileError extends Error {
   }
 }
 
-let cachedSketch: string | null = null;
+let cachedKey: string | null = null;
 let cachedResult: CompileResult | null = null;
 
-export async function compileSketch(sketch: string): Promise<CompileResult> {
-  if (cachedSketch === sketch && cachedResult) {
+export async function compileSketch(sketch: string, fqbn?: string): Promise<CompileResult> {
+  const key = `${fqbn ?? ''}\n${sketch}`;
+  if (cachedKey === key && cachedResult) {
     return cachedResult;
   }
   let result: CompileResult;
   try {
-    const { data } = await http.post<CompileResult>('/api/compile', { sketch });
+    const { data } = await http.post<CompileResult>('/api/compile', { sketch, fqbn });
     result = data;
   } catch (err) {
     if (isAxiosError(err) && err.response) {
@@ -47,7 +48,7 @@ export async function compileSketch(sketch: string): Promise<CompileResult> {
       [result.stderr, result.stdout].filter(Boolean).join('\n'),
     );
   }
-  cachedSketch = sketch;
+  cachedKey = key;
   cachedResult = result;
   return result;
 }

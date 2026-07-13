@@ -11,6 +11,8 @@ import CircuitCanvas from './CircuitCanvas';
 import ComponentPanel from './ComponentPanel';
 import CodeEditor from './CodeEditor';
 import SerialMonitor from './SerialMonitor';
+import CircuitVerificationModal from './CircuitVerificationModal';
+import type { VerificationResult } from '@/simulation/verify/circuitVerifier';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -104,7 +106,7 @@ const CircuitEditorLayoutContent = ({
   const { components: projectComponents, wires: projectWires } = useProject();
   const { componentsDetailsMap } = useComponentLibrary();
   
-  const { clearSerialOutput, compileAndRun, sendSerialInput } = useSimulation();
+  const { clearSerialOutput, compileAndRun, sendSerialInput, verifyCircuit } = useSimulation();
 
   // Serial Monitor input goes to the emulated board's UART (the context
   // echoes the command into the monitor either way).
@@ -225,7 +227,41 @@ const CircuitEditorLayoutContent = ({
     };
   }, [circuitName]);
 
-  const handleSimulate = () => {
+  // Pre-Run circuit check: blocking faults (short circuit, LED overcurrent)
+  // open a confirm modal; warnings surface as a toast but don't block. A
+  // solver failure never blocks the Run button.
+  const [verificationResult, setVerificationResult] = useState<VerificationResult | null>(null);
+  const [isVerifyModalOpen, setIsVerifyModalOpen] = useState<boolean>(false);
+  const [isVerifying, setIsVerifying] = useState<boolean>(false);
+
+  const handleSimulate = async () => {
+    if (isSimulationRunning) {
+      toggleSimulation();
+      return;
+    }
+    if (isVerifying) return;
+    setIsVerifying(true);
+    let result: VerificationResult | null = null;
+    try {
+      result = await verifyCircuit();
+    } catch {
+      // verifyCircuit shouldn't throw; if it somehow does, don't block Run.
+    } finally {
+      setIsVerifying(false);
+    }
+    if (result && result.errors.length > 0) {
+      setVerificationResult(result);
+      setIsVerifyModalOpen(true);
+      return;
+    }
+    if (result && result.warnings.length > 0) {
+      for (const warning of result.warnings) toast.warning(warning.message);
+    }
+    toggleSimulation();
+  };
+
+  const handleRunAnyway = () => {
+    setIsVerifyModalOpen(false);
     toggleSimulation();
   };
 
@@ -582,9 +618,12 @@ const CircuitEditorLayoutContent = ({
                 size="sm"
                 variant={isSimulationRunning ? 'destructive' : 'default'}
                 onClick={handleSimulate}
+                disabled={isVerifying}
               >
                 {isSimulationRunning ? (
                   <Square className="mr-1 h-4 w-4" />
+                ) : isVerifying ? (
+                  <Loader2 className="mr-1 h-4 w-4 animate-spin" />
                 ) : (
                   <Play className="mr-1 h-4 w-4" />
                 )}
@@ -696,6 +735,13 @@ const CircuitEditorLayoutContent = ({
           </div>
         </div>
       </ReactFlowProvider>
+
+      <CircuitVerificationModal
+        open={isVerifyModalOpen}
+        onOpenChange={setIsVerifyModalOpen}
+        result={verificationResult}
+        onRunAnyway={handleRunAnyway}
+      />
 
       <AlertDialog open={isClearConfirmOpen} onOpenChange={setIsClearConfirmOpen}>
         <AlertDialogContent>
