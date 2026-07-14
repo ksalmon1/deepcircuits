@@ -58,7 +58,22 @@ export type GpioBinding =
       /** LM393-comparator modules pull DOUT low on detection. */
       activeLow: boolean;
     }
-  | { componentId: string; kind: 'ws2812'; partType: string; dinPin: number };
+  | { componentId: string; kind: 'ws2812'; partType: string; dinPin: number }
+  | {
+      componentId: string;
+      kind: 'stepper';
+      /** Coil pins in [A+, A-, B+, B-] order. */
+      coilPins: [number, number, number, number];
+    }
+  | { componentId: string; kind: 'ir-receiver'; datPin: number }
+  | { componentId: string; kind: 'hx711'; dtPin: number; sckPin: number }
+  | {
+      componentId: string;
+      kind: 'keypad';
+      /** Row pins (driven or scanned) and column pins. */
+      rowPins: number[];
+      colPins: number[];
+    };
 
 /** NeoPixel-family parts, all speaking WS2812 on their DIN pin. */
 const WS2812_TYPES = new Set(['neopixel', 'led-ring', 'neopixel-matrix']);
@@ -211,6 +226,47 @@ export function resolveDisplayBindings(
     if (type === 'dht22') {
       const data = gpioOf('SDA'); // the part's data pin is labelled SDA
       if (data !== null) bindings.gpio.push({ componentId: comp.id, kind: 'dht22', dataPin: data });
+      continue;
+    }
+
+    if (type === 'stepper-motor') {
+      const coils = ['A+', 'A-', 'B+', 'B-'].map(gpioOf);
+      if (coils.every((pin): pin is number => pin !== null)) {
+        bindings.gpio.push({
+          componentId: comp.id,
+          kind: 'stepper',
+          coilPins: coils as [number, number, number, number],
+        });
+      }
+      continue;
+    }
+
+    if (type === 'ir-receiver') {
+      const dat = gpioOf('DAT');
+      if (dat !== null) bindings.gpio.push({ componentId: comp.id, kind: 'ir-receiver', datPin: dat });
+      continue;
+    }
+
+    if (type === 'hx711') {
+      const dt = gpioOf('DT');
+      const sck = gpioOf('SCK');
+      if (dt !== null && sck !== null) {
+        bindings.gpio.push({ componentId: comp.id, kind: 'hx711', dtPin: dt, sckPin: sck });
+      }
+      continue;
+    }
+
+    if (type === 'membrane-keypad') {
+      const rows = ['R1', 'R2', 'R3', 'R4'].map(gpioOf);
+      const cols = ['C1', 'C2', 'C3', 'C4'].map(gpioOf);
+      if (rows.every((p): p is number => p !== null) && cols.every((p): p is number => p !== null)) {
+        bindings.gpio.push({
+          componentId: comp.id,
+          kind: 'keypad',
+          rowPins: rows as number[],
+          colPins: cols as number[],
+        });
+      }
       continue;
     }
 

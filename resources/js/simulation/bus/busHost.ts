@@ -33,6 +33,10 @@ import { ServoDecoder } from '@/simulation/gpio/ServoDecoder';
 import { HCSR04Responder, distanceCmFrom } from '@/simulation/gpio/HCSR04Responder';
 import { DHT22Responder, dhtValuesFrom } from '@/simulation/gpio/DHT22Responder';
 import { WS2812Decoder, type Rgb } from '@/simulation/gpio/WS2812Decoder';
+import { StepperDecoder, type CoilLevels } from '@/simulation/gpio/StepperDecoder';
+import { IRReceiver } from '@/simulation/gpio/IRReceiver';
+import { HX711Responder, gramsFrom } from '@/simulation/gpio/HX711Responder';
+import { KeypadMatrix, KEYPAD_KEYS } from '@/simulation/gpio/KeypadMatrix';
 
 interface SSD1306ElementLike extends HTMLElement {
   imageData: ImageData;
@@ -252,6 +256,85 @@ export function attachBusDevices(
           paint();
         });
         detachers.push(runner.watchPin(binding.signalPin, (level) => decoder.edge(level, runner.cpu.cycles)));
+      } else if (binding.kind === 'stepper') {
+        const id = binding.componentId;
+        const coilPins = binding.coilPins;
+        let lastAngle = 0;
+        const paint = framePainter(() => {
+          const element = getPartElement(id) as ServoElementLike | undefined;
+          if (element) element.angle = lastAngle;
+        });
+        const decoder = new StepperDecoder((degrees) => {
+          lastAngle = degrees;
+          paint();
+        });
+        const sample = () =>
+          decoder.update(coilPins.map((pin) => runner.getPinLevel(pin)) as CoilLevels);
+        for (const pin of coilPins) detachers.push(runner.watchPin(pin, sample));
+      } else if (binding.kind === 'ir-receiver') {
+        const id = binding.componentId;
+        const receiver = new IRReceiver(ops, binding.datPin);
+        claimedInputPins.add(binding.datPin);
+        // A remote key "held down": while `sendCode` names a command, the
+        // module keeps re-transmitting the NEC frame at the protocol's
+        // ~110ms repeat cadence, exactly as a real remote does. Clearing the
+        // field releases the key.
+        let detached = false;
+        const poll = () => {
+          if (detached) return;
+          const attributes = getAttributes(id);
+          const code = attributes?.sendCode;
+          if (code !== undefined && code !== '' && !receiver.transmitting) {
+            const command = typeof code === 'string' ? parseInt(code, 10) : Number(code);
+            if (Number.isFinite(command)) {
+              const address = Number(attributes?.address ?? 0) || 0;
+              receiver.send(address & 0xff, command & 0xff);
+            }
+          }
+          ops.schedule(poll, 110 * 16_000); // NEC repeat interval
+        };
+        poll();
+        detachers.push(() => {
+          detached = true;
+        });
+      } else if (binding.kind === 'hx711') {
+        const id = binding.componentId;
+        const hx = new HX711Responder(ops, binding.dtPin, () => gramsFrom(getAttributes(id)));
+        detachers.push(runner.watchPin(binding.sckPin, (level) => hx.sckEdge(level)));
+        claimedInputPins.add(binding.dtPin);
+      } else if (binding.kind === 'keypad') {
+        const id = binding.componentId;
+        const matrix = new KeypadMatrix(
+          {
+            readPin: (pin) => runner.getPinLevel(pin),
+            drive: (pin, level) => runner.setDigitalInput(pin, level),
+          },
+          binding.rowPins,
+          binding.colPins,
+        );
+        // Column levels follow the scanned rows...
+        for (const pin of binding.rowPins) {
+          detachers.push(runner.watchPin(pin, () => matrix.refresh()));
+        }
+        // ...and the held keys come from the element's own press events,
+        // mirrored into attributes by the catalog behavior.
+        let detached = false;
+        let lastKeys = '';
+        const poll = () => {
+          if (detached) return;
+          const keys = String(getAttributes(id)?.pressedKeys ?? '');
+          if (keys !== lastKeys) {
+            const held = new Set(keys.split(',').filter(Boolean));
+            for (const key of KEYPAD_KEYS) matrix.setKey(key, held.has(key));
+            lastKeys = keys;
+          }
+          ops.schedule(poll, 80_000); // 5ms
+        };
+        poll();
+        binding.colPins.forEach((pin) => claimedInputPins.add(pin));
+        detachers.push(() => {
+          detached = true;
+        });
       } else if (binding.kind === 'ws2812') {
         const id = binding.componentId;
         const partType = binding.partType;

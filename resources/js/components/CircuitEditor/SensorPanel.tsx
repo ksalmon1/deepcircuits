@@ -7,6 +7,7 @@ import { mpu6050ValuesFrom } from '@/simulation/bus/devices/MPU6050Controller';
 import { dhtValuesFrom } from '@/simulation/gpio/DHT22Responder';
 import { distanceCmFrom } from '@/simulation/gpio/HCSR04Responder';
 import { sensorActiveFrom } from '@/simulation/bus/busHost';
+import { gramsFrom } from '@/simulation/gpio/HX711Responder';
 
 /**
  * Sensor panel — inject values into virtual sensors while the simulation
@@ -71,6 +72,17 @@ const SENSOR_SPECS: Record<string, SensorSpec> = {
       { key: 'humidity', label: 'Humidity', unit: '%', min: 0, max: 100, step: 0.1 },
     ],
     values: (attributes) => dhtValuesFrom(attributes) as unknown as Record<string, number>,
+  },
+  hx711: {
+    title: 'Load Cell (HX711)',
+    fields: [{ key: 'weight', label: 'Weight', unit: 'g', min: 0, max: 5000, step: 1 }],
+    values: (attributes) => ({ weight: gramsFrom(attributes) }),
+  },
+  'ir-receiver': {
+    title: 'IR Receiver',
+    // Setting a command transmits one NEC frame (a remote key press).
+    fields: [{ key: 'sendCode', label: 'Send code', unit: '', min: 0, max: 255, step: 1 }],
+    values: (attributes) => ({ sendCode: Number(attributes?.sendCode ?? 0) || 0 }),
   },
   'pir-motion-sensor': detectSensor('PIR Motion Sensor', 'Motion detected'),
   'tilt-switch': detectSensor('Tilt Switch', 'Tilted'),
