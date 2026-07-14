@@ -32,6 +32,7 @@ import type { GpioHostOps } from '@/simulation/gpio/GpioHostOps';
 import { ServoDecoder } from '@/simulation/gpio/ServoDecoder';
 import { HCSR04Responder, distanceCmFrom } from '@/simulation/gpio/HCSR04Responder';
 import { DHT22Responder, dhtValuesFrom } from '@/simulation/gpio/DHT22Responder';
+import { WS2812Decoder, type Rgb } from '@/simulation/gpio/WS2812Decoder';
 
 interface SSD1306ElementLike extends HTMLElement {
   imageData: ImageData;
@@ -53,6 +54,45 @@ interface LcdElementLike extends HTMLElement {
 
 interface ServoElementLike extends HTMLElement {
   angle: number;
+}
+
+interface NeoPixelElementLike extends HTMLElement {
+  r: number;
+  g: number;
+  b: number;
+}
+
+interface PixelChainElementLike extends HTMLElement {
+  pixels?: number;
+  rows?: number;
+  cols?: number;
+  setPixel(...args: unknown[]): void;
+}
+
+/** Push a decoded WS2812 frame onto the matching element type. */
+function paintPixels(element: HTMLElement, partType: string, frame: Rgb[]): void {
+  const scale = (v: number) => v / 255;
+  if (partType === 'neopixel') {
+    const px = element as NeoPixelElementLike;
+    const first = frame[0];
+    px.r = scale(first.r);
+    px.g = scale(first.g);
+    px.b = scale(first.b);
+    return;
+  }
+  const chain = element as PixelChainElementLike;
+  if (typeof chain.setPixel !== 'function') return;
+  if (partType === 'neopixel-matrix') {
+    const cols = chain.cols ?? 8;
+    frame.forEach((pixel, i) => {
+      chain.setPixel(Math.floor(i / cols), i % cols, { r: scale(pixel.r), g: scale(pixel.g), b: scale(pixel.b) });
+    });
+    return;
+  }
+  // led-ring
+  frame.forEach((pixel, i) => {
+    chain.setPixel(i, { r: scale(pixel.r), g: scale(pixel.g), b: scale(pixel.b) });
+  });
 }
 
 /** Live attribute accessor, so decoders see Sensor-panel edits mid-run. */
@@ -212,6 +252,19 @@ export function attachBusDevices(
           paint();
         });
         detachers.push(runner.watchPin(binding.signalPin, (level) => decoder.edge(level, runner.cpu.cycles)));
+      } else if (binding.kind === 'ws2812') {
+        const id = binding.componentId;
+        const partType = binding.partType;
+        let lastFrame: Rgb[] = [];
+        const paint = framePainter(() => {
+          const element = getPartElement(id);
+          if (element && lastFrame.length > 0) paintPixels(element, partType, lastFrame);
+        });
+        const decoder = new WS2812Decoder(ops, (frame) => {
+          lastFrame = frame;
+          paint();
+        });
+        detachers.push(runner.watchPin(binding.dinPin, (level) => decoder.edge(level, runner.cpu.cycles)));
       } else if (binding.kind === 'digital-sensor') {
         // One digital detect line, refreshed on a ~1ms emulated-time tick so
         // Sensor-panel toggles reach the pin without needing an edge.

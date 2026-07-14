@@ -57,7 +57,11 @@ export type GpioBinding =
       outPin: number;
       /** LM393-comparator modules pull DOUT low on detection. */
       activeLow: boolean;
-    };
+    }
+  | { componentId: string; kind: 'ws2812'; partType: string; dinPin: number };
+
+/** NeoPixel-family parts, all speaking WS2812 on their DIN pin. */
+const WS2812_TYPES = new Set(['neopixel', 'led-ring', 'neopixel-matrix']);
 
 /** Sensor modules with one digital detect output: part type → pin/polarity. */
 const DIGITAL_SENSOR_TYPES: Record<string, { pinName: string; activeLow: boolean }> = {
@@ -207,6 +211,14 @@ export function resolveDisplayBindings(
     if (type === 'dht22') {
       const data = gpioOf('SDA'); // the part's data pin is labelled SDA
       if (data !== null) bindings.gpio.push({ componentId: comp.id, kind: 'dht22', dataPin: data });
+      continue;
+    }
+
+    if (WS2812_TYPES.has(type)) {
+      const din = gpioOf('DIN');
+      if (din !== null) {
+        bindings.gpio.push({ componentId: comp.id, kind: 'ws2812', partType: type, dinPin: din });
+      }
       continue;
     }
 

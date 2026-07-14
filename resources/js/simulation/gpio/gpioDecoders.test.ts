@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { ServoDecoder } from './ServoDecoder';
 import { HCSR04Responder } from './HCSR04Responder';
 import { DHT22Responder, dht22Frame, dhtValuesFrom } from './DHT22Responder';
+import { WS2812Decoder, type Rgb } from './WS2812Decoder';
 import { CYCLES_PER_US, type GpioHostOps } from './GpioHostOps';
 
 /** Deterministic emulated clock: schedule() queues, tick() advances time. */
@@ -158,5 +159,65 @@ describe('DHT22Responder', () => {
   it('reads attribute overrides with defaults', () => {
     expect(dhtValuesFrom(undefined)).toEqual({ temperature: 24, humidity: 40 });
     expect(dhtValuesFrom({ temperature: '-5.5', humidity: 80 })).toEqual({ temperature: -5.5, humidity: 80 });
+  });
+});
+
+describe('WS2812Decoder', () => {
+  /** Clock out one WS2812 bit: T1H 0.8µs / T0H 0.25µs, ~1.25µs period. */
+  function sendBit(decoder: WS2812Decoder, ops: FakeOps, bit: number): void {
+    decoder.edge(true, ops.cycles);
+    ops.advanceUs(bit ? 0.8 : 0.25);
+    decoder.edge(false, ops.cycles);
+    ops.advanceUs(bit ? 0.45 : 1);
+  }
+
+  function sendGrb(decoder: WS2812Decoder, ops: FakeOps, g: number, r: number, b: number): void {
+    for (const byte of [g, r, b]) {
+      for (let i = 7; i >= 0; i--) sendBit(decoder, ops, (byte >> i) & 1);
+    }
+  }
+
+  it('decodes GRB pixels and latches on the reset gap', () => {
+    const ops = new FakeOps();
+    const frames: Rgb[][] = [];
+    const decoder = new WS2812Decoder(ops, (f) => frames.push(f));
+
+    sendGrb(decoder, ops, 0x00, 0xff, 0x00); // red
+    sendGrb(decoder, ops, 0x80, 0x00, 0x40); // g=128, b=64
+    ops.advanceUs(100); // idle past the reset window → latch fires
+
+    expect(frames).toHaveLength(1);
+    expect(frames[0]).toEqual([
+      { r: 0xff, g: 0x00, b: 0x00 },
+      { r: 0x00, g: 0x80, b: 0x40 },
+    ]);
+  });
+
+  it('a long gap between transmissions separates frames', () => {
+    const ops = new FakeOps();
+    const frames: Rgb[][] = [];
+    const decoder = new WS2812Decoder(ops, (f) => frames.push(f));
+
+    sendGrb(decoder, ops, 0, 255, 0);
+    ops.advanceUs(100);
+    sendGrb(decoder, ops, 255, 0, 0);
+    ops.advanceUs(100);
+
+    expect(frames).toHaveLength(2);
+    expect(frames[0][0]).toEqual({ r: 255, g: 0, b: 0 });
+    expect(frames[1][0]).toEqual({ r: 0, g: 255, b: 0 });
+  });
+
+  it('discards trailing partial pixels', () => {
+    const ops = new FakeOps();
+    const frames: Rgb[][] = [];
+    const decoder = new WS2812Decoder(ops, (f) => frames.push(f));
+
+    sendGrb(decoder, ops, 0, 0, 255); // one full pixel...
+    for (let i = 0; i < 5; i++) sendBit(decoder, ops, 1); // ...plus 5 stray bits
+    ops.advanceUs(100);
+
+    expect(frames).toHaveLength(1);
+    expect(frames[0]).toEqual([{ r: 0, g: 0, b: 255 }]);
   });
 });
