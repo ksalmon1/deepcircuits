@@ -152,6 +152,33 @@ const behaviors: Record<string, Pick<WokwiPartSpec, 'applyState' | 'bindEvents'>
   },
   'arduino-uno': { applyState: applyBoardIndicators },
   'arduino-nano': { applyState: applyBoardIndicators },
+  'membrane-keypad': {
+    // The element raises button-press/button-release with the key label;
+    // mirror the held set into attributes so the matrix decoder (which runs
+    // on the emulator side) can see it.
+    bindEvents(element, updateAttributes) {
+      const held = new Set<string>();
+      const sync = () => updateAttributes({ pressedKeys: Array.from(held).join(',') });
+      const onPress = (e: Event) => {
+        const key = (e as CustomEvent<{ key: string }>).detail?.key;
+        if (!key) return;
+        held.add(key);
+        sync();
+      };
+      const onRelease = (e: Event) => {
+        const key = (e as CustomEvent<{ key: string }>).detail?.key;
+        if (!key) return;
+        held.delete(key);
+        sync();
+      };
+      element.addEventListener('button-press', onPress);
+      element.addEventListener('button-release', onRelease);
+      return () => {
+        element.removeEventListener('button-press', onPress);
+        element.removeEventListener('button-release', onRelease);
+      };
+    },
+  },
   '7segment': {
     // Pins: [COM.1, COM.2, A..G, DP]. A segment lights when it sits a
     // diode-drop away from the common pin — polarity-agnostic, so both
