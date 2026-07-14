@@ -51,7 +51,9 @@ export function connectAnalogInputsToMcu(
 /**
  * Feed solved voltages into the MCU's GPIO input registers. Pins the sketch
  * drives as OUTPUT are skipped (the MCU owns them), as are ADC-only pads
- * (the Nano's A6/A7 have no GPIO register).
+ * (the Nano's A6/A7 have no GPIO register) and pins claimed by a protocol
+ * responder — an HC-SR04 echo or DHT22 data line is a cycle-timed digital
+ * signal, and the DC operating point must not overwrite it mid-pulse.
  */
 export function connectDigitalInputsToMcu(
   mcu: McuInputSink,
@@ -59,12 +61,14 @@ export function connectDigitalInputsToMcu(
   pins: BoardPinLike[],
   pinVoltages: PinVoltageMap,
   resolver: PinResolver,
+  claimedPins?: ReadonlySet<number>,
 ): void {
   for (const pin of pins) {
     const role = boardPinRole(pin.name, profile);
     const volts = pinVoltages?.[pin.id];
     if (!role || role.kind !== 'io' || volts === undefined) continue;
     if (isAnalogOnlyPin(role.arduinoPin, profile)) continue;
+    if (claimedPins?.has(role.arduinoPin)) continue;
     if (mcu.getPinMode(role.arduinoPin) === 'output') continue;
     mcu.setDigitalInput(role.arduinoPin, resolver.resolve(role.arduinoPin, volts));
   }

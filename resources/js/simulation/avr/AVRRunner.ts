@@ -191,14 +191,25 @@ export class AVRRunner {
    * circuit cadence). Used by protocol decoders that latch on pin edges,
    * e.g. a character LCD sampling its data pins on the E strobe. Returns an
    * unsubscribe function.
+   *
+   * `releasedReadsHigh` treats input mode as a high level — the right view
+   * of a bidirectional 1-wire line with an external pull-up (DHT22): the
+   * chip "releasing" the pin lets the line float high.
    */
-  watchPin(arduinoPin: number, onChange: (level: boolean) => void): () => void {
+  watchPin(
+    arduinoPin: number,
+    onChange: (level: boolean) => void,
+    options?: { releasedReadsHigh?: boolean },
+  ): () => void {
     const mapping = this.profile.pinMapping[arduinoPin];
     if (!mapping) return () => {};
     const port = this.ports[mapping.port];
-    let last = port.pinState(mapping.bit) === PinState.High;
+    const levelOf = (state: PinState): boolean =>
+      state === PinState.High ||
+      (options?.releasedReadsHigh === true && (state === PinState.Input || state === PinState.InputPullUp));
+    let last = levelOf(port.pinState(mapping.bit));
     const listener = () => {
-      const level = port.pinState(mapping.bit) === PinState.High;
+      const level = levelOf(port.pinState(mapping.bit));
       if (level !== last) {
         last = level;
         onChange(level);

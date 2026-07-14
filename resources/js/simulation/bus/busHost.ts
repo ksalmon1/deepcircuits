@@ -28,6 +28,10 @@ import { ILI9341Controller, ILI9341_WIDTH, ILI9341_HEIGHT } from './devices/ILI9
 import { MPU6050Controller, mpu6050ValuesFrom } from './devices/MPU6050Controller';
 import { DS1307Controller } from './devices/DS1307Controller';
 import { SDCardController } from './devices/SDCardController';
+import type { GpioHostOps } from '@/simulation/gpio/GpioHostOps';
+import { ServoDecoder } from '@/simulation/gpio/ServoDecoder';
+import { HCSR04Responder, distanceCmFrom } from '@/simulation/gpio/HCSR04Responder';
+import { DHT22Responder, dhtValuesFrom } from '@/simulation/gpio/DHT22Responder';
 
 interface SSD1306ElementLike extends HTMLElement {
   imageData: ImageData;
@@ -45,6 +49,10 @@ interface LcdElementLike extends HTMLElement {
   cursorX: number;
   cursorY: number;
   backlight: boolean;
+}
+
+interface ServoElementLike extends HTMLElement {
+  angle: number;
 }
 
 /** Live attribute accessor, so decoders see Sensor-panel edits mid-run. */
@@ -134,6 +142,16 @@ function ili9341SpiDevice(runner: AVRRunner, binding: SpiDisplayBinding): { devi
   return { device, detach };
 }
 
+export interface BusAttachment {
+  /** Unbind everything (call when the board stops or restarts). */
+  detach: () => void;
+  /**
+   * Board input pins owned by a protocol responder (echo, 1-wire data).
+   * The analog co-sim feedback must skip these — see mcuCoupling.
+   */
+  claimedInputPins: ReadonlySet<number>;
+}
+
 export function attachBusDevices(
   runner: AVRRunner,
   components: CircuitComponentLike[],
@@ -141,9 +159,10 @@ export function attachBusDevices(
   boardId: string,
   profile: BoardProfile,
   getAttributes: AttributesAccessor = () => undefined,
-): () => void {
+): BusAttachment {
   const bindings = resolveDisplayBindings(components, wires, boardId, profile);
   const detachers: Array<() => void> = [];
+  const claimedInputPins = new Set<number>();
 
   for (const binding of bindings.i2c) {
     if (binding.kind === 'ssd1306') {
@@ -161,6 +180,48 @@ export function attachBusDevices(
 
   for (const lcd of bindings.hd44780) {
     detachers.push(attachHD44780(runner, lcd));
+  }
+
+  if (bindings.gpio.length > 0) {
+    // Cycle-clock operations for the ad-hoc GPIO protocols (echo timing,
+    // 1-wire bit streams): scheduled in emulated time, not wall time.
+    const ops: GpioHostOps = {
+      now: () => runner.cpu.cycles,
+      schedule: (callback, afterCycles) => {
+        runner.cpu.addClockEvent(callback, afterCycles);
+      },
+      drive: (arduinoPin, level) => runner.setDigitalInput(arduinoPin, level),
+    };
+
+    for (const binding of bindings.gpio) {
+      if (binding.kind === 'servo') {
+        const id = binding.componentId;
+        let lastAngle = 0;
+        const paint = framePainter(() => {
+          const element = getPartElement(id) as ServoElementLike | undefined;
+          if (element) element.angle = lastAngle;
+        });
+        const decoder = new ServoDecoder((degrees) => {
+          lastAngle = degrees;
+          paint();
+        });
+        detachers.push(runner.watchPin(binding.signalPin, (level) => decoder.edge(level, runner.cpu.cycles)));
+      } else if (binding.kind === 'hc-sr04') {
+        const id = binding.componentId;
+        const sonar = new HCSR04Responder(ops, binding.echoPin, () => distanceCmFrom(getAttributes(id)));
+        detachers.push(runner.watchPin(binding.trigPin, (level) => sonar.trigEdge(level)));
+        claimedInputPins.add(binding.echoPin);
+      } else {
+        const id = binding.componentId;
+        const dht = new DHT22Responder(ops, binding.dataPin, () => dhtValuesFrom(getAttributes(id)));
+        // The DHT line is bidirectional with a pull-up: the host "releasing"
+        // the pin (input mode) reads as the line going high.
+        detachers.push(
+          runner.watchPin(binding.dataPin, (level) => dht.dataEdge(level), { releasedReadsHigh: true }),
+        );
+        claimedInputPins.add(binding.dataPin);
+      }
+    }
   }
 
   if (bindings.spi.length > 0) {
@@ -185,9 +246,12 @@ export function attachBusDevices(
     runner.onSpiByte = (mosiByte: number) => router.transfer(mosiByte);
   }
 
-  return () => {
-    runner.i2cBus.unregisterAll();
-    runner.onSpiByte = null;
-    detachers.forEach((detach) => detach());
+  return {
+    detach: () => {
+      runner.i2cBus.unregisterAll();
+      runner.onSpiByte = null;
+      detachers.forEach((detach) => detach());
+    },
+    claimedInputPins,
   };
 }
