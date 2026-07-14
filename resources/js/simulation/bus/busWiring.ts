@@ -11,10 +11,12 @@ import { pinHandleId } from '@/utils/pinUtils';
 import { boardPinRole } from '@/simulation/avr/boardModel';
 import type { BoardProfile } from '@/simulation/avr/boardProfiles';
 import { SSD1306_I2C_ADDRESS } from './devices/SSD1306Controller';
+import { MPU6050_I2C_ADDRESS } from './devices/MPU6050Controller';
+import { DS1307_I2C_ADDRESS } from './devices/DS1307Controller';
 
-export interface I2CDisplayBinding {
+export interface I2CDeviceBinding {
   componentId: string;
-  kind: 'ssd1306';
+  kind: 'ssd1306' | 'mpu6050' | 'ds1307';
   address: number;
 }
 
@@ -35,10 +37,18 @@ export interface SpiDisplayBinding {
   dcPin: number;
 }
 
+export interface SdCardBinding {
+  componentId: string;
+  kind: 'sdcard';
+  csPin: number;
+}
+
+export type SpiDeviceBinding = SpiDisplayBinding | SdCardBinding;
+
 export interface DisplayBindings {
-  i2c: I2CDisplayBinding[];
+  i2c: I2CDeviceBinding[];
   hd44780: Hd44780Binding[];
-  spi: SpiDisplayBinding[];
+  spi: SpiDeviceBinding[];
 }
 
 const baseType = (componentType: string) => componentType.toLowerCase().replace(/^wokwi-/, '');
@@ -107,6 +117,33 @@ export function resolveDisplayBindings(
       // Wokwi's board-ssd1306 is the I2C variant: DATA = SDA, CLK = SCL.
       if (gpioOf('DATA') === profile.i2cPins.sda && gpioOf('CLK') === profile.i2cPins.scl) {
         bindings.i2c.push({ componentId: comp.id, kind: 'ssd1306', address: SSD1306_I2C_ADDRESS });
+      }
+      continue;
+    }
+
+    if (type === 'mpu6050' || type === 'ds1307') {
+      if (gpioOf('SDA') === profile.i2cPins.sda && gpioOf('SCL') === profile.i2cPins.scl) {
+        bindings.i2c.push({
+          componentId: comp.id,
+          kind: type,
+          // Note: both parts default to 0x68 on real hardware too — the
+          // last one registered wins if a circuit wires up both.
+          address: type === 'mpu6050' ? MPU6050_I2C_ADDRESS : DS1307_I2C_ADDRESS,
+        });
+      }
+      continue;
+    }
+
+    if (type === 'microsd-card') {
+      // DI is the card's MOSI, DO its MISO.
+      const cs = gpioOf('CS');
+      if (
+        cs !== null &&
+        gpioOf('DI') === profile.spiPins.mosi &&
+        gpioOf('SCK') === profile.spiPins.sck &&
+        gpioOf('DO') === profile.spiPins.miso
+      ) {
+        bindings.spi.push({ componentId: comp.id, kind: 'sdcard', csPin: cs });
       }
       continue;
     }

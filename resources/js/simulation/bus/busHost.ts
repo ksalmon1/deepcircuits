@@ -1,9 +1,18 @@
 /**
- * displayHost — binds wired display parts to a running board emulation:
- * resolves which displays are electrically connected (busWiring), creates a
- * protocol controller per display (SSD1306 on the I2C bus, HD44780 on GPIO
- * edge watches), and pushes decoded output straight onto the mounted
- * elements via the element registry, coalesced to animation frames.
+ * busHost — binds wired bus peripherals to a running board emulation:
+ * resolves which parts are electrically connected (busWiring), creates a
+ * protocol controller per part, and routes traffic:
+ *
+ *  - I2C (SSD1306 OLED, MPU6050 IMU, DS1307 RTC): registered on the
+ *    runner's I2CBus by 7-bit address.
+ *  - SPI (ILI9341 TFT, microSD card): routed by live chip-select level
+ *    through an SPIRouter; the TFT additionally samples D/C per byte.
+ *  - GPIO (HD44780 character LCDs): cycle-accurate E-strobe watches.
+ *
+ * Display output pushes straight onto the mounted elements via the element
+ * registry, coalesced to animation frames. Sensor values read live from the
+ * part's attributes through `getAttributes`, so the Sensor panel can change
+ * them mid-run.
  *
  * Returns a detach function; call it when the board stops or restarts.
  */
@@ -12,9 +21,13 @@ import type { BoardProfile } from '@/simulation/avr/boardProfiles';
 import type { CircuitComponentLike, WireLike } from '@/simulation/netlist/buildMapping';
 import { getPartElement } from '@/integrations/wokwi/elementRegistry';
 import { resolveDisplayBindings, type Hd44780Binding, type SpiDisplayBinding } from './busWiring';
+import { SPIRouter, type SpiDevice } from './SPIBus';
 import { SSD1306Controller, SSD1306_WIDTH, SSD1306_HEIGHT } from './devices/SSD1306Controller';
 import { HD44780Controller } from './devices/HD44780Controller';
 import { ILI9341Controller, ILI9341_WIDTH, ILI9341_HEIGHT } from './devices/ILI9341Controller';
+import { MPU6050Controller, mpu6050ValuesFrom } from './devices/MPU6050Controller';
+import { DS1307Controller } from './devices/DS1307Controller';
+import { SDCardController } from './devices/SDCardController';
 
 interface SSD1306ElementLike extends HTMLElement {
   imageData: ImageData;
@@ -33,6 +46,9 @@ interface LcdElementLike extends HTMLElement {
   cursorY: number;
   backlight: boolean;
 }
+
+/** Live attribute accessor, so decoders see Sensor-panel edits mid-run. */
+export type AttributesAccessor = (componentId: string) => Record<string, unknown> | undefined;
 
 /** Coalesce high-frequency decoder updates into one paint per frame. */
 function framePainter(paint: () => void): () => void {
@@ -91,73 +107,82 @@ function attachHD44780(runner: AVRRunner, binding: Hd44780Binding): () => void {
   });
 }
 
-interface SpiTarget {
-  binding: SpiDisplayBinding;
-  controller: ILI9341Controller;
-}
-
-/**
- * Route SPI MOSI bytes to whichever display holds its chip-select low, with
- * the D/C pin (sampled per byte, as the real controller does) picking
- * command vs data. Repaints happen on the CS rising edge — the natural
- * transaction boundary on an SPI bus.
- */
-function attachSpiDisplays(runner: AVRRunner, bindings: SpiDisplayBinding[]): Array<() => void> {
-  const detachers: Array<() => void> = [];
-  const targets: SpiTarget[] = [];
-
-  for (const binding of bindings) {
-    const controller = new ILI9341Controller();
-    const paint = framePainter(() => {
-      const element = getPartElement(binding.componentId) as Ili9341ElementLike | undefined;
-      const ctx = element?.canvas?.getContext('2d');
-      if (!ctx) return;
-      const image = ctx.createImageData(ILI9341_WIDTH, ILI9341_HEIGHT);
-      controller.renderTo(image.data);
-      ctx.putImageData(image, 0, 0);
-    });
-    detachers.push(
-      runner.watchPin(binding.csPin, (level) => {
-        if (level) paint(); // deselected: transaction over, repaint
-      }),
-    );
-    targets.push({ binding, controller });
-  }
-
-  runner.onSpiByte = (mosiByte: number) => {
-    for (const { binding, controller } of targets) {
-      if (runner.getPinLevel(binding.csPin)) continue; // not selected
+/** ILI9341 as an SpiDevice: D/C sampled per byte, repaint on deselect. */
+function ili9341SpiDevice(runner: AVRRunner, binding: SpiDisplayBinding): { device: SpiDevice; detach: () => void } {
+  const controller = new ILI9341Controller();
+  const paint = framePainter(() => {
+    const element = getPartElement(binding.componentId) as Ili9341ElementLike | undefined;
+    const ctx = element?.canvas?.getContext('2d');
+    if (!ctx) return;
+    const image = ctx.createImageData(ILI9341_WIDTH, ILI9341_HEIGHT);
+    controller.renderTo(image.data);
+    ctx.putImageData(image, 0, 0);
+  });
+  const detach = runner.watchPin(binding.csPin, (level) => {
+    if (level) paint(); // deselected: transaction over, repaint
+  });
+  const device: SpiDevice = {
+    transferByte(mosi: number): number {
       if (runner.getPinLevel(binding.dcPin)) {
-        controller.dataByte(mosiByte);
+        controller.dataByte(mosi);
       } else {
-        controller.commandByte(mosiByte);
+        controller.commandByte(mosi);
       }
       return 0x00;
-    }
-    return 0xff; // no device selected: MISO floats high
+    },
   };
-
-  return detachers;
+  return { device, detach };
 }
 
-export function attachDisplays(
+export function attachBusDevices(
   runner: AVRRunner,
   components: CircuitComponentLike[],
   wires: WireLike[],
   boardId: string,
   profile: BoardProfile,
+  getAttributes: AttributesAccessor = () => undefined,
 ): () => void {
   const bindings = resolveDisplayBindings(components, wires, boardId, profile);
   const detachers: Array<() => void> = [];
 
-  for (const display of bindings.i2c) {
-    attachSSD1306(runner, display.componentId, display.address);
+  for (const binding of bindings.i2c) {
+    if (binding.kind === 'ssd1306') {
+      attachSSD1306(runner, binding.componentId, binding.address);
+    } else if (binding.kind === 'mpu6050') {
+      const id = binding.componentId;
+      runner.i2cBus.register(
+        binding.address,
+        new MPU6050Controller(() => mpu6050ValuesFrom(getAttributes(id))),
+      );
+    } else {
+      runner.i2cBus.register(binding.address, new DS1307Controller());
+    }
   }
+
   for (const lcd of bindings.hd44780) {
     detachers.push(attachHD44780(runner, lcd));
   }
+
   if (bindings.spi.length > 0) {
-    detachers.push(...attachSpiDisplays(runner, bindings.spi));
+    const router = new SPIRouter();
+    for (const binding of bindings.spi) {
+      const selected = () => !runner.getPinLevel(binding.csPin);
+      if (binding.kind === 'ili9341') {
+        const { device, detach } = ili9341SpiDevice(runner, binding);
+        router.add(selected, device);
+        detachers.push(detach);
+      } else {
+        const card = new SDCardController();
+        router.add(selected, card);
+        // Reset any partial frame when the host releases chip-select.
+        detachers.push(
+          runner.watchPin(binding.csPin, (level) => {
+            if (level) card.deselect();
+          }),
+        );
+      }
+    }
+    runner.onSpiByte = (mosiByte: number) => router.transfer(mosiByte);
   }
 
   return () => {
