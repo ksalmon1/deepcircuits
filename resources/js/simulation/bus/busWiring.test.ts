@@ -130,6 +130,30 @@ describe('resolveDisplayBindings', () => {
     expect(resolveDisplayBindings([boardSpi, tft], bad, 'uno-1', uno).spi).toEqual([]);
   });
 
+  it('binds digital detect sensors with datasheet polarity', () => {
+    const pir: CircuitComponentLike = {
+      id: 'pir-1',
+      type: 'pir-motion-sensor',
+      attributes: {},
+      pins: [{ name: 'VCC' }, { name: 'OUT' }, { name: 'GND' }],
+    };
+    const flame: CircuitComponentLike = {
+      id: 'flame-1',
+      type: 'flame-sensor',
+      attributes: {},
+      pins: [{ name: 'VCC' }, { name: 'GND' }, { name: 'DOUT' }, { name: 'AOUT' }],
+    };
+    const wires = [
+      w('w1', 'uno-1', 'pin-6', 'pir-1', 'pin-1'), // 2 -> OUT
+      w('w2', 'uno-1', 'pin-5', 'flame-1', 'pin-2'), // 3 -> DOUT
+    ];
+    const bindings = resolveDisplayBindings([board, pir, flame], wires, 'uno-1', uno);
+    expect(bindings.gpio).toEqual([
+      { componentId: 'pir-1', kind: 'digital-sensor', sensorType: 'pir-motion-sensor', outPin: 2, activeLow: false },
+      { componentId: 'flame-1', kind: 'digital-sensor', sensorType: 'flame-sensor', outPin: 3, activeLow: true },
+    ]);
+  });
+
   it("resolves the Mega's dedicated SDA/SCL header pins to 20/21", () => {
     const megaBoard: CircuitComponentLike = {
       id: 'mega-1',

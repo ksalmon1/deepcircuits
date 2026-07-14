@@ -49,7 +49,25 @@ export type SpiDeviceBinding = SpiDisplayBinding | SdCardBinding;
 export type GpioBinding =
   | { componentId: string; kind: 'servo'; signalPin: number }
   | { componentId: string; kind: 'hc-sr04'; trigPin: number; echoPin: number }
-  | { componentId: string; kind: 'dht22'; dataPin: number };
+  | { componentId: string; kind: 'dht22'; dataPin: number }
+  | {
+      componentId: string;
+      kind: 'digital-sensor';
+      sensorType: string;
+      outPin: number;
+      /** LM393-comparator modules pull DOUT low on detection. */
+      activeLow: boolean;
+    };
+
+/** Sensor modules with one digital detect output: part type → pin/polarity. */
+const DIGITAL_SENSOR_TYPES: Record<string, { pinName: string; activeLow: boolean }> = {
+  'pir-motion-sensor': { pinName: 'OUT', activeLow: false }, // HC-SR501: high on motion
+  'tilt-switch': { pinName: 'OUT', activeLow: false },
+  'flame-sensor': { pinName: 'DOUT', activeLow: true }, // LM393 modules sink on detect
+  'gas-sensor': { pinName: 'DOUT', activeLow: true },
+  'big-sound-sensor': { pinName: 'DOUT', activeLow: true },
+  'small-sound-sensor': { pinName: 'DOUT', activeLow: true },
+};
 
 export interface DisplayBindings {
   i2c: I2CDeviceBinding[];
@@ -189,6 +207,21 @@ export function resolveDisplayBindings(
     if (type === 'dht22') {
       const data = gpioOf('SDA'); // the part's data pin is labelled SDA
       if (data !== null) bindings.gpio.push({ componentId: comp.id, kind: 'dht22', dataPin: data });
+      continue;
+    }
+
+    const digitalSensor = DIGITAL_SENSOR_TYPES[type];
+    if (digitalSensor) {
+      const out = gpioOf(digitalSensor.pinName);
+      if (out !== null) {
+        bindings.gpio.push({
+          componentId: comp.id,
+          kind: 'digital-sensor',
+          sensorType: type,
+          outPin: out,
+          activeLow: digitalSensor.activeLow,
+        });
+      }
       continue;
     }
 

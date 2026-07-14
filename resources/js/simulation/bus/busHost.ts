@@ -58,6 +58,12 @@ interface ServoElementLike extends HTMLElement {
 /** Live attribute accessor, so decoders see Sensor-panel edits mid-run. */
 export type AttributesAccessor = (componentId: string) => Record<string, unknown> | undefined;
 
+/** Detect state of a simple digital sensor (PIR, tilt, flame, ...). */
+export function sensorActiveFrom(attributes: Record<string, unknown> | undefined): boolean {
+  const raw = attributes?.active;
+  return raw === true || raw === 'true' || raw === 1;
+}
+
 /** Coalesce high-frequency decoder updates into one paint per frame. */
 function framePainter(paint: () => void): () => void {
   let scheduled = false;
@@ -206,6 +212,24 @@ export function attachBusDevices(
           paint();
         });
         detachers.push(runner.watchPin(binding.signalPin, (level) => decoder.edge(level, runner.cpu.cycles)));
+      } else if (binding.kind === 'digital-sensor') {
+        // One digital detect line, refreshed on a ~1ms emulated-time tick so
+        // Sensor-panel toggles reach the pin without needing an edge.
+        const id = binding.componentId;
+        const activeLow = binding.activeLow;
+        const outPin = binding.outPin;
+        let detached = false;
+        const refresh = () => {
+          if (detached) return;
+          const active = sensorActiveFrom(getAttributes(id));
+          runner.setDigitalInput(outPin, activeLow ? !active : active);
+          ops.schedule(refresh, 16_000); // 1ms at 16MHz
+        };
+        refresh();
+        claimedInputPins.add(outPin);
+        detachers.push(() => {
+          detached = true;
+        });
       } else if (binding.kind === 'hc-sr04') {
         const id = binding.componentId;
         const sonar = new HCSR04Responder(ops, binding.echoPin, () => distanceCmFrom(getAttributes(id)));
