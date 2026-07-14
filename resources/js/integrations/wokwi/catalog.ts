@@ -152,6 +152,41 @@ const behaviors: Record<string, Pick<WokwiPartSpec, 'applyState' | 'bindEvents'>
   },
   'arduino-uno': { applyState: applyBoardIndicators },
   'arduino-nano': { applyState: applyBoardIndicators },
+  '7segment': {
+    // Pins: [COM.1, COM.2, A..G, DP]. A segment lights when it sits a
+    // diode-drop away from the common pin — polarity-agnostic, so both
+    // common-cathode and common-anode wirings render.
+    applyState(element, _attributes, _activeStates, pinVoltages, pins) {
+      const display = element as HTMLElement & { values: number[] };
+      const voltageByName = (name: string): number | undefined => {
+        const pin = pins?.find((p) => p.name.replace(/\.\d+$/, '') === name || p.name === name);
+        return pin ? pinVoltages?.[pin.id] : undefined;
+      };
+      const common = voltageByName('COM') ?? voltageByName('COM.1');
+      if (common === undefined) return;
+      const segments = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'DP'];
+      display.values = segments.map((segment) => {
+        const v = voltageByName(segment);
+        return v !== undefined && Math.abs(v - common) > 1.5 ? 1 : 0;
+      });
+    },
+  },
+  'led-bar-graph': {
+    // Pins: anodes A1-A10, cathodes C1-C10; each LED lights on its own
+    // anode-to-cathode forward voltage.
+    applyState(element, _attributes, _activeStates, pinVoltages, pins) {
+      const graph = element as HTMLElement & { values: number[] };
+      const voltageByName = (name: string): number | undefined => {
+        const pin = pins?.find((p) => p.name === name);
+        return pin ? pinVoltages?.[pin.id] : undefined;
+      };
+      graph.values = Array.from({ length: 10 }, (_, i) => {
+        const anode = voltageByName(`A${i + 1}`);
+        const cathode = voltageByName(`C${i + 1}`);
+        return anode !== undefined && cathode !== undefined && anode - cathode > 1.5 ? 1 : 0;
+      });
+    },
+  },
   'arduino-mega': { applyState: applyBoardIndicators },
   'slide-switch': {
     applyState(element, _attributes, activeStates) {

@@ -6,6 +6,7 @@ import { CircuitComponent } from '@/types/component';
 import { mpu6050ValuesFrom } from '@/simulation/bus/devices/MPU6050Controller';
 import { dhtValuesFrom } from '@/simulation/gpio/DHT22Responder';
 import { distanceCmFrom } from '@/simulation/gpio/HCSR04Responder';
+import { sensorActiveFrom } from '@/simulation/bus/busHost';
 
 /**
  * Sensor panel — inject values into virtual sensors while the simulation
@@ -32,7 +33,17 @@ interface SensorSpec {
   fields: FieldSpec[];
   /** Current values (attribute overrides applied over datasheet defaults). */
   values: (attributes: Record<string, unknown> | undefined) => Record<string, number>;
+  /** Label for a boolean detect state (PIR "Motion", flame "Flame", ...). */
+  toggleLabel?: string;
 }
+
+/** Spec shared by the one-output detect sensors: a single on/off state. */
+const detectSensor = (title: string, toggleLabel: string): SensorSpec => ({
+  title,
+  fields: [],
+  values: () => ({}),
+  toggleLabel,
+});
 
 const SENSOR_SPECS: Record<string, SensorSpec> = {
   mpu6050: {
@@ -61,6 +72,12 @@ const SENSOR_SPECS: Record<string, SensorSpec> = {
     ],
     values: (attributes) => dhtValuesFrom(attributes) as unknown as Record<string, number>,
   },
+  'pir-motion-sensor': detectSensor('PIR Motion Sensor', 'Motion detected'),
+  'tilt-switch': detectSensor('Tilt Switch', 'Tilted'),
+  'flame-sensor': detectSensor('Flame Sensor', 'Flame detected'),
+  'gas-sensor': detectSensor('Gas Sensor', 'Gas detected'),
+  'big-sound-sensor': detectSensor('Sound Sensor (Big)', 'Sound detected'),
+  'small-sound-sensor': detectSensor('Sound Sensor (Small)', 'Sound detected'),
 };
 
 const sensorType = (comp: CircuitComponent) => comp.type.toLowerCase().replace(/^wokwi-/, '');
@@ -83,6 +100,22 @@ const SensorCard = ({ component, spec }: { component: CircuitComponent; spec: Se
       <div className="mb-1 text-xs font-semibold">
         {spec.title} — {component.id}
       </div>
+      {spec.toggleLabel && (
+        <label className="flex items-center gap-2 text-xs">
+          <input
+            type="checkbox"
+            checked={sensorActiveFrom(component.attributes)}
+            onChange={(e) =>
+              updateComponent({
+                ...component,
+                attributes: { ...component.attributes, active: e.target.checked },
+              })
+            }
+            data-testid={`sensor-${component.id}-active`}
+          />
+          <span>{spec.toggleLabel}</span>
+        </label>
+      )}
       <div className="grid grid-cols-1 gap-1">
         {spec.fields.map((field) => (
           <label key={field.key} className="flex items-center gap-2 text-xs">
