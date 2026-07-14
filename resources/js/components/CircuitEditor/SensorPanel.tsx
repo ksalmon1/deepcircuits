@@ -4,12 +4,14 @@ import { Button } from '@/components/ui/button';
 import { useProject } from '@/context/ProjectContext';
 import { CircuitComponent } from '@/types/component';
 import { mpu6050ValuesFrom } from '@/simulation/bus/devices/MPU6050Controller';
+import { dhtValuesFrom } from '@/simulation/gpio/DHT22Responder';
+import { distanceCmFrom } from '@/simulation/gpio/HCSR04Responder';
 
 /**
  * Sensor panel — inject values into virtual sensors while the simulation
- * runs. Edits write into the component's attributes; the bus decoders read
- * them live (see busHost), so a running sketch sees the new readings on its
- * next I2C poll, no restart needed.
+ * runs. Edits write into the component's attributes; the protocol decoders
+ * read them live (see busHost), so a running sketch sees the new readings
+ * on its next poll, no restart needed.
  */
 
 interface SensorPanelProps {
@@ -25,22 +27,47 @@ interface FieldSpec {
   step: number;
 }
 
-const MPU6050_FIELDS: FieldSpec[] = [
-  { key: 'accelX', label: 'Accel X', unit: 'g', min: -2, max: 2, step: 0.01 },
-  { key: 'accelY', label: 'Accel Y', unit: 'g', min: -2, max: 2, step: 0.01 },
-  { key: 'accelZ', label: 'Accel Z', unit: 'g', min: -2, max: 2, step: 0.01 },
-  { key: 'gyroX', label: 'Gyro X', unit: '°/s', min: -250, max: 250, step: 1 },
-  { key: 'gyroY', label: 'Gyro Y', unit: '°/s', min: -250, max: 250, step: 1 },
-  { key: 'gyroZ', label: 'Gyro Z', unit: '°/s', min: -250, max: 250, step: 1 },
-  { key: 'temperature', label: 'Temp', unit: '°C', min: -40, max: 85, step: 0.5 },
-];
+interface SensorSpec {
+  title: string;
+  fields: FieldSpec[];
+  /** Current values (attribute overrides applied over datasheet defaults). */
+  values: (attributes: Record<string, unknown> | undefined) => Record<string, number>;
+}
 
-const isMpu6050 = (comp: CircuitComponent) =>
-  comp.type.toLowerCase().replace(/^wokwi-/, '') === 'mpu6050';
+const SENSOR_SPECS: Record<string, SensorSpec> = {
+  mpu6050: {
+    title: 'IMU (MPU6050)',
+    fields: [
+      { key: 'accelX', label: 'Accel X', unit: 'g', min: -2, max: 2, step: 0.01 },
+      { key: 'accelY', label: 'Accel Y', unit: 'g', min: -2, max: 2, step: 0.01 },
+      { key: 'accelZ', label: 'Accel Z', unit: 'g', min: -2, max: 2, step: 0.01 },
+      { key: 'gyroX', label: 'Gyro X', unit: '°/s', min: -250, max: 250, step: 1 },
+      { key: 'gyroY', label: 'Gyro Y', unit: '°/s', min: -250, max: 250, step: 1 },
+      { key: 'gyroZ', label: 'Gyro Z', unit: '°/s', min: -250, max: 250, step: 1 },
+      { key: 'temperature', label: 'Temp', unit: '°C', min: -40, max: 85, step: 0.5 },
+    ],
+    values: (attributes) => mpu6050ValuesFrom(attributes) as unknown as Record<string, number>,
+  },
+  'hc-sr04': {
+    title: 'Ultrasonic (HC-SR04)',
+    fields: [{ key: 'distance', label: 'Distance', unit: 'cm', min: 2, max: 400, step: 1 }],
+    values: (attributes) => ({ distance: distanceCmFrom(attributes) }),
+  },
+  dht22: {
+    title: 'Temp & Humidity (DHT22)',
+    fields: [
+      { key: 'temperature', label: 'Temp', unit: '°C', min: -40, max: 80, step: 0.1 },
+      { key: 'humidity', label: 'Humidity', unit: '%', min: 0, max: 100, step: 0.1 },
+    ],
+    values: (attributes) => dhtValuesFrom(attributes) as unknown as Record<string, number>,
+  },
+};
 
-const SensorCard = ({ component }: { component: CircuitComponent }) => {
+const sensorType = (comp: CircuitComponent) => comp.type.toLowerCase().replace(/^wokwi-/, '');
+
+const SensorCard = ({ component, spec }: { component: CircuitComponent; spec: SensorSpec }) => {
   const { updateComponent } = useProject();
-  const values = mpu6050ValuesFrom(component.attributes) as unknown as Record<string, number>;
+  const values = spec.values(component.attributes);
 
   const setValue = (key: string, raw: string) => {
     const value = parseFloat(raw);
@@ -53,9 +80,11 @@ const SensorCard = ({ component }: { component: CircuitComponent }) => {
 
   return (
     <div className="rounded-md border p-2" data-testid={`sensor-card-${component.id}`}>
-      <div className="mb-1 text-xs font-semibold">IMU (MPU6050) — {component.id}</div>
+      <div className="mb-1 text-xs font-semibold">
+        {spec.title} — {component.id}
+      </div>
       <div className="grid grid-cols-1 gap-1">
-        {MPU6050_FIELDS.map((field) => (
+        {spec.fields.map((field) => (
           <label key={field.key} className="flex items-center gap-2 text-xs">
             <span className="w-14 shrink-0 text-muted-foreground">{field.label}</span>
             <input
@@ -89,7 +118,7 @@ const SensorCard = ({ component }: { component: CircuitComponent }) => {
 
 const SensorPanel = ({ onClose }: SensorPanelProps) => {
   const { components } = useProject();
-  const sensors = components.filter(isMpu6050);
+  const sensors = components.filter((comp) => SENSOR_SPECS[sensorType(comp)] !== undefined);
 
   return (
     <div
@@ -104,13 +133,13 @@ const SensorPanel = ({ onClose }: SensorPanelProps) => {
       </div>
       {sensors.length === 0 ? (
         <p className="text-xs text-muted-foreground">
-          No injectable sensors on the canvas. Add an IMU (MPU6050) from the library — its readings become editable
-          here while the simulation runs.
+          No injectable sensors on the canvas. Add an IMU, ultrasonic ranger, or DHT22 from the library — their
+          readings become editable here while the simulation runs.
         </p>
       ) : (
         <div className="flex max-h-80 flex-col gap-2 overflow-y-auto">
           {sensors.map((sensor) => (
-            <SensorCard key={sensor.id} component={sensor} />
+            <SensorCard key={sensor.id} component={sensor} spec={SENSOR_SPECS[sensorType(sensor)]} />
           ))}
         </div>
       )}

@@ -72,6 +72,17 @@ describe('connectDigitalInputsToMcu', () => {
     expect(mcu.digital).toEqual({ [nano.analogBase]: true }); // A0 only
   });
 
+  it('never drives a pin claimed by a protocol responder', () => {
+    const mcu = new FakeMcu();
+    const resolver = new PinResolver(uno.logicFamily);
+    const pins = [
+      { id: 'p-7', name: '7' }, // claimed (e.g. an HC-SR04 echo line)
+      { id: 'p-8', name: '8' },
+    ];
+    connectDigitalInputsToMcu(mcu, uno, pins, { 'p-7': 0, 'p-8': 5 }, resolver, new Set([7]));
+    expect(mcu.digital).toEqual({ 8: true });
+  });
+
   it('holds the previous level through the undefined region (hysteresis)', () => {
     const mcu = new FakeMcu();
     const resolver = new PinResolver(uno.logicFamily);

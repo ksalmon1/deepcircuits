@@ -90,6 +90,9 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
   const pinResolverRef = useRef<PinResolver | null>(null);
   // Detaches display decoders (I2C/GPIO) bound to the running board.
   const detachDisplaysRef = useRef<(() => void) | null>(null);
+  // Board input pins owned by protocol responders (echo/1-wire lines): the
+  // analog feedback loop must not overwrite their cycle-timed pulses.
+  const claimedPinsRef = useRef<ReadonlySet<number>>(new Set());
   // Incremented whenever the board (re)starts or stops, so an in-flight
   // compile can detect it has been superseded.
   const boardSessionRef = useRef<number>(0);
@@ -190,6 +193,7 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
     boardSessionRef.current++;
     detachDisplaysRef.current?.();
     detachDisplaysRef.current = null;
+    claimedPinsRef.current = new Set();
     avrRunnerRef.current?.stop();
     avrRunnerRef.current = null;
     boardProfileRef.current = null;
@@ -247,10 +251,10 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
     // GPIO changes rerun SPICE through the existing debounced path.
     runner.onPinChange = () => notifyCircuitChangedRef.current();
     avrRunnerRef.current = runner;
-    // Bind wired bus peripherals (displays, IMU, RTC, SD card) to the chip.
+    // Bind wired bus peripherals (displays, sensors, storage) to the chip.
     // Attributes are read through a ref so Sensor-panel edits reach the
     // decoders mid-run without restarting the board.
-    detachDisplaysRef.current = attachBusDevices(
+    const attachment = attachBusDevices(
       runner,
       components,
       wires || [],
@@ -258,6 +262,8 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
       profile,
       (componentId) => componentsRef.current.find((comp) => comp.id === componentId)?.attributes,
     );
+    detachDisplaysRef.current = attachment.detach;
+    claimedPinsRef.current = attachment.claimedInputPins;
     runner.start();
     addSerialOutput('[Sketch running]');
     notifyCircuitChangedRef.current();
@@ -386,7 +392,7 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
         const resolver =
           pinResolverRef.current ?? (pinResolverRef.current = new PinResolver(profile.logicFamily));
         connectAnalogInputsToMcu(runner, profile, pins, pinVoltages);
-        connectDigitalInputsToMcu(runner, profile, pins, pinVoltages, resolver);
+        connectDigitalInputsToMcu(runner, profile, pins, pinVoltages, resolver, claimedPinsRef.current);
       }
     } else if (msg.type === 'error') {
       if (!schedulerRef.current.accept(msg.runId)) return;

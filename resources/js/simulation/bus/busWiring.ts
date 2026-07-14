@@ -45,10 +45,17 @@ export interface SdCardBinding {
 
 export type SpiDeviceBinding = SpiDisplayBinding | SdCardBinding;
 
+/** Parts speaking ad-hoc single/dual-GPIO protocols (no shared bus). */
+export type GpioBinding =
+  | { componentId: string; kind: 'servo'; signalPin: number }
+  | { componentId: string; kind: 'hc-sr04'; trigPin: number; echoPin: number }
+  | { componentId: string; kind: 'dht22'; dataPin: number };
+
 export interface DisplayBindings {
   i2c: I2CDeviceBinding[];
   hd44780: Hd44780Binding[];
   spi: SpiDeviceBinding[];
+  gpio: GpioBinding[];
 }
 
 const baseType = (componentType: string) => componentType.toLowerCase().replace(/^wokwi-/, '');
@@ -73,7 +80,7 @@ export function resolveDisplayBindings(
   boardId: string,
   profile: BoardProfile,
 ): DisplayBindings {
-  const bindings: DisplayBindings = { i2c: [], hd44780: [], spi: [] };
+  const bindings: DisplayBindings = { i2c: [], hd44780: [], spi: [], gpio: [] };
   const board = components.find((comp) => comp.id === boardId);
   if (!board) return bindings;
 
@@ -161,6 +168,27 @@ export function resolveDisplayBindings(
       ) {
         bindings.spi.push({ componentId: comp.id, kind: 'ili9341', csPin: cs, dcPin: dc });
       }
+      continue;
+    }
+
+    if (type === 'servo') {
+      const signal = gpioOf('PWM');
+      if (signal !== null) bindings.gpio.push({ componentId: comp.id, kind: 'servo', signalPin: signal });
+      continue;
+    }
+
+    if (type === 'hc-sr04') {
+      const trig = gpioOf('TRIG');
+      const echo = gpioOf('ECHO');
+      if (trig !== null && echo !== null) {
+        bindings.gpio.push({ componentId: comp.id, kind: 'hc-sr04', trigPin: trig, echoPin: echo });
+      }
+      continue;
+    }
+
+    if (type === 'dht22') {
+      const data = gpioOf('SDA'); // the part's data pin is labelled SDA
+      if (data !== null) bindings.gpio.push({ componentId: comp.id, kind: 'dht22', dataPin: data });
       continue;
     }
 
