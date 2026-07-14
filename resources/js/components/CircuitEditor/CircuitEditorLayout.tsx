@@ -11,6 +11,7 @@ import CircuitCanvas from './CircuitCanvas';
 import ComponentPanel from './ComponentPanel';
 import CodeEditor from './CodeEditor';
 import SerialMonitor from './SerialMonitor';
+import SensorPanel from './SensorPanel';
 import CircuitVerificationModal from './CircuitVerificationModal';
 import type { VerificationResult } from '@/simulation/verify/circuitVerifier';
 import { Button } from '@/components/ui/button';
@@ -24,7 +25,7 @@ import {
 import {
   Play, Save, Undo, Redo, Trash2, ArrowLeft,
   Code, MonitorUp, SplitSquareVertical, SplitSquareHorizontal,
-  RotateCw, Square, Loader2
+  RotateCw, Square, Loader2, Gauge
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate, useLocation, useBlocker } from '@/lib/router';
@@ -118,6 +119,7 @@ const CircuitEditorLayoutContent = ({
   // Internal state for the content layout and UI toggles
   const [showCodeEditor, setShowCodeEditor] = useState<boolean>(false);
   const [showSerialMonitor, setShowSerialMonitor] = useState<boolean>(false);
+  const [showSensorPanel, setShowSensorPanel] = useState<boolean>(false);
   const [verticalSplit, setVerticalSplit] = useState<boolean>(true);
   const [isClearConfirmOpen, setIsClearConfirmOpen] = useState<boolean>(false);
   const [isLoadingProject, setIsLoadingProject] = useState<boolean>(true);
@@ -502,6 +504,21 @@ const CircuitEditorLayoutContent = ({
             </TooltipTrigger>
             <TooltipContent>{showSerialMonitor ? 'Hide serial monitor' : 'Show serial monitor'}</TooltipContent>
           </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowSensorPanel(!showSensorPanel)}
+                className={showSensorPanel ? "bg-secondary" : ""}
+                aria-pressed={showSensorPanel}
+              >
+                <Gauge className="mr-1 h-4 w-4" />
+                Sensors
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{showSensorPanel ? 'Hide sensor panel' : 'Inject sensor values (IMU)'}</TooltipContent>
+          </Tooltip>
           {(showCodeEditor || showSerialMonitor) && (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -657,14 +674,15 @@ const CircuitEditorLayoutContent = ({
                 defaultSize={(showCodeEditor || showSerialMonitor) ? mainLayout[0] : 100} 
                 minSize={30}
               >
-                <div className="h-full w-full overflow-hidden">
-                  <CircuitCanvas 
-                    circuitComponents={projectComponents} 
+                <div className="relative h-full w-full overflow-hidden">
+                  <CircuitCanvas
+                    circuitComponents={projectComponents}
                     wireConnections={projectWires}
                     onComponentsChange={handleComponentsChange}
                     onWiresChange={handleWiresChange}
                     onModified={() => setIsModified(true)}
                   />
+                  {showSensorPanel && <SensorPanel onClose={() => setShowSensorPanel(false)} />}
                 </div>
               </Panel>
 

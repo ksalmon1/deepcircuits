@@ -16,7 +16,7 @@ import type { BoardProfile } from '@/simulation/avr/boardProfiles';
 import { PinResolver } from '@/simulation/logic/logicFamilies';
 import { connectAnalogInputsToMcu, connectDigitalInputsToMcu } from '@/simulation/mixedMode/mcuCoupling';
 import { MixedModeScheduler } from '@/simulation/mixedMode/MixedModeScheduler';
-import { attachDisplays } from '@/simulation/bus/displayHost';
+import { attachBusDevices } from '@/simulation/bus/busHost';
 
 // This matches the type needed by our simulation engine
 
@@ -98,6 +98,9 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
   const notifyCircuitChangedRef = useRef<() => void>(() => {});
   const codeRef = useRef<string>(code);
   codeRef.current = code;
+  // Latest components, for decoders that read attributes mid-run.
+  const componentsRef = useRef(components);
+  componentsRef.current = components;
 
   // Dedicated solver for the pre-Run verifier, created lazily and kept warm.
   const verifySolverRef = useRef<WorkerSolverAdapter | null>(null);
@@ -244,8 +247,17 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
     // GPIO changes rerun SPICE through the existing debounced path.
     runner.onPinChange = () => notifyCircuitChangedRef.current();
     avrRunnerRef.current = runner;
-    // Bind wired displays (I2C OLED, parallel character LCDs) to the chip.
-    detachDisplaysRef.current = attachDisplays(runner, components, wires || [], board.id, profile);
+    // Bind wired bus peripherals (displays, IMU, RTC, SD card) to the chip.
+    // Attributes are read through a ref so Sensor-panel edits reach the
+    // decoders mid-run without restarting the board.
+    detachDisplaysRef.current = attachBusDevices(
+      runner,
+      components,
+      wires || [],
+      board.id,
+      profile,
+      (componentId) => componentsRef.current.find((comp) => comp.id === componentId)?.attributes,
+    );
     runner.start();
     addSerialOutput('[Sketch running]');
     notifyCircuitChangedRef.current();
