@@ -57,6 +57,26 @@ interface PinTracker {
   windowStartCycles: number;
 }
 
+/** One recorded GPIO transition. */
+export interface TraceEdge {
+  cycles: number;
+  pin: number;
+  level: boolean;
+}
+
+/** Everything the oscilloscope needs from one poll of the edge trace. */
+export interface TraceSnapshot {
+  /** Transitions in chronological order (oldest first). */
+  edges: TraceEdge[];
+  /** CPU cycle count at snapshot time (the right edge of the window). */
+  nowCycles: number;
+  clockHz: number;
+}
+
+// Edge-trace ring capacity. Even a 1kHz PWM pin only produces 2000 edges/s,
+// so this holds several seconds of typical activity.
+const TRACE_CAPACITY = 16384;
+
 export class AVRRunner {
   readonly program: Uint16Array;
   readonly cpu: CPU;
@@ -87,6 +107,12 @@ export class AVRRunner {
   private lastSliceWallTime = 0;
   private rxQueue: number[] = [];
   private trackers: PinTracker[] = [];
+  // Timestamped GPIO edge ring buffer feeding the oscilloscope panel.
+  private traceCycles = new Float64Array(TRACE_CAPACITY);
+  private tracePins = new Uint8Array(TRACE_CAPACITY);
+  private traceLevels = new Uint8Array(TRACE_CAPACITY);
+  private traceHead = 0;
+  private traceCount = 0;
 
   constructor(hex: string, profile: BoardProfile) {
     this.profile = profile;
@@ -261,6 +287,22 @@ export class AVRRunner {
     });
   }
 
+  /** Snapshot the GPIO edge trace (chronological) for the oscilloscope. */
+  readTrace(): TraceSnapshot {
+    this.updateTrackers();
+    const edges: TraceEdge[] = new Array(this.traceCount);
+    const start = (this.traceHead - this.traceCount + TRACE_CAPACITY) % TRACE_CAPACITY;
+    for (let i = 0; i < this.traceCount; i++) {
+      const idx = (start + i) % TRACE_CAPACITY;
+      edges[i] = {
+        cycles: this.traceCycles[idx],
+        pin: this.tracePins[idx],
+        level: this.traceLevels[idx] === 1,
+      };
+    }
+    return { edges, nowCycles: this.cpu.cycles, clockHz: CLOCK_HZ };
+  }
+
   private modeFor(state: PinState): ArduinoPinMode {
     if (state === PinState.Input) return 'input';
     if (state === PinState.InputPullUp) return 'input_pullup';
@@ -280,6 +322,12 @@ export class AVRRunner {
         tracker.isHigh = isHigh;
         tracker.lastChangeCycles = now;
         tracker.transitions++;
+        // Record the edge for the oscilloscope.
+        this.traceCycles[this.traceHead] = now;
+        this.tracePins[this.traceHead] = pin;
+        this.traceLevels[this.traceHead] = isHigh ? 1 : 0;
+        this.traceHead = (this.traceHead + 1) % TRACE_CAPACITY;
+        if (this.traceCount < TRACE_CAPACITY) this.traceCount++;
       }
     }
   }

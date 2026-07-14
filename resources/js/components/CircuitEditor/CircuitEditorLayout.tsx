@@ -12,6 +12,7 @@ import ComponentPanel from './ComponentPanel';
 import CodeEditor from './CodeEditor';
 import SerialMonitor from './SerialMonitor';
 import SensorPanel from './SensorPanel';
+import ScopePanel from './ScopePanel';
 import CircuitVerificationModal from './CircuitVerificationModal';
 import type { VerificationResult } from '@/simulation/verify/circuitVerifier';
 import { Button } from '@/components/ui/button';
@@ -25,7 +26,7 @@ import {
 import {
   Play, Save, Undo, Redo, Trash2, ArrowLeft,
   Code, MonitorUp, SplitSquareVertical, SplitSquareHorizontal,
-  RotateCw, Square, Loader2, Gauge
+  RotateCw, Square, Loader2, Gauge, Activity
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate, useLocation, useBlocker } from '@/lib/router';
@@ -120,6 +121,7 @@ const CircuitEditorLayoutContent = ({
   const [showCodeEditor, setShowCodeEditor] = useState<boolean>(false);
   const [showSerialMonitor, setShowSerialMonitor] = useState<boolean>(false);
   const [showSensorPanel, setShowSensorPanel] = useState<boolean>(false);
+  const [showScopePanel, setShowScopePanel] = useState<boolean>(false);
   const [verticalSplit, setVerticalSplit] = useState<boolean>(true);
   const [isClearConfirmOpen, setIsClearConfirmOpen] = useState<boolean>(false);
   const [isLoadingProject, setIsLoadingProject] = useState<boolean>(true);
@@ -519,6 +521,21 @@ const CircuitEditorLayoutContent = ({
             </TooltipTrigger>
             <TooltipContent>{showSensorPanel ? 'Hide sensor panel' : 'Inject sensor values (IMU)'}</TooltipContent>
           </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowScopePanel(!showScopePanel)}
+                className={showScopePanel ? "bg-secondary" : ""}
+                aria-pressed={showScopePanel}
+              >
+                <Activity className="mr-1 h-4 w-4" />
+                Scope
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{showScopePanel ? 'Hide scope' : 'Show GPIO waveforms'}</TooltipContent>
+          </Tooltip>
           {(showCodeEditor || showSerialMonitor) && (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -683,6 +700,7 @@ const CircuitEditorLayoutContent = ({
                     onModified={() => setIsModified(true)}
                   />
                   {showSensorPanel && <SensorPanel onClose={() => setShowSensorPanel(false)} />}
+                  {showScopePanel && <ScopePanel onClose={() => setShowScopePanel(false)} />}
                 </div>
               </Panel>
 

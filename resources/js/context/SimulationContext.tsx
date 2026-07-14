@@ -9,7 +9,7 @@ import { buildSpiceMapping } from '@/simulation/netlist/buildMapping';
 import { spiceIdLower } from '@/simulation/netlist/spiceId';
 import { WorkerSolverAdapter } from '@/simulation/netlist/adapters/WorkerSolverAdapter';
 import { verifyCircuit as runCircuitVerification, type VerificationResult } from '@/simulation/verify/circuitVerifier';
-import { AVRRunner } from '@/simulation/avr/AVRRunner';
+import { AVRRunner, type TraceSnapshot } from '@/simulation/avr/AVRRunner';
 import { compileSketch, CompileError } from '@/simulation/avr/compile';
 import { isBoardType, getBoardProfile, computeBoardDirectives } from '@/simulation/avr/boardModel';
 import type { BoardProfile } from '@/simulation/avr/boardProfiles';
@@ -53,6 +53,11 @@ interface SimulationContextType {
    * the live simulation loop. Never throws.
    */
   verifyCircuit: () => Promise<VerificationResult>;
+  /**
+   * Snapshot the running board's GPIO edge trace for the oscilloscope
+   * (null when no board is running). `analogBase` labels analog pins.
+   */
+  readBoardTrace: () => (TraceSnapshot & { analogBase: number }) | null;
 }
 
 const SimulationContext = createContext<SimulationContextType | undefined>(undefined);
@@ -107,6 +112,13 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
 
   // Dedicated solver for the pre-Run verifier, created lazily and kept warm.
   const verifySolverRef = useRef<WorkerSolverAdapter | null>(null);
+
+  const readBoardTrace = useCallback((): (TraceSnapshot & { analogBase: number }) | null => {
+    const runner = avrRunnerRef.current;
+    const profile = boardProfileRef.current;
+    if (!runner?.isRunning || !profile) return null;
+    return { ...runner.readTrace(), analogBase: profile.analogBase };
+  }, []);
 
   const verifyCircuit = useCallback(async (): Promise<VerificationResult> => {
     if (components.length === 0) return { errors: [], warnings: [] };
@@ -519,6 +531,7 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
     compileAndRun,
     sendSerialInput,
     verifyCircuit,
+    readBoardTrace,
   };
 
   // Ensure simulation run is triggered after isSimulationRunning is set to true
