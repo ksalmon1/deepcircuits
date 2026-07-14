@@ -16,6 +16,7 @@ import type { BoardProfile } from '@/simulation/avr/boardProfiles';
 import { PinResolver } from '@/simulation/logic/logicFamilies';
 import { connectAnalogInputsToMcu, connectDigitalInputsToMcu } from '@/simulation/mixedMode/mcuCoupling';
 import { MixedModeScheduler } from '@/simulation/mixedMode/MixedModeScheduler';
+import { attachDisplays } from '@/simulation/bus/displayHost';
 
 // This matches the type needed by our simulation engine
 
@@ -87,6 +88,8 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
   // Digital-level resolver for the running board's inputs (holds per-pin
   // hysteresis state); recreated whenever the board profile changes.
   const pinResolverRef = useRef<PinResolver | null>(null);
+  // Detaches display decoders (I2C/GPIO) bound to the running board.
+  const detachDisplaysRef = useRef<(() => void) | null>(null);
   // Incremented whenever the board (re)starts or stops, so an in-flight
   // compile can detect it has been superseded.
   const boardSessionRef = useRef<number>(0);
@@ -182,6 +185,8 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
   // --- Emulated board lifecycle ---
   const stopBoard = useCallback(() => {
     boardSessionRef.current++;
+    detachDisplaysRef.current?.();
+    detachDisplaysRef.current = null;
     avrRunnerRef.current?.stop();
     avrRunnerRef.current = null;
     boardProfileRef.current = null;
@@ -239,10 +244,12 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
     // GPIO changes rerun SPICE through the existing debounced path.
     runner.onPinChange = () => notifyCircuitChangedRef.current();
     avrRunnerRef.current = runner;
+    // Bind wired displays (I2C OLED, parallel character LCDs) to the chip.
+    detachDisplaysRef.current = attachDisplays(runner, components, wires || [], board.id, profile);
     runner.start();
     addSerialOutput('[Sketch running]');
     notifyCircuitChangedRef.current();
-  }, [components, stopBoard, addSerialOutput, emitSerialByte]);
+  }, [components, wires, stopBoard, addSerialOutput, emitSerialByte]);
 
   const sendSerialInput = useCallback((text: string) => {
     addSerialOutput(`> ${text}`);

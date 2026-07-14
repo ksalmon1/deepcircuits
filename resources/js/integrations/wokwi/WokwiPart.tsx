@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { CircuitComponent } from '@/types/component';
 import { useProject } from '@/context/ProjectContext';
 import { getWokwiPart } from './catalog';
+import { registerPartElement } from './elementRegistry';
 
 interface WokwiPartProps {
   data: CircuitComponent;
@@ -34,6 +35,8 @@ const WokwiPart: React.FC<WokwiPartProps> = ({ data, activeStates }) => {
     const element = document.createElement(spec.tag);
     elementRef.current = element;
     containerRef.current.appendChild(element);
+    // Let protocol decoders (displays) push straight onto the element.
+    const unregister = registerPartElement(dataRef.current.id, element);
 
     const unbind = spec.bindEvents?.(element, (patch) => {
       const current = dataRef.current;
@@ -45,6 +48,7 @@ const WokwiPart: React.FC<WokwiPartProps> = ({ data, activeStates }) => {
 
     return () => {
       unbind?.();
+      unregister();
       element.remove();
       elementRef.current = null;
     };

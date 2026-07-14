@@ -20,11 +20,14 @@ import {
   AVRTimer,
   AVRUSART,
   AVRADC,
+  AVRTWI,
+  AVRSPI,
   CPU,
   PinState,
 } from 'avr8js';
 import MemoryMap from 'nrf-intel-hex';
 import { BoardProfile, makeIOPorts } from './boardProfiles';
+import { I2CBus } from '@/simulation/bus/I2CBus';
 
 const CLOCK_HZ = 16_000_000;
 // Execute in ~16ms slices so the UI thread stays responsive.
@@ -63,6 +66,15 @@ export class AVRRunner {
   readonly ports: Record<string, AVRIOPort>;
   readonly usart: AVRUSART;
   readonly adc: AVRADC;
+  readonly twi: AVRTWI;
+  readonly spi: AVRSPI;
+  /** Virtual I2C bus: register decoders (displays, sensors) by address. */
+  readonly i2cBus: I2CBus;
+  /**
+   * SPI byte hook: return the MISO response for a MOSI byte. When unset the
+   * transfer completes with 0xFF (an undriven MISO line).
+   */
+  onSpiByte: ((mosiByte: number) => number) | null = null;
 
   /** Called for every byte the sketch writes to Serial. */
   onSerialByte: ((byte: number) => void) | null = null;
@@ -94,6 +106,14 @@ export class AVRRunner {
     this.ports = makeIOPorts(profile, this.cpu);
     this.usart = new AVRUSART(this.cpu, profile.usartConfig, CLOCK_HZ);
     this.adc = new AVRADC(this.cpu, profile.adcConfig);
+    this.twi = new AVRTWI(this.cpu, profile.twiConfig, CLOCK_HZ);
+    this.i2cBus = new I2CBus(this.twi);
+    this.twi.eventHandler = this.i2cBus;
+    this.spi = new AVRSPI(this.cpu, profile.spiConfig, CLOCK_HZ);
+    this.spi.onByte = (value: number) => {
+      const response = this.onSpiByte ? this.onSpiByte(value & 0xff) : 0xff;
+      this.spi.completeTransfer(response & 0xff);
+    };
 
     for (let pin = 0; pin < profile.pinCount; pin++) {
       this.trackers.push({
@@ -157,6 +177,35 @@ export class AVRRunner {
     const mapping = this.profile.pinMapping[arduinoPin];
     if (!mapping) return 'input';
     return this.modeFor(this.ports[mapping.port].pinState(mapping.bit));
+  }
+
+  /** Instantaneous logic level the chip is driving on a pin. */
+  getPinLevel(arduinoPin: number): boolean {
+    const mapping = this.profile.pinMapping[arduinoPin];
+    if (!mapping) return false;
+    return this.ports[mapping.port].pinState(mapping.bit) === PinState.High;
+  }
+
+  /**
+   * Watch a GPIO pin at emulation speed (cycle-accurate, unlike the solved-
+   * circuit cadence). Used by protocol decoders that latch on pin edges,
+   * e.g. a character LCD sampling its data pins on the E strobe. Returns an
+   * unsubscribe function.
+   */
+  watchPin(arduinoPin: number, onChange: (level: boolean) => void): () => void {
+    const mapping = this.profile.pinMapping[arduinoPin];
+    if (!mapping) return () => {};
+    const port = this.ports[mapping.port];
+    let last = port.pinState(mapping.bit) === PinState.High;
+    const listener = () => {
+      const level = port.pinState(mapping.bit) === PinState.High;
+      if (level !== last) {
+        last = level;
+        onChange(level);
+      }
+    };
+    port.addListener(listener);
+    return () => port.removeListener(listener);
   }
 
   /** Feed an analog voltage (volts, from the solved circuit) into an ADC channel. */

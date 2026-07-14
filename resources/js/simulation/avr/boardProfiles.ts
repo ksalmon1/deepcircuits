@@ -33,12 +33,16 @@ import {
   timer2Config,
   usart0Config,
   adcConfig,
+  twiConfig,
+  spiConfig,
 } from 'avr8js';
 import { LOGIC_FAMILIES, type LogicFamily } from '@/simulation/logic/logicFamilies';
 
 type TimerConfig = typeof timer0Config;
 type USARTConfig = typeof usart0Config;
 type ADCConfig = typeof adcConfig;
+type TWIConfig = typeof twiConfig;
+type SPIConfig = typeof spiConfig;
 
 /** Where an Arduino pin number lands on the AVR: a port letter and bit. */
 export interface PinPort {
@@ -84,6 +88,12 @@ export interface BoardProfile {
   timerConfigs: [TimerConfig, TimerConfig, TimerConfig];
   usartConfig: USARTConfig;
   adcConfig: ADCConfig;
+  twiConfig: TWIConfig;
+  spiConfig: SPIConfig;
+  /** Arduino pin numbers of the hardware TWI pins (SDA/SCL). */
+  i2cPins: { sda: number; scl: number };
+  /** Arduino pin numbers of the hardware SPI pins. */
+  spiPins: { mosi: number; miso: number; sck: number };
   /** Input thresholds of the chip's GPIO (drives digitalRead co-simulation). */
   logicFamily: LogicFamily;
 }
@@ -121,6 +131,11 @@ const PERIPHERALS_328P = {
   timerConfigs: [timer0Config, timer1Config, timer2Config] as [TimerConfig, TimerConfig, TimerConfig],
   usartConfig: usart0Config,
   adcConfig,
+  twiConfig,
+  spiConfig,
+  // 328p boards: SDA = A4 (pin 18), SCL = A5 (pin 19); SPI on 11/12/13.
+  i2cPins: { sda: 18, scl: 19 },
+  spiPins: { mosi: 11, miso: 12, sck: 13 },
 };
 
 // The 328p's stack tops out at RAMEND 0x08FF; avr8js's default data space is
@@ -186,6 +201,12 @@ const MEGA_PERIPHERALS = {
   ] as [TimerConfig, TimerConfig, TimerConfig],
   usartConfig: { ...usart0Config, rxCompleteInterrupt: 0x32, dataRegisterEmptyInterrupt: 0x34, txCompleteInterrupt: 0x36 },
   adcConfig: { ...adcConfig, adcInterrupt: 0x3a },
+  // 2560 vectors: TWI is vector 40 (word 0x4E), SPI STC vector 25 (word 0x30).
+  twiConfig: { ...twiConfig, twiInterrupt: 0x4e },
+  spiConfig: { ...spiConfig, spiInterrupt: 0x30 },
+  // Mega: SDA = pin 20, SCL = pin 21; SPI on 50-52.
+  i2cPins: { sda: 20, scl: 21 },
+  spiPins: { mosi: 51, miso: 50, sck: 52 },
 };
 
 const MEGA_PROFILE: BoardProfile = {
